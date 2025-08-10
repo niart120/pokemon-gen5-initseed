@@ -201,6 +201,12 @@ WebAssembly SIMD128命令を活用した4並列SHA-1処理により大幅な性�
 
  - spec/implementation/phase2-api.md
 
+## 型の境界と単一ソース
+
+- Enumなどのドメイン概念は `src/types/domain.ts` を単一ソースとして利用します。
+- WASM層の生データ型は `src/types/pokemon-raw.ts`、UI向けの拡張モデルとヘルパーは `src/types/pokemon-enhanced.ts`。
+- 性格名（Nature）は `DomainNatureNames`（英語名）に集約しています。
+
 ## E2Eテスト
 
 包括的なブラウザ自動化テストをPlaywright-MCPで実行できます：

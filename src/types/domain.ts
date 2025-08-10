@@ -70,3 +70,12 @@ export enum DomainDustCloudContent {
   Jewel = 1,
   EvolutionStone = 2,
 }
+
+// Nature names (EN) - single source of truth for nature display
+export const DomainNatureNames = [
+  'Hardy', 'Lonely', 'Brave', 'Adamant', 'Naughty',
+  'Bold', 'Docile', 'Relaxed', 'Impish', 'Lax',
+  'Timid', 'Hasty', 'Serious', 'Jolly', 'Naive',
+  'Modest', 'Mild', 'Quiet', 'Bashful', 'Rash',
+  'Calm', 'Gentle', 'Sassy', 'Careful', 'Quirky'
+] as const;

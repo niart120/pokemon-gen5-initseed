@@ -92,13 +92,7 @@ export { DomainShinyType as ShinyType };
 /**
  * 性格ID→性格名マッピング
  */
-export const NATURE_NAMES: readonly string[] = [
-  'がんばりや', 'さみしがり', 'ゆうかん', 'いじっぱり', 'やんちゃ',
-  'ずぶとい', 'すなお', 'のんき', 'わんぱく', 'のうてんき',
-  'おくびょう', 'せっかち', 'まじめ', 'ようき', 'むじゃき',
-  'ひかえめ', 'おっとり', 'れいせい', 'てれや', 'うっかりや',
-  'おだやか', 'おとなしい', 'なまいき', 'しんちょう', 'きまぐれ'
-] as const;
+// Nature名の定義は英語版 DomainNatureNames に集約（日本語表記はUI層で必要時のみ別管理）
 
 /**
  * WASM RawPokemonDataから取得可能なプロパティ名

@@ -3,8 +3,8 @@
  * 内容は旧 raw-pokemon-data.ts から移設（破壊的変更を許容）
  */
 
-import { DomainEncounterType, DomainShinyType } from './domain';
-import { parseUnknownWasmRawData } from '@/lib/integration/raw-parser';
+import { DomainEncounterType, DomainShinyType, DomainNatureNames } from './domain';
+import { parseWasmLikeToRawPokemonData } from '@/lib/integration/raw-parser';
 
 export { DomainEncounterType as EncounterType };
 export { DomainShinyType as ShinyType };
@@ -67,17 +67,13 @@ export interface EncounterDetails {
   levelRange: { min: number; max: number };
 }
 
-export const NATURE_NAMES = [
-  'Hardy', 'Lonely', 'Brave', 'Adamant', 'Naughty',
-  'Bold', 'Docile', 'Relaxed', 'Impish', 'Lax',
-  'Timid', 'Hasty', 'Serious', 'Jolly', 'Naive',
-  'Modest', 'Mild', 'Quiet', 'Bashful', 'Rash',
-  'Calm', 'Gentle', 'Sassy', 'Careful', 'Quirky'
-] as const;
+// Nature名は domain.ts の単一ソースを使用
+export const NATURE_NAMES = DomainNatureNames;
 
+// UI層のエントリポイント: WASMライク入力 → UI向けの camelCase RawPokemonData
 export function parseRawPokemonData(wasmData: unknown): RawPokemonData {
   try {
-    const snake = parseUnknownWasmRawData(wasmData);
+  const snake = parseWasmLikeToRawPokemonData(wasmData as Record<string, unknown>);
     return {
       seed: snake.seed,
       pid: snake.pid,
@@ -96,10 +92,10 @@ export function parseRawPokemonData(wasmData: unknown): RawPokemonData {
 }
 
 export function getNatureName(natureId: number): string {
-  if (natureId < 0 || natureId >= NATURE_NAMES.length) {
+  if (natureId < 0 || natureId >= DomainNatureNames.length) {
     throw new Error(`Invalid nature ID: ${natureId}`);
   }
-  return NATURE_NAMES[natureId];
+  return DomainNatureNames[natureId];
 }
 
 export function getShinyStatusName(shinyType: number): ShinyStatusName {

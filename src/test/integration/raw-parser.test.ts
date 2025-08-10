@@ -218,7 +218,7 @@ describe('RawPokemonDataParser', () => {
 
       const result = parser.parseToDetailed(rawData);
 
-      expect(result.nature_name).toBe('ずぶとい');
+  expect(result.nature_name).toBe('Bold');
       expect(result.species_id).toBe(495); // ツタージャ
       expect(result.gender).toBe('M'); // 雄
       expect(result.calculated_level).toBe(3); // min_level(2) + 中間値 = 3
@@ -414,9 +414,9 @@ describe('RawPokemonDataParser', () => {
       const results = parser.parseToDetailedBatch(rawDataArray);
 
       expect(results).toHaveLength(2);
-      expect(results[0].nature_name).toBe('がんばりや');
+  expect(results[0].nature_name).toBe('Hardy');
       expect(results[0].gender).toBe('M');
-      expect(results[1].nature_name).toBe('ずぶとい');
+  expect(results[1].nature_name).toBe('Bold');
       expect(results[1].gender).toBe('F');
       expect(results[1].shiny_info?.type).toBe('star');
     });
@@ -493,7 +493,7 @@ describe('ユーティリティ関数', () => {
 
       const result = parseWasmToPokemon(mockWasm, config);
 
-      expect(result.nature_name).toBe('ずぶとい');
+  expect(result.nature_name).toBe('Bold');
       expect(result.species_id).toBe(495);
       expect(result.gender).toBe('M');
     });

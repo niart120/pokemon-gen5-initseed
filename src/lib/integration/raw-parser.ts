@@ -8,12 +8,12 @@ import {
   ParsedPokemonData,
   PlaceholderValue,
   ShinyInfo,
-  NATURE_NAMES,
   RawPokemonParserConfig,
   LevelCalculationConfig,
   // GenderRatio,
   // WasmRawPokemonDataProperty
 } from '@/types/pokemon-raw';
+import { DomainNatureNames } from '@/types/domain';
 import {
   DomainEncounterType as EncounterType,
   DomainShinyType as ShinyType,
@@ -244,10 +244,10 @@ export class RawPokemonDataParser {
    * @returns 性格名
    */
   private getNatureName(natureId: number): string {
-    if (natureId < 0 || natureId >= NATURE_NAMES.length) {
+  if (natureId < 0 || natureId >= DomainNatureNames.length) {
       return `Unknown(${natureId})`;
     }
-    return NATURE_NAMES[natureId];
+  return DomainNatureNames[natureId];
   }
 
   /**
@@ -419,10 +419,15 @@ export function parseWasmToPokemon(
 }
 
 /**
- * 汎用パーサー: unknownなWASMオブジェクトから RawPokemonData（snake_case）を生成
- * getter関数/直プロパティの双方に対応
+ * WASMライク入力アダプタ: wasm-bindgenインスタンス or 同等のgetterを持つオブジェクトから
+ * RawPokemonData（snake_case）を生成する低レベルアダプタ。
+ *
+ * 役割: インテグレーション境界で入力のゆらぎを吸収し、以降は型安全な RawPokemonData に揃える。
+ * 想定利用先: 上位のUI層アダプタ（例: parseRawPokemonData）など。
  */
-export function parseUnknownWasmRawData(wasmData: unknown): RawPokemonData {
+export function parseWasmLikeToRawPokemonData(
+  wasmData: WasmRawPokemonDataInstance | Record<string, unknown>
+): RawPokemonData {
   if (!wasmData) {
     throw new Error('WASM data is null or undefined');
   }
@@ -484,7 +489,7 @@ export function parseUnknownWasmRawData(wasmData: unknown): RawPokemonData {
       shiny_type: toNumber(shinyType),
     };
   } catch (error) {
-    throw new Error(`Failed to parse unknown WASM pokemon data: ${error}`);
+    throw new Error(`Failed to adapt WASM-like pokemon data: ${error}`);
   }
 }
 
