@@ -68,7 +68,23 @@ export async function initWasm(): Promise<WasmModule> {
     try {
       // Import the WebAssembly module
       const module = await import('../../wasm/wasm_pkg.js');
-      await module.default();
+
+      // Node(vitest) 環境では fetch が file: URL をサポートしないため、
+      // 可能ならバイト列を直接渡す
+      let initArg: any;
+      if (typeof window === 'undefined') {
+        // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+        const fs = await import('fs');
+        // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+        const path = await import('path');
+        const wasmPath = path.join(process.cwd(), 'src/wasm/wasm_pkg_bg.wasm');
+        const bytes = fs.readFileSync(wasmPath);
+        initArg = { module_or_path: bytes };
+      } else {
+        initArg = { module_or_path: new URL('../../wasm/wasm_pkg_bg.wasm', import.meta.url) };
+      }
+
+      await module.default(initArg);
       
       wasmModule = {
         IntegratedSeedSearcher: module.IntegratedSeedSearcher,

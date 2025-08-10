@@ -2,8 +2,8 @@
  * Node.js環境でのWebAssembly読み込み用ユーティリティ
  */
 
-import { readFileSync } from 'fs'
 import { join } from 'path'
+import { readFileSync } from 'fs'
 
 // WebAssembly module interface
 interface WasmModule {
@@ -24,16 +24,14 @@ export async function initWasmForTesting(): Promise<WasmModule> {
   }
 
   try {
-    // WebAssemblyファイルを直接読み込んでJSモジュールに渡す
-    const wasmPath = join(process.cwd(), 'src/wasm/wasm_pkg_bg.wasm');
-    const wasmBytes = readFileSync(wasmPath);
-    
     // JSバインディングモジュールを読み込み
     const jsModulePath = join(process.cwd(), 'src/wasm/wasm_pkg.js');
     const jsModule = await import(jsModulePath);
-    
-    // WebAssemblyバイトコードでJSモジュールを初期化
-    await jsModule.default(wasmBytes);
+
+    // WASM バイトコードを読み込み、オブジェクト引数で渡す（fetch 不要）
+    const wasmPath = join(process.cwd(), 'src/wasm/wasm_pkg_bg.wasm');
+    const wasmBytes = readFileSync(wasmPath);
+    await jsModule.default({ module_or_path: wasmBytes });
     
     wasmModuleInstance = {
       swap_bytes_32_wasm: jsModule.swap_bytes_32_wasm,
@@ -42,9 +40,11 @@ export async function initWasmForTesting(): Promise<WasmModule> {
       calculate_sha1_batch: jsModule.calculate_sha1_batch,
     };
 
+    // eslint-disable-next-line no-console
     console.log('🦀 WebAssembly module loaded for testing');
     return wasmModuleInstance;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to load WebAssembly module for testing:', error);
     throw error;
   }
