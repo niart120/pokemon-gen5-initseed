@@ -16,7 +16,7 @@ import {
   // GenderRatio,
   // WasmRawPokemonDataProperty
 } from '@/types/raw-pokemon';
-import { determineGenderFromSpec } from '@/lib/services/gender-utils';
+import { determineGenderFromSpec } from '@/lib/utils/gender-utils';
 
 /**
  * WASM RawPokemonDataオブジェクト（実際のWASMインスタンス）

@@ -13,7 +13,7 @@ import {
   type RawPokemonData,
   type ShinyStatusName 
 } from '../types/raw-pokemon-data';
-import { determineGenderFromSpec } from '../lib/services/gender-utils';
+import { determineGenderFromSpec } from '../lib/utils/gender-utils';
 import { 
   WasmPokemonService, 
   WasmServiceError,

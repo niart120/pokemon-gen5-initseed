@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { determineGenderFromSpec } from '../lib/services/gender-utils';
+import { determineGenderFromSpec } from '../lib/utils/gender-utils';
 
 describe('Gender determination by femaleThreshold', () => {
   const ratio = (t: number) => ({ type: 'ratio' as const, femaleThreshold: t });

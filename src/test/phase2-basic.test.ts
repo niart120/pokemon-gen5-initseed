@@ -7,7 +7,7 @@ import {
   getNatureName, 
   getShinyStatusName,
 } from '../types/raw-pokemon-data';
-import { determineGenderFromSpec } from '../lib/services/gender-utils';
+import { determineGenderFromSpec } from '../lib/utils/gender-utils';
 import { calculateLevel } from '../data/encounter-tables';
 import { getGeneratedSpeciesById } from '../data/species/generated';
 

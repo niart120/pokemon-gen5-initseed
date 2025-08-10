@@ -24,7 +24,7 @@ import {
 } from '../../data/encounter-tables';
 // Replace TS species dataset with generated JSON adapter
 import { getGeneratedSpeciesById, selectAbilityBySlot } from '../../data/species/generated';
-import { determineGenderFromSpec } from './gender-utils';
+import { determineGenderFromSpec } from '../utils/gender-utils';
 
 /**
  * Integration configuration
