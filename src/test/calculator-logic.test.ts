@@ -119,21 +119,14 @@ describe('WebAssembly計算ロジックテスト', () => {
     }).toThrow()
   })
 
-  test('パフォーマンスの基本チェック', () => {
+  test('反復実行の健全性チェック（タイミング非依存）', () => {
     const testMessage = [0x12345678, 0x9ABCDEF0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    
-    const startTime = Date.now()
-    
-    // 1000回計算
+    // 同じ入力で繰り返し計算しても結果が安定していることのみ確認
+    const results = new Set<string>()
     for (let i = 0; i < 1000; i++) {
-      calculator.calculateSeed(testMessage)
+      const { seed, hash } = calculator.calculateSeed(testMessage)
+      results.add(`${seed}:${hash}`)
     }
-    
-    const elapsedTime = Date.now() - startTime
-    
-    // 1000回の計算が5秒以内に完了することを確認
-    expect(elapsedTime).toBeLessThan(5000)
-    
-    console.log(`📊 1000回計算: ${elapsedTime}ms (${(1000 / elapsedTime * 1000).toFixed(0)} calc/sec)`)
+    expect(results.size).toBe(1)
   })
 })

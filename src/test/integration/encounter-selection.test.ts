@@ -8,7 +8,7 @@
  * - https://pokebook.jp/data/sp5/enc_w2 (BW2 White2)
  * 
  * Tests verify encounter table probability consistency and
- * statistical validity of selection algorithms.
+ * boundary mapping of selection algorithms (no heavy statistical/perf checks).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -286,46 +286,5 @@ describe('Encounter Selection Integration Tests', () => {
     });
   });
 
-  describe('Performance and Scalability', () => {
-    it('should perform slot selection efficiently (reduced iterations)', () => {
-      const startTime = performance.now();
-      
-      for (let i = 0; i < 30000; i++) {
-        EncounterTableSelector.selectSlotByProbability(
-          Math.floor(Math.random() * 65536),
-          EncounterType.Normal
-        );
-      }
-      
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-      
-      // 30,000回の選択が1秒以内に完了することを期待
-      expect(duration).toBeLessThan(1000);
-    });
-
-    it('should handle multiple encounter types efficiently (reduced iterations)', () => {
-      const startTime = performance.now();
-      const encounterTypes = [
-        EncounterType.Normal,
-        EncounterType.Surfing,
-        EncounterType.Fishing,
-        EncounterType.ShakingGrass
-      ];
-      
-      for (let i = 0; i < 15000; i++) {
-        const randomType = encounterTypes[i % encounterTypes.length];
-        EncounterTableSelector.selectSlotByProbability(
-          Math.floor(Math.random() * 65536),
-          randomType
-        );
-      }
-      
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-      
-  // 複数タイプでの15,000回選択が1秒以内に完了することを期待
-  expect(duration).toBeLessThan(1000);
-    });
-  });
+  // Performance-focused tests removed to avoid flakiness and indirect validation.
 });

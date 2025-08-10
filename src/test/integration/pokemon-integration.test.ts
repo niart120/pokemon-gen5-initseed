@@ -6,7 +6,7 @@
  *
  * 詳細検証の担当:
  * - 遭遇スロット/レベル分布: encounter-selection.test.ts
- * - 統合データ処理/同期ルール/特殊遭遇: pokemon-assembler.test.ts, assembler-sync-rules.integration.test.ts
+ * - 統合データ処理/同期ルール/特殊遭遇: pokemon-assembler.test.ts
  * - 性別境界: gender-threshold.test.ts
  * - WASM/サービス連携: wasm-service.test.ts, wasm-node.test.ts, phase2-* tests
  */
