@@ -12,6 +12,7 @@
 
 import type { AreaEncounterTable } from './types';
 import { EncounterType, FishingRodType } from './types';
+import type { ROMVersion } from '@/types/pokemon';
 
 /** サンプルエンカウントテーブル - Route 1 (BW) */
 export const SAMPLE_ROUTE_1_BW: AreaEncounterTable = {
@@ -88,9 +89,9 @@ export const ENCOUNTER_TABLES: Record<string, AreaEncounterTable> = {
 };
 
 /** バージョン・エリア別テーブル検索 */
-export function getEncounterTable(areaId: string, version: string): AreaEncounterTable | null {
+export function getEncounterTable(areaId: string, version: ROMVersion): AreaEncounterTable | null {
   const table = ENCOUNTER_TABLES[areaId];
-  if (!table || !table.versions.includes(version as any)) {
+  if (!table || !table.versions.includes(version)) {
     return null;
   }
   return table;

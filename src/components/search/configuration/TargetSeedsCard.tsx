@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Trash, Upload, Download, Warning, Target } from '@phosphor-icons/react';
 import { useAppStore } from '../../../store/app-store';
@@ -21,7 +20,6 @@ export function TargetSeedsCard() {
 
   const { isStack } = useResponsiveLayout();
   const [parseErrors, setParseErrors] = React.useState<{ line: number; value: string; error: string }[]>([]);
-  const calculator = new SeedCalculator();
 
   // Parse input and update seeds when input changes
   React.useEffect(() => {
@@ -30,13 +28,14 @@ export function TargetSeedsCard() {
       return;
     }
 
+    const calculator = new SeedCalculator();
     const { validSeeds, errors } = calculator.parseTargetSeeds(targetSeedInput);
     setParseErrors(errors);
     
     if (errors.length === 0) {
       setTargetSeeds(validSeeds);
     }
-  }, [targetSeedInput]);
+  }, [targetSeedInput, setTargetSeeds]);
 
   const handleClearAll = () => {
     setTargetSeedInput('');

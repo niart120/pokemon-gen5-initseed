@@ -11,7 +11,7 @@
  * statistical validity of selection algorithms.
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { 
   EncounterTableSelector, 
   EncounterRateValidator, 

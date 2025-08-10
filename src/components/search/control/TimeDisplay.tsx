@@ -16,7 +16,7 @@ export function TimeDisplay({
   elapsedTime, 
   estimatedTimeRemaining, 
   currentStep, 
-  totalSteps 
+  totalSteps: _
 }: TimeDisplayProps) {
   const processingRate = formatProcessingRate(currentStep, elapsedTime);
   

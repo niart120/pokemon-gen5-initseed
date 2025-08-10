@@ -21,7 +21,7 @@ export async function debugConsistencyTest() {
   try {
     await calculator.initializeWasm();
     console.log('✅ WebAssembly initialized');
-  } catch (error) {
+  } catch {
     console.warn('⚠️ WebAssembly not available, using TypeScript fallback');
   }
 
@@ -90,8 +90,8 @@ export async function debugConsistencyTest() {
       console.log(`Diff:     ${Math.abs(result.seed - testCase.seed)}`);
     }
 
-  } catch (error) {
-    console.error('❌ Calculation failed:', error);
+  } catch {
+    console.error('❌ Calculation failed');
   }
 
   console.log('\n=== Debug completed ===');
@@ -104,7 +104,7 @@ export async function debugSearchRangeSample() {
   
   try {
     await calculator.initializeWasm();
-  } catch (error) {
+  } catch {
     // Fallback to TypeScript
   }
 
@@ -157,8 +157,8 @@ export async function debugSearchRangeSample() {
         
         sampleCount++;
         if (sampleCount >= maxSamples) break;
-      } catch (error) {
-        console.error('Sample calculation failed:', error);
+      } catch {
+        // Sample calculation failed, continue with next
       }
     }
   }

@@ -10,10 +10,10 @@
 import type { RawPokemonData, EnhancedPokemonData, EncounterDetails } from '../../types/raw-pokemon-data';
 import type { ROMVersion } from '../../types/pokemon';
 import { 
-  getNatureName, 
   getShinyStatusName, 
   getEncounterTypeName, 
-  determineGender 
+  getNatureName // added: for mapping nature ID to name
+  // determineGender // removed: use gender-utils with generated dataset
 } from '../../types/raw-pokemon-data';
 import { 
   getEncounterTable, 
@@ -22,11 +22,9 @@ import {
   // getDefaultEncounterTable, // removed: JSON datasets only, no fallback
   type EncounterTable 
 } from '../../data/encounter-tables';
-import { 
-  getPokemonSpecies, 
-  getSpeciesAbility
-  // type PokemonSpecies // removed: import type from types module when needed
-} from '../../data/pokemon-species';
+// Replace TS species dataset with generated JSON adapter
+import { getGeneratedSpeciesById, selectAbilityBySlot } from '../../data/species/generated';
+import { determineGenderFromSpec } from './gender-utils';
 
 /**
  * Integration configuration
@@ -68,7 +66,7 @@ export class IntegrationError extends Error {
   constructor(
     message: string,
     public code: string,
-    public data?: any
+  public data?: unknown
   ) {
     super(message);
     this.name = 'IntegrationError';
@@ -107,8 +105,8 @@ export class PokemonIntegrationService {
 
       // Step 2: Get species information
       const slot = getEncounterSlot(encounterInfo.table, rawData.encounterSlotValue);
-      const species = getPokemonSpecies(slot.speciesId);
-      if (species) {
+      const gSpecies = getGeneratedSpeciesById(slot.speciesId);
+      if (gSpecies) {
         speciesDataFound = true;
       } else {
         warnings.push(`Species data not found for ID ${slot.speciesId}`);
@@ -119,18 +117,17 @@ export class PokemonIntegrationService {
         );
       }
 
-      // Step 3: Get ability information
-      const ability = getSpeciesAbility(species, rawData.abilitySlot);
-      if (ability) {
+      // Step 3: Get ability information (ability1/2 only)
+      const abilityNode = selectAbilityBySlot(rawData.abilitySlot, gSpecies.abilities);
+      if (abilityNode) {
         abilityDataFound = true;
       } else {
-        warnings.push(`Ability data not found for slot ${rawData.abilitySlot} of species ${species.name}`);
+        warnings.push(`Ability data not found for slot ${rawData.abilitySlot} of species ${gSpecies.names.en}`);
       }
 
       // Step 4: Calculate derived values
-      const gender = determineGender(rawData.genderValue, species.genderRatio);
+      const gender = determineGenderFromSpec(rawData.genderValue, gSpecies.gender);
       const level = calculateLevel(rawData.levelRandValue, slot.levelRange);
-      const natureName = getNatureName(rawData.nature);
       const shinyStatus = getShinyStatusName(rawData.shinyType);
 
       // Step 5: Apply synchronize effects if applicable
@@ -139,16 +136,29 @@ export class PokemonIntegrationService {
       // Step 6: Create enhanced Pokemon data
       const enhancedPokemon: EnhancedPokemonData = {
         ...rawData,
-        species,
-        ability: ability || {
-          name: 'Unknown',
-          description: 'Ability data not available',
-          isHidden: false,
+        // Map minimal species info expected by EnhancedPokemonData
+        species: {
+          nationalDex: gSpecies.nationalDex,
+          name: gSpecies.names.en,
+          baseStats: gSpecies.baseStats,
+          // types are not present in generated dataset; provide placeholder single-type for now
+          // Consumers relying on types should be updated in a later phase
+          types: ['Normal'],
+          // genderRatio in old model is percent male or -1; we cannot map accurately here, set -1 for genderless else 0
+          genderRatio: gSpecies.gender.type === 'genderless' ? -1 : 0,
+          abilities: {
+            ability1: gSpecies.abilities.ability1?.names.en || 'Unknown',
+            ability2: gSpecies.abilities.ability2?.names.en || undefined,
+            hiddenAbility: gSpecies.abilities.hidden?.names.en || undefined,
+          },
+        },
+        ability: abilityNode ? { name: abilityNode.names.en, description: '', isHidden: false } : {
+          name: 'Unknown', description: 'Ability data not available', isHidden: false
         },
         gender,
         level,
         encounter: encounterInfo.details,
-        natureName: finalNature.name,
+        natureName: getNatureName(finalNature.applied ? finalNature.natureId : rawData.nature),
         shinyStatus,
       };
 

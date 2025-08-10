@@ -169,14 +169,15 @@ export const NATURE_NAMES = [
  * @param wasmData Raw data object from WASM module
  * @returns Parsed RawPokemonData
  */
-export function parseRawPokemonData(wasmData: any): RawPokemonData {
+export function parseRawPokemonData(wasmData: unknown): RawPokemonData {
   if (!wasmData) {
     throw new Error('WASM data is null or undefined');
   }
 
   // getter関数/プロパティ両対応のフィールド取得ヘルパ
-  const readField = (obj: any, key: string) => {
-    const val = typeof obj[key] === 'function' ? obj[key]() : obj[key];
+  const readField = (obj: Record<string, unknown>, key: string) => {
+    const candidate = obj[key];
+    const val = typeof candidate === 'function' ? (candidate as () => unknown)() : candidate;
     if (val === undefined) {
       throw new Error(`Missing required property or method: ${key}`);
     }
@@ -184,28 +185,47 @@ export function parseRawPokemonData(wasmData: any): RawPokemonData {
   };
 
   try {
-    const seedVal = readField(wasmData, 'get_seed');
-    const pid = readField(wasmData, 'get_pid');
-    const nature = readField(wasmData, 'get_nature');
-    const syncApplied = readField(wasmData, 'get_sync_applied');
-    const abilitySlot = readField(wasmData, 'get_ability_slot');
-    const genderValue = readField(wasmData, 'get_gender_value');
-    const encounterSlotValue = readField(wasmData, 'get_encounter_slot_value');
-    const encounterType = readField(wasmData, 'get_encounter_type');
-    const levelRandValue = readField(wasmData, 'get_level_rand_value');
-    const shinyType = readField(wasmData, 'get_shiny_type');
+    const obj = wasmData as Record<string, unknown>;
+    const toBigInt = (v: unknown): bigint => {
+      if (typeof v === 'bigint') return v;
+      if (typeof v === 'number') return BigInt(Math.trunc(v));
+      if (typeof v === 'string') return BigInt(v);
+      if (typeof v === 'boolean') return BigInt(v ? 1 : 0);
+      throw new Error(`Invalid bigint-like value: ${String(v)}`);
+    };
+    const toNumber = (v: unknown): number => {
+      if (typeof v === 'number') return v;
+      if (typeof v === 'bigint') return Number(v);
+      if (typeof v === 'string') {
+        const n = Number(v);
+        if (!Number.isFinite(n)) throw new Error(`Invalid number string: ${v}`);
+        return n;
+      }
+      if (typeof v === 'boolean') return v ? 1 : 0;
+      throw new Error(`Invalid number-like value: ${String(v)}`);
+    };
+  const seedVal = readField(obj, 'get_seed');
+  const pid = readField(obj, 'get_pid');
+  const nature = readField(obj, 'get_nature');
+  const syncApplied = readField(obj, 'get_sync_applied');
+  const abilitySlot = readField(obj, 'get_ability_slot');
+  const genderValue = readField(obj, 'get_gender_value');
+  const encounterSlotValue = readField(obj, 'get_encounter_slot_value');
+  const encounterType = readField(obj, 'get_encounter_type');
+  const levelRandValue = readField(obj, 'get_level_rand_value');
+  const shinyType = readField(obj, 'get_shiny_type');
 
     return {
-      seed: typeof seedVal === 'bigint' ? seedVal : BigInt(seedVal),
-      pid: Number(pid),
-      nature: Number(nature),
+      seed: toBigInt(seedVal),
+      pid: toNumber(pid),
+      nature: toNumber(nature),
       syncApplied: Boolean(syncApplied),
-      abilitySlot: Number(abilitySlot),
-      genderValue: Number(genderValue),
-      encounterSlotValue: Number(encounterSlotValue),
-      encounterType: Number(encounterType),
-      levelRandValue: Number(levelRandValue),
-      shinyType: Number(shinyType),
+      abilitySlot: toNumber(abilitySlot),
+      genderValue: toNumber(genderValue),
+      encounterSlotValue: toNumber(encounterSlotValue),
+      encounterType: toNumber(encounterType),
+      levelRandValue: toNumber(levelRandValue),
+      shinyType: toNumber(shinyType),
     };
   } catch (error) {
     throw new Error(`Failed to parse WASM pokemon data: ${error}`);
@@ -272,13 +292,5 @@ export function getEncounterTypeName(encounterType: number): string {
  * @param genderRatio Species gender ratio (percent male, -1 for genderless)
  * @returns Gender string
  */
-export function determineGender(genderValue: number, genderRatio: number): 'Male' | 'Female' | 'Genderless' {
-  if (genderRatio === -1) {
-    return 'Genderless';
-  }
-  
-  // Convert percentage to threshold (0-255 scale)
-  const maleThreshold = Math.floor((genderRatio / 100) * 256);
-  
-  return genderValue < maleThreshold ? 'Male' : 'Female';
-}
+// Legacy determineGender(genderRatio) is removed.
+// Use determineGenderFromSpec(genderValue, { type: 'genderless' | 'fixed' | 'ratio', ... })

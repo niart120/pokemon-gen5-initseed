@@ -62,7 +62,13 @@ function parseRawPokemonData(wasmData: any): RawPokemonData
 // Utility functions
 function getNatureName(natureId: number): string
 function getShinyStatusName(shinyType: number): string
-function determineGender(genderValue: number, genderRatio: number): 'Male' | 'Female' | 'Genderless'
+function determineGenderFromSpec(
+  genderValue: number,
+  spec:
+    | { type: 'genderless' }
+    | { type: 'fixed'; fixed: 'male' | 'female' }
+    | { type: 'ratio'; femaleThreshold: number }
+): 'Male' | 'Female' | 'Genderless'
 ```
 
 ### 2. Encounter Tables (`src/data/encounter-tables.ts`)

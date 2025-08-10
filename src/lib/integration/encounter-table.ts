@@ -17,7 +17,6 @@ import {
   FishingRodType
 } from '../../data/encounters/types';
 import type { 
-  AreaEncounterTable, 
   EncounterSlot, 
   EncounterSelection,
   EncounterRateValidation,

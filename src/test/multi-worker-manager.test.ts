@@ -86,7 +86,7 @@ describe('MultiWorkerSearchManager', () => {
   describe('startParallelSearch', () => {
     it('重複実行を防ぐ', async () => {
       // 最初の検索開始をモック
-      const searchPromise1 = manager.startParallelSearch(
+  const _searchPromise1 = manager.startParallelSearch(
         mockConditions, 
         [0x12345678], 
         mockCallbacks
@@ -105,7 +105,7 @@ describe('MultiWorkerSearchManager', () => {
       vi.clearAllMocks();
       
       // 検索開始
-      const searchPromise = manager2.startParallelSearch(
+  const _searchPromise = manager2.startParallelSearch(
         mockConditions, 
         [0x12345678], 
         mockCallbacks
@@ -119,7 +119,7 @@ describe('MultiWorkerSearchManager', () => {
     });
 
     it('Workerにメッセージを送信する', async () => {
-      const searchPromise = manager.startParallelSearch(
+  const _searchPromise = manager.startParallelSearch(
         mockConditions, 
         [0x12345678], 
         mockCallbacks

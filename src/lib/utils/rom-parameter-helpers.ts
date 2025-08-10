@@ -4,6 +4,7 @@
  */
 import type { ROMParameters } from '@/types/pokemon';
 import romParameters from '@/data/rom-parameters';
+import type { ROMVersion, ROMRegion } from '@/types/pokemon';
 
 /**
  * 指定されたVCOUNT値に対応するTimer0範囲を取得
@@ -81,13 +82,18 @@ export function getVCountFromTimer0(version: string, region: string, timer0: num
  * @returns ROMParameters or null if not found
  */
 function getROMParameters(version: string, region: string): ROMParameters | null {
-  const versionData = (romParameters as any)[version];
+  // romParameters の型を構築
+  type ROMParamsTree = Record<ROMVersion, Record<ROMRegion, ROMParameters>>;
+  const tree = romParameters as unknown as ROMParamsTree;
+  const versionKey = version as ROMVersion;
+  const regionKey = region as ROMRegion;
+  const versionData = tree[versionKey];
   if (!versionData) return null;
-  
-  const regionData = versionData[region];
+
+  const regionData = versionData[regionKey];
   if (!regionData) return null;
-  
-  return regionData as ROMParameters;
+
+  return regionData;
 }
 
 /**

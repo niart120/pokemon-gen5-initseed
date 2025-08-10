@@ -13,9 +13,10 @@ import {
   NATURE_NAMES,
   RawPokemonParserConfig,
   LevelCalculationConfig,
-  GenderRatio,
-  WasmRawPokemonDataProperty
+  // GenderRatio,
+  // WasmRawPokemonDataProperty
 } from '@/types/raw-pokemon';
+import { determineGenderFromSpec } from '@/lib/services/gender-utils';
 
 /**
  * WASM RawPokemonDataオブジェクト（実際のWASMインスタンス）
@@ -41,7 +42,7 @@ export interface WasmRawPokemonDataInstance {
  * WASM出力 → TypeScript型変換とplaceholder値処理
  */
 export class RawPokemonDataParser {
-  private config: Required<RawPokemonParserConfig>;
+  private config: RawPokemonParserConfig;
 
   constructor(config: Partial<RawPokemonParserConfig> = {}) {
     this.config = {
@@ -211,7 +212,7 @@ export class RawPokemonDataParser {
    */
   private determineGender(data: RawPokemonData): 'M' | 'F' | 'N' {
     const genderValue = this.processPlaceholderValue(data.gender_value, 'gender');
-    
+
     if (genderValue === null) {
       return 'N'; // 性別不明
     }
@@ -226,9 +227,12 @@ export class RawPokemonDataParser {
       return 'N';
     }
 
-    // Pokemon仕様: gender_value < female_threshold なら雌、それ以外は雄
-    // male_ratioは雌になる上限値（female threshold）
-    return genderValue < genderRatio.male_ratio ? 'F' : 'M';
+    // gender-utils に統一: femaleThreshold ベースの仕様で判定
+    const unified = determineGenderFromSpec(genderValue, {
+      type: 'ratio',
+      femaleThreshold: genderRatio.male_ratio, // male_ratio は female threshold（雌になる上限値）
+    });
+    return unified === 'Female' ? 'F' : 'M';
   }
 
   /**

@@ -12,7 +12,7 @@ import { getResponsiveSizes } from '../../utils/responsive-sizes';
 import type { InitialSeedResult, SearchResult } from '../../types/pokemon';
 
 export function SearchPanel() {
-  const { searchConditions, setSearchConditions, searchResults } = useAppStore();
+  const { searchResults } = useAppStore();
   
   const { isStack, uiScale } = useResponsiveLayout();
   
@@ -58,7 +58,7 @@ export function SearchPanel() {
   // Sort results
   const filteredAndSortedResults = useMemo(() => {
     const sorted = [...filteredResults].sort((a, b) => {
-      let aValue: any, bValue: any;
+      let aValue: number, bValue: number;
       
       switch (sortField) {
         case 'datetime':

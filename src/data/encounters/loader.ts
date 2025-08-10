@@ -26,7 +26,7 @@ let registry: Record<string, EncounterRegistry> | null = null; // key: `${versio
   const modules = import.meta.glob('./generated/v1/**/**/*.json', { eager: true }) as Record<string, { default: EncounterLocationsJson } | EncounterLocationsJson>;
   const acc: Record<string, EncounterRegistry> = {};
   for (const [, mod] of Object.entries(modules)) {
-    const data: EncounterLocationsJson = (mod as any).default ?? (mod as any);
+    const data: EncounterLocationsJson = (('default' in (mod as object)) ? (mod as { default: EncounterLocationsJson }).default : (mod as EncounterLocationsJson));
     const key = `${data.version}_${data.method}`;
     if (!acc[key]) acc[key] = {};
     for (const [locKey, payload] of Object.entries(data.locations)) {
