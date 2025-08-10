@@ -27,7 +27,22 @@
 - **バックグラウンド処理**: Web Workers + 並列処理対応
 - **パフォーマンス監視**: 本番用軽量監視 + 開発用詳細分析
 
-## 開発・ビルド
+### WebAssembly計算エンジン
+
+本アプリケーションの計算処理は以下のRust WebAssemblyモジュールで実装されています：
+
+- **IntegratedSeedSearcher**: 統合シード探索API（メイン検索エンジン）
+- **PersonalityRNG**: BW/BW2仕様64bit線形合同法乱数生成器
+- **EncounterCalculator**: 遭遇スロット計算エンジン（BW/BW2別対応）
+- **OffsetCalculator**: ゲーム初期化処理とオフセット計算
+- **PIDCalculator & ShinyChecker**: PID生成と色違い判定
+- **PokemonGenerator**: 統合ポケモン生成エンジン
+
+
+
+## 開発・ビルド・テスト
+
+### 基本コマンド
 
 ```bash
 # 依存関係のインストール
@@ -35,6 +50,9 @@ npm install
 
 # 開発サーバー起動
 npm run dev
+
+# 開発サーバー起動（軽量モード・E2Eテスト用）
+npm run dev:agent
 
 # WebAssemblyビルド
 npm run build:wasm
@@ -44,19 +62,52 @@ npm run build
 
 # GitHub Pagesデプロイ
 npm run deploy
+```
 
-# テスト実行
+### テスト・検証手順
+
+#### 基本テスト実行
+
+```bash
+# TypeScriptテスト実行
 npm run test
 
-# Rustテスト実行
+# Rustテスト実行（WASM単体）
 npm run test:rust
 
-# Rustブラウザテスト実行
+# Rustブラウザテスト実行（WASM統合）
 npm run test:rust:browser
 
-# 全テスト実行
+# 全テスト実行（推奨）
 npm run test:all
 ```
+
+#### 開発・検証用テストページ
+
+テストページでの詳細な動作確認・パフォーマンス測定：
+
+```bash
+# 開発サーバー起動後、ブラウザで以下にアクセス
+
+# 開発テスト（個別機能・パフォーマンステスト）
+http://localhost:5173/test-development.html
+
+# 統合テスト（システム全体・ワークフローテスト）  
+http://localhost:5173/test-integration.html
+
+# 並列処理テスト（WebWorker・並列処理検証）
+http://localhost:5173/test-parallel.html
+```
+
+### 品質保証
+
+本プロジェクトは包括的なテスト環境により品質を保証しています：
+
+- **WASM単体テスト**: Rust Cargoテスト（95テスト以上）
+- **TypeScript単体テスト**: Vitestベース
+- **統合テスト**: WebAssembly-TypeScript連携テスト
+- **ブラウザテスト**: wasm-packによる実環境テスト
+- **E2Eテスト**: Playwright-MCPによる自動化テスト
 
 ## テスト環境
 
@@ -138,6 +189,12 @@ WebAssembly SIMD128命令を活用した4並列SHA-1処理により大幅な性�
 4. 目標Seedリストを入力
 5. 探索開始で高速検索を実行
 
+## APIドキュメント
+
+詳細なAPI仕様や使用例は以下を参照してください。
+
+ - spec/implementation/phase2-api.md
+
 ## E2Eテスト
 
 包括的なブラウザ自動化テストをPlaywright-MCPで実行できます：
@@ -156,7 +213,18 @@ npm run dev
 
 ## データ出典とクレジット
 
-- 遭遇データの主な出典: <a href="https://pokebook.jp/" target="_blank" rel="noreferrer">ポケモンの友 (Pokebook)</a>
+### 技術資料
+- ポケモン第5世代乱数調整: https://rusted-coil.sakura.ne.jp/pokemon/ran/ran_5.htm
+- BW なみのり・つり・大量発生 野生乱数: https://xxsakixx.com/archives/53402929.html
+- BW 出現スロットの閾値: https://xxsakixx.com/archives/53962575.html
+
+### データソース
+- ポケモン攻略DE.com: http://blog.game-de.com/pokedata/pokemon-data/ （種族データ）
+- ポケモンの友 (Black): https://pokebook.jp/data/sp5/enc_b （遭遇テーブル）
+- ポケモンの友 (White): https://pokebook.jp/data/sp5/enc_w （遭遇テーブル）
+- ポケモンの友 (Black 2): https://pokebook.jp/data/sp5/enc_b2 （遭遇テーブル）
+- ポケモンの友 (White 2): https://pokebook.jp/data/sp5/enc_w2 （遭遇テーブル）
+
 - 本ツールは非公式であり、いかなる保証も行いません。データには誤りが含まれる可能性があります。ゲーム内結果での検証を推奨します。
 
 ## ライセンス

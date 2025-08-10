@@ -8,7 +8,7 @@
 1) エンカウントは既存のJSONテーブル群（src/data/encounters/**）を唯一のソースとする。
    - PR30 の簡易BASIC_ENCOUNTER_TABLEと独自Resolver（src/lib/integration/resolvers.ts）は廃止。
 2) 性別判定は「female閾値（0-255）基準」に統一。
-   - gender_value < female_threshold → Female、その他 → Male。
+   - gender_value < female_threshold → Female、その以外 → Male。
    - Genderless/固定性別はデータで明示。
    - 共通ユーティリティ化して単一実装を使用。
 3) 特性解決は ability_slot による通常特性1/2の選択のみに限定。
@@ -65,7 +65,7 @@ Phase 3: テスト更新
 
 Phase 4: クリーニング
 - Lint修正（未使用変数・React Hooksルール等の警告/エラー解消）。
-- ドキュメント整備（docs/phase2-api.md の追記、README抜粋更新）。
+- ドキュメント整備（spec/implementation/phase2-api.md の追記、README抜粋更新）。
 
 リスクと対処
 - 外部API変更/一時不通 → 生成物をリポジトリに保持、再取得は手動。
