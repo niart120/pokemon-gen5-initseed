@@ -13,9 +13,7 @@ import { Alert, AlertDescription } from '../ui/alert';
 export function PresetManager() {
   const { 
     searchConditions, 
-    setSearchConditions, 
     presets, 
-    setPresets, 
     addPreset, 
     removePreset, 
     loadPreset: loadPresetFromStore 

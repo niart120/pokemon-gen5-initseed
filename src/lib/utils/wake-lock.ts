@@ -27,11 +27,11 @@ export async function requestWakeLock(): Promise<boolean> {
     
     // Listen for wake lock release (e.g., when tab becomes hidden)
     wakeLockSentinel.addEventListener('release', () => {
-      console.log('Wake lock was released');
+      console.warn('Wake lock was released');
       wakeLockSentinel = null;
     });
 
-    console.log('Wake lock acquired - screen will stay on');
+    console.warn('Wake lock acquired - screen will stay on');
     return true;
   } catch (error) {
     console.error('Failed to acquire wake lock:', error);
@@ -50,8 +50,8 @@ export async function releaseWakeLock(): Promise<boolean> {
 
   try {
     await wakeLockSentinel.release();
-    wakeLockSentinel = null;
-    console.log('Wake lock released - screen can sleep normally');
+  wakeLockSentinel = null;
+  console.warn('Wake lock released - screen can sleep normally');
     return true;
   } catch (error) {
     console.error('Failed to release wake lock:', error);

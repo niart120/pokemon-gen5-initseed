@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MultiWorkerSearchManager, SearchCallbacks } from '../lib/search/multi-worker-manager';
 import { ChunkCalculator } from '../lib/search/chunk-calculator';
-import type { SearchConditions, InitialSeedResult } from '../types/pokemon';
+import type { SearchConditions } from '../types/pokemon';
 import { initWasmForTesting } from './wasm-loader';
 
 describe('Phase 5: 並列処理テスト', () => {
@@ -124,7 +124,7 @@ describe('Phase 5: 並列処理テスト', () => {
       try {
         await manager.startParallelSearch(conditions, targetSeeds, callbacks);
         await new Promise(resolve => setTimeout(resolve, 100));
-      } catch (error) {
+  } catch {
         errorCaught = true;
       }
       
@@ -258,12 +258,12 @@ describe('Phase 5: 並列処理テスト', () => {
       const conditions = createTestConditions({ hours: 1 });
       const targetSeeds = [0x12345678];
       
-      let hasError = false;
+  let _hasError = false;
       const callbacks: SearchCallbacks = {
         onProgress: vi.fn(),
         onResult: vi.fn(),
         onComplete: vi.fn(),
-        onError: () => { hasError = true; },
+  onError: () => { _hasError = true; },
         onPaused: vi.fn(),
         onResumed: vi.fn(),
         onStopped: vi.fn()

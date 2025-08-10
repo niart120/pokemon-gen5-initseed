@@ -4,8 +4,9 @@
  */
 
 import { SeedCalculator } from '../lib/core/seed-calculator';
-import { ProductionPerformanceMonitor } from '../lib/core/performance-monitor';
-import type { SearchConditions, InitialSeedResult } from '../types/pokemon';
+import { toMacUint8Array } from '../utils/mac-address';
+// import { ProductionPerformanceMonitor } from '../lib/core/performance-monitor';
+import type { SearchConditions, InitialSeedResult, Hardware } from '../types/pokemon';
 
 // Performance optimization: Use larger batch sizes for better WASM utilization
 const BATCH_SIZE_SECONDS = 86400;   // 1日
@@ -42,20 +43,28 @@ interface TimerState {
 }
 
 // Worker state
-let searchState = {
+const searchState = {
   isRunning: false,
   isPaused: false,
   shouldStop: false
 };
 
 // Timer state for elapsed time management
-let timerState: TimerState = {
+const timerState: TimerState = {
   cumulativeRunTime: 0,
   segmentStartTime: 0,
   isPaused: false
 };
 
 let calculator: SeedCalculator;
+
+/**
+ * MACアドレスを Uint8Array(6) に変換
+ * - number[] や string[]("0x12"/"12") を受け付ける
+ * - 値は 0-255 にクランプ
+ * - 長さ不一致時は 6 バイトへ切り詰め/ゼロ埋め
+ */
+// toMacUint8Array は共通ユーティリティから利用
 
 // Initialize calculator
 async function initializeCalculator() {
@@ -123,22 +132,21 @@ async function processBatchIntegrated(
       }
 
       // Hardware別のframe値を設定
-      const HARDWARE_FRAME_VALUES: Record<string, number> = {
-        'DS': 8,
-        'DS_LITE': 6,
+      const HARDWARE_FRAME_VALUES: Record<Hardware, number> = {
+        DS: 8,
+        DS_LITE: 6,
         '3DS': 9
       };
       const frameValue = HARDWARE_FRAME_VALUES[conditions.hardware] || 8;
 
       const searcher = new wasmModule.IntegratedSeedSearcher(
-        conditions.macAddress,
+        toMacUint8Array(conditions.macAddress as unknown as Array<number | string>),
         new Uint32Array(params.nazo),
         conditions.hardware,
         conditions.keyInput,
         frameValue
       );
 
-      const startDate = new Date(startTimestamp);
       const rangeSeconds = Math.floor((endTimestamp - startTimestamp) / 1000);
 
       // サブチャンク分割処理（15日単位、最大1296000秒）
@@ -308,7 +316,7 @@ async function performSearch(conditions: SearchConditions, targetSeeds: number[]
 
     // Calculate search space
     const timer0Range = conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1;
-    const vcountRange = conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1;
+    // const vcountRange = conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1;
     
     const startDate = new Date(
       conditions.dateRange.startYear,
@@ -357,7 +365,7 @@ async function performSearch(conditions: SearchConditions, targetSeeds: number[]
       
       // Note: User manual settings are respected even if outside ROM optimal ranges
       if (actualVCount < conditions.timer0VCountConfig.vcountRange.min || actualVCount > conditions.timer0VCountConfig.vcountRange.max) {
-        console.log(`ℹ️ [WORKER] Calculated VCount ${actualVCount} (0x${actualVCount.toString(16)}) is outside user range ${conditions.timer0VCountConfig.vcountRange.min}-${conditions.timer0VCountConfig.vcountRange.max}, but continuing search as requested.`);
+        console.warn(`[WORKER] Calculated VCount ${actualVCount} (0x${actualVCount.toString(16)}) is outside user range ${conditions.timer0VCountConfig.vcountRange.min}-${conditions.timer0VCountConfig.vcountRange.max}, but continuing search as requested.`);
       }
       
       // Process in time ranges using integrated search with optimized batch size

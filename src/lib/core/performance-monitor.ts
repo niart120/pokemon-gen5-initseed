@@ -69,8 +69,9 @@ export class ProductionPerformanceMonitor {
     const calculationsPerSecond = this.processedCount / (totalTime / 1000);
     
     // メモリ使用量（利用可能な場合）
-    const memoryUsageMB = (performance as any).memory 
-      ? (performance as any).memory.usedJSHeapSize / 1024 / 1024 
+    const perfAny = performance as unknown as { memory?: { usedJSHeapSize: number } };
+    const memoryUsageMB = perfAny.memory
+      ? perfAny.memory.usedJSHeapSize / 1024 / 1024
       : 0;
 
     return {

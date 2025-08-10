@@ -135,7 +135,7 @@ export class ChunkCalculator {
   /**
    * 総秒数計算
    */
-  private static getTotalSeconds(dateRange: any): number {
+  private static getTotalSeconds(dateRange: Pick<SearchConditions, 'dateRange'>['dateRange']): number {
     const startDate = new Date(
       dateRange.startYear,
       dateRange.startMonth - 1,
@@ -173,8 +173,6 @@ export class ChunkCalculator {
 
     const operations = chunks.map(chunk => chunk.estimatedOperations);
     const averageOperations = operations.reduce((sum, ops) => sum + ops, 0) / operations.length;
-    const maxOperations = Math.max(...operations);
-    const minOperations = Math.min(...operations);
     
     // 負荷分散スコア (分散が小さいほど高得点)
     const variance = operations.reduce((sum, ops) => sum + Math.pow(ops - averageOperations, 2), 0) / operations.length;

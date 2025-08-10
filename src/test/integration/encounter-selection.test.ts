@@ -250,6 +250,7 @@ describe('Encounter Selection Integration Tests', () => {
     });
   });
 
+  
 
   describe('Edge Cases and Error Handling', () => {
     it('should handle extreme random values correctly', () => {
