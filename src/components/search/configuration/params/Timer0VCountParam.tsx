@@ -36,7 +36,7 @@ export function Timer0VCountParam() {
       min: formatHexDisplay(config.vcountRange.min),
       max: formatHexDisplay(config.vcountRange.max)
     });
-  }, [hasConfig, config?.timer0Range, config?.vcountRange]);
+  }, [hasConfig, config, config?.timer0Range, config?.vcountRange]);
 
   // useAutoConfigurationフラグ変更時の自動範囲適用
   useEffect(() => {
@@ -64,7 +64,7 @@ export function Timer0VCountParam() {
         });
       }
     }
-  }, [hasConfig, config?.useAutoConfiguration, searchConditions.romVersion, searchConditions.romRegion, setSearchConditions]);
+  }, [hasConfig, config, config?.useAutoConfiguration, searchConditions.romVersion, searchConditions.romRegion, setSearchConditions]);
 
   const handleTimer0InputChange = (field: 'min' | 'max', value: string) => {
     setTimer0InputValues(prev => ({ ...prev, [field]: value }));

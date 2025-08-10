@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import globals from 'globals';
 
 export default tseslint.config(
-  { ignores: ['dist', 'docs', 'wasm-pkg', 'node_modules', 'public/wasm', 'src/wasm'] },
+  { ignores: ['dist', 'docs', 'wasm-pkg', 'node_modules', 'public/wasm', 'src/wasm', 'src/components/ui'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

@@ -40,11 +40,9 @@ export async function initWasmForTesting(): Promise<WasmModule> {
       calculate_sha1_batch: jsModule.calculate_sha1_batch,
     };
 
-    // eslint-disable-next-line no-console
     console.log('🦀 WebAssembly module loaded for testing');
     return wasmModuleInstance;
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('Failed to load WebAssembly module for testing:', error);
     throw error;
   }

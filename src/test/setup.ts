@@ -68,7 +68,6 @@ if (!(global as any).window.localStorage) {
 
 // WebAssembly環境の有無を通知（必要なら）
 if (typeof (global as any).WebAssembly === 'undefined') {
-  // eslint-disable-next-line no-console
   console.warn('WebAssembly not available in test environment');
 }
 
@@ -79,7 +78,6 @@ if (typeof (global as any).WebAssembly === 'undefined') {
     const wasmModule = await WebAssembly.instantiate(wasmFile as unknown as BufferSource);
     return (wasmModule as WebAssembly.WebAssemblyInstantiatedSource).instance;
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('WASM loading error:', error);
     throw error;
   }

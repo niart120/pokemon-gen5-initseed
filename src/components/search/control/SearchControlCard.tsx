@@ -51,7 +51,7 @@ export function SearchControlCard() {
         wakeLockEnabled && (searchProgress.isRunning || searchProgress.isPaused)
       );
     }
-  }, []);
+  }, [wakeLockEnabled, searchProgress.isRunning, searchProgress.isPaused]);
 
   // Wake Lock状態管理: 検索開始/一時停止/終了時に制御
   useEffect(() => {

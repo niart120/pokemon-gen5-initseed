@@ -73,9 +73,7 @@ export async function initWasm(): Promise<WasmModule> {
       // 可能ならバイト列を直接渡す
       let initArg: any;
       if (typeof window === 'undefined') {
-        // eslint-disable-next-line @typescript-eslint/consistent-type-imports
         const fs = await import('fs');
-        // eslint-disable-next-line @typescript-eslint/consistent-type-imports
         const path = await import('path');
         const wasmPath = path.join(process.cwd(), 'src/wasm/wasm_pkg_bg.wasm');
         const bytes = fs.readFileSync(wasmPath);
