@@ -1,462 +1,199 @@
-# Phase 2 — TypeScript Integration API Documentation
+# Phase 2 — TypeScript 統合 API ドキュメント（実装準拠・日本語版）
 
-This document provides comprehensive API documentation for the Phase 2 TypeScript integration components that combine WASM Pokemon generation with encounter tables and species data.
+本書は、WASM で生成した生ポケモンデータを遭遇テーブルと種族データで拡張し、表示・検証に適した形へ統合する Phase 2 の TypeScript API を実装準拠で説明します。
 
-## Overview
-
-Phase 2 implements a complete pipeline from raw WASM Pokemon data to enhanced Pokemon information suitable for display and analysis. The system follows these principles:
-
-- Source of Truth: WASM (Rust) implementation for all calculations
-- Data Integration: Combines WASM output with encounter tables and species data
-- Type Safety: Full TypeScript strict mode compliance
-- Validation: Comprehensive input validation and error handling
-- Documentation: All data sources include URLs and retrieval dates
-
-## Architecture
+## 全体像（正しい入口の明確化）
 
 ```
-WASM Generation → Raw Pokemon Data → Data Integration → Enhanced Pokemon Data
-     ↓                    ↓                  ↓                    ↓
-IntegratedSeedSearcher → RawPokemonData → Integration Service → EnhancedPokemonData
+WASM PokemonGenerator → RawPokemonData → Integration Service → EnhancedPokemonData
+                               │                   │
+                               └─ parseRawPokemonData          └─ 遭遇テーブル + 生成種族データ
 ```
 
-## Core Components
+- 生成エントリは PokemonGenerator（WASM）です。IntegratedSeedSearcher は「初期Seed探索」用であり、生成パイプラインの入口ではありません。
+- 型・パーサは `src/types/raw-pokemon-data.ts` を唯一の基準とします。
+- 遭遇テーブルは JSON データのみに依存し、統合サービスではフォールバックを行いません（テスト用途のサンプルは別途有り）。
+- 種族データは生成済み JSON アダプタ（`src/data/species/generated`）を使用します。
 
-### 1. RawPokemonData Parser (`src/types/raw-pokemon-data.ts`)
+## 1) RawPokemonData とパーサ（`src/types/raw-pokemon-data.ts`）
 
-Handles parsing and typing of raw Pokemon data from WASM.
+役割
+- WASM から返る RawPokemonData を TypeScript へ安全に変換
+- 名称変換（性格/色違い種別）などのユーティリティ提供
 
-#### Key Types
+主要型（抜粋）
+- RawPokemonData: seed/pid/nature/syncApplied/abilitySlot/genderValue/encounterSlotValue/encounterType/levelRandValue/shinyType
+- EnhancedPokemonData: RawPokemonData を拡張し species/ability/gender/level/encounter/natureName/shinyStatus を付与
 
-```typescript
-interface RawPokemonData {
-  seed: bigint;
-  pid: number;
-  nature: number;
-  syncApplied: boolean;
-  abilitySlot: number;
-  genderValue: number;
-  encounterSlotValue: number;
-  encounterType: number;
-  levelRandValue: number;
-  shinyType: number;
-}
+主要関数
+- parseRawPokemonData(wasmData): WASM の getter/properties 双方に対応して厳密変換
+- getNatureName(natureId): 0–24 を検証して名称を返却
+- getShinyStatusName(shinyType): 列挙に基づく名称化
 
-interface EnhancedPokemonData extends RawPokemonData {
-  species: PokemonSpecies;
-  ability: PokemonAbility;
-  gender: 'Male' | 'Female' | 'Genderless';
-  level: number;
-  encounter: EncounterDetails;
-  natureName: string;
-  shinyStatus: 'Normal' | 'Square Shiny' | 'Star Shiny';
-}
-```
+補足
+- enum EncounterType/ShinyType を公開
 
-#### Key Functions
+## 2) WASM 生成サービス（`src/lib/services/wasm-pokemon-service.ts`）
 
-```typescript
-// Parse WASM data to TypeScript
-function parseRawPokemonData(wasmData: any): RawPokemonData
+役割
+- PokemonGenerator の高水準ラッパ。入力検証と例外を一元化
 
-// Utility functions
-function getNatureName(natureId: number): string
-function getShinyStatusName(shinyType: number): string
-function determineGenderFromSpec(
-  genderValue: number,
-  spec:
-    | { type: 'genderless' }
-    | { type: 'fixed'; fixed: 'male' | 'female' }
-    | { type: 'ratio'; femaleThreshold: number }
-): 'Male' | 'Female' | 'Genderless'
-```
+公開型
+- WasmGenerationConfig: version/region/hardware/tid/sid/syncEnabled/syncNatureId/macAddress/keyInput/frame
+- PokemonGenerationRequest: seed/config/(count/offset)
+- PokemonGenerationResult: pokemon[]/stats（時間・件数・初期seed）
 
-### 2. Encounter Tables (`src/data/encounter-tables.ts`)
+公開クラス
+- WasmPokemonService
+  - initialize(): WASM 初期化
+  - isReady(): 準備完了判定
+  - generateSinglePokemon(req): RawPokemonData を 1 件生成
+  - generatePokemonBatch(req): RawPokemonData を複数生成
+  - static createDefaultConfig(): デモ用既定設定
 
-Defines encounter tables with documented data sources.
+ユーティリティ
+- getWasmPokemonService(): シングルトン取得（内部で initialize）
+- generatePokemon(seed, config?): 1件生成の簡易関数
+- generatePokemonBatch(seed, count, config?): 複数生成の簡易関数
 
-#### Data Sources
-- Bulbapedia: https://bulbapedia.bulbagarden.net/wiki/List_of_Pok%C3%A9mon_by_Unova_Pok%C3%A9dex_number (Retrieved: 2024-01-15)
-- Serebii.net: https://www.serebii.net/blackwhite/pokemon.shtml (Retrieved: 2024-01-15)
-- Pokemon Database: https://pokemondb.net/pokedex/game/black-white (Retrieved: 2024-01-15)
+エラー
+- WasmServiceError（code: WASM_INIT_FAILED/GENERATION_FAILED/BATCH_GENERATION_FAILED/NOT_INITIALIZED/…）
 
-#### Key Types
+備考
+- 実装は `BWGenerationConfig` を構築し `PokemonGenerator.generate_*_bw` を呼び出します。
 
-```typescript
-interface EncounterSlot {
-  speciesId: number;
-  rate: number;
-  levelRange: { min: number; max: number };
-}
+## 3) 統合サービス（`src/lib/services/pokemon-integration-service.ts`）
 
-interface EncounterTable {
-  location: string;
-  method: EncounterType;
-  version: ROMVersion;
-  slots: EncounterSlot[];
-}
-```
+役割
+- RawPokemonData + 遭遇テーブル + 生成種族データ を結合し EnhancedPokemonData を作成
 
-#### Key Functions
+公開型
+- IntegrationConfig: version/defaultLocation/applySynchronize/synchronizeNature
+- IntegrationResult: pokemon（Enhanced）+ metadata（found フラグ・warnings）
 
-```typescript
-// Lookup functions
-function getEncounterTable(version: ROMVersion, location: string, method: EncounterType): EncounterTable | null
-function getEncounterSlot(table: EncounterTable, slotValue: number): EncounterSlot
+公開クラス/関数
+- PokemonIntegrationService
+  - integratePokemon(raw, config): 1件統合
+  - integratePokemonBatch(raws, config): 複数統合
+  - validateIntegrationResult(result): レベル範囲/性格/特性スロット等の整合性検証
+  - getIntegrationStats(results): 統計集計
+- getIntegrationService(): シングルトン
+- integratePokemon()/integratePokemonBatch(): ユーティリティ
+- createDefaultIntegrationConfig(): 既定設定作成
 
-// Calculation functions
-function calculateLevel(levelRandValue: number, levelRange: { min: number; max: number }): number
-```
+エラー/方針
+- IntegrationError（code: MISSING_ENCOUNTER_TABLE など）
+- 統合サービスは JSON データのみを参照し「フォールバック無し」。テーブル未発見は例外。
+- 同期（Synchronize）は野生系遭遇（EncounterType 0..7）のみ対象。静的/イベント/ローミングは対象外。
 
-### 3. Pokemon Species Data (`src/data/pokemon-species.ts`)
+EnhancedPokemonData へのマッピング注意
+- 現状の生成種族データには型や性別比の完全情報が未整備のため、以下は暫定値：
+  - species.types: ['Normal'] のプレースホルダ
+  - species.genderRatio: genderless のとき -1、それ以外は 0
+ 追って生成データ拡充時に正値へ置換予定。
 
-Contains Pokemon species and ability information.
+## 4) 遭遇テーブル（`src/data/encounter-tables.ts`）
 
-#### Data Sources
-- Bulbapedia species pages: https://bulbapedia.bulbagarden.net/wiki/List_of_Pok%C3%A9mon_by_National_Pok%C3%A9dex_number (Retrieved: 2024-01-15)
-- Pokemon Database: https://pokemondb.net/pokedex/all (Retrieved: 2024-01-15)
-- Serebii.net Pokedex: https://www.serebii.net/pokedex-bw/ (Retrieved: 2024-01-15)
+役割
+- `getEncounterTable(version, location, method)` / `getEncounterSlot(table, slotValue)` / `calculateLevel(levelRandValue, range)` を提供
 
-#### Key Types
+方針
+- 統合サービスは JSON テーブル必須（フォールバック無し）。
+- テスト/デモ向けのサンプルはアセンブラ側（後述）で提供。
 
-```typescript
-interface PokemonSpecies {
-  nationalDex: number;
-  name: string;
-  baseStats: { hp: number; attack: number; defense: number; specialAttack: number; specialDefense: number; speed: number };
-  types: [string] | [string, string];
-  genderRatio: number; // -1 for genderless
-  abilities: { ability1: string; ability2?: string; hiddenAbility?: string };
-}
+出典（実装に合わせる）
+- 遭遇テーブル: pokebook.jp（BW/BW2 の各ページ）
 
-interface PokemonAbility {
-  name: string;
-  description: string;
-  isHidden: boolean;
-}
-```
+## 5) 生成種族データ（`src/data/species/generated`）
 
-#### Key Functions
+役割
+- 生成済み JSON から種族・特性を引くアダプタ
 
-```typescript
-// Lookup functions
-function getPokemonSpecies(nationalDex: number): PokemonSpecies | null
-function getPokemonAbility(abilityName: string): PokemonAbility | null
-function getSpeciesAbility(species: PokemonSpecies, abilitySlot: number): PokemonAbility | null
-```
+公開関数（代表）
+- getGeneratedSpeciesById(id)
+- selectAbilityBySlot(slot, abilities)
 
-### 4. WASM Pokemon Service (`src/lib/services/wasm-pokemon-service.ts`)
+注意
+- abilities は `{ ability1/ability2/hidden }` それぞれに `names.{ en, ja }` を持つ構造です。
 
-High-level interface to WASM Pokemon generation with validation and error handling.
+## 6) アセンブラ（関数型 API、テスト/デモ用）
 
-#### Key Types
+場所
+- `src/lib/integration/pokemon-assembler.ts`
 
-```typescript
-interface WasmGenerationConfig {
-  version: ROMVersion;
-  region: ROMRegion;
-  hardware: Hardware;
-  tid: number;
-  sid: number;
-  syncEnabled: boolean;
-  syncNatureId: number;
-  macAddress: number[];
-  keyInput: number;
-  frame: number;
-}
+役割
+- サンプル遭遇テーブル（`createSampleEncounterTables()`）や同期ルール検証（`validateSyncRules()`）を含むデモ/テスト支援 API。
+- 本番統合は `PokemonIntegrationService` を使用し、フォールバックは行いません。
 
-interface PokemonGenerationRequest {
-  seed: bigint;
-  config: WasmGenerationConfig;
-  count?: number;
-  offset?: number;
-}
-```
+主な関数
+- createAssemblerContext(version, region, tables?)
+- assembleData(ctx, raw) / assembleBatch(ctx, raws)
+- setEncounterTable(ctx, type, table) / getEncounterTables(ctx)
+- validateSyncRules(enhanced[]): 同期適用の適合性検証
 
-#### Key Classes
+## 使用例
 
-```typescript
-class WasmPokemonService {
-  async initialize(): Promise<void>
-  isReady(): boolean
-  async generateSinglePokemon(request: PokemonGenerationRequest): Promise<RawPokemonData>
-  async generatePokemonBatch(request: PokemonGenerationRequest): Promise<PokemonGenerationResult>
-}
-```
+WASM 生成 → 統合までの最小例：
 
-#### Usage Example
-
-```typescript
-import { WasmPokemonService } from '@/lib/services/wasm-pokemon-service';
-
-const service = new WasmPokemonService();
-await service.initialize();
-
-const config = WasmPokemonService.createDefaultConfig();
-const pokemon = await service.generateSinglePokemon({
-  seed: 0x123456789ABCDEFn,
-  config,
-});
-```
-
-### 5. Pokemon Integration Service (`src/lib/services/pokemon-integration-service.ts`)
-
-Combines raw WASM data with encounter tables and species information.
-
-#### Key Types
-
-```typescript
-interface IntegrationConfig {
-  version: ROMVersion;
-  defaultLocation?: string;
-  applySynchronize?: boolean;
-  synchronizeNature?: number;
-}
-
-interface IntegrationResult {
-  pokemon: EnhancedPokemonData;
-  metadata: {
-    encounterTableFound: boolean;
-    speciesDataFound: boolean;
-    abilityDataFound: boolean;
-    warnings: string[];
-  };
-}
-```
-
-#### Key Classes
-
-```typescript
-class PokemonIntegrationService {
-  integratePokemon(rawData: RawPokemonData, config: IntegrationConfig): IntegrationResult
-  integratePokemonBatch(rawDataArray: RawPokemonData[], config: IntegrationConfig): IntegrationResult[]
-  validateIntegrationResult(result: IntegrationResult): boolean
-}
-```
-
-#### Usage Example
-
-```typescript
-import { getIntegrationService } from '@/lib/services/pokemon-integration-service';
-
-const service = getIntegrationService();
-const result = service.integratePokemon(rawData, {
-  version: 'B',
-  defaultLocation: 'Route 1',
-  applySynchronize: true,
-  synchronizeNature: 10, // Timid
-});
-
-console.log(`Generated ${result.pokemon.species.name} at level ${result.pokemon.level}`);
-```
-
-## Complete Usage Example
-
-Here's a complete example showing the full pipeline from WASM generation to enhanced Pokemon data:
-
-```typescript
+```ts
 import { getWasmPokemonService } from '@/lib/services/wasm-pokemon-service';
 import { getIntegrationService } from '@/lib/services/pokemon-integration-service';
 
 async function generateEnhancedPokemon(seed: bigint) {
-  // Step 1: Generate raw Pokemon data with WASM
   const wasmService = await getWasmPokemonService();
   const rawData = await wasmService.generateSinglePokemon({
     seed,
     config: {
-      version: 'B',
-      region: 'JPN',
-      hardware: 'DS',
-      tid: 12345,
-      sid: 54321,
-      syncEnabled: true,
-      syncNatureId: 10, // Timid
-      macAddress: [0x00, 0x16, 0x56, 0x12, 0x34, 0x56],
-      keyInput: 0,
-      frame: 1,
+      version: 'B', region: 'JPN', hardware: 'DS',
+      tid: 12345, sid: 54321,
+      syncEnabled: true, syncNatureId: 10,
+      macAddress: [0, 0, 0, 0, 0, 0], keyInput: 0, frame: 1,
     },
   });
 
-  // Step 2: Integrate with encounter and species data
-  const integrationService = getIntegrationService();
-  const result = integrationService.integratePokemon(rawData, {
+  const integration = getIntegrationService();
+  const result = integration.integratePokemon(rawData, {
     version: 'B',
     defaultLocation: 'Route 1',
     applySynchronize: true,
     synchronizeNature: 10,
   });
 
-  // Step 3: Use enhanced Pokemon data
-  const pokemon = result.pokemon;
-  console.log(`Generated ${pokemon.species.name}:`);
-  console.log(`  Level: ${pokemon.level}`);
-  console.log(`  Nature: ${pokemon.natureName}`);
-  console.log(`  Ability: ${pokemon.ability.name}`);
-  console.log(`  Gender: ${pokemon.gender}`);
-  console.log(`  Shiny: ${pokemon.shinyStatus}`);
-  console.log(`  Location: ${pokemon.encounter.location}`);
-
-  return pokemon;
+  return result.pokemon;
 }
 ```
 
-## Error Handling
+## エラー処理
 
-All services provide comprehensive error handling:
-
-```typescript
-import { WasmServiceError, IntegrationError } from '@/lib/services/...';
+```ts
+import { WasmServiceError } from '@/lib/services/wasm-pokemon-service';
+import { IntegrationError } from '@/lib/services/pokemon-integration-service';
 
 try {
-  const pokemon = await generatePokemon(seed, config);
-} catch (error) {
-  if (error instanceof WasmServiceError) {
-    console.error('WASM generation failed:', error.code, error.message);
-  } else if (error instanceof IntegrationError) {
-    console.error('Integration failed:', error.code, error.message);
+  const p = await generateEnhancedPokemon(0x12345678n);
+} catch (e) {
+  if (e instanceof WasmServiceError) {
+    // 初期化・生成時のエラー
+  } else if (e instanceof IntegrationError) {
+    // 遭遇テーブル未発見などの統合エラー
   }
 }
 ```
 
-## Testing
+## テスト
 
-The implementation includes comprehensive tests:
+- 統合テスト: `src/test/phase2-integration.test.ts`
+- アセンブラ検証: `src/test/integration/pokemon-assembler.test.ts`
+- 生成サービス: `src/test/integration/wasm-service.test.ts`
 
-- Basic validation tests: `src/test/phase2-basic.test.ts`
-- Integration tests: `src/test/phase2-integration.test.ts`
+## データ出典（現行実装に準拠）
 
-Run tests:
-```bash
-npm run test src/test/phase2-basic.test.ts
-npm run test src/test/phase2-integration.test.ts
-```
+- 技術資料: rusted-coil、xxsakixx（BW遭遇・乱数）
+- 遭遇テーブル: pokebook.jp（BW/BW2 各ページ）
+- 補助資料: 必要に応じて Bulbapedia など
 
-## Data Coverage
+## 付記（今後の拡張）
 
-Currently implemented data includes:
+- 生成種族データの型/性別比/タイプ情報の拡充に合わせ、EnhancedPokemonData へのプレースホルダを正値化します。
+- 隠れ特性はフラグ導入後に isHidden の正確化を予定。
 
-### Pokemon Species
-- Generation 5 starters (Snivy, Tepig, Oshawott)
-- Common early-game Pokemon (Patrat, Lillipup)
-- Elemental monkeys (Pansage, Pansear, Panpour)
-- Example psychic and water types (Munna, Basculin)
-
-### Encounter Tables
-- Route 1 grass encounters
-- Dreamyard static encounters
-- Wellspring Cave fishing encounters
-- Default tables for all encounter types
-
-### Abilities
-- Basic ability database with descriptions
-- Support for normal and hidden abilities
-
-## Extension Points
-
-The system is designed for easy extension:
-
-1. Add more species: Extend `POKEMON_SPECIES` in `pokemon-species.ts`
-2. Add more encounter tables: Extend `ENCOUNTER_TABLES` in `encounter-tables.ts`
-3. Add more abilities: Extend `ABILITIES` in `pokemon-species.ts`
-4. Custom integration logic: Extend `PokemonIntegrationService`
-
-## Performance Considerations
-
-- WASM generation is optimized for batch operations
-- Integration service validates results efficiently
-- Services use singleton patterns to minimize initialization overhead
-- Error handling is comprehensive but lightweight
-
-## Source Attribution
-
-All data sources are properly attributed with URLs and retrieval dates as required:
-
-- Encounter data: Bulbapedia, Serebii.net, Pokemon Database
-- Species data: Official Pokemon sources, community databases
-- Game mechanics: Smogon RNG documentation, research communities
-
-This ensures full traceability and allows for data verification and updates.
-
----
-
-## Functional Assembler API (Phase 2 integration) — New
-
-As part of the Phase 2 integration cleanup, the previous class-based `PokemonAssembler` was removed and replaced with a functional API for simpler composition and testability.
-
-Location: `src/lib/integration/pokemon-assembler.ts`
-
-### Key Types
-
-```ts
-export interface AssemblerContext {
-  romVersion: ROMVersion;
-  romRegion: ROMRegion;
-  encounterTables: Partial<EncounterTableMap>;
-}
-
-export interface EncounterTableEntry {
-  species: number;
-  minLevel: number;
-  maxLevel: number;
-  abilityRatio: [number, number];
-  genderRatio: number; // -1 for genderless
-}
-```
-
-### API
-
-```ts
-// Context
-createAssemblerContext(romVersion: ROMVersion, romRegion: ROMRegion, tables?: Partial<EncounterTableMap>): AssemblerContext
-
-// Assemble
-assembleData(ctx: AssemblerContext, raw: RawPokemonData): EnhancedPokemonData
-assembleBatch(ctx: AssemblerContext, raws: RawPokemonData[]): EnhancedPokemonData[]
-
-// Tables
-setEncounterTable(ctx: AssemblerContext, type: EncounterType, table: EncounterTableEntry[]): void
-getEncounterTables(ctx: AssemblerContext): Partial<EncounterTableMap>
-
-// Sync rules validation (batch)
-validateSyncRules(results: EnhancedPokemonData[]): {
-  isValid: boolean;
-  violations: Array<{ index: number; encounterType: EncounterType; syncApplied: boolean; syncEligible: boolean; violation: string }>
-}
-```
-
-Notes:
-- Sync application rules are strictly enforced. Roaming encounters never allow synchronize, and ineligible encounter types must not have sync applied.
-- When encounter tables are absent for a type, a safe default entry is used for testing/fallback.
-
-### Usage Example
-
-```ts
-import {
-  createAssemblerContext,
-  assembleData,
-  assembleBatch,
-  setEncounterTable,
-  getEncounterTables,
-  validateSyncRules,
-  EncounterType,
-  createSampleEncounterTables,
-} from '@/lib/integration/pokemon-assembler';
-
-const ctx = createAssemblerContext('B', 'JPN', createSampleEncounterTables());
-
-// Single
-const enhanced = assembleData(ctx, raw);
-
-// Batch
-const list = assembleBatch(ctx, raws);
-const validation = validateSyncRules(list);
-
-// Manage encounter tables
-setEncounterTable(ctx, EncounterType.Normal, [{ species: 25, minLevel: 10, maxLevel: 15, abilityRatio: [1,0], genderRatio: 50 }]);
-const tables = getEncounterTables(ctx);
-```
-
-### Migration Note
-
-- Removed: `class PokemonAssembler`
-- Use the functional API listed above. All previous behaviors (encounter resolution, level/gender/ability/shiny handling, dust cloud logic, sync eligibility and enforcement) are preserved.
