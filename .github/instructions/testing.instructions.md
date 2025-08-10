@@ -44,7 +44,7 @@ applyTo: "**/*.test.{ts,js}"
 
 ### 本番用監視 (`src/lib/core/performance-monitor.ts`)
 - リアルタイム測定機能
-- 基本メトリクス (計算速度、メモリ、進捗)
+- 基本メトリクス (計算速度、進捗)
 - 軽量設計・本番環境最適化
 
 ### 開発用分析 (`src/test-utils/profiling/development-analyzer.ts`)

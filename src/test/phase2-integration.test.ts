@@ -10,10 +10,10 @@ import {
   parseRawPokemonData, 
   getNatureName, 
   getShinyStatusName,
-  determineGender,
   type RawPokemonData,
   type ShinyStatusName 
 } from '../types/raw-pokemon-data';
+import { determineGenderFromSpec } from '../lib/services/gender-utils';
 import { 
   WasmPokemonService, 
   WasmServiceError,
@@ -104,17 +104,18 @@ describe('Phase 2 Integration Tests', () => {
       expect(() => getShinyStatusName(3)).toThrow('Invalid shiny type');
     });
 
-    it('should determine gender correctly', () => {
-      // Male-only species (87.5% male)
-      expect(determineGender(100, 87.5)).toBe('Male');
-      expect(determineGender(250, 87.5)).toBe('Female');
-      
-      // 50/50 gender ratio
-      expect(determineGender(100, 50)).toBe('Male');
-      expect(determineGender(150, 50)).toBe('Female');
-      
+    it('should determine gender correctly (femaleThreshold semantics)', () => {
+      // Example thresholds:
+      // 12.5% female → threshold 31
+      expect(determineGenderFromSpec(30, { type: 'ratio', femaleThreshold: 31 })).toBe('Female');
+      expect(determineGenderFromSpec(31, { type: 'ratio', femaleThreshold: 31 })).toBe('Male');
+
+      // 50% female → threshold 128
+      expect(determineGenderFromSpec(100, { type: 'ratio', femaleThreshold: 128 })).toBe('Female');
+      expect(determineGenderFromSpec(150, { type: 'ratio', femaleThreshold: 128 })).toBe('Male');
+
       // Genderless
-      expect(determineGender(100, -1)).toBe('Genderless');
+      expect(determineGenderFromSpec(100, { type: 'genderless' })).toBe('Genderless');
     });
   });
 

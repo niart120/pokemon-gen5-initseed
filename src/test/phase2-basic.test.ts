@@ -6,8 +6,8 @@ import { describe, it, expect } from 'vitest';
 import { 
   getNatureName, 
   getShinyStatusName,
-  determineGender 
 } from '../types/raw-pokemon-data';
+import { determineGenderFromSpec } from '../lib/services/gender-utils';
 import { calculateLevel } from '../data/encounter-tables';
 import { 
   getPokemonSpecies 
@@ -27,10 +27,12 @@ describe('Phase 2 Basic Validation', () => {
       expect(getShinyStatusName(2)).toBe('Star Shiny');
     });
 
-    it('should determine gender correctly', () => {
-      expect(determineGender(100, 50)).toBe('Male');
-      expect(determineGender(150, 50)).toBe('Female');
-      expect(determineGender(100, -1)).toBe('Genderless');
+    it('should determine gender correctly (femaleThreshold semantics)', () => {
+      // 50% female → threshold ~128
+      expect(determineGenderFromSpec(100, { type: 'ratio', femaleThreshold: 128 })).toBe('Female');
+      expect(determineGenderFromSpec(150, { type: 'ratio', femaleThreshold: 128 })).toBe('Male');
+      // Genderless
+      expect(determineGenderFromSpec(100, { type: 'genderless' })).toBe('Genderless');
     });
   });
 

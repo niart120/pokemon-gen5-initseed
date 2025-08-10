@@ -292,13 +292,5 @@ export function getEncounterTypeName(encounterType: number): string {
  * @param genderRatio Species gender ratio (percent male, -1 for genderless)
  * @returns Gender string
  */
-export function determineGender(genderValue: number, genderRatio: number): 'Male' | 'Female' | 'Genderless' {
-  if (genderRatio === -1) {
-    return 'Genderless';
-  }
-  
-  // Convert percentage to threshold (0-255 scale)
-  const maleThreshold = Math.floor((genderRatio / 100) * 256);
-  
-  return genderValue < maleThreshold ? 'Male' : 'Female';
-}
+// Legacy determineGender(genderRatio) is removed.
+// Use determineGenderFromSpec(genderValue, { type: 'genderless' | 'fixed' | 'ratio', ... })
