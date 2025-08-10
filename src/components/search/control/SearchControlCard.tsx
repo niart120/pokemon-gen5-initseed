@@ -9,8 +9,8 @@ import { Play, Pause, Square } from '@phosphor-icons/react';
 import { useAppStore } from '../../../store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
 import { getSearchWorkerManager, resetSearchWorkerManager } from '../../../lib/search/search-worker-manager';
-import { isWakeLockSupported, requestWakeLock, releaseWakeLock, setupAutoWakeLockManagement } from '../../../lib/utils/wake-lock';
-import type { InitialSeedResult } from '../../../types/pokemon';
+import { isWakeLockSupported, requestWakeLock, releaseWakeLock, setupAutoWakeLockManagement } from '@/lib/utils/wake-lock';
+import type { InitialSeedResult } from '../../../types/search';
 
 export function SearchControlCard() {
   const { isStack } = useResponsiveLayout();

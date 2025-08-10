@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { useAppStore } from '../../../../store/app-store';
-import { parseMacByte, formatHexDisplay } from '../../../../lib/utils/hex-parser';
+import { parseMacByte, formatHexDisplay } from '@/lib/utils/hex-parser';
 
 export function MACAddressParam() {
   const { searchConditions, setSearchConditions } = useAppStore();

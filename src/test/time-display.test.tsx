@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatElapsedTime, formatRemainingTime, formatProcessingRate } from '../lib/utils/format-helpers';
+import { formatElapsedTime, formatRemainingTime, formatProcessingRate } from '@/lib/utils/format-helpers';
 
 describe('TimeDisplay format helpers', () => {
   describe('formatElapsedTime', () => {

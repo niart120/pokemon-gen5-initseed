@@ -8,7 +8,7 @@
  */
 
 import type { RawPokemonData, EnhancedPokemonData, EncounterDetails } from '../../types/raw-pokemon-data';
-import type { ROMVersion } from '../../types/pokemon';
+import type { ROMVersion } from '../../types/rom';
 import { 
   getShinyStatusName, 
   getEncounterTypeName, 

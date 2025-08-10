@@ -23,6 +23,23 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // Prevent re-introduction of deprecated barrels or direct WASM bindings
+  'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: '@/lib/utils', message: 'utils のバレル（index.ts）経由のインポートは禁止です。src/lib/utils/<module> を明示して下さい。' },
+            { name: '@/lib/utils/index', message: 'utils のバレル（index.ts）経由のインポートは禁止です。src/lib/utils/<module> を明示して下さい。' },
+            { name: 'src/lib/utils', message: 'utils のバレル（index.ts）経由のインポートは禁止です。src/lib/utils/<module> を明示して下さい。' },
+            { name: 'src/lib/utils/index', message: 'utils のバレル（index.ts）経由のインポートは禁止です。src/lib/utils/<module> を明示して下さい。' }
+          ],
+          patterns: [
+            { group: ['**/types/pokemon', '@/types/pokemon'], message: 'types/pokemon は削除済みです。types/rom・types/search・types/parallel を使用してください。' },
+            { group: ['**/wasm/wasm_pkg', '@/wasm/wasm_pkg'], message: 'wasm_pkg の直接参照は禁止です。lib/core/wasm-interface と lib/integration/wasm-enums を経由してください。' },
+            { group: ['**/src/utils/*', '@/utils/*', 'src/utils/*'], message: 'src/utils は削除済みです。代わりに src/lib/utils 配下の明示的なモジュールをインポートしてください。' }
+          ]
+        }
+      ],
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_' }
@@ -60,6 +77,13 @@ export default tseslint.config(
     files: ['src/test-utils/**/*.{ts,tsx}'],
     rules: {
       'no-console': 'off',
+    },
+  },
+  // wasm_pkg への直接参照は原則禁止だが、唯一の境界となる wasm-interface に限り例外とする
+  {
+    files: ['src/lib/core/wasm-interface.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
     },
   }
 );

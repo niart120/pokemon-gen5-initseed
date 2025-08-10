@@ -1,5 +1,5 @@
 import { SeedCalculator } from '../../lib/core/seed-calculator';
-import type { SearchConditions } from '../../types/pokemon';
+import type { SearchConditions } from '../../types/search';
 
 // Test function to validate the seed calculator
 export function testSeedCalculation() {

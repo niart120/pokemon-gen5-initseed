@@ -3,9 +3,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAppStore } from '../../../../store/app-store';
-import { parseHexInput, formatHexDisplay } from '../../../../lib/utils/hex-parser';
-import { getFullTimer0Range, getValidVCounts } from '../../../../lib/utils/rom-parameter-helpers';
-import { resetApplicationState } from '../../../../lib/utils/error-recovery';
+import { parseHexInput, formatHexDisplay } from '@/lib/utils/hex-parser';
+import { getFullTimer0Range, getValidVCounts } from '@/lib/utils/rom-parameter-helpers';
+import { resetApplicationState } from '@/lib/utils/error-recovery';
 
 export function Timer0VCountParam() {
   const { searchConditions, setSearchConditions } = useAppStore();

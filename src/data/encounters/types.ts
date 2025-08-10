@@ -8,7 +8,7 @@
  * - https://pokebook.jp/data/sp5/enc_w2 (BW2 White2)
  */
 
-import type { ROMVersion } from '../../types/pokemon';
+import type { ROMVersion } from '../../types/rom';
 
 /** エンカウントタイプ定義 - BW/BW2仕様に基づく */
 export enum EncounterType {

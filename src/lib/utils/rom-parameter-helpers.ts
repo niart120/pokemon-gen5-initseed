@@ -2,9 +2,9 @@
  * ROM Parameters Helper Functions
  * 新しいタプル型ROMParametersデータ構造のアクセス関数
  */
-import type { ROMParameters } from '@/types/pokemon';
+import type { ROMParameters } from '@/types/rom';
 import romParameters from '@/data/rom-parameters';
-import type { ROMVersion, ROMRegion } from '@/types/pokemon';
+import type { ROMVersion, ROMRegion } from '@/types/rom';
 
 /**
  * 指定されたVCOUNT値に対応するTimer0範囲を取得

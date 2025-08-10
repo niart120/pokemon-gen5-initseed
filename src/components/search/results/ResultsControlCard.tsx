@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { ExportButton } from './ExportButton';
 import { useAppStore } from '../../../store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
-import type { SearchResult } from '../../../types/pokemon';
+import type { SearchResult } from '../../../types/search';
 
 export type SortField = 'datetime' | 'seed' | 'timer0' | 'vcount';
 

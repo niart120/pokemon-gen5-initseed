@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MultiWorkerSearchManager } from '../lib/search/multi-worker-manager';
-import type { SearchConditions } from '../types/pokemon';
+import type { SearchConditions } from '../types/search';
 
 // Worker mock
 const mockWorker = {

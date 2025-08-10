@@ -1,5 +1,5 @@
 import { SeedCalculator } from '../../lib/core/seed-calculator';
-import type { ROMVersion, ROMRegion, Hardware } from '../../types/pokemon';
+import type { ROMVersion, ROMRegion, Hardware } from '../../types/rom';
 
 // Minimal interface for testing
 interface TestConditions {
@@ -84,7 +84,7 @@ export async function verifyWebAssemblyImplementation(): Promise<boolean> {
           },
           keyInput: testConditions.keyInput,
           macAddress: testConditions.macAddress,
-        } satisfies import('../../types/pokemon').SearchConditions;
+  } satisfies import('../../types/search').SearchConditions;
         const message = calculator.generateMessage(minimalConditions, timer0, vcount, date);
         
         // Test with WebAssembly
@@ -174,7 +174,7 @@ export async function comparePerformance(): Promise<void> {
       },
       keyInput: testConditions.keyInput,
       macAddress: testConditions.macAddress,
-    } satisfies import('../../types/pokemon').SearchConditions;
+  } satisfies import('../../types/search').SearchConditions;
     messages.push(calculator.generateMessage(minimalConditions, timer0, vcount, testDate));
   }
 

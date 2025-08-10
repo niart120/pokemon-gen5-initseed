@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { SearchConditions, InitialSeedResult, TargetSeedList, SearchProgress, SearchPreset, ROMVersion, ROMRegion, Hardware, ParallelSearchSettings, AggregatedProgress } from '../types/pokemon';
+import type { SearchConditions, InitialSeedResult, TargetSeedList, SearchProgress, SearchPreset } from '../types/search';
+import type { ROMVersion, ROMRegion, Hardware } from '../types/rom';
+import type { ParallelSearchSettings, AggregatedProgress } from '../types/parallel';
 import { DEMO_TARGET_SEEDS } from '../data/default-seeds';
 
 interface AppStore {

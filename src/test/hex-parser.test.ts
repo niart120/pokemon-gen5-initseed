@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseHexInput, formatHexDisplay, parseMacByte } from '../lib/utils/hex-parser';
+import { parseHexInput, formatHexDisplay, parseMacByte } from '@/lib/utils/hex-parser';
 
 describe('hex-parser', () => {
   describe('parseHexInput', () => {

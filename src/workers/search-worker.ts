@@ -4,9 +4,12 @@
  */
 
 import { SeedCalculator } from '../lib/core/seed-calculator';
-import { toMacUint8Array } from '../utils/mac-address';
+import { toMacUint8Array } from '@/lib/utils/mac-address';
 // import { ProductionPerformanceMonitor } from '../lib/core/performance-monitor';
-import type { SearchConditions, InitialSeedResult, Hardware } from '../types/pokemon';
+import type { SearchConditions } from '../types/search';
+import type { InitialSeedResult } from '../types/search';
+import type { TimerState, WorkerProgressMessage } from '../types/callbacks';
+import type { Hardware } from '../types/rom';
 
 // Performance optimization: Use larger batch sizes for better WASM utilization
 const BATCH_SIZE_SECONDS = 86400;   // 1日
@@ -22,25 +25,13 @@ export interface WorkerRequest {
 
 export interface WorkerResponse {
   type: 'PROGRESS' | 'RESULT' | 'COMPLETE' | 'ERROR' | 'PAUSED' | 'RESUMED' | 'STOPPED' | 'READY';
-  progress?: {
-    currentStep: number;
-    totalSteps: number;
-    elapsedTime: number;
-    estimatedTimeRemaining: number;
-    matchesFound: number;
-    currentDateTime?: string;
-  };
+  progress?: WorkerProgressMessage;
   result?: InitialSeedResult;
   error?: string;
   message?: string;
 }
 
 // Timer state for accurate elapsed time calculation
-interface TimerState {
-  cumulativeRunTime: number;  // 累積実行時間（ミリ秒）
-  segmentStartTime: number;   // 現在セグメント開始時刻
-  isPaused: boolean;          // 一時停止状態
-}
 
 // Worker state
 const searchState = {

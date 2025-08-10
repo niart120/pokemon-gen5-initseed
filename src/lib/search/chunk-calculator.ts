@@ -3,7 +3,8 @@
  * 検索範囲を複数Workerに効率的に分散
  */
 
-import type { SearchConditions, WorkerChunk } from '../../types/pokemon';
+import type { SearchConditions } from '../../types/search';
+import type { WorkerChunk } from '../../types/parallel';
 
 export interface ChunkMetrics {
   totalChunks: number;

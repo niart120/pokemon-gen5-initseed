@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PresetManager, SearchHistory } from '../options';
-import { resetApplicationState } from '../../lib/utils/error-recovery';
+import { resetApplicationState } from '@/lib/utils/error-recovery';
 
 export function OptionPanel() {
   const handleReset = () => {

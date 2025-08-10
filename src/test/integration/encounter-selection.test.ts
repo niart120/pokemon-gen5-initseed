@@ -18,7 +18,7 @@ import {
 } from '../../lib/integration/encounter-table';
 import { EncounterType, FishingRodType } from '../../data/encounters/types';
 import { ENCOUNTER_RATES } from '../../data/encounters/rates';
-import type { ROMVersion } from '../../types/pokemon';
+import type { ROMVersion } from '../../types/rom';
 
 describe('Encounter Selection Integration Tests', () => {
   describe('Encounter Rate Validation', () => {

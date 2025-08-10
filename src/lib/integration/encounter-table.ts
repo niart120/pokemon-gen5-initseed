@@ -11,7 +11,7 @@
  * Follows IntegratedSeedSearcher pattern for WASM integration.
  */
 
-import type { ROMVersion } from '../../types/pokemon';
+import type { ROMVersion } from '../../types/rom';
 import { 
   EncounterType, 
   FishingRodType

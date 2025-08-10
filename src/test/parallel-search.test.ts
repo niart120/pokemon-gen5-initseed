@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MultiWorkerSearchManager, SearchCallbacks } from '../lib/search/multi-worker-manager';
 import { ChunkCalculator } from '../lib/search/chunk-calculator';
-import type { SearchConditions } from '../types/pokemon';
+import type { SearchConditions } from '../types/search';
 import { initWasmForTesting } from './wasm-loader';
 
 describe('Phase 5: 並列処理テスト', () => {

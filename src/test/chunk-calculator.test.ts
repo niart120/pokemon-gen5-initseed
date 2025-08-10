@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { ChunkCalculator } from '../lib/search/chunk-calculator';
-import type { SearchConditions } from '../types/pokemon';
+import type { SearchConditions } from '../types/search';
 
 describe('ChunkCalculator', () => {
   const mockConditions: SearchConditions = {

@@ -24,6 +24,17 @@ import { DevelopmentPerformanceAnalyzer } from '@/test-utils/profiling/developme
 - **開発ツール**: `src/test-utils/` - 詳細分析・デバッグ支援
 - **循環依存禁止**: 本番コードは開発ツールに依存させない
 
+### ユーティリティの取り扱い
+- すべてのユーティリティは `src/lib/utils/` 配下に配置する
+- バレル（再エクスポート）を作らず、各モジュールを明示的にインポートする
+	- 例: `import { toMacUint8Array } from '@/lib/utils/mac-address'`
+- 旧パス `src/utils/*` は削除済みのため使用禁止（ESLintでブロック）
+
+### WebAssembly 境界
+- wasm-bindgen 生成物の直接参照は禁止
+- 必ず `src/lib/core/wasm-interface.ts` を経由してアクセスする
+- enum 等の相互変換は `src/lib/integration/wasm-enums.ts` に集約する
+
 ### 禁止事項
 - コア計算処理の新規TypeScript実装（WebAssembly使用必須）
 - 既存の検証システムの無効化

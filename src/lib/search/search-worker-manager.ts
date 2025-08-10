@@ -4,27 +4,15 @@
  * Extended with parallel search capabilities
  */
 
-import type { SearchConditions, InitialSeedResult, AggregatedProgress } from '../../types/pokemon';
+import type { SearchConditions, InitialSeedResult } from '../../types/search';
+import type { AggregatedProgress } from '../../types/parallel';
 import type { WorkerRequest, WorkerResponse } from '../../workers/search-worker';
 import { MultiWorkerSearchManager } from './multi-worker-manager';
+import type { SingleWorkerSearchCallbacks } from '../../types/callbacks';
 
-export interface SearchCallbacks {
-  onProgress: (progress: {
-    currentStep: number;
-    totalSteps: number;
-    elapsedTime: number;
-    estimatedTimeRemaining: number;
-    matchesFound: number;
-    currentDateTime?: Date;
-  }) => void;
-  onResult: (result: InitialSeedResult) => void;
-  onComplete: (message: string) => void;
-  onError: (error: string) => void;
-  onPaused: () => void;
-  onResumed: () => void;
-  onStopped: () => void;
+export type SearchCallbacks = SingleWorkerSearchCallbacks<InitialSeedResult> & {
   onParallelProgress?: (progress: AggregatedProgress | null) => void;
-}
+};
 
 export class SearchWorkerManager {
   private worker: Worker | null = null;

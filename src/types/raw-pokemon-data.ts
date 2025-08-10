@@ -6,6 +6,13 @@
  * 
  * Source of Truth: wasm-pkg/src/pokemon_generator.rs RawPokemonData struct
  */
+import { DomainEncounterType, DomainShinyType } from './domain';
+// Provide local value aliases to use in code below
+const EncounterType = DomainEncounterType;
+const ShinyType = DomainShinyType;
+// Re-export to keep existing import paths working
+export { DomainEncounterType as EncounterType };
+export { DomainShinyType as ShinyType };
 
 /**
  * Raw Pokemon data structure (mirrors WASM RawPokemonData)
@@ -125,30 +132,12 @@ export interface EncounterDetails {
 /**
  * Encounter type enumeration (matches WASM values)
  */
-export enum EncounterType {
-  Normal = 0,
-  Surfing = 1,
-  Fishing = 2,
-  ShakingGrass = 3,
-  DustCloud = 4,
-  PokemonShadow = 5,
-  SurfingBubble = 6,
-  FishingBubble = 7,
-  StaticSymbol = 10,
-  StaticStarter = 11,
-  StaticFossil = 12,
-  StaticEvent = 13,
-  Roaming = 20,
-}
+// Use shared domain enums to avoid duplication (see exports above)
 
 /**
  * Shiny type enumeration (matches WASM values)
  */
-export enum ShinyType {
-  Normal = 0,
-  Square = 1,
-  Star = 2,
-}
+// see exports above
 
 /**
  * Nature names array (index corresponds to nature ID)

@@ -28,7 +28,8 @@ import {
   searchSeeds,
   searchWithConditions,
 } from '../../lib/integration/wasm-service';
-import type { ROMVersion, Hardware, SearchConditions } from '../../types/pokemon';
+import type { ROMVersion, Hardware } from '../../types/rom';
+import type { SearchConditions } from '../../types/search';
 import { initWasmForTesting } from '../wasm-loader';
 
 describe('WASM Service Integration Tests', () => {

@@ -1,4 +1,4 @@
-import type { SearchResult } from '../../types/pokemon';
+import type { SearchResult } from '../../types/search';
 
 /**
  * Export functionality for search results

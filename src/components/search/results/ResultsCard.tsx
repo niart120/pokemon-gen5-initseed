@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { useAppStore } from '../../../store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
-import type { InitialSeedResult } from '../../../types/pokemon';
+import type { InitialSeedResult } from '../../../types/search';
 import type { SortField } from './ResultsControlCard';
 
 interface ResultsCardProps {

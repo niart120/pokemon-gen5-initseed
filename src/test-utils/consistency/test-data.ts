@@ -3,7 +3,7 @@
  * 類似ツールの検索結果との比較検証用データ
  */
 
-import type { SearchConditions } from '../../types/pokemon';
+import type { SearchConditions } from '../../types/search';
 
 /**
  * 整合性テスト用の基本検索条件

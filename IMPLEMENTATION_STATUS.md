@@ -398,6 +398,14 @@ WebAssembly実装とTypeScript実装の両方が、Project_Veniの参照実装�
    - 探索履歴管理
    - 成功実績保存
 
+---
+
+## 🧹 クリーンアップ・追跡タスク（Backlog）
+
+- Legacy barrel 削除: `src/types/pokemon.ts` は削除済み（Phase 5 完了）。
+  - 代替: `src/types/{rom.ts, search.ts, parallel.ts, domain.ts}` を参照
+  - ESLint no-restricted-imports を更新し、削除済み・直接参照禁止の文言に修正
+
 2. **ファイルインポート機能** (見積: 3日)  
    - 目標Seedリストファイル読み込み
    - 設定データ移行機能

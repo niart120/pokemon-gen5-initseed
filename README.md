@@ -95,8 +95,8 @@ http://localhost:5173/test-development.html
 # 統合テスト（システム全体・ワークフローテスト）  
 http://localhost:5173/test-integration.html
 
-# 並列処理テスト（WebWorker・並列処理検証）
-http://localhost:5173/test-parallel.html
+# SIMD機能テスト（SIMD最適化・パフォーマンス比較）
+http://localhost:5173/test-simd.html
 ```
 
 ### 品質保証
@@ -137,6 +137,12 @@ npm run dev
 - WebAssembly-Worker統合テスト
 - 実環境並列処理検証
 - メモリ管理・パフォーマンス測定
+
+## 開発者向けメモ
+- ユーティリティは `src/lib/utils/<module>` を明示的にインポート（バレル禁止）
+    - 例: `import { toMacUint8Array } from '@/lib/utils/mac-address'`
+- wasm-bindgen 生成物の直接参照は禁止。必ず `src/lib/core/wasm-interface.ts` を経由
+- enum 等の変換は `src/lib/integration/wasm-enums.ts` に集約
 
 ## GitHub Copilot対応
 

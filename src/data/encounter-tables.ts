@@ -11,7 +11,7 @@
  */
 
 import { EncounterType } from '../types/raw-pokemon-data';
-import type { ROMVersion } from '../types/pokemon';
+import type { ROMVersion } from '../types/rom';
 import { ensureEncounterRegistryLoaded, getEncounterFromRegistry } from './encounters/loader';
 
 /**

@@ -12,7 +12,7 @@
 
 import type { AreaEncounterTable } from './types';
 import { EncounterType, FishingRodType } from './types';
-import type { ROMVersion } from '@/types/pokemon';
+import type { ROMVersion } from '@/types/rom';
 
 /** サンプルエンカウントテーブル - Route 1 (BW) */
 export const SAMPLE_ROUTE_1_BW: AreaEncounterTable = {

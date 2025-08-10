@@ -4,32 +4,16 @@
  */
 
 import { ChunkCalculator } from './chunk-calculator';
-import type { 
-  SearchConditions, 
-  InitialSeedResult, 
-  WorkerChunk,
-  AggregatedProgress,
-  WorkerProgress,
-  ParallelWorkerRequest,
-  ParallelWorkerResponse
-} from '../../types/pokemon';
+import type { SearchConditions, InitialSeedResult } from '../../types/search';
+import type { AggregatedProgress, WorkerChunk, WorkerProgress, ParallelWorkerRequest, ParallelWorkerResponse } from '../../types/parallel';
+import type { MultiWorkerSearchCallbacks, TimerState } from '../../types/callbacks';
 
-export interface SearchCallbacks {
-  onProgress: (progress: AggregatedProgress) => void;
-  onResult: (result: InitialSeedResult) => void;
-  onComplete: (message: string) => void;
-  onError: (error: string) => void;
-  onPaused: () => void;
-  onResumed: () => void;
-  onStopped: () => void;
-}
+export type SearchCallbacks = MultiWorkerSearchCallbacks<AggregatedProgress, InitialSeedResult>;
+// Backward-compatible alias if external imports used this name
+export type MultiWorkerCallbacks = SearchCallbacks;
 
 // Timer state for accurate elapsed time calculation
-interface ManagerTimerState {
-  cumulativeRunTime: number;  // 累積実行時間（ミリ秒）
-  segmentStartTime: number;   // 現在セグメント開始時刻
-  isPaused: boolean;          // 一時停止状態
-}
+type ManagerTimerState = TimerState;
 
 export class MultiWorkerSearchManager {
   private workers: Map<number, Worker> = new Map();

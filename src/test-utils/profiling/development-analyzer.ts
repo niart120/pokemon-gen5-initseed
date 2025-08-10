@@ -7,7 +7,7 @@
 
 import { SeedCalculator } from '../../lib/core/seed-calculator';
 import { ProductionPerformanceMonitor } from '../../lib/core/performance-monitor';
-import type { SearchConditions } from '../../types/pokemon';
+import type { SearchConditions } from '../../types/search';
 
 export interface DetailedPerformanceMetrics {
   totalTime: number;

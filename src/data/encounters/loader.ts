@@ -1,6 +1,6 @@
 import type { EncounterLocationsJson, EncounterSlotJson, EncounterMethod } from './schema';
 import { EncounterType } from '@/types/raw-pokemon-data';
-import type { ROMVersion } from '@/types/pokemon';
+import type { ROMVersion } from '@/types/rom';
 
 function normalizeLocationKey(location: string): string {
   return location.trim().replace(/[\u3000\s]+/g, '').replace(/[‐‑‒–—−\-_.]/g, '');

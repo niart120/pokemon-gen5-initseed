@@ -9,8 +9,9 @@ import type {
   PokemonGenerator as WasmPokemonGenerator,
   EncounterType as WasmEncounterType,
   GameVersion as WasmGameVersion,
-  SearchResult as WasmSearchResult,
 } from '../../wasm/wasm_pkg';
+// Local type alias for internal interface references
+type WasmSearchResult = import('../../wasm/wasm_pkg').SearchResult;
 
 // Init arg for wasm-bindgen init function
 type WasmInitArg = { module_or_path: BufferSource | URL };
@@ -122,3 +123,6 @@ export function getWasm(): WasmModule {
 export function isWasmReady(): boolean {
   return wasmModule !== null;
 }
+
+// Export alias type for consumers without importing wasm_pkg directly
+export type { WasmSearchResult };

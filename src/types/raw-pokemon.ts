@@ -77,31 +77,17 @@ export enum PlaceholderValue {
  * エンカウントタイプ列挙
  * WASM側のEncounterTypeと対応
  */
-export enum EncounterType {
-  Normal = 0,
-  Surfing = 1,
-  Fishing = 2,
-  ShakingGrass = 3,
-  DustCloud = 4,
-  PokemonShadow = 5,
-  SurfingBubble = 6,
-  FishingBubble = 7,
-  StaticSymbol = 10,
-  StaticStarter = 11,
-  StaticFossil = 12,
-  StaticEvent = 13,
-  Roaming = 20,
-}
+import type { DomainEncounterType as DomainEncounterTypeT } from './domain';
+import { DomainEncounterType } from './domain';
+import { DomainShinyType } from './domain';
+export { DomainEncounterType as EncounterType };
 
 /**
  * 色違いタイプ列挙
  * WASM側のShinyTypeと対応
  */
-export enum ShinyType {
-  Normal = 0,
-  Square = 1,
-  Star = 2,
-}
+// 値レベルの列挙をエイリアスとして再エクスポート（型としても利用可能）
+export { DomainShinyType as ShinyType };
 
 /**
  * 性格ID→性格名マッピング
@@ -160,7 +146,7 @@ export interface EncounterSpecies {
  */
 export interface EncounterTable {
   /** エンカウントタイプ */
-  encounter_type: EncounterType;
+  encounter_type: DomainEncounterTypeT;
   /** エリア名 */
   area_name: string;
   /** ゲームバージョン */

@@ -3,23 +3,15 @@
  * 割り当てられた時刻チャンクを高速処理
  */
 
+import type { TimerState } from '../types/callbacks';
 import { SeedCalculator } from '../lib/core/seed-calculator';
-import { toMacUint8Array } from '../utils/mac-address';
-import type { 
-  SearchConditions, 
-  InitialSeedResult, 
-  ParallelWorkerRequest, 
-  ParallelWorkerResponse,
-  WorkerChunk,
-  Hardware 
-} from '../types/pokemon';
+import { toMacUint8Array } from '@/lib/utils/mac-address';
+import type { SearchConditions, InitialSeedResult } from '../types/search';
+import type { ParallelWorkerRequest, ParallelWorkerResponse, WorkerChunk } from '../types/parallel';
+import type { Hardware } from '../types/rom';
 
 // Timer state for accurate elapsed time calculation
-interface TimerState {
-  cumulativeRunTime: number;  // 累積実行時間（ミリ秒）
-  segmentStartTime: number;   // 現在セグメント開始時刻
-  isPaused: boolean;          // 一時停止状態
-}
+// use shared TimerState
 
 // Worker状態
 const searchState = {

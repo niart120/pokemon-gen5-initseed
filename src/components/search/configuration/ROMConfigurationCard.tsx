@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { GameController } from '@phosphor-icons/react';
 import { useAppStore } from '../../../store/app-store';
-import type { ROMVersion, ROMRegion, Hardware } from '../../../types/pokemon';
+import type { ROMVersion, ROMRegion, Hardware } from '../../../types/rom';
 
 const ROM_VERSIONS: { value: ROMVersion; label: string }[] = [
   { value: 'B', label: 'B' },

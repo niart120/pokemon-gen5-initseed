@@ -10,7 +10,7 @@ import {
   parseExpectedDateTime,
   formatDateTime 
 } from '../consistency';
-import type { SearchConditions } from '../../types/pokemon';
+import type { SearchConditions } from '../../types/search';
 
 export async function debugConsistencyTest() {
   console.log('=== 整合性確認テスト デバッグ ===\n');

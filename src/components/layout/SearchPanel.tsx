@@ -8,8 +8,8 @@ import {
 import { SearchControlCard, SearchProgressCard } from '../search/control';
 import { ResultsControlCard, ResultsCard, ResultDetailsDialog, type SortField } from '../search/results';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
-import { getResponsiveSizes } from '../../utils/responsive-sizes';
-import type { InitialSeedResult, SearchResult } from '../../types/pokemon';
+import { getResponsiveSizes } from '@/lib/utils/responsive-sizes';
+import type { InitialSeedResult, SearchResult } from '../../types/search';
 
 export function SearchPanel() {
   const { searchResults } = useAppStore();

@@ -1,6 +1,6 @@
 import { SeedCalculator } from '../../lib/core/seed-calculator';
-import { getFullTimer0Range, getValidVCounts } from '../../lib/utils/rom-parameter-helpers';
-import type { SearchConditions } from '../../types/pokemon';
+import { getFullTimer0Range, getValidVCounts } from '@/lib/utils/rom-parameter-helpers';
+import type { SearchConditions } from '../../types/search';
 
 /**
  * Verification function to test the search logic with known parameters

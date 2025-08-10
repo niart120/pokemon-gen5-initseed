@@ -10,7 +10,7 @@
  * - Strict sync application scope (wild only, roaming excluded)
  */
 
-import type { ROMVersion, ROMRegion } from '../../types/pokemon';
+import type { ROMVersion, ROMRegion } from '../../types/rom';
 
 // Encounter types based on wasm-pkg encounter_calculator.rs
 export enum EncounterType {

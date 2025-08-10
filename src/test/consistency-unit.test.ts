@@ -13,7 +13,7 @@ import {
   isSameDateTime,
   createLocalSearchRange 
 } from '../test-utils/consistency';
-import type { SearchConditions } from '../types/pokemon';
+import type { SearchConditions } from '../types/search';
 
 describe('出力結果整合性確認 - 単体テスト', () => {
   let calculator: SeedCalculator;

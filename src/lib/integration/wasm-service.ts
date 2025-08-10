@@ -6,41 +6,25 @@
 
 import { initWasm, getWasm, isWasmReady } from '../core/wasm-interface';
 import type { WasmModule } from '../core/wasm-interface';
-import type { SearchResult as WasmSearchResult } from '../../wasm/wasm_pkg';
-import type { ROMVersion, Hardware, SearchConditions } from '../../types/pokemon';
+import type { WasmSearchResult } from '../core/wasm-interface';
+import type { ROMVersion, Hardware } from '../../types/rom';
+import type { SearchConditions } from '../../types/search';
+import {
+  WasmGameVersion as WasmGameVersionEnum,
+  WasmEncounterType as WasmEncounterTypeEnum,
+  WasmGameMode as WasmGameModeEnum,
+  romVersionToGameVersion as convertRomVersionToGameVersion,
+  stringToEncounterType as convertStringToEncounterType,
+  configToGameMode as convertConfigToGameMode,
+} from './wasm-enums';
 
-// Enum mappings based on Rust implementations
-export enum WasmGameVersion {
-  BlackWhite = 0,
-  BlackWhite2 = 1,
-}
-
-export enum WasmEncounterType {
-  Normal = 0,
-  Surfing = 1,
-  Fishing = 2,
-  ShakingGrass = 3,
-  DustCloud = 4,
-  PokemonShadow = 5,
-  SurfingBubble = 6,
-  FishingBubble = 7,
-  StaticSymbol = 10,
-  StaticStarter = 11,
-  StaticFossil = 12,
-  StaticEvent = 13,
-  Roaming = 20,
-}
-
-export enum WasmGameMode {
-  BwNewGameWithSave = 0,
-  BwNewGameNoSave = 1,
-  BwContinue = 2,
-  Bw2NewGameWithMemoryLinkSave = 3,
-  Bw2NewGameNoMemoryLinkSave = 4,
-  Bw2NewGameNoSave = 5,
-  Bw2ContinueWithMemoryLink = 6,
-  Bw2ContinueNoMemoryLink = 7,
-}
+// Re-export enums for backward compatibility
+export const WasmGameVersion = WasmGameVersionEnum;
+export type WasmGameVersion = WasmGameVersionEnum;
+export const WasmEncounterType = WasmEncounterTypeEnum;
+export type WasmEncounterType = WasmEncounterTypeEnum;
+export const WasmGameMode = WasmGameModeEnum;
+export type WasmGameMode = WasmGameModeEnum;
 
 // Error types
 export class WasmServiceError extends Error {
@@ -73,50 +57,11 @@ export class WasmInitializationError extends WasmServiceError {
 
 // Conversion utilities (function-based)
 export function romVersionToGameVersion(romVersion: ROMVersion): WasmGameVersion {
-  switch (romVersion) {
-    case 'B':
-    case 'W':
-      return WasmGameVersion.BlackWhite;
-    case 'B2':
-    case 'W2':
-      return WasmGameVersion.BlackWhite2;
-    default:
-      throw new ConversionError(`Invalid ROM version: ${romVersion}`, romVersion);
-  }
+  return convertRomVersionToGameVersion(romVersion);
 }
 
 export function stringToEncounterType(encounterType: string): WasmEncounterType {
-  const normalized = encounterType.toUpperCase().replace(/[_-]/g, '');
-  switch (normalized) {
-    case 'NORMAL':
-      return WasmEncounterType.Normal;
-    case 'SURFING':
-      return WasmEncounterType.Surfing;
-    case 'FISHING':
-      return WasmEncounterType.Fishing;
-    case 'SHAKINGGRASS':
-      return WasmEncounterType.ShakingGrass;
-    case 'DUSTCLOUD':
-      return WasmEncounterType.DustCloud;
-    case 'POKEMONSHADOW':
-      return WasmEncounterType.PokemonShadow;
-    case 'SURFINGBUBBLE':
-      return WasmEncounterType.SurfingBubble;
-    case 'FISHINGBUBBLE':
-      return WasmEncounterType.FishingBubble;
-    case 'STATICSYMBOL':
-      return WasmEncounterType.StaticSymbol;
-    case 'STATICSTARTER':
-      return WasmEncounterType.StaticStarter;
-    case 'STATICFOSSIL':
-      return WasmEncounterType.StaticFossil;
-    case 'STATICEVENT':
-      return WasmEncounterType.StaticEvent;
-    case 'ROAMING':
-      return WasmEncounterType.Roaming;
-    default:
-      throw new ConversionError(`Invalid encounter type: ${encounterType}`, encounterType);
-  }
+  return convertStringToEncounterType(encounterType);
 }
 
 export function configToGameMode(
@@ -125,28 +70,7 @@ export function configToGameMode(
   isNewGame: boolean,
   hasMemoryLink?: boolean
 ): WasmGameMode {
-  const isBW2 = romVersion === 'B2' || romVersion === 'W2';
-  if (isBW2) {
-    if (isNewGame) {
-      if (hasExistingSave) {
-        return hasMemoryLink
-          ? WasmGameMode.Bw2NewGameWithMemoryLinkSave
-          : WasmGameMode.Bw2NewGameNoMemoryLinkSave;
-      } else {
-        return WasmGameMode.Bw2NewGameNoSave;
-      }
-    } else {
-      return hasMemoryLink
-        ? WasmGameMode.Bw2ContinueWithMemoryLink
-        : WasmGameMode.Bw2ContinueNoMemoryLink;
-    }
-  } else {
-    if (isNewGame) {
-      return hasExistingSave ? WasmGameMode.BwNewGameWithSave : WasmGameMode.BwNewGameNoSave;
-    } else {
-      return WasmGameMode.BwContinue;
-    }
-  }
+  return convertConfigToGameMode(romVersion, hasExistingSave, isNewGame, hasMemoryLink);
 }
 
 export function validateHardware(hardware: Hardware): string {
