@@ -9,9 +9,7 @@ import {
 } from '../types/raw-pokemon-data';
 import { determineGenderFromSpec } from '../lib/services/gender-utils';
 import { calculateLevel } from '../data/encounter-tables';
-import { 
-  getPokemonSpecies 
-} from '../data/pokemon-species';
+import { getGeneratedSpeciesById } from '../data/species/generated';
 
 describe('Phase 2 Basic Validation', () => {
   describe('Raw Pokemon Data utilities', () => {
@@ -45,26 +43,23 @@ describe('Phase 2 Basic Validation', () => {
     });
   });
 
-  describe('Pokemon Species', () => {
-    it('should have species data for Gen 5 starters', () => {
-      const snivy = getPokemonSpecies(495);
+  describe('Pokemon Species (generated)', () => {
+    it('should have generated species data for Gen 5 starters', () => {
+      const snivy = getGeneratedSpeciesById(495);
       expect(snivy).toBeDefined();
-      expect(snivy?.name).toBe('Snivy');
-      expect(snivy?.types).toEqual(['Grass']);
+      expect(snivy?.names.en).toBe('Snivy');
 
-      const tepig = getPokemonSpecies(498);
+      const tepig = getGeneratedSpeciesById(498);
       expect(tepig).toBeDefined();
-      expect(tepig?.name).toBe('Tepig');
-      expect(tepig?.types).toEqual(['Fire']);
+      expect(tepig?.names.en).toBe('Tepig');
 
-      const oshawott = getPokemonSpecies(501);
+      const oshawott = getGeneratedSpeciesById(501);
       expect(oshawott).toBeDefined();
-      expect(oshawott?.name).toBe('Oshawott');
-      expect(oshawott?.types).toEqual(['Water']);
+      expect(oshawott?.names.en).toBe('Oshawott');
     });
 
     it('should return null for unknown species', () => {
-      expect(getPokemonSpecies(99999)).toBeNull();
+      expect(getGeneratedSpeciesById(99999)).toBeNull();
     });
   });
 });

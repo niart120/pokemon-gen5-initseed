@@ -19,7 +19,7 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      'react-refresh/only-export-components': [
+  'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
       ],
@@ -31,7 +31,14 @@ export default tseslint.config(
             { name: '@/lib/utils', message: 'utils のバレル（index.ts）経由のインポートは禁止です。src/lib/utils/<module> を明示して下さい。' },
             { name: '@/lib/utils/index', message: 'utils のバレル（index.ts）経由のインポートは禁止です。src/lib/utils/<module> を明示して下さい。' },
             { name: 'src/lib/utils', message: 'utils のバレル（index.ts）経由のインポートは禁止です。src/lib/utils/<module> を明示して下さい。' },
-            { name: 'src/lib/utils/index', message: 'utils のバレル（index.ts）経由のインポートは禁止です。src/lib/utils/<module> を明示して下さい。' }
+    { name: 'src/lib/utils/index', message: 'utils のバレル（index.ts）経由のインポートは禁止です。src/lib/utils/<module> を明示して下さい。' },
+    // legacy encounter/species modules
+    { name: '@/data/encounters', message: 'legacy encounters barrel は使用禁止です。src/data/encounter-tables を使用してください。' },
+    { name: '@/data/encounters/index', message: 'legacy encounters barrel は使用禁止です。src/data/encounter-tables を使用してください。' },
+    { name: '@/data/encounters/types', message: 'EncounterType は domain/raw-pokemon-data 経由を使用してください。' },
+    { name: '@/data/encounters/rates', message: '固定レート表は使用禁止です。JSON データに基づく処理に移行してください。' },
+    { name: '@/data/encounters/tables', message: 'サンプルテーブルは使用禁止です。JSON ローダー＋encounter-tables を使用してください。' },
+    { name: '@/data/pokemon-species', message: '旧TS種族データは使用禁止です。data/species/generated を使用してください。' }
           ],
           patterns: [
             { group: ['**/types/pokemon', '@/types/pokemon'], message: 'types/pokemon は削除済みです。types/rom・types/search・types/parallel を使用してください。' },

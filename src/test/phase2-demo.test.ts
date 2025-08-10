@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { initWasmForTesting } from './wasm-loader';
 import { parseRawPokemonData, getNatureName } from '../types/raw-pokemon-data';
-import { getPokemonSpecies } from '../data/pokemon-species';
+import { getGeneratedSpeciesById } from '../data/species/generated';
 import { calculateLevel } from '../data/encounter-tables';
 
 describe('Phase 2 Integration Demo', () => {
@@ -38,9 +38,9 @@ describe('Phase 2 Integration Demo', () => {
     expect(natureName).toBe('Bold');
 
     // Step 3: Get species data (assuming encounter slot 0 gives us Patrat)
-    const species = getPokemonSpecies(504); // Patrat
-    expect(species).toBeDefined();
-    expect(species?.name).toBe('Patrat');
+  const species = getGeneratedSpeciesById(504); // Patrat
+  expect(species).toBeDefined();
+  expect(species?.names.en).toBe('Patrat');
 
     // Step 4: Calculate level
     const level = calculateLevel(rawData.levelRandValue, { min: 2, max: 4 });
@@ -49,7 +49,7 @@ describe('Phase 2 Integration Demo', () => {
 
     console.log('✅ Phase 2 integration demo successful:');
     console.log(`   Seed: ${rawData.seed}`);
-    console.log(`   Species: ${species?.name}`);
+  console.log(`   Species: ${species?.names.en}`);
     console.log(`   Nature: ${natureName}`);
     console.log(`   Level: ${level}`);
     console.log(`   PID: 0x${rawData.pid.toString(16)}`);
@@ -60,9 +60,8 @@ describe('Phase 2 Integration Demo', () => {
     expect(getNatureName(0)).toBe('Hardy');
     expect(getNatureName(24)).toBe('Quirky');
 
-    const snivy = getPokemonSpecies(495);
-    expect(snivy?.name).toBe('Snivy');
-    expect(snivy?.types).toEqual(['Grass']);
+  const snivy = getGeneratedSpeciesById(495);
+  expect(snivy?.names.en).toBe('Snivy');
 
     const level = calculateLevel(5, { min: 10, max: 15 });
     expect(level).toBe(15); // 10 + (5 % 6) = 15
