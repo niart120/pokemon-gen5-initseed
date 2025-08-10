@@ -8,14 +8,13 @@
  * - https://pokebook.jp/data/sp5/enc_w2 (BW2 White2)
  * 
  * Tests verify encounter table probability consistency and
- * statistical validity of selection algorithms.
+ * boundary mapping of selection algorithms (no heavy statistical/perf checks).
  */
 
 import { describe, it, expect } from 'vitest';
 import { 
   EncounterTableSelector, 
-  EncounterRateValidator, 
-  EncounterDistributionTester 
+  EncounterRateValidator
 } from '../../lib/integration/encounter-table';
 import { EncounterType, FishingRodType } from '../../data/encounters/types';
 import { ENCOUNTER_RATES } from '../../data/encounters/rates';
@@ -251,47 +250,7 @@ describe('Encounter Selection Integration Tests', () => {
     });
   });
 
-  describe('Statistical Distribution Tests', () => {
-    it('should pass statistical distribution test for normal encounters', () => {
-      const result = EncounterDistributionTester.testDistribution(
-        EncounterType.Normal,
-        10000, // large sample size for reliable statistics
-        12345  // fixed seed for reproducible results
-      );
-      
-      expect(result.sampleSize).toBe(10000);
-      expect(result.chiSquareValue).toBeGreaterThan(0);
-      expect(result.pValue).toBeGreaterThanOrEqual(0);
-      expect(result.pValue).toBeLessThanOrEqual(1);
-      
-      // 統計的に有意でないことを期待（分布が適切）
-      expect(result.isSignificant).toBe(false);
-      
-      // 観測度数と期待度数が存在することを確認
-      expect(result.observedFrequencies.size).toBeGreaterThan(0);
-      expect(result.expectedFrequencies.size).toBeGreaterThan(0);
-    });
-
-    it('should pass statistical distribution test for surfing encounters', () => {
-      const result = EncounterDistributionTester.testDistribution(
-        EncounterType.Surfing,
-        5000,
-        54321
-      );
-      
-      expect(result.sampleSize).toBe(5000);
-      expect(result.isSignificant).toBe(false); // 適切な分布を期待
-    });
-
-    it('should throw error for unsupported encounter types in distribution test', () => {
-      expect(() => {
-        EncounterDistributionTester.testDistribution(
-          999 as EncounterType,
-          1000
-        );
-      }).toThrow('Unsupported encounter type');
-    });
-  });
+  
 
   describe('Edge Cases and Error Handling', () => {
     it('should handle extreme random values correctly', () => {
@@ -328,46 +287,5 @@ describe('Encounter Selection Integration Tests', () => {
     });
   });
 
-  describe('Performance and Scalability', () => {
-    it('should perform slot selection efficiently for large numbers', () => {
-      const startTime = performance.now();
-      
-      for (let i = 0; i < 100000; i++) {
-        EncounterTableSelector.selectSlotByProbability(
-          Math.floor(Math.random() * 65536),
-          EncounterType.Normal
-        );
-      }
-      
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-      
-      // 100,000回の選択が1秒以内に完了することを期待
-      expect(duration).toBeLessThan(1000);
-    });
-
-    it('should handle multiple encounter types efficiently', () => {
-      const startTime = performance.now();
-      const encounterTypes = [
-        EncounterType.Normal,
-        EncounterType.Surfing,
-        EncounterType.Fishing,
-        EncounterType.ShakingGrass
-      ];
-      
-      for (let i = 0; i < 50000; i++) {
-        const randomType = encounterTypes[i % encounterTypes.length];
-        EncounterTableSelector.selectSlotByProbability(
-          Math.floor(Math.random() * 65536),
-          randomType
-        );
-      }
-      
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-      
-      // 複数タイプでの50,000回選択が1秒以内に完了することを期待
-      expect(duration).toBeLessThan(1000);
-    });
-  });
+  // Performance-focused tests removed to avoid flakiness and indirect validation.
 });

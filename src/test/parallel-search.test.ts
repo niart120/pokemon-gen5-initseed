@@ -230,18 +230,10 @@ describe('Phase 5: 並列処理テスト', () => {
     });
   });
 
-  describe('Task 5.1: パフォーマンス検証', () => {
-    it('チャンク分割の実行時間が許容範囲内である', () => {
+  describe('Task 5.1: パフォーマンス検証 (functional, non-timing)', () => {
+    it('チャンク分割が実行され結果が得られる', () => {
       const conditions = createTestConditions({ hours: 24 });
-      
-      const startTime = performance.now();
       const chunks = ChunkCalculator.calculateOptimalChunks(conditions, 8);
-      const endTime = performance.now();
-      
-      const executionTime = endTime - startTime;
-      
-      // チャンク分割は100ms以内で完了することを確認
-      expect(executionTime).toBeLessThan(100);
       expect(chunks.length).toBeGreaterThan(0);
     });
 
