@@ -4,6 +4,7 @@
  */
 
 import { SeedCalculator } from '../lib/core/seed-calculator';
+import { toMacUint8Array } from '../utils/mac-address';
 // import { ProductionPerformanceMonitor } from '../lib/core/performance-monitor';
 import type { SearchConditions, InitialSeedResult, Hardware } from '../types/pokemon';
 
@@ -63,23 +64,7 @@ let calculator: SeedCalculator;
  * - 値は 0-255 にクランプ
  * - 長さ不一致時は 6 バイトへ切り詰め/ゼロ埋め
  */
-function toMacUint8Array(input: Array<number | string>): Uint8Array {
-  const out = new Uint8Array(6);
-  for (let i = 0; i < 6; i++) {
-    const raw = input[i] ?? 0;
-    let n: number;
-    if (typeof raw === 'number') {
-      n = raw;
-    } else {
-      const s = raw.trim().toLowerCase();
-      n = s.startsWith('0x') ? parseInt(s, 16) : Number.isNaN(Number(s)) ? parseInt(s, 16) : Number(s);
-    }
-    if (!Number.isFinite(n)) n = 0;
-    n = Math.min(255, Math.max(0, Math.trunc(n)));
-    out[i] = n;
-  }
-  return out;
-}
+// toMacUint8Array は共通ユーティリティから利用
 
 // Initialize calculator
 async function initializeCalculator() {

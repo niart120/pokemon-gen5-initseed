@@ -4,6 +4,7 @@
  */
 
 import { SeedCalculator } from '../lib/core/seed-calculator';
+import { toMacUint8Array } from '../utils/mac-address';
 import type { 
   SearchConditions, 
   InitialSeedResult, 
@@ -45,25 +46,7 @@ let calculator: SeedCalculator;
  * - 値は 0-255 にクランプ
  * - 長さ不一致時は 6 バイトへ切り詰め/ゼロ埋め
  */
-function toMacUint8Array(input: Array<number | string>): Uint8Array {
-  const out = new Uint8Array(6);
-  for (let i = 0; i < 6; i++) {
-    const raw = input[i] ?? 0;
-    let n: number;
-    if (typeof raw === 'number') {
-      n = raw;
-    } else {
-      const s = raw.trim().toLowerCase();
-      // 0x 前置または 16進/10進を許容
-      n = s.startsWith('0x') ? parseInt(s, 16) : Number.isNaN(Number(s)) ? parseInt(s, 16) : Number(s);
-    }
-    if (!Number.isFinite(n)) n = 0;
-    // 0-255 にクランプ
-    n = Math.min(255, Math.max(0, Math.trunc(n)));
-    out[i] = n;
-  }
-  return out;
-}
+// toMacUint8Array は共通ユーティリティから利用
 
 /**
  * Timer management functions for accurate elapsed time calculation
