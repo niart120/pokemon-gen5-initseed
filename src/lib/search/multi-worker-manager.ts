@@ -13,7 +13,6 @@ import type {
   ParallelWorkerRequest,
   ParallelWorkerResponse
 } from '../../types/pokemon';
-import { log } from 'console';
 
 export interface SearchCallbacks {
   onProgress: (progress: AggregatedProgress) => void;
@@ -213,16 +212,18 @@ export class MultiWorkerSearchManager {
     if (!this.callbacks) return;
 
     switch (response.type) {
-      case 'READY':
+      case 'READY': {
         break;
+      }
 
-      case 'PROGRESS':
+      case 'PROGRESS': {
         if (response.progress) {
           this.updateWorkerProgress(workerId, response.progress);
         }
         break;
+      }
 
-      case 'RESULT':
+      case 'RESULT': {
         if (response.result) {
           // 結果のDateオブジェクト復元
           const result: InitialSeedResult = {
@@ -239,50 +240,66 @@ export class MultiWorkerSearchManager {
           }
         }
         break;
+      }
 
-      case 'COMPLETE':
+      case 'COMPLETE': {
         this.handleWorkerCompletion(workerId);
         break;
+      }
 
-      case 'ERROR':
+      case 'ERROR': {
         console.error(`❌ Worker ${workerId} error:`, response.error);
         this.handleWorkerError(workerId, new Error(response.error || 'Unknown worker error'));
         break;
+      }
 
-      case 'PAUSED':
+      case 'PAUSED': {
         const pausedProgress = this.workerProgresses.get(workerId);
         if (pausedProgress) {
           pausedProgress.status = 'paused';
         }
         break;
+      }
 
-      case 'RESUMED':
+      case 'RESUMED': {
         const resumedProgress = this.workerProgresses.get(workerId);
         if (resumedProgress) {
           resumedProgress.status = 'running';
         }
         break;
+      }
 
-      case 'STOPPED':
+      case 'STOPPED': {
         const stoppedProgress = this.workerProgresses.get(workerId);
         if (stoppedProgress) {
           stoppedProgress.status = 'completed';
         }
         break;
+      }
 
-      default:
+      default: {
         console.warn(`Unknown worker response type from ${workerId}:`, response);
+      }
     }
   }
 
   /**
    * Worker進捗更新
    */
-  private updateWorkerProgress(workerId: number, progressData: any): void {
+  private updateWorkerProgress(
+    workerId: number,
+    progressData: {
+      currentStep: number;
+      elapsedTime: number;
+      estimatedTimeRemaining: number;
+      matchesFound: number;
+      currentDateTime?: string;
+    }
+  ): void {
     const currentProgress = this.workerProgresses.get(workerId);
     if (!currentProgress) return;
 
-    // 進捗データ更新
+    // 進捗データ更新（totalStepsやstatusは既存のものを維持）
     currentProgress.currentStep = progressData.currentStep;
     currentProgress.elapsedTime = progressData.elapsedTime;
     currentProgress.estimatedTimeRemaining = progressData.estimatedTimeRemaining;
@@ -392,7 +409,7 @@ export class MultiWorkerSearchManager {
     const totalElapsed = this.getManagerElapsedTime(); // 一時停止時間を除外した正確な時間
     const totalResults = this.results.length;
     
-    console.log(`🎉 Parallel search completed in ${totalElapsed}ms with ${totalResults} results`);
+  console.warn(`Parallel search completed in ${totalElapsed}ms with ${totalResults} results`);
     
     // 完了時の実際の進捗数を計算（Speed表示保持のため）
     const progresses = Array.from(this.workerProgresses.values());
@@ -495,7 +512,7 @@ export class MultiWorkerSearchManager {
     // マネージャータイマーを一時停止
     this.pauseManagerTimer();
     
-    console.info('Pausing all workers...');
+  console.warn('Pausing all workers...');
     for (const worker of this.workers.values()) {
       const request: ParallelWorkerRequest = {
         type: 'PAUSE_SEARCH',

@@ -150,8 +150,8 @@ class PokemonResultParser {
       // 特性決定（性格値の16bit目で判定）
       ability: this.determineAbility(rawData.personality_value, rawData.encounter_slot_value, encounterParams),
       
-      // 性別決定（性格値下位8bit vs 種族閾値）
-      gender: this.determineGender(rawData.personality_value, rawData.encounter_slot_value, encounterParams),
+  // 性別決定（性格値下位8bit vs 種族の性別仕様）
+  gender: this.determineGender(rawData.personality_value, rawData.encounter_slot_value, encounterParams),
       
       // 色違いはWASM側で判定済み
       isShiny: rawData.shiny_flag,
@@ -192,20 +192,18 @@ class PokemonResultParser {
   }
   
   private determineGender(pid: number, slotValue: number, encounterParams: EncounterParams): Gender {
+    // 新ユーティリティ determineGenderFromSpec を使用
+    // import { determineGenderFromSpec } from '@/lib/services/gender-utils'
     const species = this.determineSpecies(slotValue, encounterParams);
     const speciesData = this.dataManager.getSpecies(species);
     if (!speciesData) throw new Error(`Unknown species: ${species}`);
-    
-    // 性別比率が固定の場合
-    if (speciesData.genderRatio === 'genderless') return 'genderless';
-    if (speciesData.genderRatio === 'male-only') return 'male';
-    if (speciesData.genderRatio === 'female-only') return 'female';
-    
-    // 性格値下位8bit vs 種族閾値で判定
-    const genderValue = pid & 0xFF;
-    const threshold = this.getGenderThreshold(speciesData.genderRatio);
-    
-    return genderValue < threshold ? 'female' : 'male';
+
+    // 旧 genderRatio 文字列表現から互換仕様へマッピングする補助関数例
+    const spec = this.toGenderSpec(speciesData.genderRatio);
+    const genderValue = pid & 0xff;
+    const unified = determineGenderFromSpec(genderValue, spec);
+    // ドキュメント例の型に合わせて表記をマップ
+    return unified === 'Genderless' ? 'genderless' : unified.toLowerCase() as Gender;
   }
   
   private getNatureFromId(natureId: number): PokemonNature {
@@ -220,16 +218,22 @@ class PokemonResultParser {
     return natureList[natureId] as PokemonNature;
   }
   
-  private getGenderThreshold(genderRatio: string): number {
+  private toGenderSpec(genderRatio: string):
+    | { type: 'genderless' }
+    | { type: 'fixed'; fixed: 'male' | 'female' }
+    | { type: 'ratio'; femaleThreshold: number } {
+    if (genderRatio === 'genderless') return { type: 'genderless' };
+    if (genderRatio === 'male-only') return { type: 'fixed', fixed: 'male' };
+    if (genderRatio === 'female-only') return { type: 'fixed', fixed: 'female' };
     const ratioMap: Record<string, number> = {
-      '87.5:12.5': 31,   // 87.5% male (starter等)
-      '75:25': 63,       // 75% male
-      '50:50': 127,      // 50% male
-      '25:75': 191,      // 25% male
-      '12.5:87.5': 225,  // 12.5% male
+      '87.5:12.5': 31,
+      '75:25': 63,
+      '50:50': 128, // 50% female → 0..127 female, 128..255 male
+      '25:75': 191,
+      '12.5:87.5': 225,
     };
-    
-    return ratioMap[genderRatio] || 127;
+    const femaleThreshold = ratioMap[genderRatio] ?? 128;
+    return { type: 'ratio', femaleThreshold };
   }
 }
 ```

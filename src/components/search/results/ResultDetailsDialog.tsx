@@ -1,6 +1,6 @@
 import { Eye } from 'lucide-react';
 import { Button } from '../../ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { Label } from '../../ui/label';
 import type { InitialSeedResult } from '../../../types/pokemon';
 
@@ -107,7 +107,7 @@ interface ResultDetailsButtonProps {
   onClick: () => void;
 }
 
-export function ResultDetailsButton({ result, onClick }: ResultDetailsButtonProps) {
+export function ResultDetailsButton({ result: _result, onClick }: ResultDetailsButtonProps) {
   return (
     <Button 
       variant="outline" 

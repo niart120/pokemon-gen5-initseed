@@ -62,11 +62,11 @@ export class SHA1 {
     }
 
     // Add this chunk's hash to result
-    let h0 = this.add32(H0, a);
-    let h1 = this.add32(H1, b);
-    let h2 = this.add32(H2, c);
-    let h3 = this.add32(H3, d);
-    let h4 = this.add32(H4, e);
+    const h0 = this.add32(H0, a);
+    const h1 = this.add32(H1, b);
+    const h2 = this.add32(H2, c);
+    const h3 = this.add32(H3, d);
+    const h4 = this.add32(H4, e);
 
     return { h0, h1, h2, h3, h4 };
   }

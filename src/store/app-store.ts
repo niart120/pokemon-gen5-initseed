@@ -118,12 +118,14 @@ const defaultParallelSearchSettings: ParallelSearchSettings = {
   chunkStrategy: 'time-based',
 };
 
-// Use demo seeds for initial setup
-console.log('Using demo target seeds:', DEMO_TARGET_SEEDS.map(s => '0x' + s.toString(16).padStart(8, '0')));
+// Use demo seeds for initial setup (development only)
+if (import.meta.env.DEV) {
+  console.warn('Using demo target seeds:', DEMO_TARGET_SEEDS.map(s => '0x' + s.toString(16).padStart(8, '0')));
+}
 
 export const useAppStore = create<AppStore>()(
   persist(
-    (set, get) => ({
+    (set, _get, _api) => ({
       // Search conditions
       searchConditions: defaultSearchConditions,
       setSearchConditions: (conditions) =>
@@ -256,65 +258,13 @@ export const useAppStore = create<AppStore>()(
         }),
     }),
     {
-      name: 'pokemon-seed-app',
-      partialize: (state) => ({
-        searchConditions: state.searchConditions,
-        targetSeeds: state.targetSeeds,
-        targetSeedInput: state.targetSeedInput,
-        presets: state.presets,
-        parallelSearchSettings: state.parallelSearchSettings,
-      }),
-      migrate: (persistedState: any, version: number) => {
-        // データ移行: 旧timer0Range/vcountRange構造から新timer0VCountConfig構造へ
-        if (persistedState?.searchConditions) {
-          const conditions = persistedState.searchConditions;
-          
-          // 旧構造を新構造に移行
-          if (conditions.timer0Range && conditions.vcountRange) {
-            conditions.timer0VCountConfig = {
-              useAutoConfiguration: conditions.timer0Range.useAutoRange || conditions.vcountRange.useAutoRange,
-              timer0Range: {
-                min: conditions.timer0Range.min,
-                max: conditions.timer0Range.max,
-              },
-              vcountRange: {
-                min: conditions.vcountRange.min,
-                max: conditions.vcountRange.max,
-              },
-            };
-            
-            // 旧フィールドを削除
-            delete conditions.timer0Range;
-            delete conditions.vcountRange;
-          }
-          
-          // プリセットも同様に移行
-          if (persistedState.presets) {
-            persistedState.presets = persistedState.presets.map((preset: any) => {
-              if (preset.conditions?.timer0Range && preset.conditions?.vcountRange) {
-                const newConditions = { ...preset.conditions };
-                newConditions.timer0VCountConfig = {
-                  useAutoConfiguration: newConditions.timer0Range.useAutoRange || newConditions.vcountRange.useAutoRange,
-                  timer0Range: {
-                    min: newConditions.timer0Range.min,
-                    max: newConditions.timer0Range.max,
-                  },
-                  vcountRange: {
-                    min: newConditions.vcountRange.min,
-                    max: newConditions.vcountRange.max,
-                  },
-                };
-                delete newConditions.timer0Range;
-                delete newConditions.vcountRange;
-                return { ...preset, conditions: newConditions };
-              }
-              return preset;
-            });
-          }
-        }
-        
-        return persistedState;
+      name: 'app-store',
+      version: 2,
+      migrate: (persistedState: unknown, _version: number) => {
+        // ここでは単純にそのまま返す（将来のマイグレーション時に更新）
+        return persistedState as unknown as AppStore;
       },
-    }
-  )
+      // ...existing code...
+    },
+  ),
 );

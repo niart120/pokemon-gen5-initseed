@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Development-only verification logic
  * Separate from production code to maintain clean architecture
