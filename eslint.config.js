@@ -27,13 +27,14 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_' }
       ],
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
   {
-    files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
+    files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', 'src/test/**/*.{ts,tsx}'],
     languageOptions: {
       globals: {
         ...globals.browser,
@@ -52,6 +53,13 @@ export default tseslint.config(
         'warn',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
       ],
+      'no-console': 'off',
+    },
+  },
+  {
+    files: ['src/test-utils/**/*.{ts,tsx}'],
+    rules: {
+      'no-console': 'off',
     },
   }
 );

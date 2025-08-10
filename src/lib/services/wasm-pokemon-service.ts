@@ -145,8 +145,8 @@ export class WasmPokemonService {
           bwConfig
         );
         const rawData = parseRawPokemonData(wasmRaw);
-        const endTime = performance.now();
-        console.log(`WASM single Pokemon generation completed in ${endTime - startTime}ms`);
+  const endTime = performance.now();
+  console.warn(`WASM single Pokemon generation completed in ${endTime - startTime}ms`);
         return rawData;
       } finally {
         bwConfig.free();

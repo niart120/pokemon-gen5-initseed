@@ -376,3 +376,87 @@ All data sources are properly attributed with URLs and retrieval dates as requir
 - **Game mechanics**: Smogon RNG documentation, research communities
 
 This ensures full traceability and allows for data verification and updates.
+
+---
+
+## Functional Assembler API (Phase 2 integration) — New
+
+As part of the Phase 2 integration cleanup, the previous class-based `PokemonAssembler` was removed and replaced with a functional API for simpler composition and testability.
+
+Location: `src/lib/integration/pokemon-assembler.ts`
+
+### Key Types
+
+```ts
+export interface AssemblerContext {
+  romVersion: ROMVersion;
+  romRegion: ROMRegion;
+  encounterTables: Partial<EncounterTableMap>;
+}
+
+export interface EncounterTableEntry {
+  species: number;
+  minLevel: number;
+  maxLevel: number;
+  abilityRatio: [number, number];
+  genderRatio: number; // -1 for genderless
+}
+```
+
+### API
+
+```ts
+// Context
+createAssemblerContext(romVersion: ROMVersion, romRegion: ROMRegion, tables?: Partial<EncounterTableMap>): AssemblerContext
+
+// Assemble
+assembleData(ctx: AssemblerContext, raw: RawPokemonData): EnhancedPokemonData
+assembleBatch(ctx: AssemblerContext, raws: RawPokemonData[]): EnhancedPokemonData[]
+
+// Tables
+setEncounterTable(ctx: AssemblerContext, type: EncounterType, table: EncounterTableEntry[]): void
+getEncounterTables(ctx: AssemblerContext): Partial<EncounterTableMap>
+
+// Sync rules validation (batch)
+validateSyncRules(results: EnhancedPokemonData[]): {
+  isValid: boolean;
+  violations: Array<{ index: number; encounterType: EncounterType; syncApplied: boolean; syncEligible: boolean; violation: string }>
+}
+```
+
+Notes:
+- Sync application rules are strictly enforced. Roaming encounters never allow synchronize, and ineligible encounter types must not have sync applied.
+- When encounter tables are absent for a type, a safe default entry is used for testing/fallback.
+
+### Usage Example
+
+```ts
+import {
+  createAssemblerContext,
+  assembleData,
+  assembleBatch,
+  setEncounterTable,
+  getEncounterTables,
+  validateSyncRules,
+  EncounterType,
+  createSampleEncounterTables,
+} from '@/lib/integration/pokemon-assembler';
+
+const ctx = createAssemblerContext('B', 'JPN', createSampleEncounterTables());
+
+// Single
+const enhanced = assembleData(ctx, raw);
+
+// Batch
+const list = assembleBatch(ctx, raws);
+const validation = validateSyncRules(list);
+
+// Manage encounter tables
+setEncounterTable(ctx, EncounterType.Normal, [{ species: 25, minLevel: 10, maxLevel: 15, abilityRatio: [1,0], genderRatio: 50 }]);
+const tables = getEncounterTables(ctx);
+```
+
+### Migration Note
+
+- Removed: `class PokemonAssembler`
+- Use the functional API listed above. All previous behaviors (encounter resolution, level/gender/ability/shiny handling, dust cloud logic, sync eligibility and enforcement) are preserved.

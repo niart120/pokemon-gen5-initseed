@@ -365,7 +365,7 @@ async function performSearch(conditions: SearchConditions, targetSeeds: number[]
       
       // Note: User manual settings are respected even if outside ROM optimal ranges
       if (actualVCount < conditions.timer0VCountConfig.vcountRange.min || actualVCount > conditions.timer0VCountConfig.vcountRange.max) {
-        console.log(`ℹ️ [WORKER] Calculated VCount ${actualVCount} (0x${actualVCount.toString(16)}) is outside user range ${conditions.timer0VCountConfig.vcountRange.min}-${conditions.timer0VCountConfig.vcountRange.max}, but continuing search as requested.`);
+        console.warn(`[WORKER] Calculated VCount ${actualVCount} (0x${actualVCount.toString(16)}) is outside user range ${conditions.timer0VCountConfig.vcountRange.min}-${conditions.timer0VCountConfig.vcountRange.max}, but continuing search as requested.`);
       }
       
       // Process in time ranges using integrated search with optimized batch size
