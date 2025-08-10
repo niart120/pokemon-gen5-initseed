@@ -8,15 +8,31 @@ import fetch, { Request, Response } from 'node-fetch';
 import { TextDecoder as NodeTextDecoder, TextEncoder as NodeTextEncoder } from 'util';
 
 // Node.js環境でのfetch polyfill（Node 18+ では既に存在するが、未定義時のみ設定）
-if (typeof (global as any).fetch === 'undefined') {
-  (global as any).fetch = fetch as unknown as typeof global.fetch;
-  (global as any).Request = Request as unknown as typeof global.Request;
-  (global as any).Response = Response as unknown as typeof global.Response;
+declare global {
+  // Node の test 環境向けに必要な最小のグローバル拡張
+  interface Window { localStorage?: StorageLike }
+}
+
+const g = globalThis as typeof globalThis & {
+  fetch?: typeof global.fetch;
+  Request?: typeof global.Request;
+  Response?: typeof global.Response;
+  TextDecoder?: typeof NodeTextDecoder;
+  TextEncoder?: typeof NodeTextEncoder;
+  window?: { localStorage?: StorageLike };
+  WebAssembly?: typeof WebAssembly;
+  localStorage?: StorageLike;
+};
+
+if (typeof g.fetch === 'undefined') {
+  g.fetch = fetch as unknown as typeof global.fetch;
+  g.Request = Request as unknown as typeof global.Request;
+  g.Response = Response as unknown as typeof global.Response;
 }
 
 // TextEncoder/Decoder の polyfill（未定義時のみ設定）
-(global as any).TextDecoder = (global as any).TextDecoder || NodeTextDecoder;
-(global as any).TextEncoder = (global as any).TextEncoder || NodeTextEncoder;
+g.TextDecoder = g.TextDecoder || (NodeTextDecoder as unknown as typeof g.TextDecoder);
+g.TextEncoder = g.TextEncoder || (NodeTextEncoder as unknown as typeof g.TextEncoder);
 
 // ------------------------------------------------------------
 // localStorage モック（Zustand persist 警告抑制用）
@@ -56,27 +72,28 @@ function createInMemoryStorage(): StorageLike {
 }
 
 // Node 環境では window が無いので最小限のモックを提供
-if (typeof (global as any).window === 'undefined') {
-  (global as any).window = {} as any;
+if (typeof g.window === 'undefined') {
+  // テスト環境の Window 互換オブジェクト（最小）
+  (g as unknown as { window: { localStorage?: StorageLike } }).window = {};
 }
 
-if (!(global as any).window.localStorage) {
+if (!g.window.localStorage) {
   const ls = createInMemoryStorage();
-  (global as any).window.localStorage = ls;
-  (global as any).localStorage = ls; // 直接参照にも対応
+  g.window.localStorage = ls;
+  g.localStorage = ls; // 直接参照にも対応
 }
 
 // WebAssembly環境の有無を通知（必要なら）
-if (typeof (global as any).WebAssembly === 'undefined') {
+if (typeof g.WebAssembly === 'undefined') {
   console.warn('WebAssembly not available in test environment');
 }
 
 // ファイルシステムからWASMを読み込むヘルパー（必要なテストのみ使用）
-;(global as any).loadWasmFromFile = async (wasmPath: string) => {
+g.loadWasmFromFile = async (wasmPath: string) => {
   try {
     const wasmFile = readFileSync(resolve(wasmPath));
     const wasmModule = await WebAssembly.instantiate(wasmFile as unknown as BufferSource);
-    return (wasmModule as WebAssembly.WebAssemblyInstantiatedSource).instance;
+  return (wasmModule as WebAssembly.WebAssemblyInstantiatedSource).instance;
   } catch (error) {
     console.error('WASM loading error:', error);
     throw error;

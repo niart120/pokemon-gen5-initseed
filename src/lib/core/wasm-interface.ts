@@ -3,6 +3,15 @@
  * This module provides high-performance calculation functions using Rust + WebAssembly
  */
 
+// Type-only imports from generated wasm types
+import type {
+  BWGenerationConfig as WasmBWGenerationConfig,
+  RawPokemonData as WasmRawPokemonData,
+} from '../../wasm/wasm_pkg';
+
+// Init arg for wasm-bindgen init function
+type WasmInitArg = { module_or_path: BufferSource | URL };
+
 // WebAssembly module interface - 統合検索とポケモン生成API
 interface WasmModule {
   // 統合検索機能（従来実装）
@@ -26,7 +35,7 @@ interface WasmModule {
       vcount_min: number,
       vcount_max: number,
       target_seeds: Uint32Array
-    ): any[];
+    ): unknown[];
     free(): void;
   };
 
@@ -38,10 +47,15 @@ interface WasmModule {
     sid: number,
     sync_enabled: boolean,
     sync_nature_id: number
-  ) => { free(): void };
+  ) => WasmBWGenerationConfig;
   PokemonGenerator: {
-    generate_single_pokemon_bw(seed: bigint, config: any): any;
-    generate_pokemon_batch_bw(base_seed: bigint, offset: bigint, count: number, config: any): any[];
+    generate_single_pokemon_bw(seed: bigint, config: WasmBWGenerationConfig): WasmRawPokemonData;
+    generate_pokemon_batch_bw(
+      base_seed: bigint,
+      offset: bigint,
+      count: number,
+      config: WasmBWGenerationConfig
+    ): WasmRawPokemonData[];
   };
 
   // 追加: 列挙（数値）
@@ -71,7 +85,7 @@ export async function initWasm(): Promise<WasmModule> {
 
       // Node(vitest) 環境では fetch が file: URL をサポートしないため、
       // 可能ならバイト列を直接渡す
-      let initArg: any;
+      let initArg: WasmInitArg;
       if (typeof window === 'undefined') {
         const fs = await import('fs');
         const path = await import('path');
