@@ -77,24 +77,24 @@ class FeatureFlags {
   // Phase 3a control methods
   enableOptimizedHooksForMainContent(): void {
     this.config.enableOptimizedHooksForMainContent = true;
-    console.log('🚀 Phase 3a: MainContent最適化hook有効化');
+  console.warn('Phase 3a: MainContent 最適化hook有効化');
   }
 
   enableOptimizedHooksForSearchPanel(): void {
     this.config.enableOptimizedHooksForSearchPanel = true;
-    console.log('🚀 Phase 3a: SearchPanel最適化hook有効化');
+  console.warn('Phase 3a: SearchPanel 最適化hook有効化');
   }
 
   enableOptimizedHooksForAllComponents(): void {
     this.config.enableOptimizedHooksForMainContent = true;
     this.config.enableOptimizedHooksForSearchPanel = true;
-    console.log('🚀 Phase 3a: 全コンポーネント最適化hook有効化');
+  console.warn('Phase 3a: 全コンポーネント 最適化hook有効化');
   }
 
   // Phase 3b control methods
   enableOptimizedHooksGlobally(): void {
     this.config.enableOptimizedHooksGlobally = true;
-    console.log('🚀 Phase 3b: グローバル最適化hook有効化');
+  console.warn('Phase 3b: グローバル 最適化hook有効化');
   }
 
   // Rollback methods
@@ -102,7 +102,7 @@ class FeatureFlags {
     this.config.enableOptimizedHooksForMainContent = false;
     this.config.enableOptimizedHooksForSearchPanel = false;
     this.config.enableOptimizedHooksGlobally = false;
-    console.log('🔄 最適化hook無効化（ロールバック）');
+  console.warn('最適化hook無効化（ロールバック）');
   }
 
   // Configuration inspection
@@ -113,7 +113,7 @@ class FeatureFlags {
   // Runtime configuration update (for testing)
   updateConfig(updates: Partial<FeatureFlagsConfig>): void {
     this.config = { ...this.config, ...updates };
-    console.log('🔧 Feature flags updated:', updates);
+  console.warn('Feature flags updated:', updates);
   }
 }
 

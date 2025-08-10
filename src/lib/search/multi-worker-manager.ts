@@ -409,7 +409,7 @@ export class MultiWorkerSearchManager {
     const totalElapsed = this.getManagerElapsedTime(); // 一時停止時間を除外した正確な時間
     const totalResults = this.results.length;
     
-    console.log(`🎉 Parallel search completed in ${totalElapsed}ms with ${totalResults} results`);
+  console.warn(`Parallel search completed in ${totalElapsed}ms with ${totalResults} results`);
     
     // 完了時の実際の進捗数を計算（Speed表示保持のため）
     const progresses = Array.from(this.workerProgresses.values());
@@ -512,7 +512,7 @@ export class MultiWorkerSearchManager {
     // マネージャータイマーを一時停止
     this.pauseManagerTimer();
     
-    console.info('Pausing all workers...');
+  console.warn('Pausing all workers...');
     for (const worker of this.workers.values()) {
       const request: ParallelWorkerRequest = {
         type: 'PAUSE_SEARCH',

@@ -118,8 +118,10 @@ const defaultParallelSearchSettings: ParallelSearchSettings = {
   chunkStrategy: 'time-based',
 };
 
-// Use demo seeds for initial setup
-console.log('Using demo target seeds:', DEMO_TARGET_SEEDS.map(s => '0x' + s.toString(16).padStart(8, '0')));
+// Use demo seeds for initial setup (development only)
+if (import.meta.env.DEV) {
+  console.warn('Using demo target seeds:', DEMO_TARGET_SEEDS.map(s => '0x' + s.toString(16).padStart(8, '0')));
+}
 
 export const useAppStore = create<AppStore>()(
   persist(

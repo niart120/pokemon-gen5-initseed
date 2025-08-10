@@ -55,5 +55,11 @@ export default tseslint.config(
       ],
       'no-console': 'off',
     },
+  },
+  {
+    files: ['src/test-utils/**/*.{ts,tsx}'],
+    rules: {
+      'no-console': 'off',
+    },
   }
 );

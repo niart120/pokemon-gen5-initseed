@@ -122,7 +122,7 @@ export function SearchControlCard() {
             addSearchResult(result);
           },
           onComplete: (message: string) => {
-            console.log('✅ Search completed:', message);
+            console.warn('Search completed:', message);
             
             // 検索時間を保存
             const currentProgress = useAppStore.getState().searchProgress;
@@ -156,13 +156,13 @@ export function SearchControlCard() {
             resetSearchWorkerManager();
           },
           onPaused: () => {
-            console.log('🔻 Search paused by worker');
+            console.warn('Search paused by worker');
           },
           onResumed: () => {
-            console.log('▶️ Search resumed by worker');
+            console.warn('Search resumed by worker');
           },
           onStopped: () => {
-            console.log('⏹️ Search stopped by worker');
+            console.warn('Search stopped by worker');
             stopSearch();
             // 停止時も統計情報保持（並列進捗も維持、次回検索開始時にリセット）
             // setParallelProgress(null); ← 削除：統計表示を維持
