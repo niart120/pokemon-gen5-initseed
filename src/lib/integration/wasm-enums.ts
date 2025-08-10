@@ -24,11 +24,13 @@ import { ConversionError } from './wasm-service';
 export function romVersionToGameVersion(romVersion: ROMVersion): WasmGameVersion {
   switch (romVersion) {
     case 'B':
+      return WasmGameVersion.B;
     case 'W':
-      return WasmGameVersion.BlackWhite;
+      return WasmGameVersion.W;
     case 'B2':
+      return WasmGameVersion.B2;
     case 'W2':
-      return WasmGameVersion.BlackWhite2;
+      return WasmGameVersion.W2;
     default:
       throw new ConversionError(`Invalid ROM version: ${romVersion}`, romVersion);
   }

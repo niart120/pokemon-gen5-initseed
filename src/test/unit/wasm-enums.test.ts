@@ -11,8 +11,10 @@ import {
 
 describe('wasm-enums conversions', () => {
   it('domain enums mirror WASM numeric values', () => {
-    expect(WasmGameVersion.BlackWhite).toBe(DomainGameVersion.BlackWhite);
-    expect(WasmGameVersion.BlackWhite2).toBe(DomainGameVersion.BlackWhite2);
+    expect(WasmGameVersion.B).toBe(DomainGameVersion.B);
+    expect(WasmGameVersion.W).toBe(DomainGameVersion.W);
+    expect(WasmGameVersion.B2).toBe(DomainGameVersion.B2);
+    expect(WasmGameVersion.W2).toBe(DomainGameVersion.W2);
 
     expect(WasmEncounterType.Normal).toBe(DomainEncounterType.Normal);
     expect(WasmEncounterType.StaticEvent).toBe(DomainEncounterType.StaticEvent);
@@ -21,8 +23,10 @@ describe('wasm-enums conversions', () => {
   });
 
   it('romVersionToGameVersion converts correctly', () => {
-    expect(romVersionToGameVersion('B')).toBe(WasmGameVersion.BlackWhite);
-    expect(romVersionToGameVersion('W2')).toBe(WasmGameVersion.BlackWhite2);
+    expect(romVersionToGameVersion('B')).toBe(WasmGameVersion.B);
+    expect(romVersionToGameVersion('W')).toBe(WasmGameVersion.W);
+    expect(romVersionToGameVersion('B2')).toBe(WasmGameVersion.B2);
+    expect(romVersionToGameVersion('W2')).toBe(WasmGameVersion.W2);
   });
 
   it('stringToEncounterType converts correctly', () => {

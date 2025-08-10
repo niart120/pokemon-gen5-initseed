@@ -125,21 +125,33 @@ export class GenerationDataManager {
   }
   
   private loadGameConstants(gameVersion: GameVersion): GameConstants {
-    // ゲームバージョン別の定数
+    // ゲームバージョン別の定数（B/W/B2/W2 に統一）
     const constants = {
-      [GameVersion.BlackWhite]: {
+      [GameVersion.B]: {
         encounterSlotDivisor: 0x290,
         encounterSlotMultiplier: 0xFFFF,
-        vcount: { black: 0x60, white: 0x5f },
-        nazo: { black: 0x2215f10, white: 0x2215f30 },
+        vcount: { black: 0x60 },
+        nazo: { black: 0x2215f10 },
       },
-      [GameVersion.BlackWhite2]: {
+      [GameVersion.W]: {
+        encounterSlotDivisor: 0x290,
+        encounterSlotMultiplier: 0xFFFF,
+        vcount: { white: 0x5f },
+        nazo: { white: 0x2215f30 },
+      },
+      [GameVersion.B2]: {
         encounterSlotDivisor: 1,
         encounterSlotMultiplier: 100,
-        vcount: { black2: 0x60, white2: 0x5f }, // 要確認
-        nazo: { black2: 0x2215f10, white2: 0x2215f30 }, // 要確認
-      }
-    };
+        vcount: { black2: 0x60 }, // 要確認
+        nazo: { black2: 0x2215f10 }, // 要確認
+      },
+      [GameVersion.W2]: {
+        encounterSlotDivisor: 1,
+        encounterSlotMultiplier: 100,
+        vcount: { white2: 0x5f }, // 要確認
+        nazo: { white2: 0x2215f30 }, // 要確認
+      },
+    } as const;
     
     return constants[gameVersion];
   }

@@ -47,7 +47,7 @@ fn test_integrated_generation_pattern1_bw2_continue_no_memory_link() {
     
     // Step 4: ポケモン生成設定
     let config = BWGenerationConfig::new(
-        GameVersion::BlackWhite2,
+    GameVersion::B2,
         encounter_type,
         tid,
         sid,
@@ -161,7 +161,7 @@ fn test_integrated_generation_pattern2_bw_continue_surfing() {
     
     // Step 4: ポケモン生成設定
     let config = BWGenerationConfig::new(
-        GameVersion::BlackWhite,
+    GameVersion::B,
         encounter_type,
         tid,
         sid,
@@ -273,7 +273,7 @@ fn test_integrated_generation_pattern3_bw2_continue_with_memory_link_static() {
     
     // Step 4: ポケモン生成設定
     let config = BWGenerationConfig::new(
-        GameVersion::BlackWhite2,
+    GameVersion::B2,
         encounter_type,
         tid,
         sid,
@@ -372,7 +372,7 @@ fn test_integrated_generation_pattern4_bw2_continue_no_memory_link_static_starte
     
     // Step 4: ポケモン生成設定
     let config = BWGenerationConfig::new(
-        GameVersion::BlackWhite2,
+    GameVersion::B2,
         EncounterType::StaticStarter,
         tid,
         sid,
@@ -434,9 +434,9 @@ fn test_integrated_generation_multiple_patterns() {
         
         let config = BWGenerationConfig::new(
             if matches!(game_mode, GameMode::Bw2ContinueNoMemoryLink | GameMode::Bw2ContinueWithMemoryLink) { 
-                GameVersion::BlackWhite2 
+                GameVersion::B2 
             } else { 
-                GameVersion::BlackWhite 
+                GameVersion::B 
             },
             *encounter_type,
             54321,
@@ -465,7 +465,7 @@ fn test_integrated_generation_edge_cases() {
     let generation_seed = PersonalityRNG::jump_seed(zero_seed, offset as u64);
     
     let config = BWGenerationConfig::new(
-        GameVersion::BlackWhite,
+    GameVersion::B,
         EncounterType::Normal,
         0,
         0,
@@ -498,7 +498,7 @@ fn test_integrated_generation_edge_cases() {
 fn test_integrated_generation_shiny_verification() {
     // 色違いになる可能性のあるTID/SIDの組み合わせでテスト
     let config = BWGenerationConfig::new(
-        GameVersion::BlackWhite,
+    GameVersion::B,
         EncounterType::Normal,
         12345,  // 特定のTID
         54321,  // 特定のSID

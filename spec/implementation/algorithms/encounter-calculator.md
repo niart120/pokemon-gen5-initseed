@@ -7,8 +7,10 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 #[derive(Clone, Copy)]
 pub enum GameVersion {
-    BlackWhite = 0,
-    BlackWhite2 = 1,
+    B = 0,
+    W = 1,
+    B2 = 2,
+    W2 = 3,
 }
 
 #[wasm_bindgen]
@@ -33,11 +35,11 @@ impl EncounterCalculator {
     // ゲームバージョン別の遭遇スロット計算
     pub fn calculate_encounter_slot_by_game_version(version: GameVersion, rand_value: u32) -> u32 {
         match version {
-            GameVersion::BlackWhite => {
+            GameVersion::B | GameVersion::W => {
                 // BW: (rand * 0xFFFF / 0x290) >> 32
                 ((rand_value as u64 * 0xFFFF / 0x290) >> 32) as u32
             },
-            GameVersion::BlackWhite2 => {
+            GameVersion::B2 | GameVersion::W2 => {
                 // BW2: (rand * 100) >> 32
                 ((rand_value as u64 * 100) >> 32) as u32
             },

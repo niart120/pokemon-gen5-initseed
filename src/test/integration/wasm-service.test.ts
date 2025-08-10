@@ -41,13 +41,13 @@ describe('WASM Service Integration Tests', () => {
   describe('enum/convert helpers', () => {
     describe('romVersionToGameVersion', () => {
       it('should convert BW ROM versions correctly', () => {
-  expect(romVersionToGameVersion('B')).toBe(WasmGameVersion.BlackWhite);
-  expect(romVersionToGameVersion('W')).toBe(WasmGameVersion.BlackWhite);
+  expect(romVersionToGameVersion('B')).toBe(WasmGameVersion.B);
+  expect(romVersionToGameVersion('W')).toBe(WasmGameVersion.W);
       });
 
       it('should convert BW2 ROM versions correctly', () => {
-  expect(romVersionToGameVersion('B2')).toBe(WasmGameVersion.BlackWhite2);
-  expect(romVersionToGameVersion('W2')).toBe(WasmGameVersion.BlackWhite2);
+  expect(romVersionToGameVersion('B2')).toBe(WasmGameVersion.B2);
+  expect(romVersionToGameVersion('W2')).toBe(WasmGameVersion.W2);
       });
 
       it('should throw ConversionError for invalid ROM versions', () => {

@@ -105,8 +105,8 @@ impl PokemonGenerator {
         
         // Step 2: 遭遇スロット決定
         let encounter_slot_value = match self.game_version {
-            GameVersion::BlackWhite => self.rng.encounter_slot_bw(),
-            GameVersion::BlackWhite2 => self.rng.encounter_slot_bw2(),
+            GameVersion::B | GameVersion::W => self.rng.encounter_slot_bw(),
+            GameVersion::B2 | GameVersion::W2 => self.rng.encounter_slot_bw2(),
         };
         
         // Step 3: 性格値決定

@@ -43,8 +43,8 @@ pub fn process_special_encounter(&mut self, encounter_type: u32) -> EncounterRes
     
     // Step 3: 遭遇スロット決定
     let slot_value = match self.game_version {
-        GameVersion::BlackWhite => self.rng.encounter_slot_bw(),   // r1[n+2] 消費
-        GameVersion::BlackWhite2 => self.rng.encounter_slot_bw2(), // r1[n+2] 消費
+        GameVersion::B | GameVersion::W => self.rng.encounter_slot_bw(),   // r1[n+2] 消費
+        GameVersion::B2 | GameVersion::W2 => self.rng.encounter_slot_bw2(), // r1[n+2] 消費
     };
     
     // Step 4: レベル乱数生成（エンカウントタイプ依存）

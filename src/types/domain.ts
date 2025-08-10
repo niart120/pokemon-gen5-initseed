@@ -7,8 +7,10 @@
  */
 
 export enum DomainGameVersion {
-  BlackWhite = 0,
-  BlackWhite2 = 1,
+  B = 0,
+  W = 1,
+  B2 = 2,
+  W2 = 3,
 }
 
 export enum DomainEncounterType {

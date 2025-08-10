@@ -325,13 +325,15 @@ export class WasmPokemonService {
     const wasm = getWasm();
     switch (version) {
       case 'B':
+        return wasm.GameVersion.B;
       case 'W':
-        return wasm.GameVersion.BlackWhite ?? wasm.GameVersion["BlackWhite"] ?? 0;
+        return wasm.GameVersion.W;
       case 'B2':
+        return wasm.GameVersion.B2;
       case 'W2':
-        return wasm.GameVersion.BlackWhite2 ?? wasm.GameVersion["BlackWhite2"] ?? 1;
+        return wasm.GameVersion.W2;
       default:
-        return wasm.GameVersion.BlackWhite ?? 0;
+        return wasm.GameVersion.B;
     }
   }
 

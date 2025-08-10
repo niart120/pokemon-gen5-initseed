@@ -11,28 +11,11 @@
  */
 
 import type { ROMVersion, ROMRegion } from '../../types/rom';
+import { EncounterType } from '@/types/raw-pokemon-data';
+export { EncounterType };
 
-// Encounter types based on wasm-pkg encounter_calculator.rs
-export enum EncounterType {
-  // Wild encounters (sync applicable)
-  Normal = 0,           // 通常エンカウント（草むら・洞窟・ダンジョン共通）
-  Surfing = 1,          // なみのり
-  Fishing = 2,          // つりざお
-  ShakingGrass = 3,     // 揺れる草むら（特殊エンカウント）
-  DustCloud = 4,        // 砂煙（特殊エンカウント）
-  PokemonShadow = 5,    // ポケモンの影（特殊エンカウント）
-  SurfingBubble = 6,    // 水泡（なみのり版特殊エンカウント）
-  FishingBubble = 7,    // 水泡釣り（釣り版特殊エンカウント）
-  
-  // Static encounters (sync applicable for symbols only)
-  StaticSymbol = 10,    // 固定シンボル（レジェンダリー等）- シンクロ有効
-  StaticStarter = 11,   // 御三家受け取り - シンクロ無効
-  StaticFossil = 12,    // 化石復元 - シンクロ無効
-  StaticEvent = 13,     // イベント配布 - シンクロ無効
-  
-  // Roaming encounters (sync NOT applicable)
-  Roaming = 20,         // 徘徊ポケモン（ドキュメント仕様準拠）
-}
+// EncounterType はドメイン定義（DomainEncounterType）を再エクスポートしたものを使用する
+// 出典: src/types/raw-pokemon-data.ts で DomainEncounterType を EncounterType としてエクスポート
 
 // Dust cloud content types
 export enum DustCloudContent {

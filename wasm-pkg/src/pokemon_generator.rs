@@ -683,7 +683,7 @@ mod tests {
 
     fn create_bw_test_config() -> BWGenerationConfig {
         BWGenerationConfig::new(
-            GameVersion::BlackWhite,
+            GameVersion::B,
             EncounterType::Normal,
             12345,
             54321,

@@ -6,8 +6,10 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GameVersion {
-    BlackWhite = 0,
-    BlackWhite2 = 1,
+    B = 0,
+    W = 1,
+    B2 = 2,
+    W2 = 3,
 }
 
 /// 遭遇タイプ列挙型
@@ -104,11 +106,11 @@ impl EncounterCalculator {
     /// 内部用の生スロット値計算
     fn calculate_raw_encounter_slot_internal(version: GameVersion, random_value: u32) -> u32 {
         match version {
-            GameVersion::BlackWhite => {
+            GameVersion::B | GameVersion::W => {
                 // BW: (rand * 0xFFFF / 0x290) >> 32
                 ((random_value as u64 * 0xFFFF / 0x290) >> 32) as u32
             },
-            GameVersion::BlackWhite2 => {
+            GameVersion::B2 | GameVersion::W2 => {
                 // BW2: (rand * 100) >> 32
                 ((random_value as u64 * 100) >> 32) as u32
             },
@@ -359,7 +361,7 @@ mod tests {
     fn test_normal_encounter_distribution() {
         let dist = EncounterCalculator::calculate_slot_distribution(
             EncounterType::Normal,
-            GameVersion::BlackWhite
+            GameVersion::B
         );
         
         // 期待される分布を確認（ドキュメント仕様）
@@ -381,7 +383,7 @@ mod tests {
     fn test_surfing_encounter_distribution() {
         let dist = EncounterCalculator::calculate_slot_distribution(
             EncounterType::Surfing,
-            GameVersion::BlackWhite
+            GameVersion::B
         );
         
         // 期待される分布を確認
@@ -401,7 +403,7 @@ mod tests {
     fn test_fishing_encounter_distribution() {
         let dist = EncounterCalculator::calculate_slot_distribution(
             EncounterType::Fishing,
-            GameVersion::BlackWhite
+            GameVersion::B
         );
         
         // 期待される分布を確認
@@ -421,7 +423,7 @@ mod tests {
     fn test_shaking_grass_encounter_distribution() {
         let dist = EncounterCalculator::calculate_slot_distribution(
             EncounterType::ShakingGrass,
-            GameVersion::BlackWhite
+            GameVersion::B
         );
         
         // 期待される分布を確認
@@ -441,7 +443,7 @@ mod tests {
     fn test_dust_cloud_encounter_distribution() {
         let dist = EncounterCalculator::calculate_slot_distribution(
             EncounterType::DustCloud,
-            GameVersion::BlackWhite
+            GameVersion::B
         );
         
         // 期待される分布を確認
@@ -459,7 +461,7 @@ mod tests {
     fn test_pokemon_shadow_encounter_distribution() {
         let dist = EncounterCalculator::calculate_slot_distribution(
             EncounterType::PokemonShadow,
-            GameVersion::BlackWhite
+            GameVersion::B
         );
         
         // 期待される分布を確認
@@ -478,7 +480,7 @@ mod tests {
     fn test_surfing_bubble_encounter_distribution() {
         let dist = EncounterCalculator::calculate_slot_distribution(
             EncounterType::SurfingBubble,
-            GameVersion::BlackWhite
+            GameVersion::B
         );
         
         // 期待される分布を確認
@@ -497,7 +499,7 @@ mod tests {
     fn test_fishing_bubble_encounter_distribution() {
         let dist = EncounterCalculator::calculate_slot_distribution(
             EncounterType::FishingBubble,
-            GameVersion::BlackWhite
+            GameVersion::B
         );
         
         // 期待される分布を確認
@@ -552,7 +554,7 @@ mod tests {
         // 境界値のテスト（32bit乱数値）
         // シード値0からの計算結果をテスト
         let result_zero = EncounterCalculator::calculate_encounter_slot(
-            GameVersion::BlackWhite,
+            GameVersion::B,
             EncounterType::Normal,
             0
         );
@@ -560,7 +562,7 @@ mod tests {
         
         // 最大値での計算結果をテスト
         let result_max = EncounterCalculator::calculate_encounter_slot(
-            GameVersion::BlackWhite,
+            GameVersion::B,
             EncounterType::Normal,
             u32::MAX
         );
@@ -569,12 +571,12 @@ mod tests {
         // 一致性テスト：同じ32bit値は常に同じ結果
         let test_value = 0x12345678u32;
         let result1 = EncounterCalculator::calculate_encounter_slot(
-            GameVersion::BlackWhite,
+            GameVersion::B,
             EncounterType::Normal,
             test_value
         );
         let result2 = EncounterCalculator::calculate_encounter_slot(
-            GameVersion::BlackWhite,
+            GameVersion::B,
             EncounterType::Normal,
             test_value
         );
@@ -596,12 +598,12 @@ mod tests {
         ] {
             for rand_val in 0..100 {
                 let bw_result = EncounterCalculator::calculate_encounter_slot(
-                    GameVersion::BlackWhite,
+                    GameVersion::B,
                     encounter_type,
                     rand_val
                 );
                 let bw2_result = EncounterCalculator::calculate_encounter_slot(
-                    GameVersion::BlackWhite2,
+                    GameVersion::B2,
                     encounter_type,
                     rand_val
                 );
@@ -618,11 +620,11 @@ mod tests {
         
         for &rand_val in &test_values {
             let bw_slot = EncounterCalculator::calculate_raw_encounter_slot(
-                GameVersion::BlackWhite, 
+                GameVersion::B, 
                 rand_val
             );
             let bw2_slot = EncounterCalculator::calculate_raw_encounter_slot(
-                GameVersion::BlackWhite2, 
+                GameVersion::B2, 
                 rand_val
             );
             
@@ -646,12 +648,12 @@ mod tests {
 
         for (encounter_type, rand_val) in test_cases {
             let result1 = EncounterCalculator::calculate_encounter_slot(
-                GameVersion::BlackWhite,
+                GameVersion::B,
                 encounter_type,
                 rand_val
             );
             let result2 = EncounterCalculator::calculate_encounter_slot(
-                GameVersion::BlackWhite,
+                GameVersion::B,
                 encounter_type,
                 rand_val
             );
@@ -696,7 +698,7 @@ mod tests {
             EncounterType::FishingBubble,
         ];
         
-        let versions = [GameVersion::BlackWhite, GameVersion::BlackWhite2];
+    let versions = [GameVersion::B, GameVersion::B2];
         let test_values = [0u32, 0x12345678, 0x80000000, u32::MAX];
         
         for version in versions {
