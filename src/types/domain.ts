@@ -29,6 +29,24 @@ export enum DomainEncounterType {
   Roaming = 20,
 }
 
+// EncounterType の名前ユニオン（データスキーマやJSONとの境界で使用）
+export const DomainEncounterTypeNames = [
+  'Normal',
+  'Surfing',
+  'Fishing',
+  'ShakingGrass',
+  'DustCloud',
+  'PokemonShadow',
+  'SurfingBubble',
+  'FishingBubble',
+  'StaticSymbol',
+  'StaticStarter',
+  'StaticFossil',
+  'StaticEvent',
+  'Roaming',
+] as const;
+export type DomainEncounterTypeName = typeof DomainEncounterTypeNames[number];
+
 export enum DomainShinyType {
   Normal = 0,
   Square = 1,

@@ -1,6 +1,8 @@
-import type { EncounterLocationsJson, EncounterSlotJson, EncounterMethod } from './schema';
+import type { EncounterLocationsJson, EncounterSlotJson } from './schema';
 import { EncounterType } from '@/types/raw-pokemon-data';
 import type { ROMVersion } from '@/types/rom';
+import type { DomainEncounterTypeName } from '@/types/domain';
+import { encounterTypeToName } from '@/lib/integration/wasm-enums';
 
 function normalizeLocationKey(location: string): string {
   return location.trim().replace(/[\u3000\s]+/g, '').replace(/[‐‑‒–—−\-_.]/g, '');
@@ -15,7 +17,7 @@ function applyLocationAlias(input: string): string {
   return s;
 }
 
-const methodName = (method: EncounterType): EncounterMethod => (EncounterType[method] as EncounterMethod);
+const methodName = (method: EncounterType): DomainEncounterTypeName => encounterTypeToName(method as number);
 
 export type EncounterRegistry = Record<string, { displayName: string; slots: EncounterSlotJson[] }>
 

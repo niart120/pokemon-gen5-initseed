@@ -1,17 +1,4 @@
-export type EncounterMethod =
-  | 'Normal'
-  | 'Surfing'
-  | 'Fishing'
-  | 'ShakingGrass'
-  | 'DustCloud'
-  | 'PokemonShadow'
-  | 'SurfingBubble'
-  | 'FishingBubble'
-  | 'StaticSymbol'
-  | 'StaticStarter'
-  | 'StaticFossil'
-  | 'StaticEvent'
-  | 'Roaming';
+import type { DomainEncounterTypeName } from '@/types/domain';
 
 export interface EncounterSlotJson {
   speciesId: number;
@@ -21,7 +8,7 @@ export interface EncounterSlotJson {
 
 export interface EncounterLocationsJson {
   version: 'B' | 'W' | 'B2' | 'W2';
-  method: EncounterMethod;
+  method: DomainEncounterTypeName;
   source: { name: string; url: string; retrievedAt: string };
   locations: Record<string, { displayName: string; slots: EncounterSlotJson[] }>;
 }

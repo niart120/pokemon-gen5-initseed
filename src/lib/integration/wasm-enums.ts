@@ -5,7 +5,7 @@
  * - This module exposes the WASM-flavored enums and conversion helpers.
  */
 
-import { DomainGameVersion, DomainEncounterType, DomainGameMode } from '../../types/domain';
+import { DomainGameVersion, DomainEncounterType, DomainGameMode, DomainEncounterTypeName } from '../../types/domain';
 
 // These mirrors the numeric values of WASM enums and provide TS names used at the boundary
 export const WasmGameVersion = DomainGameVersion;
@@ -68,6 +68,16 @@ export function stringToEncounterType(encounterType: string): WasmEncounterType 
     default:
       throw new ConversionError(`Invalid encounter type: ${encounterType}`, encounterType);
   }
+}
+
+// Canonical conversions between enum value and its domain name
+export function encounterTypeToName(type: WasmEncounterType): DomainEncounterTypeName {
+  return (DomainEncounterType[type] as unknown) as DomainEncounterTypeName;
+}
+
+export function nameToEncounterType(name: DomainEncounterTypeName): WasmEncounterType {
+  // Delegate to string converter to keep normalization in one place
+  return stringToEncounterType(name);
 }
 
 export function configToGameMode(
