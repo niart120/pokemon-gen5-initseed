@@ -6,11 +6,11 @@ This document provides comprehensive API documentation for the Phase 2 TypeScrip
 
 Phase 2 implements a complete pipeline from raw WASM Pokemon data to enhanced Pokemon information suitable for display and analysis. The system follows these principles:
 
-- **Source of Truth**: WASM (Rust) implementation for all calculations
-- **Data Integration**: Combines WASM output with encounter tables and species data
-- **Type Safety**: Full TypeScript strict mode compliance
-- **Validation**: Comprehensive input validation and error handling
-- **Documentation**: All data sources include URLs and retrieval dates
+- Source of Truth: WASM (Rust) implementation for all calculations
+- Data Integration: Combines WASM output with encounter tables and species data
+- Type Safety: Full TypeScript strict mode compliance
+- Validation: Comprehensive input validation and error handling
+- Documentation: All data sources include URLs and retrieval dates
 
 ## Architecture
 
@@ -76,9 +76,9 @@ function determineGenderFromSpec(
 Defines encounter tables with documented data sources.
 
 #### Data Sources
-- **Bulbapedia**: https://bulbapedia.bulbagarden.net/wiki/List_of_Pok%C3%A9mon_by_Unova_Pok%C3%A9dex_number (Retrieved: 2024-01-15)
-- **Serebii.net**: https://www.serebii.net/blackwhite/pokemon.shtml (Retrieved: 2024-01-15)
-- **Pokemon Database**: https://pokemondb.net/pokedex/game/black-white (Retrieved: 2024-01-15)
+- Bulbapedia: https://bulbapedia.bulbagarden.net/wiki/List_of_Pok%C3%A9mon_by_Unova_Pok%C3%A9dex_number (Retrieved: 2024-01-15)
+- Serebii.net: https://www.serebii.net/blackwhite/pokemon.shtml (Retrieved: 2024-01-15)
+- Pokemon Database: https://pokemondb.net/pokedex/game/black-white (Retrieved: 2024-01-15)
 
 #### Key Types
 
@@ -113,9 +113,9 @@ function calculateLevel(levelRandValue: number, levelRange: { min: number; max: 
 Contains Pokemon species and ability information.
 
 #### Data Sources
-- **Bulbapedia species pages**: https://bulbapedia.bulbagarden.net/wiki/List_of_Pok%C3%A9mon_by_National_Pok%C3%A9dex_number (Retrieved: 2024-01-15)
-- **Pokemon Database**: https://pokemondb.net/pokedex/all (Retrieved: 2024-01-15)
-- **Serebii.net Pokedex**: https://www.serebii.net/pokedex-bw/ (Retrieved: 2024-01-15)
+- Bulbapedia species pages: https://bulbapedia.bulbagarden.net/wiki/List_of_Pok%C3%A9mon_by_National_Pok%C3%A9dex_number (Retrieved: 2024-01-15)
+- Pokemon Database: https://pokemondb.net/pokedex/all (Retrieved: 2024-01-15)
+- Serebii.net Pokedex: https://www.serebii.net/pokedex-bw/ (Retrieved: 2024-01-15)
 
 #### Key Types
 
@@ -322,8 +322,8 @@ try {
 
 The implementation includes comprehensive tests:
 
-- **Basic validation tests**: `src/test/phase2-basic.test.ts`
-- **Integration tests**: `src/test/phase2-integration.test.ts`
+- Basic validation tests: `src/test/phase2-basic.test.ts`
+- Integration tests: `src/test/phase2-integration.test.ts`
 
 Run tests:
 ```bash
@@ -355,10 +355,10 @@ Currently implemented data includes:
 
 The system is designed for easy extension:
 
-1. **Add more species**: Extend `POKEMON_SPECIES` in `pokemon-species.ts`
-2. **Add more encounter tables**: Extend `ENCOUNTER_TABLES` in `encounter-tables.ts`
-3. **Add more abilities**: Extend `ABILITIES` in `pokemon-species.ts`
-4. **Custom integration logic**: Extend `PokemonIntegrationService`
+1. Add more species: Extend `POKEMON_SPECIES` in `pokemon-species.ts`
+2. Add more encounter tables: Extend `ENCOUNTER_TABLES` in `encounter-tables.ts`
+3. Add more abilities: Extend `ABILITIES` in `pokemon-species.ts`
+4. Custom integration logic: Extend `PokemonIntegrationService`
 
 ## Performance Considerations
 
@@ -371,9 +371,9 @@ The system is designed for easy extension:
 
 All data sources are properly attributed with URLs and retrieval dates as required:
 
-- **Encounter data**: Bulbapedia, Serebii.net, Pokemon Database
-- **Species data**: Official Pokemon sources, community databases
-- **Game mechanics**: Smogon RNG documentation, research communities
+- Encounter data: Bulbapedia, Serebii.net, Pokemon Database
+- Species data: Official Pokemon sources, community databases
+- Game mechanics: Smogon RNG documentation, research communities
 
 This ensures full traceability and allows for data verification and updates.
 
