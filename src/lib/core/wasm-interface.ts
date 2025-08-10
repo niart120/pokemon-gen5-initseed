@@ -6,14 +6,17 @@
 // Type-only imports from generated wasm types
 import type {
   BWGenerationConfig as WasmBWGenerationConfig,
-  RawPokemonData as WasmRawPokemonData,
+  PokemonGenerator as WasmPokemonGenerator,
+  EncounterType as WasmEncounterType,
+  GameVersion as WasmGameVersion,
+  SearchResult as WasmSearchResult,
 } from '../../wasm/wasm_pkg';
 
 // Init arg for wasm-bindgen init function
 type WasmInitArg = { module_or_path: BufferSource | URL };
 
 // WebAssembly module interface - 統合検索とポケモン生成API
-interface WasmModule {
+export interface WasmModule {
   // 統合検索機能（従来実装）
   IntegratedSeedSearcher: new (
     mac: Uint8Array,
@@ -35,32 +38,17 @@ interface WasmModule {
       vcount_min: number,
       vcount_max: number,
       target_seeds: Uint32Array
-    ): unknown[];
+    ): WasmSearchResult[];
     free(): void;
   };
 
   // 追加: ポケモン生成API
-  BWGenerationConfig: new (
-    version: number, // GameVersion
-    encounter_type: number, // EncounterType
-    tid: number,
-    sid: number,
-    sync_enabled: boolean,
-    sync_nature_id: number
-  ) => WasmBWGenerationConfig;
-  PokemonGenerator: {
-    generate_single_pokemon_bw(seed: bigint, config: WasmBWGenerationConfig): WasmRawPokemonData;
-    generate_pokemon_batch_bw(
-      base_seed: bigint,
-      offset: bigint,
-      count: number,
-      config: WasmBWGenerationConfig
-    ): WasmRawPokemonData[];
-  };
+  BWGenerationConfig: typeof WasmBWGenerationConfig;
+  PokemonGenerator: typeof WasmPokemonGenerator;
 
   // 追加: 列挙（数値）
-  EncounterType: { [k: string]: number };
-  GameVersion: { [k: string]: number };
+  EncounterType: typeof WasmEncounterType;
+  GameVersion: typeof WasmGameVersion;
 }
 
 let wasmModule: WasmModule | null = null;

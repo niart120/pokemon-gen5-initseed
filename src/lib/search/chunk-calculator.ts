@@ -135,7 +135,7 @@ export class ChunkCalculator {
   /**
    * 総秒数計算
    */
-  private static getTotalSeconds(dateRange: any): number {
+  private static getTotalSeconds(dateRange: Pick<SearchConditions, 'dateRange'>['dateRange']): number {
     const startDate = new Date(
       dateRange.startYear,
       dateRange.startMonth - 1,

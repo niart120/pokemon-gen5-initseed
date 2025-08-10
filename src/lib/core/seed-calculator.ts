@@ -48,7 +48,8 @@ export class SeedCalculator {
   /**
    * Get WebAssembly module for integrated search
    */
-  public getWasmModule(): any {
+  public getWasmModule() {
+    // 明示型を返すことで any を回避（呼び出し側はインポート経由の型推論に依存）
     return getWasm();
   }
 

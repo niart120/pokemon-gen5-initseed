@@ -66,7 +66,7 @@ export class IntegrationError extends Error {
   constructor(
     message: string,
     public code: string,
-    public data?: any
+  public data?: unknown
   ) {
     super(message);
     this.name = 'IntegrationError';

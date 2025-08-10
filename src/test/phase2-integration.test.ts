@@ -20,7 +20,6 @@ import {
 } from '../lib/services/wasm-pokemon-service';
 import { 
   PokemonIntegrationService,
-  IntegrationError,
   type IntegrationConfig 
 } from '../lib/services/pokemon-integration-service';
 import { 

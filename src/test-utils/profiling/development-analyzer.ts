@@ -238,8 +238,9 @@ export class DevelopmentPerformanceAnalyzer {
    * メモリ使用量取得
    */
   private getMemoryUsage(): number {
-    if ((performance as any).memory) {
-      return (performance as any).memory.usedJSHeapSize;
+    const perf = performance as unknown as { memory?: { usedJSHeapSize: number } };
+    if (perf.memory) {
+      return perf.memory.usedJSHeapSize;
     }
     return 0;
   }

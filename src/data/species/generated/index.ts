@@ -25,10 +25,10 @@ export interface GeneratedSpecies {
   heldItems: Record<'black' | 'white' | 'black-2' | 'white-2', Array<{ key: string; names: LocalizedName; rarity?: number }>>;
 }
 
-const byId: Record<string, GeneratedSpecies> = dataset as any;
+const byId: Record<string, GeneratedSpecies> = dataset as Record<string, GeneratedSpecies>;
 
 export function getGeneratedSpeciesById(id: number): GeneratedSpecies | null {
-  const s = (byId as any)[String(id)] as GeneratedSpecies | undefined;
+  const s = byId[String(id)];
   return s ?? null;
 }
 

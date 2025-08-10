@@ -20,7 +20,7 @@ function App() {
   // Development: Global access to feature flags
   React.useEffect(() => {
     if (import.meta.env.DEV) {
-      (window as any).featureFlags = featureFlags;
+      window.featureFlags = featureFlags;
     }
   }, []);
 

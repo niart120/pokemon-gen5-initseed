@@ -258,9 +258,9 @@ export const useAppStore = create<AppStore>()(
     {
       name: 'app-store',
       version: 2,
-      migrate: (persistedState: any, _version: number) => {
+      migrate: (persistedState: unknown, _version: number) => {
         // ここでは単純にそのまま返す（将来のマイグレーション時に更新）
-        return persistedState;
+        return persistedState as unknown as AppStore;
       },
       // ...existing code...
     },

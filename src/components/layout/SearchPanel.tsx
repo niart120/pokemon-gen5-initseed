@@ -58,7 +58,7 @@ export function SearchPanel() {
   // Sort results
   const filteredAndSortedResults = useMemo(() => {
     const sorted = [...filteredResults].sort((a, b) => {
-      let aValue: any, bValue: any;
+      let aValue: number, bValue: number;
       
       switch (sortField) {
         case 'datetime':

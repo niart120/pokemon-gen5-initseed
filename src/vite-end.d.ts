@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
-declare const GITHUB_RUNTIME_PERMANENT_NAME: string
-declare const BASE_KV_SERVICE_URL: string
+// declare const GITHUB_RUNTIME_PERMANENT_NAME: string
+// declare const BASE_KV_SERVICE_URL: string
 
 // Wake Lock API types for screen sleep prevention
 interface WakeLockSentinel {
@@ -16,6 +16,16 @@ interface WakeLock {
   request(type: 'screen'): Promise<WakeLockSentinel>;
 }
 
-interface Navigator {
+// Extend Navigator only for typing; avoid unused lint by exporting a type
+export interface NavigatorWithWakeLock extends Navigator {
   wakeLock?: WakeLock;
 }
+
+// Runtime feature flags exposure in development
+declare global {
+  interface Window {
+    featureFlags?: typeof import('./lib/core/feature-flags').featureFlags;
+  }
+}
+
+export {};

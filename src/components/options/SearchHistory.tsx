@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store/app-store';
+import type { SearchConditions } from '@/types/pokemon';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -11,7 +12,7 @@ import { ja } from 'date-fns/locale';
 
 export interface SearchHistoryEntry {
   id: string;
-  searchConditions: any; // TODO: narrow to SearchConditions
+  searchConditions: SearchConditions;
   searchDate: Date;
   resultsCount: number;
   duration: number; // milliseconds
@@ -22,10 +23,13 @@ export function SearchHistory() {
   const { setSearchConditions } = useAppStore();
   const [history, setHistory] = useState<SearchHistoryEntry[]>(() => {
     const saved = localStorage.getItem('pokemon-seed-search-history');
-    return saved ? JSON.parse(saved).map((entry: any) => ({
+    if (!saved) return [];
+    type PersistedEntry = Omit<SearchHistoryEntry, 'searchDate'> & { searchDate: string };
+    const parsed = JSON.parse(saved) as PersistedEntry[];
+    return parsed.map((entry) => ({
       ...entry,
       searchDate: new Date(entry.searchDate)
-    })) : [];
+    }));
   });
   
   const [selectedEntryId, setSelectedEntryId] = useState<string>('');
@@ -78,7 +82,7 @@ export function SearchHistory() {
   const selectedEntry = history.find(h => h.id === selectedEntryId);
 
   // 条件の要約文字列を生成
-  const formatConditionsSummary = (conditions: any) => {
+  const formatConditionsSummary = (conditions: SearchConditions) => {
     return `${conditions.romVersion}-${conditions.romRegion} (${conditions.hardware}) | ${conditions.dateRange.startYear}/${conditions.dateRange.startMonth}/${conditions.dateRange.startDay}`;
   };
 
@@ -195,10 +199,10 @@ export function SearchHistory() {
                                   ～ {selectedEntry.searchConditions.dateRange.endYear}/{selectedEntry.searchConditions.dateRange.endMonth}/{selectedEntry.searchConditions.dateRange.endDay}
                                 </div>
                                 <div>
-                                  Timer0: {selectedEntry.searchConditions.timer0Range.min} - {selectedEntry.searchConditions.timer0Range.max}
+                                  Timer0: {selectedEntry.searchConditions.timer0VCountConfig.timer0Range.min} - {selectedEntry.searchConditions.timer0VCountConfig.timer0Range.max}
                                 </div>
                                 <div>
-                                  VCount: {selectedEntry.searchConditions.vcountRange.min} - {selectedEntry.searchConditions.vcountRange.max}
+                                  VCount: {selectedEntry.searchConditions.timer0VCountConfig.vcountRange.min} - {selectedEntry.searchConditions.timer0VCountConfig.vcountRange.max}
                                 </div>
                               </div>
                             </div>

@@ -8,10 +8,7 @@ import {
   getShinyStatusName,
   determineGender 
 } from '../types/raw-pokemon-data';
-import { 
-  getEncounterTable, 
-  calculateLevel 
-} from '../data/encounter-tables';
+import { calculateLevel } from '../data/encounter-tables';
 import { 
   getPokemonSpecies 
 } from '../data/pokemon-species';
