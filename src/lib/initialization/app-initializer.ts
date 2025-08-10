@@ -4,10 +4,12 @@
  * Production-focused with minimal overhead
  */
 
+import type { SeedCalculator } from '@/lib/core/seed-calculator';
+
 export interface InitializationResult {
   wasmEnabled: boolean;
   integratedSearchAvailable: boolean;
-  calculator?: any;
+  calculator?: SeedCalculator;
 }
 
 export async function initializeApplication(): Promise<InitializationResult> {
@@ -19,7 +21,7 @@ export async function initializeApplication(): Promise<InitializationResult> {
     if (wasmSuccess) {
       // Test integrated search availability
       const wasmModule = calculator.getWasmModule();
-      const integratedSearchAvailable = wasmModule && wasmModule.IntegratedSeedSearcher;
+  const integratedSearchAvailable = Boolean(wasmModule?.IntegratedSeedSearcher);
 
       return {
         wasmEnabled: true,

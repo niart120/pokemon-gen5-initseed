@@ -1,13 +1,10 @@
 import React from 'react';
-import { useAppStore } from './store/app-store';
 import { AppHeader, AppFooter, MainContent } from './components/layout';
 import { initializeApplication } from './lib/initialization/app-initializer';
 import { runDevelopmentVerification } from './lib/initialization/development-verification';
 import { featureFlags } from './lib/core/feature-flags';
 
 function App() {
-  const { targetSeeds } = useAppStore();
-
   // Initialize application on mount (only once)
   React.useEffect(() => {
     const initializeApp = async () => {
@@ -23,7 +20,7 @@ function App() {
   // Development: Global access to feature flags
   React.useEffect(() => {
     if (import.meta.env.DEV) {
-      (window as any).featureFlags = featureFlags;
+      window.featureFlags = featureFlags;
     }
   }, []);
 
