@@ -9,7 +9,8 @@ import type {
   InitialSeedResult, 
   ParallelWorkerRequest, 
   ParallelWorkerResponse,
-  WorkerChunk 
+  WorkerChunk,
+  Hardware 
 } from '../types/pokemon';
 
 // Timer state for accurate elapsed time calculation
@@ -37,6 +38,32 @@ const timerState: TimerState = {
 };
 
 let calculator: SeedCalculator;
+
+/**
+ * MACアドレスを Uint8Array(6) に変換
+ * - number[] や string[]("0x12"/"12"/"12") を受け付ける
+ * - 値は 0-255 にクランプ
+ * - 長さ不一致時は 6 バイトへ切り詰め/ゼロ埋め
+ */
+function toMacUint8Array(input: Array<number | string>): Uint8Array {
+  const out = new Uint8Array(6);
+  for (let i = 0; i < 6; i++) {
+    const raw = input[i] ?? 0;
+    let n: number;
+    if (typeof raw === 'number') {
+      n = raw;
+    } else {
+      const s = raw.trim().toLowerCase();
+      // 0x 前置または 16進/10進を許容
+      n = s.startsWith('0x') ? parseInt(s, 16) : Number.isNaN(Number(s)) ? parseInt(s, 16) : Number(s);
+    }
+    if (!Number.isFinite(n)) n = 0;
+    // 0-255 にクランプ
+    n = Math.min(255, Math.max(0, Math.trunc(n)));
+    out[i] = n;
+  }
+  return out;
+}
 
 /**
  * Timer management functions for accurate elapsed time calculation
@@ -149,16 +176,16 @@ async function processChunkWithWasm(
   }
 
   // Hardware別のframe値を設定
-  const HARDWARE_FRAME_VALUES: Record<string, number> = {
-    'DS': 8,
-    'DS_LITE': 6,
+  const HARDWARE_FRAME_VALUES: Record<Hardware, number> = {
+    DS: 8,
+    DS_LITE: 6,
     '3DS': 9
   };
   const frameValue = HARDWARE_FRAME_VALUES[conditions.hardware] || 8;
 
   // WebAssembly searcher作成
   const searcher = new wasmModule.IntegratedSeedSearcher(
-    conditions.macAddress,
+    toMacUint8Array(conditions.macAddress as unknown as Array<number | string>),
     new Uint32Array(params.nazo),
     conditions.hardware,
     conditions.keyInput,
@@ -313,7 +340,9 @@ async function processChunkWithTypeScript(
   const startTime = chunk.startDateTime.getTime();
   const endTime = chunk.endDateTime.getTime();
   const totalSeconds = Math.floor((endTime - startTime) / 1000) + 1;
-  const totalOperations = totalSeconds * 
+  // フォールバック実装は各 timer0 について実効 VCount を1つだけ評価するため、
+  // 実行される操作数は「秒数 × timer0 値の個数」とする
+  const totalOperations = totalSeconds *
     (conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1);
 
   // Timer0範囲をループ

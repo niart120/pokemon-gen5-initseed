@@ -11,7 +11,8 @@ import {
   getNatureName, 
   getShinyStatusName,
   determineGender,
-  type RawPokemonData 
+  type RawPokemonData,
+  type ShinyStatusName 
 } from '../types/raw-pokemon-data';
 import { 
   WasmPokemonService, 
@@ -386,7 +387,7 @@ describe('Phase 2 Integration Tests', () => {
             levelRange: { min: 5, max: 10 },
           },
           natureName: 'Bold',
-          shinyStatus: 'Normal',
+          shinyStatus: 'Normal' as ShinyStatusName,
         },
         metadata: {
           encounterTableFound: true,

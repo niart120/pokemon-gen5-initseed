@@ -5,7 +5,7 @@
 
 import { SeedCalculator } from '../lib/core/seed-calculator';
 // import { ProductionPerformanceMonitor } from '../lib/core/performance-monitor';
-import type { SearchConditions, InitialSeedResult } from '../types/pokemon';
+import type { SearchConditions, InitialSeedResult, Hardware } from '../types/pokemon';
 
 // Performance optimization: Use larger batch sizes for better WASM utilization
 const BATCH_SIZE_SECONDS = 86400;   // 1日
@@ -56,6 +56,30 @@ const timerState: TimerState = {
 };
 
 let calculator: SeedCalculator;
+
+/**
+ * MACアドレスを Uint8Array(6) に変換
+ * - number[] や string[]("0x12"/"12") を受け付ける
+ * - 値は 0-255 にクランプ
+ * - 長さ不一致時は 6 バイトへ切り詰め/ゼロ埋め
+ */
+function toMacUint8Array(input: Array<number | string>): Uint8Array {
+  const out = new Uint8Array(6);
+  for (let i = 0; i < 6; i++) {
+    const raw = input[i] ?? 0;
+    let n: number;
+    if (typeof raw === 'number') {
+      n = raw;
+    } else {
+      const s = raw.trim().toLowerCase();
+      n = s.startsWith('0x') ? parseInt(s, 16) : Number.isNaN(Number(s)) ? parseInt(s, 16) : Number(s);
+    }
+    if (!Number.isFinite(n)) n = 0;
+    n = Math.min(255, Math.max(0, Math.trunc(n)));
+    out[i] = n;
+  }
+  return out;
+}
 
 // Initialize calculator
 async function initializeCalculator() {
@@ -123,15 +147,15 @@ async function processBatchIntegrated(
       }
 
       // Hardware別のframe値を設定
-      const HARDWARE_FRAME_VALUES: Record<string, number> = {
-        'DS': 8,
-        'DS_LITE': 6,
+      const HARDWARE_FRAME_VALUES: Record<Hardware, number> = {
+        DS: 8,
+        DS_LITE: 6,
         '3DS': 9
       };
       const frameValue = HARDWARE_FRAME_VALUES[conditions.hardware] || 8;
 
       const searcher = new wasmModule.IntegratedSeedSearcher(
-        conditions.macAddress,
+        toMacUint8Array(conditions.macAddress as unknown as Array<number | string>),
         new Uint32Array(params.nazo),
         conditions.hardware,
         conditions.keyInput,
