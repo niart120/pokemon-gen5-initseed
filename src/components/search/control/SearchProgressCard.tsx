@@ -6,21 +6,21 @@ import { Button } from '@/components/ui/button';
 import { CaretDown, CaretUp, ChartBar } from '@phosphor-icons/react';
 import { useAppStore } from '../../../store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
-import { getResponsiveSizes } from '../../../utils/responsive-sizes';
+// import { getResponsiveSizes } from '../../../utils/responsive-sizes';
 import { 
-  formatElapsedTime, 
-  formatRemainingTime, 
+  // formatElapsedTime, 
+  // formatRemainingTime, 
   formatProcessingRate,
-  calculateOverallProcessingRate,
-  calculateWorkerProcessingRate
+  // calculateOverallProcessingRate,
+  // calculateWorkerProcessingRate
 } from '../../../lib/utils/format-helpers';
 import { TimeDisplay } from './TimeDisplay';
 
 export function SearchProgressCard() {
   const { searchProgress, parallelProgress, parallelSearchSettings } = useAppStore();
   const [isWorkerDetailsExpanded, setIsWorkerDetailsExpanded] = useState(true);
-  const { isStack: isMobile, uiScale } = useResponsiveLayout();
-  const sizes = getResponsiveSizes(uiScale);
+  const { isStack: isMobile } = useResponsiveLayout();
+  // const sizes = getResponsiveSizes(uiScale);
 
   const isParallelMode = parallelSearchSettings.enabled;
   const isRunning = searchProgress.isRunning;

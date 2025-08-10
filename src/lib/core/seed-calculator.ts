@@ -2,7 +2,6 @@ import { SHA1 } from './sha1';
 import { initWasm, getWasm, isWasmReady } from './wasm-interface';
 import type { SearchConditions, ROMParameters, Hardware } from '../../types/pokemon';
 import romParameters from '../../data/rom-parameters';
-import { getTimer0Range, getVCountFromTimer0 } from '../utils/rom-parameter-helpers';
 
 const HARDWARE_FRAME_VALUES: Record<Hardware, number> = {
   DS: 8,
@@ -250,10 +249,12 @@ export class SeedCalculator {
         seenSeeds.add(seedValue);
         validSeeds.push(seedValue);
       } catch (err) {
+        // エラー内容を記録
+        const msg = err instanceof Error ? err.message : String(err);
         errors.push({
           line: index + 1,
           value: line,
-          error: 'Failed to parse as hexadecimal number.'
+          error: msg || 'Failed to parse as hexadecimal number.'
         });
       }
     });

@@ -13,8 +13,8 @@ import {
   NATURE_NAMES,
   RawPokemonParserConfig,
   LevelCalculationConfig,
-  GenderRatio,
-  WasmRawPokemonDataProperty
+  // GenderRatio,
+  // WasmRawPokemonDataProperty
 } from '@/types/raw-pokemon';
 
 /**
@@ -41,7 +41,7 @@ export interface WasmRawPokemonDataInstance {
  * WASM出力 → TypeScript型変換とplaceholder値処理
  */
 export class RawPokemonDataParser {
-  private config: Required<RawPokemonParserConfig>;
+  private config: RawPokemonParserConfig;
 
   constructor(config: Partial<RawPokemonParserConfig> = {}) {
     this.config = {

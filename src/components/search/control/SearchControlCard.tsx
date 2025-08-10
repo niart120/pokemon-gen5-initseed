@@ -5,7 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
-import { Play, Pause, Square, Gear } from '@phosphor-icons/react';
+import { Play, Pause, Square } from '@phosphor-icons/react';
 import { useAppStore } from '../../../store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
 import { getSearchWorkerManager, resetSearchWorkerManager } from '../../../lib/search/search-worker-manager';

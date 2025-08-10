@@ -25,7 +25,7 @@ describe('出力結果整合性確認 - 単体テスト', () => {
     try {
       await calculator.initializeWasm();
       console.log('✅ WebAssembly initialized for consistency tests');
-    } catch (error) {
+    } catch {
       console.warn('⚠️ WebAssembly not available, using TypeScript fallback');
     }
   });
@@ -93,7 +93,7 @@ describe('出力結果整合性確認 - 単体テスト', () => {
         console.log(`Search range: ${searchRange.startYear}/${searchRange.startMonth}/${searchRange.startDay} ${searchRange.startHour}:${searchRange.startMinute} - ${searchRange.endHour}:${searchRange.endMinute}`);
 
         let found = false;
-        let foundResults: Array<{ datetime: Date; timer0: number; seed: number }> = [];
+        const foundResults: Array<{ datetime: Date; timer0: number; seed: number }> = [];
 
         // 局所検索実行
         for (let timer0 = CONSISTENCY_TEST_CONDITIONS.timer0VCountConfig.timer0Range.min; timer0 <= CONSISTENCY_TEST_CONDITIONS.timer0VCountConfig.timer0Range.max; timer0++) {
@@ -123,8 +123,8 @@ describe('出力結果整合性確認 - 単体テスト', () => {
                     console.log(`📍 Alternative match: ${formatDateTime(currentDate)}, Timer0=0x${timer0.toString(16).toUpperCase()}`);
                   }
                 }
-              } catch (error) {
-                console.error('Calculation error:', error);
+              } catch {
+                console.error('Calculation error:');
               }
             }
           }

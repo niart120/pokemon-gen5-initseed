@@ -4,7 +4,7 @@
  */
 
 import { SeedCalculator } from '../lib/core/seed-calculator';
-import { ProductionPerformanceMonitor } from '../lib/core/performance-monitor';
+// import { ProductionPerformanceMonitor } from '../lib/core/performance-monitor';
 import type { SearchConditions, InitialSeedResult } from '../types/pokemon';
 
 // Performance optimization: Use larger batch sizes for better WASM utilization
@@ -42,14 +42,14 @@ interface TimerState {
 }
 
 // Worker state
-let searchState = {
+const searchState = {
   isRunning: false,
   isPaused: false,
   shouldStop: false
 };
 
 // Timer state for elapsed time management
-let timerState: TimerState = {
+const timerState: TimerState = {
   cumulativeRunTime: 0,
   segmentStartTime: 0,
   isPaused: false
@@ -138,7 +138,6 @@ async function processBatchIntegrated(
         frameValue
       );
 
-      const startDate = new Date(startTimestamp);
       const rangeSeconds = Math.floor((endTimestamp - startTimestamp) / 1000);
 
       // サブチャンク分割処理（15日単位、最大1296000秒）
@@ -308,7 +307,7 @@ async function performSearch(conditions: SearchConditions, targetSeeds: number[]
 
     // Calculate search space
     const timer0Range = conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1;
-    const vcountRange = conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1;
+    // const vcountRange = conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1;
     
     const startDate = new Date(
       conditions.dateRange.startYear,

@@ -83,7 +83,7 @@ export class DevelopmentPerformanceAnalyzer {
     const startTime = performance.now();
     const memoryBefore = this.getMemoryUsage();
     
-    let bottlenecks: string[] = [];
+    const bottlenecks: string[] = [];
     let calculationTime = 0;
     
     // 実際の計算処理

@@ -12,7 +12,7 @@ import { getResponsiveSizes } from '../../utils/responsive-sizes';
 import type { InitialSeedResult, SearchResult } from '../../types/pokemon';
 
 export function SearchPanel() {
-  const { searchConditions, setSearchConditions, searchResults } = useAppStore();
+  const { searchResults } = useAppStore();
   
   const { isStack, uiScale } = useResponsiveLayout();
   

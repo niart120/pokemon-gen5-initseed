@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAppStore } from '../../../../store/app-store';
 import { parseHexInput, formatHexDisplay } from '../../../../lib/utils/hex-parser';
-import { getFullTimer0Range, getValidVCounts, isValidTimer0VCountPair } from '../../../../lib/utils/rom-parameter-helpers';
+import { getFullTimer0Range, getValidVCounts } from '../../../../lib/utils/rom-parameter-helpers';
 import { resetApplicationState } from '../../../../lib/utils/error-recovery';
 
 export function Timer0VCountParam() {
@@ -12,46 +12,22 @@ export function Timer0VCountParam() {
 
   // 統合設定へのショートカット（防御的チェック）
   const config = searchConditions.timer0VCountConfig;
-  
-  // 旧データ構造との互換性チェック
-  if (!config) {
-    console.error('timer0VCountConfig is missing from searchConditions:', searchConditions);
-    
-    return (
-      <div className="text-red-600 p-4 space-y-4">
-        <div className="font-semibold">設定データの読み込みエラー</div>
-        <div className="text-sm">
-          古いバージョンのデータが残っているため、設定を正しく読み込めません。
-        </div>
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={resetApplicationState}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-          >
-            設定をリセットして修復
-          </button>
-          <div className="text-xs text-gray-600">
-            ※ 保存された設定とプリセットがクリアされ、初期設定に戻ります
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const hasConfig = Boolean(config);
 
-  // Timer0 の入力状態を管理
+  // Hooks は常に同順で評価される必要があるため、初期値は安全にフォールバック
   const [timer0InputValues, setTimer0InputValues] = useState({
-    min: formatHexDisplay(config.timer0Range.min),
-    max: formatHexDisplay(config.timer0Range.max)
+    min: formatHexDisplay(hasConfig ? config.timer0Range.min : 0),
+    max: formatHexDisplay(hasConfig ? config.timer0Range.max : 0),
   });
 
-  // VCount の入力状態を管理
   const [vcountInputValues, setVcountInputValues] = useState({
-    min: formatHexDisplay(config.vcountRange.min),
-    max: formatHexDisplay(config.vcountRange.max)
+    min: formatHexDisplay(hasConfig ? config.vcountRange.min : 0),
+    max: formatHexDisplay(hasConfig ? config.vcountRange.max : 0),
   });
 
   // searchConditionsが外部から変更された場合、inputValuesを同期
   useEffect(() => {
+    if (!hasConfig) return;
     setTimer0InputValues({
       min: formatHexDisplay(config.timer0Range.min),
       max: formatHexDisplay(config.timer0Range.max)
@@ -60,10 +36,11 @@ export function Timer0VCountParam() {
       min: formatHexDisplay(config.vcountRange.min),
       max: formatHexDisplay(config.vcountRange.max)
     });
-  }, [config.timer0Range, config.vcountRange]);
+  }, [hasConfig, config?.timer0Range, config?.vcountRange]);
 
   // useAutoConfigurationフラグ変更時の自動範囲適用
   useEffect(() => {
+    if (!hasConfig) return;
     if (config.useAutoConfiguration) {
       const timer0Range = getFullTimer0Range(searchConditions.romVersion, searchConditions.romRegion);
       const validVCounts = getValidVCounts(searchConditions.romVersion, searchConditions.romRegion);
@@ -87,13 +64,14 @@ export function Timer0VCountParam() {
         });
       }
     }
-  }, [config.useAutoConfiguration, searchConditions.romVersion, searchConditions.romRegion]);
+  }, [hasConfig, config?.useAutoConfiguration, searchConditions.romVersion, searchConditions.romRegion, setSearchConditions]);
 
   const handleTimer0InputChange = (field: 'min' | 'max', value: string) => {
     setTimer0InputValues(prev => ({ ...prev, [field]: value }));
   };
 
   const handleTimer0InputBlur = (field: 'min' | 'max', value: string) => {
+    if (!hasConfig) return;
     const parsed = parseHexInput(value);
     if (parsed !== null) {
       setSearchConditions({
@@ -118,6 +96,7 @@ export function Timer0VCountParam() {
   };
 
   const handleVcountInputBlur = (field: 'min' | 'max', value: string) => {
+    if (!hasConfig) return;
     const parsed = parseHexInput(value);
     if (parsed !== null) {
       setSearchConditions({
@@ -138,6 +117,7 @@ export function Timer0VCountParam() {
   };
 
   const handleAutoConfigurationToggle = (checked: boolean) => {
+    if (!hasConfig) return;
     setSearchConditions({
       timer0VCountConfig: {
         ...config,
@@ -148,11 +128,34 @@ export function Timer0VCountParam() {
 
   // 現在の設定の表示用文字列
   const currentConfigDisplay = () => {
+    if (!hasConfig) return '';
     const timer0Display = `Timer0 0x${config.timer0Range.min.toString(16).toUpperCase()}-0x${config.timer0Range.max.toString(16).toUpperCase()}`;
     const vcountDisplay = `VCount 0x${config.vcountRange.min.toString(16).toUpperCase()}-0x${config.vcountRange.max.toString(16).toUpperCase()}`;
     
     return `Current: ${timer0Display}, ${vcountDisplay}`;
   };
+
+  if (!hasConfig) {
+    return (
+      <div className="text-red-600 p-4 space-y-4">
+        <div className="font-semibold">設定データの読み込みエラー</div>
+        <div className="text-sm">
+          古いバージョンのデータが残っているため、設定を正しく読み込めません。
+        </div>
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={resetApplicationState}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            設定をリセットして修復
+          </button>
+          <div className="text-xs text-gray-600">
+            ※ 保存された設定とプリセットがクリアされ、初期設定に戻ります
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">

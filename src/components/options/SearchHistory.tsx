@@ -11,7 +11,7 @@ import { ja } from 'date-fns/locale';
 
 export interface SearchHistoryEntry {
   id: string;
-  searchConditions: any; // SearchConditions型
+  searchConditions: any; // TODO: narrow to SearchConditions
   searchDate: Date;
   resultsCount: number;
   duration: number; // milliseconds
@@ -19,7 +19,7 @@ export interface SearchHistoryEntry {
 }
 
 export function SearchHistory() {
-  const { searchConditions, setSearchConditions } = useAppStore();
+  const { setSearchConditions } = useAppStore();
   const [history, setHistory] = useState<SearchHistoryEntry[]>(() => {
     const saved = localStorage.getItem('pokemon-seed-search-history');
     return saved ? JSON.parse(saved).map((entry: any) => ({
@@ -30,14 +30,6 @@ export function SearchHistory() {
   
   const [selectedEntryId, setSelectedEntryId] = useState<string>('');
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-
-  // 履歴エントリを追加（探索完了時に呼び出される想定）
-  const addHistoryEntry = (entry: SearchHistoryEntry) => {
-    const updatedHistory = [entry, ...history].slice(0, 50); // 最新50件まで保持
-    setHistory(updatedHistory);
-    localStorage.setItem('pokemon-seed-search-history', JSON.stringify(updatedHistory));
-  };
 
   // 条件を履歴から復元
   const loadFromHistory = (entryId: string) => {

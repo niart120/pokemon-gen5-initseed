@@ -20,7 +20,7 @@ interface TimerState {
 }
 
 // Worker状態
-let searchState = {
+const searchState = {
   isRunning: false,
   isPaused: false,
   shouldStop: false,
@@ -30,7 +30,7 @@ let searchState = {
 };
 
 // Timer state for elapsed time management
-let timerState: TimerState = {
+const timerState: TimerState = {
   cumulativeRunTime: 0,
   segmentStartTime: 0,
   isPaused: false
@@ -93,7 +93,6 @@ async function processChunk(
   }
 
   searchState.startTime = Date.now();
-  let processedOperations = 0;
   let matchesFound = 0;
 
   try {
