@@ -41,7 +41,7 @@ interface WasmModule {
   ) => { free(): void };
   PokemonGenerator: {
     generate_single_pokemon_bw(seed: bigint, config: any): any;
-    generate_pokemon_batch_bw(start_seed: bigint, count: number, config: any): any[];
+    generate_pokemon_batch_bw(base_seed: bigint, offset: bigint, count: number, config: any): any[];
   };
 
   // 追加: 列挙（数値）

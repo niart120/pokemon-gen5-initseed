@@ -1,5 +1,5 @@
 /**
- * Species data exports for easy import
+ * Species data exports
  */
 
-export * from './core-species';
+export * from './generated';

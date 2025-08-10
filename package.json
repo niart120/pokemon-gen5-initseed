@@ -27,7 +27,8 @@
         "test:e2e": "node scripts/run-e2e-consistency-test.js",
         "test:performance": "node scripts/performance-comparison.js",
         "copy:wasm": "node scripts/copy-wasm-files.js",
-        "scrape:encounters": "node scripts/scrape-encounters.js"
+        "scrape:encounters": "node scripts/scrape-encounters.js",
+        "fetch:species:gen5": "node scripts/fetch-gen5-species.js"
     },
     "dependencies": {
         "@heroicons/react": "^2.2.0",

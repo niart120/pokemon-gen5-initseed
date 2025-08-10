@@ -195,10 +195,12 @@ export class WasmPokemonService {
       );
 
       try {
-        // 連続する内部シードから count 件生成（offsetは開始シードに加味）
-        const startSeed = BigInt.asUintN(64, request.seed + BigInt(offset));
+        // 連続する内部シードから count 件生成（offsetは開始位置として別引数で指定）
+        const baseSeed = BigInt.asUintN(64, request.seed);
+        const offsetBig = BigInt.asUintN(64, BigInt(offset));
         const wasmList = wasm.PokemonGenerator.generate_pokemon_batch_bw(
-          startSeed,
+          baseSeed,
+          offsetBig,
           count,
           bwConfig
         );
