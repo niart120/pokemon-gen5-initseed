@@ -11,6 +11,7 @@
  */
 
 import { EncounterType } from '../types/raw-pokemon-data';
+import { encounterTypeToName } from '@/lib/integration/wasm-enums';
 import type { ROMVersion } from '../types/rom';
 import { ensureEncounterRegistryLoaded, getEncounterFromRegistry } from './encounters/loader';
 
@@ -65,7 +66,8 @@ export function getEncounterTableKey(
   location: string,
   method: EncounterType
 ): string {
-  return `${version}_${normalizeLocationKey(location)}_${EncounterType[method]}`;
+  // Use centralized converter to avoid enum reverse-indexing
+  return `${version}_${normalizeLocationKey(location)}_${encounterTypeToName(method as number)}`;
 }
 
 /**
