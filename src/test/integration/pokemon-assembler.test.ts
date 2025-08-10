@@ -7,20 +7,25 @@
 
 import { describe, test, expect, beforeEach } from 'vitest';
 import {
-  PokemonAssembler,
   EncounterType,
   DustCloudContent,
   createSampleEncounterTables,
+  createAssemblerContext,
+  assembleData,
+  assembleBatch,
+  setEncounterTable,
+  getEncounterTables,
+  validateSyncRules,
   type RawPokemonData,
   type EnhancedPokemonData,
   type EncounterTableEntry,
 } from '../../lib/integration/pokemon-assembler';
 
 describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
-  let assembler: PokemonAssembler;
-  
+  let ctx: ReturnType<typeof createAssemblerContext>;
+
   beforeEach(() => {
-    assembler = new PokemonAssembler('B', 'JPN', createSampleEncounterTables());
+    ctx = createAssemblerContext('B', 'JPN', createSampleEncounterTables());
   });
   
   describe('基本データ統合', () => {
@@ -38,7 +43,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       // 基本データの保持
       expect(enhanced.seed).toBe(0x12345678);
@@ -70,7 +75,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 1, // Square shiny
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.isShiny).toBe(true);
       expect(enhanced.shinyType).toBe('square');
@@ -90,7 +95,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 2, // Star shiny
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.isShiny).toBe(true);
       expect(enhanced.shinyType).toBe('star');
@@ -112,7 +117,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.syncEligible).toBe(true);
       expect(enhanced.syncAppliedCorrectly).toBe(true);
@@ -132,7 +137,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.syncEligible).toBe(true);
       expect(enhanced.syncAppliedCorrectly).toBe(true);
@@ -152,7 +157,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.syncEligible).toBe(true);
       expect(enhanced.syncAppliedCorrectly).toBe(true);
@@ -172,7 +177,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.syncEligible).toBe(true);
       expect(enhanced.syncAppliedCorrectly).toBe(true);
@@ -194,7 +199,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.syncEligible).toBe(false);
       expect(enhanced.syncAppliedCorrectly).toBe(true);
@@ -214,7 +219,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.syncEligible).toBe(false);
       expect(enhanced.syncAppliedCorrectly).toBe(false); // 誤適用を検出
@@ -234,7 +239,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.syncEligible).toBe(false);
       expect(enhanced.syncAppliedCorrectly).toBe(true);
@@ -254,7 +259,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.syncEligible).toBe(false);
       expect(enhanced.syncAppliedCorrectly).toBe(true);
@@ -274,7 +279,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.syncEligible).toBe(false);
       expect(enhanced.syncAppliedCorrectly).toBe(true);
@@ -296,7 +301,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.syncEligible).toBe(true);
       expect(enhanced.dustCloudContent).toBeDefined();
@@ -326,7 +331,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.dustCloudContent).toBe(DustCloudContent.Pokemon);
       expect(enhanced.itemId).toBeUndefined();
@@ -346,7 +351,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       expect(enhanced.syncEligible).toBe(true);
       expect(enhanced.syncAppliedCorrectly).toBe(true);
@@ -382,7 +387,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         },
       ];
       
-      const enhancedArray = assembler.assembleBatch(rawDataArray);
+  const enhancedArray = assembleBatch(ctx, rawDataArray);
       
       expect(enhancedArray).toHaveLength(2);
       expect(enhancedArray[0].encounterType).toBe(EncounterType.Normal);
@@ -437,7 +442,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         },
       ];
       
-      const validation = assembler.validateSyncRules(enhancedDataArray);
+  const validation = validateSyncRules(enhancedDataArray);
       
       expect(validation.isValid).toBe(false);
       expect(validation.violations).toHaveLength(1);
@@ -490,7 +495,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         },
       ];
       
-      const validation = assembler.validateSyncRules(enhancedDataArray);
+  const validation = validateSyncRules(enhancedDataArray);
       
       expect(validation.isValid).toBe(true);
       expect(validation.violations).toHaveLength(0);
@@ -503,14 +508,14 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         { species: 25, minLevel: 10, maxLevel: 15, abilityRatio: [1, 0], genderRatio: 50 },
       ];
       
-      assembler.setEncounterTable(EncounterType.Normal, customTable);
-      
-      const tables = assembler.getEncounterTables();
+  setEncounterTable(ctx, EncounterType.Normal, customTable);
+
+  const tables = getEncounterTables(ctx);
       expect(tables[EncounterType.Normal]).toBe(customTable);
     });
     
     test('空のエンカウントテーブルでもデフォルト値で動作する', () => {
-      const emptyAssembler = new PokemonAssembler('B', 'JPN', {});
+  const emptyCtx = createAssemblerContext('B', 'JPN', {});
       
       const rawData: RawPokemonData = {
         seed: 0x12345678,
@@ -525,7 +530,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = emptyAssembler.assembleData(rawData);
+  const enhanced = assembleData(emptyCtx, rawData);
       
       expect(enhanced.species).toBe(1); // デフォルトのBulbasaur
       expect(enhanced.level).toBe(5); // デフォルトレベル
@@ -547,7 +552,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 2,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       // 必須フィールドの存在確認
       expect(enhanced).toHaveProperty('seed');
@@ -584,7 +589,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 0,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       // 徘徊特有の検証
       expect(enhanced.syncEligible).toBe(false);
@@ -615,7 +620,7 @@ describe('Pokemon Assembler - Phase 2-5: データ統合処理', () => {
         shinyType: 1,
       };
       
-      const enhanced = assembler.assembleData(rawData);
+  const enhanced = assembleData(ctx, rawData);
       
       // 砂煙特有の検証
       expect(enhanced.syncEligible).toBe(true);

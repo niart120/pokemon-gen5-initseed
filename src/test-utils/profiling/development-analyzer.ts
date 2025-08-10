@@ -83,7 +83,7 @@ export class DevelopmentPerformanceAnalyzer {
     const startTime = performance.now();
     const memoryBefore = this.getMemoryUsage();
     
-    let bottlenecks: string[] = [];
+    const bottlenecks: string[] = [];
     let calculationTime = 0;
     
     // 実際の計算処理
@@ -238,8 +238,9 @@ export class DevelopmentPerformanceAnalyzer {
    * メモリ使用量取得
    */
   private getMemoryUsage(): number {
-    if ((performance as any).memory) {
-      return (performance as any).memory.usedJSHeapSize;
+    const perf = performance as unknown as { memory?: { usedJSHeapSize: number } };
+    if (perf.memory) {
+      return perf.memory.usedJSHeapSize;
     }
     return 0;
   }

@@ -65,7 +65,27 @@ export async function verifyWebAssemblyImplementation(): Promise<boolean> {
         const params = calculator.getROMParameters(testConditions.romVersion, testConditions.romRegion);
         if (!params) continue;
         
-        const message = calculator.generateMessage(testConditions as any, timer0, vcount, date);
+        const minimalConditions = {
+          romVersion: testConditions.romVersion,
+          romRegion: testConditions.romRegion,
+          hardware: testConditions.hardware,
+          timer0VCountConfig: {
+            useAutoConfiguration: false,
+            timer0Range: { min: timer0, max: timer0 },
+            vcountRange: { min: vcount, max: vcount },
+          },
+          dateRange: {
+            startYear: date.getFullYear(), endYear: date.getFullYear(),
+            startMonth: date.getMonth() + 1, endMonth: date.getMonth() + 1,
+            startDay: date.getDate(), endDay: date.getDate(),
+            startHour: date.getHours(), endHour: date.getHours(),
+            startMinute: date.getMinutes(), endMinute: date.getMinutes(),
+            startSecond: date.getSeconds(), endSecond: date.getSeconds(),
+          },
+          keyInput: testConditions.keyInput,
+          macAddress: testConditions.macAddress,
+        } satisfies import('../../types/pokemon').SearchConditions;
+        const message = calculator.generateMessage(minimalConditions, timer0, vcount, date);
         
         // Test with WebAssembly
         calculator.setUseWasm(true);
@@ -135,7 +155,27 @@ export async function comparePerformance(): Promise<void> {
   for (let i = 0; i < iterations; i++) {
     const timer0 = 4320 + (i % 100);
     const vcount = 128 + (i % 50);
-    messages.push(calculator.generateMessage(testConditions as any, timer0, vcount, testDate));
+    const minimalConditions = {
+      romVersion: testConditions.romVersion,
+      romRegion: testConditions.romRegion,
+      hardware: testConditions.hardware,
+      timer0VCountConfig: {
+        useAutoConfiguration: false,
+        timer0Range: { min: 0, max: 0 },
+        vcountRange: { min: 0, max: 0 },
+      },
+      dateRange: {
+        startYear: testDate.getFullYear(), endYear: testDate.getFullYear(),
+        startMonth: testDate.getMonth() + 1, endMonth: testDate.getMonth() + 1,
+        startDay: testDate.getDate(), endDay: testDate.getDate(),
+        startHour: testDate.getHours(), endHour: testDate.getHours(),
+        startMinute: testDate.getMinutes(), endMinute: testDate.getMinutes(),
+        startSecond: testDate.getSeconds(), endSecond: testDate.getSeconds(),
+      },
+      keyInput: testConditions.keyInput,
+      macAddress: testConditions.macAddress,
+    } satisfies import('../../types/pokemon').SearchConditions;
+    messages.push(calculator.generateMessage(minimalConditions, timer0, vcount, testDate));
   }
 
   // Test TypeScript performance

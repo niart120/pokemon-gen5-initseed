@@ -99,7 +99,24 @@ export class ResultExporter {
       totalResults: results.length,
       format: 'json',
       results: results.map(result => {
-        const exportResult: any = {
+        const exportResult: {
+          seed: string;
+          seedDecimal: number;
+          dateTime: string;
+          timer0: string;
+          timer0Decimal: number;
+          vcount: string;
+          vcountDecimal: number;
+          rom: {
+            version: string;
+            region: string;
+            hardware: string;
+          };
+          macAddress?: string[];
+          keyInput?: string | null;
+          message?: string[];
+          sha1Hash?: string;
+        } = {
           seed: `0x${result.seed.toString(16).padStart(8, '0')}`,
           seedDecimal: result.seed,
           dateTime: result.dateTime.toISOString(),

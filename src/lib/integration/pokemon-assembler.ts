@@ -104,289 +104,286 @@ export interface EncounterTableMap {
  * Pokemon Data Assembler
  * Integrates WASM raw data with encounter tables and business logic
  */
-export class PokemonAssembler {
-  private encounterTables: Partial<EncounterTableMap>;
-  private romVersion: ROMVersion;
-  private romRegion: ROMRegion;
-  
-  constructor(
-    romVersion: ROMVersion,
-    romRegion: ROMRegion,
-    encounterTables: Partial<EncounterTableMap> = {}
-  ) {
-    this.romVersion = romVersion;
-    this.romRegion = romRegion;
-    this.encounterTables = encounterTables;
+// ===== 関数型API =====
+
+export interface AssemblerContext {
+  romVersion: ROMVersion;
+  romRegion: ROMRegion;
+  encounterTables: Partial<EncounterTableMap>;
+}
+
+export function createAssemblerContext(
+  romVersion: ROMVersion,
+  romRegion: ROMRegion,
+  encounterTables: Partial<EncounterTableMap> = {}
+): AssemblerContext {
+  return { romVersion, romRegion, encounterTables };
+}
+
+/**
+ * Assemble enhanced pokemon data from raw WASM output
+ */
+export function assembleData(ctx: AssemblerContext, rawData: RawPokemonData): EnhancedPokemonData {
+  const encounterTable = getEncounterTable(ctx, rawData.encounterType);
+  const encounterEntry = resolveEncounterSlot(rawData.encounterSlotValue, encounterTable);
+
+  const enhancedData: EnhancedPokemonData = {
+    seed: rawData.seed,
+    pid: rawData.pid,
+    nature: rawData.nature,
+    syncApplied: rawData.syncApplied,
+    abilitySlot: rawData.abilitySlot,
+    genderValue: rawData.genderValue,
+    encounterSlotValue: rawData.encounterSlotValue,
+    encounterType: rawData.encounterType,
+    levelRandValue: rawData.levelRandValue,
+    rawShinyType: rawData.shinyType,
+    species: encounterEntry.species,
+    level: calculateLevel(rawData.levelRandValue, encounterEntry),
+    ability: resolveAbility(rawData.abilitySlot, encounterEntry),
+    gender: resolveGender(rawData.genderValue, encounterEntry),
+    isShiny: rawData.shinyType > 0,
+    shinyType: resolveShinyType(rawData.shinyType),
+    syncEligible: isSyncEligible(rawData.encounterType),
+    syncAppliedCorrectly: validateSyncApplication(rawData),
+  };
+
+  // Handle special encounters
+  if (rawData.encounterType === EncounterType.DustCloud) {
+    addDustCloudData(enhancedData, rawData);
   }
-  
-  /**
-   * Assemble enhanced pokemon data from raw WASM output
-   */
-  public assembleData(rawData: RawPokemonData): EnhancedPokemonData {
-    const encounterTable = this.getEncounterTable(rawData.encounterType);
-    const encounterEntry = this.resolveEncounterSlot(rawData.encounterSlotValue, encounterTable);
-    
-    const enhancedData: EnhancedPokemonData = {
-      seed: rawData.seed,
-      pid: rawData.pid,
-      nature: rawData.nature,
-      syncApplied: rawData.syncApplied,
-      abilitySlot: rawData.abilitySlot,
-      genderValue: rawData.genderValue,
-      encounterSlotValue: rawData.encounterSlotValue,
-      encounterType: rawData.encounterType,
-      levelRandValue: rawData.levelRandValue,
-      rawShinyType: rawData.shinyType,
-      species: encounterEntry.species,
-      level: this.calculateLevel(rawData.levelRandValue, encounterEntry),
-      ability: this.resolveAbility(rawData.abilitySlot, encounterEntry),
-      gender: this.resolveGender(rawData.genderValue, encounterEntry),
-      isShiny: rawData.shinyType > 0,
-      shinyType: this.resolveShinyType(rawData.shinyType),
-      syncEligible: this.isSyncEligible(rawData.encounterType),
-      syncAppliedCorrectly: this.validateSyncApplication(rawData),
-    };
-    
-    // Handle special encounters
-    if (rawData.encounterType === EncounterType.DustCloud) {
-      this.addDustCloudData(enhancedData, rawData);
-    }
-    
-    return enhancedData;
+
+  return enhancedData;
+}
+
+/**
+ * Batch assemble multiple pokemon data entries
+ */
+export function assembleBatch(ctx: AssemblerContext, rawDataArray: RawPokemonData[]): EnhancedPokemonData[] {
+  return rawDataArray.map(rawData => assembleData(ctx, rawData));
+}
+
+/**
+ * Determine if sync is eligible for the encounter type
+ * Sync only applies to wild encounters, NOT roaming
+ */
+function isSyncEligible(encounterType: EncounterType): boolean {
+  // Wild encounters where sync applies
+  const wildEncounters = [
+    EncounterType.Normal,
+    EncounterType.Surfing,
+    EncounterType.Fishing,
+    EncounterType.ShakingGrass,
+    EncounterType.DustCloud,
+    EncounterType.PokemonShadow,
+    EncounterType.SurfingBubble,
+    EncounterType.FishingBubble,
+  ];
+
+  // Static symbols also allow sync
+  const staticSyncEligible = [EncounterType.StaticSymbol];
+
+  return wildEncounters.includes(encounterType) || staticSyncEligible.includes(encounterType);
+}
+
+/**
+ * Validate that sync was applied correctly according to rules
+ */
+function validateSyncApplication(rawData: RawPokemonData): boolean {
+  const eligible = isSyncEligible(rawData.encounterType);
+
+  // If encounter type is not eligible for sync, sync should not be applied
+  if (!eligible && rawData.syncApplied) {
+    return false; // Sync incorrectly applied to ineligible encounter
   }
-  
-  /**
-   * Batch assemble multiple pokemon data entries
-   */
-  public assembleBatch(rawDataArray: RawPokemonData[]): EnhancedPokemonData[] {
-    return rawDataArray.map(rawData => this.assembleData(rawData));
+
+  // Roaming encounters specifically should never have sync applied
+  if (rawData.encounterType === EncounterType.Roaming && rawData.syncApplied) {
+    return false; // Sync incorrectly applied to roaming encounter
   }
-  
-  /**
-   * Determine if sync is eligible for the encounter type
-   * Sync only applies to wild encounters, NOT roaming
-   */
-  private isSyncEligible(encounterType: EncounterType): boolean {
-    // Wild encounters where sync applies
-    const wildEncounters = [
-      EncounterType.Normal,
-      EncounterType.Surfing,
-      EncounterType.Fishing,
-      EncounterType.ShakingGrass,
-      EncounterType.DustCloud,
-      EncounterType.PokemonShadow,
-      EncounterType.SurfingBubble,
-      EncounterType.FishingBubble,
-    ];
-    
-    // Static symbols also allow sync
-    const staticSyncEligible = [EncounterType.StaticSymbol];
-    
-    return wildEncounters.includes(encounterType) || staticSyncEligible.includes(encounterType);
+
+  return true; // Sync application is correct
+}
+
+/**
+ * Get encounter table for specific encounter type
+ */
+function getEncounterTable(ctx: AssemblerContext, encounterType: EncounterType): EncounterTableEntry[] {
+  const table = ctx.encounterTables[encounterType];
+  if (!table || table.length === 0) {
+    // Return default entry for testing/fallback
+    return [{
+      species: 1, // Bulbasaur as default
+      minLevel: 5,
+      maxLevel: 5,
+      abilityRatio: [1, 0],
+      genderRatio: 87, // 87.5% male ratio
+    }];
   }
-  
-  /**
-   * Validate that sync was applied correctly according to rules
-   */
-  private validateSyncApplication(rawData: RawPokemonData): boolean {
-    const isEligible = this.isSyncEligible(rawData.encounterType);
-    
-    // If encounter type is not eligible for sync, sync should not be applied
-    if (!isEligible && rawData.syncApplied) {
-      return false; // Sync incorrectly applied to ineligible encounter
-    }
-    
-    // Roaming encounters specifically should never have sync applied
-    if (rawData.encounterType === EncounterType.Roaming && rawData.syncApplied) {
-      return false; // Sync incorrectly applied to roaming encounter
-    }
-    
-    return true; // Sync application is correct
+  return table;
+}
+
+/**
+ * Resolve encounter slot to specific pokemon
+ */
+function resolveEncounterSlot(slotValue: number, table: EncounterTableEntry[]): EncounterTableEntry {
+  if (table.length === 0) {
+    throw new Error('Empty encounter table');
   }
-  
-  /**
-   * Get encounter table for specific encounter type
-   */
-  private getEncounterTable(encounterType: EncounterType): EncounterTableEntry[] {
-    const table = this.encounterTables[encounterType];
-    if (!table || table.length === 0) {
-      // Return default entry for testing/fallback
-      return [{
-        species: 1, // Bulbasaur as default
-        minLevel: 5,
-        maxLevel: 5,
-        abilityRatio: [1, 0],
-        genderRatio: 87, // 87.5% male ratio
-      }];
-    }
-    return table;
+
+  // Use modulo to ensure valid index
+  const index = slotValue % table.length;
+  return table[index];
+}
+
+/**
+ * Calculate level from random value and level range
+ */
+function calculateLevel(levelRandValue: number, entry: EncounterTableEntry): number {
+  const levelRange = entry.maxLevel - entry.minLevel + 1;
+  if (levelRange <= 1) {
+    return entry.minLevel;
   }
-  
-  /**
-   * Resolve encounter slot to specific pokemon
-   */
-  private resolveEncounterSlot(slotValue: number, table: EncounterTableEntry[]): EncounterTableEntry {
-    if (table.length === 0) {
-      throw new Error('Empty encounter table');
-    }
-    
-    // Use modulo to ensure valid index
-    const index = slotValue % table.length;
-    return table[index];
+
+  // Use the level random value to determine level within range
+  const levelOffset = levelRandValue % levelRange;
+  return entry.minLevel + levelOffset;
+}
+
+/**
+ * Resolve ability from slot and entry data
+ */
+function resolveAbility(abilitySlot: number, _entry: EncounterTableEntry): number {
+  // This is a simplified implementation
+  // In reality, this would map to actual ability IDs based on species data
+  return abilitySlot === 0 ? 1 : 2; // Simple mapping for testing
+}
+
+/**
+ * Resolve gender from value and species gender ratio
+ */
+function resolveGender(genderValue: number, entry: EncounterTableEntry): number {
+  if (entry.genderRatio === -1) {
+    return 2; // Genderless
   }
-  
-  /**
-   * Calculate level from random value and level range
-   */
-  private calculateLevel(levelRandValue: number, entry: EncounterTableEntry): number {
-    const levelRange = entry.maxLevel - entry.minLevel + 1;
-    if (levelRange <= 1) {
-      return entry.minLevel;
-    }
-    
-    // Use the level random value to determine level within range
-    const levelOffset = levelRandValue % levelRange;
-    return entry.minLevel + levelOffset;
+
+  // Gender is determined by comparing random value to species ratio
+  return genderValue < entry.genderRatio ? 1 : 0; // 1: female, 0: male
+}
+
+/**
+ * Resolve shiny type enum to string
+ */
+function resolveShinyType(shinyType: number): 'normal' | 'square' | 'star' {
+  switch (shinyType) {
+    case 1: return 'square';
+    case 2: return 'star';
+    default: return 'normal';
   }
-  
-  /**
-   * Resolve ability from slot and entry data
-   */
-  private resolveAbility(abilitySlot: number, _entry: EncounterTableEntry): number {
-    // This is a simplified implementation
-    // In reality, this would map to actual ability IDs based on species data
-    return abilitySlot === 0 ? 1 : 2; // Simple mapping for testing
+}
+
+/**
+ * Add dust cloud specific data
+ */
+function addDustCloudData(enhancedData: EnhancedPokemonData, rawData: RawPokemonData): void {
+  // Dust cloud content determination based on additional random values
+  // This is a simplified implementation - in practice, this would use
+  // additional RNG calls to determine content type
+  const contentRandom = (rawData.pid & 0xFF) % 100;
+
+  if (contentRandom < 60) {
+    enhancedData.dustCloudContent = DustCloudContent.Pokemon;
+  } else if (contentRandom < 85) {
+    enhancedData.dustCloudContent = DustCloudContent.Item;
+    enhancedData.itemId = determineDustCloudItem(rawData);
+  } else {
+    enhancedData.dustCloudContent = DustCloudContent.Gem;
+    enhancedData.itemId = determineDustCloudGem(rawData);
   }
-  
-  /**
-   * Resolve gender from value and species gender ratio
-   */
-  private resolveGender(genderValue: number, entry: EncounterTableEntry): number {
-    if (entry.genderRatio === -1) {
-      return 2; // Genderless
-    }
-    
-    // Gender is determined by comparing random value to species ratio
-    return genderValue < entry.genderRatio ? 1 : 0; // 1: female, 0: male
-  }
-  
-  /**
-   * Resolve shiny type enum to string
-   */
-  private resolveShinyType(shinyType: number): 'normal' | 'square' | 'star' {
-    switch (shinyType) {
-      case 1: return 'square';
-      case 2: return 'star';
-      default: return 'normal';
-    }
-  }
-  
-  /**
-   * Add dust cloud specific data
-   */
-  private addDustCloudData(enhancedData: EnhancedPokemonData, rawData: RawPokemonData): void {
-    // Dust cloud content determination based on additional random values
-    // This is a simplified implementation - in practice, this would use
-    // additional RNG calls to determine content type
-    const contentRandom = (rawData.pid & 0xFF) % 100;
-    
-    if (contentRandom < 60) {
-      enhancedData.dustCloudContent = DustCloudContent.Pokemon;
-    } else if (contentRandom < 85) {
-      enhancedData.dustCloudContent = DustCloudContent.Item;
-      enhancedData.itemId = this.determineDustCloudItem(rawData);
-    } else {
-      enhancedData.dustCloudContent = DustCloudContent.Gem;
-      enhancedData.itemId = this.determineDustCloudGem(rawData);
-    }
-  }
-  
-  /**
-   * Determine dust cloud item ID
-   */
-  private determineDustCloudItem(rawData: RawPokemonData): number {
-    // Simplified item determination
-    // In practice, this would use location-specific item tables
-    const itemRandom = (rawData.pid >> 8) % 10;
-    
-    // Return common dust cloud items (example IDs)
-    const dustCloudItems = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
-    return dustCloudItems[itemRandom];
-  }
-  
-  /**
-   * Determine dust cloud gem ID
-   */
-  private determineDustCloudGem(rawData: RawPokemonData): number {
-    // Simplified gem determination
-    const gemRandom = (rawData.pid >> 16) % 8;
-    
-    // Return gem item IDs (example)
-    const gemItems = [550, 551, 552, 553, 554, 555, 556, 557];
-    return gemItems[gemRandom];
-  }
-  
-  /**
-   * Set encounter table for specific encounter type
-   */
-  public setEncounterTable(encounterType: EncounterType, table: EncounterTableEntry[]): void {
-    this.encounterTables[encounterType] = table;
-  }
-  
-  /**
-   * Get current encounter tables
-   */
-  public getEncounterTables(): Partial<EncounterTableMap> {
-    return { ...this.encounterTables };
-  }
-  
-  /**
-   * Validate that sync rules are correctly enforced
-   * This is particularly important for roaming encounters
-   */
-  public validateSyncRules(enhancedDataArray: EnhancedPokemonData[]): {
-    isValid: boolean;
-    violations: Array<{
-      index: number;
-      encounterType: EncounterType;
-      syncApplied: boolean;
-      syncEligible: boolean;
-      violation: string;
-    }>;
-  } {
-    const violations: Array<{
-      index: number;
-      encounterType: EncounterType;
-      syncApplied: boolean;
-      syncEligible: boolean;
-      violation: string;
-    }> = [];
-    
-    enhancedDataArray.forEach((data, index) => {
-      if (!data.syncAppliedCorrectly) {
-        let violation = '';
-        
-        if (data.encounterType === EncounterType.Roaming && data.syncApplied) {
-          violation = 'Sync incorrectly applied to roaming encounter';
-        } else if (!data.syncEligible && data.syncApplied) {
-          violation = 'Sync applied to ineligible encounter type';
-        }
-        
-        violations.push({
-          index,
-          encounterType: data.encounterType,
-          syncApplied: data.syncApplied,
-          syncEligible: data.syncEligible,
-          violation,
-        });
+}
+
+/**
+ * Determine dust cloud item ID
+ */
+function determineDustCloudItem(rawData: RawPokemonData): number {
+  // Simplified item determination
+  // In practice, this would use location-specific item tables
+  const itemRandom = (rawData.pid >> 8) % 10;
+
+  // Return common dust cloud items (example IDs)
+  const dustCloudItems = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+  return dustCloudItems[itemRandom];
+}
+
+/**
+ * Determine dust cloud gem ID
+ */
+function determineDustCloudGem(rawData: RawPokemonData): number {
+  // Simplified gem determination
+  const gemRandom = (rawData.pid >> 16) % 8;
+
+  // Return gem item IDs (example)
+  const gemItems = [550, 551, 552, 553, 554, 555, 556, 557];
+  return gemItems[gemRandom];
+}
+
+/**
+ * Manage encounter tables in context
+ */
+export function setEncounterTable(ctx: AssemblerContext, encounterType: EncounterType, table: EncounterTableEntry[]): void {
+  ctx.encounterTables[encounterType] = table;
+}
+
+export function getEncounterTables(ctx: AssemblerContext): Partial<EncounterTableMap> {
+  return { ...ctx.encounterTables };
+}
+
+/**
+ * Validate that sync rules are correctly enforced
+ * This is particularly important for roaming encounters
+ */
+export function validateSyncRules(enhancedDataArray: EnhancedPokemonData[]): {
+  isValid: boolean;
+  violations: Array<{
+    index: number;
+    encounterType: EncounterType;
+    syncApplied: boolean;
+    syncEligible: boolean;
+    violation: string;
+  }>;
+} {
+  const violations: Array<{
+    index: number;
+    encounterType: EncounterType;
+    syncApplied: boolean;
+    syncEligible: boolean;
+    violation: string;
+  }> = [];
+
+  enhancedDataArray.forEach((data, index) => {
+    if (!data.syncAppliedCorrectly) {
+      let violation = '';
+
+      if (data.encounterType === EncounterType.Roaming && data.syncApplied) {
+        violation = 'Sync incorrectly applied to roaming encounter';
+      } else if (!data.syncEligible && data.syncApplied) {
+        violation = 'Sync applied to ineligible encounter type';
       }
-    });
-    
-    return {
-      isValid: violations.length === 0,
-      violations,
-    };
-  }
+
+      violations.push({
+        index,
+        encounterType: data.encounterType,
+        syncApplied: data.syncApplied,
+        syncEligible: data.syncEligible,
+        violation,
+      });
+    }
+  });
+
+  return {
+    isValid: violations.length === 0,
+    violations,
+  };
 }
 
 /**
