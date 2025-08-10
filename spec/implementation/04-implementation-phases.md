@@ -108,6 +108,12 @@
    - エクスポート機能
 4. **状態管理**
    - Zustand store実装
+5. **API移行（残タスク）**
+    - 新しい関数ベース統合APIをUIコンポーネントから直接呼び出すように切替
+       - 参照先: `src/lib/integration/wasm-service`
+       - 旧 `src/lib/core/wasm-service` は削除済みのため参照を置換
+    - 対応内容: インポートの置換、型の調整、呼び出し箇所の更新（検索設定/実行/結果表示）
+    - 完了条件: ビルド/テスト緑、開発テストページ（test-integration.html）でUI操作による検索〜結果表示の動作確認
 
 ### 8.4 Phase 4: WebWorker & Performance（1週間）
 1. **WebWorker実装**
@@ -194,7 +200,7 @@ TypeScript Integration (データ処理・UI)
 ---
 
 **作成日**: 2025年8月3日  
-**更新日**: 2025年8月3日 - アルゴリズム分割に基づく実装フェーズ詳細化  
+**更新日**: 2025年8月10日 - Phase 3 に UI→新統合API移行の残タスクを追記  
 **バージョン**: 2.0  
 **作成者**: GitHub Copilot  
 **依存**: algorithms/*.md, pokemon-generation-feature-spec.md, pokemon-data-specification.md
