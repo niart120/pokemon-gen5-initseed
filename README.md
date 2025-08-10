@@ -27,7 +27,7 @@
 - **バックグラウンド処理**: Web Workers + 並列処理対応
 - **パフォーマンス監視**: 本番用軽量監視 + 開発用詳細分析
 
-### WebAssembly計算エンジン（WASM実装を正とする）
+### WebAssembly計算エンジン
 
 本アプリケーションの計算処理は以下のRust WebAssemblyモジュールで実装されています：
 
@@ -38,7 +38,7 @@
 - **PIDCalculator & ShinyChecker**: PID生成と色違い判定
 - **PokemonGenerator**: 統合ポケモン生成エンジン
 
-**注記**: 計算精度と仕様の正確性についてはWebAssembly（Rust）実装を正として扱います。TypeScript実装との乖離が生じた場合は、WASM実装に従います。
+
 
 ## 開発・ビルド・テスト
 
@@ -189,108 +189,11 @@ WebAssembly SIMD128命令を活用した4並列SHA-1処理により大幅な性�
 4. 目標Seedリストを入力
 5. 探索開始で高速検索を実行
 
-## WebAssembly API仕様
+## APIドキュメント
 
-### メイン検索API
+詳細なAPI仕様や使用例は以下を参照してください。
 
-#### `IntegratedSeedSearcher`
-統合シード探索システムのメインAPI：
-
-```typescript
-// 基本的な使用例
-const searcher = new IntegratedSeedSearcher(
-  version, region, hardware, 
-  macAddress, keyInput
-);
-
-const results = searcher.search_seeds_integrated_simd(
-  startDateTime, endDateTime,
-  timer0Min, timer0Max,
-  vcountMin, vcountMax,
-  targetSeeds
-);
-```
-
-### ポケモン生成API
-
-#### `PokemonGenerator`
-BW/BW2準拠のポケモン生成エンジン：
-
-```typescript
-const generator = new PokemonGenerator();
-const config = new BWGenerationConfig(
-  GameVersion.BlackWhite2,
-  EncounterType.Normal,
-  tid, sid, syncEnabled, syncNatureId
-);
-
-const pokemon = generator.generate_single_pokemon_bw(seed, config);
-```
-
-#### `PersonalityRNG`
-BW仕様64bit線形合同法乱数生成器：
-
-```typescript
-const rng = new PersonalityRNG(initialSeed);
-const randomValue = rng.next(); // 32bit乱数値取得
-rng.advance(10); // 10回進める
-```
-
-#### `EncounterCalculator`
-遭遇スロット計算エンジン：
-
-```typescript
-const calculator = new EncounterCalculator();
-const slotIndex = calculator.calculate_encounter_slot(
-  randomValue, 
-  GameVersion.BlackWhite2, 
-  EncounterType.Normal
-);
-```
-
-#### `OffsetCalculator`
-ゲーム初期化処理：
-
-```typescript
-const calculator = new OffsetCalculator();
-const offset = calculator.calculate_offset(GameMode.Bw2ContinueNoMemoryLink);
-const tidSid = calculator.calculate_tid_sid(seed, gameMode);
-```
-
-#### `PIDCalculator` & `ShinyChecker`
-PID生成と色違い判定：
-
-```typescript
-const pidCalc = new PIDCalculator();
-const shinyChecker = new ShinyChecker();
-
-const pid = pidCalc.generate_wild_pid(randomValue);
-const isShiny = shinyChecker.is_shiny(pid, tid, sid);
-const shinyType = shinyChecker.get_shiny_type(pid, tid, sid);
-```
-
-### データソース・出典
-
-#### エンカウントデータ
-
-本アプリケーションで使用するポケモンエンカウントデータは以下のソースを参照しています：
-
-- **Bulbapedia**: https://bulbapedia.bulbagarden.net/
-  - BW/BW2エンカウントテーブル、確率分布
-  - 取得日: 2025年1月（実装時点）
-  
-- **Serebii.net**: https://serebii.net/
-  - 固定シンボル、配布ポケモン情報
-  - 取得日: 2025年1月（実装時点）
-
-- **ポケモン公式データ**: 
-  - 種族値、タイプ、特性等の基本データ
-
-- **コミュニティ解析データ**:
-  - BW/BW2乱数アルゴリズム仕様
-  - エンカウント処理の詳細実装
-
-**注記**: エンカウントデータの正確性については、WebAssembly（Rust）実装で定義された確率分布・計算ロジックを正として扱います。外部データソースとの乖離が生じた場合は、実装コードの動作を優先します。
+- docs/phase2-api.md
 
 ## E2Eテスト
 
@@ -310,7 +213,18 @@ npm run dev
 
 ## データ出典とクレジット
 
-- 遭遇データの主な出典: <a href="https://pokebook.jp/" target="_blank" rel="noreferrer">ポケモンの友 (Pokebook)</a>
+### 技術資料
+- ポケモン第5世代乱数調整: https://rusted-coil.sakura.ne.jp/pokemon/ran/ran_5.htm
+- BW なみのり・つり・大量発生 野生乱数: https://xxsakixx.com/archives/53402929.html
+- BW 出現スロットの閾値: https://xxsakixx.com/archives/53962575.html
+
+### データソース
+- ポケモン攻略DE.com: http://blog.game-de.com/pokedata/pokemon-data/ （種族データ）
+- ポケモンの友 (Black): https://pokebook.jp/data/sp5/enc_b （遭遇テーブル）
+- ポケモンの友 (White): https://pokebook.jp/data/sp5/enc_w （遭遇テーブル）
+- ポケモンの友 (Black 2): https://pokebook.jp/data/sp5/enc_b2 （遭遇テーブル）
+- ポケモンの友 (White 2): https://pokebook.jp/data/sp5/enc_w2 （遭遇テーブル）
+
 - 本ツールは非公式であり、いかなる保証も行いません。データには誤りが含まれる可能性があります。ゲーム内結果での検証を推奨します。
 
 ## ライセンス
