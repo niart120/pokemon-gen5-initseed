@@ -7,15 +7,17 @@ import {
   RawPokemonData,
   ParsedPokemonData,
   PlaceholderValue,
-  EncounterType,
-  ShinyType,
   ShinyInfo,
   NATURE_NAMES,
   RawPokemonParserConfig,
   LevelCalculationConfig,
   // GenderRatio,
   // WasmRawPokemonDataProperty
-} from '@/types/raw-pokemon';
+} from '@/types/pokemon-raw';
+import {
+  DomainEncounterType as EncounterType,
+  DomainShinyType as ShinyType,
+} from '@/types/domain';
 import { determineGenderFromSpec } from '@/lib/utils/gender-utils';
 
 /**
@@ -414,6 +416,76 @@ export function parseWasmToPokemon(
   const parser = createRawPokemonDataParser(config);
   const rawData = parser.parseFromWasm(wasmInstance);
   return parser.parseToDetailed(rawData);
+}
+
+/**
+ * 汎用パーサー: unknownなWASMオブジェクトから RawPokemonData（snake_case）を生成
+ * getter関数/直プロパティの双方に対応
+ */
+export function parseUnknownWasmRawData(wasmData: unknown): RawPokemonData {
+  if (!wasmData) {
+    throw new Error('WASM data is null or undefined');
+  }
+
+  const obj = wasmData as Record<string, unknown>;
+
+  // getter関数/プロパティ両対応
+  const readField = (key: string) => {
+    const candidate = obj[key];
+    const val = typeof candidate === 'function' ? (candidate as () => unknown)() : candidate;
+    if (val === undefined) {
+      throw new Error(`Missing required property or method: ${key}`);
+    }
+    return val;
+  };
+
+  const toBigInt = (v: unknown): bigint => {
+    if (typeof v === 'bigint') return v;
+    if (typeof v === 'number') return BigInt(Math.trunc(v));
+    if (typeof v === 'string') return BigInt(v);
+    if (typeof v === 'boolean') return BigInt(v ? 1 : 0);
+    throw new Error(`Invalid bigint-like value: ${String(v)}`);
+  };
+
+  const toNumber = (v: unknown): number => {
+    if (typeof v === 'number') return v;
+    if (typeof v === 'bigint') return Number(v);
+    if (typeof v === 'string') {
+      const n = Number(v);
+      if (!Number.isFinite(n)) throw new Error(`Invalid number string: ${v}`);
+      return n;
+    }
+    if (typeof v === 'boolean') return v ? 1 : 0;
+    throw new Error(`Invalid number-like value: ${String(v)}`);
+  };
+
+  try {
+    const seedVal = readField('get_seed');
+    const pid = readField('get_pid');
+    const nature = readField('get_nature');
+    const syncApplied = readField('get_sync_applied');
+    const abilitySlot = readField('get_ability_slot');
+    const genderValue = readField('get_gender_value');
+    const encounterSlotValue = readField('get_encounter_slot_value');
+    const encounterType = readField('get_encounter_type');
+    const levelRandValue = readField('get_level_rand_value');
+    const shinyType = readField('get_shiny_type');
+
+    return {
+      seed: toBigInt(seedVal),
+      pid: toNumber(pid),
+      nature: toNumber(nature),
+      sync_applied: Boolean(syncApplied),
+      ability_slot: toNumber(abilitySlot),
+      gender_value: toNumber(genderValue),
+      encounter_slot_value: toNumber(encounterSlotValue),
+      encounter_type: toNumber(encounterType),
+      level_rand_value: toNumber(levelRandValue),
+      shiny_type: toNumber(shinyType),
+    };
+  } catch (error) {
+    throw new Error(`Failed to parse unknown WASM pokemon data: ${error}`);
+  }
 }
 
 /**

@@ -69,7 +69,7 @@ Phase 4: クリーニング
 
 リスクと対処
 - 外部API変更/一時不通 → 生成物をリポジトリに保持、再取得は手動。
-- 既存型との齟齬 → src/types で統一型を定義し、既存の raw-pokemon-data.ts/ts 側の型は互換層を設ける。
+- 既存型との齟齬 → src/types で統一型を定義し、旧 raw-pokemon-data.ts は `src/types/pokemon-enhanced.ts` に統合済み。
 - 隠れ特性判定 → 現行はslotに依存しない。WASMの仕様確認後にフラグ導入を検討。
 
 影響範囲

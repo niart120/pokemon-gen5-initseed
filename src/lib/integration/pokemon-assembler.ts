@@ -11,11 +11,11 @@
  */
 
 import type { ROMVersion, ROMRegion } from '../../types/rom';
-import { EncounterType } from '@/types/raw-pokemon-data';
+import { EncounterType } from '@/types/pokemon-enhanced';
 export { EncounterType };
 
 // EncounterType はドメイン定義（DomainEncounterType）を再エクスポートしたものを使用する
-// 出典: src/types/raw-pokemon-data.ts で DomainEncounterType を EncounterType としてエクスポート
+// 出典: src/types/pokemon-enhanced.ts で DomainEncounterType を EncounterType としてエクスポート
 
 // Dust cloud content types
 export enum DustCloudContent {

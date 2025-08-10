@@ -35,7 +35,7 @@ export default tseslint.config(
     // legacy encounter/species modules
     { name: '@/data/encounters', message: 'legacy encounters barrel は使用禁止です。src/data/encounter-tables を使用してください。' },
     { name: '@/data/encounters/index', message: 'legacy encounters barrel は使用禁止です。src/data/encounter-tables を使用してください。' },
-    { name: '@/data/encounters/types', message: 'EncounterType は domain/raw-pokemon-data 経由を使用してください。' },
+  { name: '@/data/encounters/types', message: 'EncounterType は types/domain.ts もしくは types/pokemon-enhanced.ts の再エクスポート経由を使用してください。' },
     { name: '@/data/encounters/rates', message: '固定レート表は使用禁止です。JSON データに基づく処理に移行してください。' },
     { name: '@/data/encounters/tables', message: 'サンプルテーブルは使用禁止です。JSON ローダー＋encounter-tables を使用してください。' },
     { name: '@/data/pokemon-species', message: '旧TS種族データは使用禁止です。data/species/generated を使用してください。' }

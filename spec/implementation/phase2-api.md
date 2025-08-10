@@ -11,11 +11,11 @@ WASM PokemonGenerator → RawPokemonData → Integration Service → EnhancedPok
 ```
 
 - 生成エントリは PokemonGenerator（WASM）です。IntegratedSeedSearcher は「初期Seed探索」用であり、生成パイプラインの入口ではありません。
-- 型・パーサは `src/types/raw-pokemon-data.ts` を唯一の基準とします。
+- 型・パーサは `src/types/pokemon-enhanced.ts`（UI向けヘルパ含む）と `src/types/pokemon-raw.ts`（WASM層）を基準とします。
 - 遭遇テーブルは JSON データのみに依存し、統合サービスではフォールバックを行いません（テスト用途のサンプルは別途有り）。
 - 種族データは生成済み JSON アダプタ（`src/data/species/generated`）を使用します。
 
-## 1) RawPokemonData とパーサ（`src/types/raw-pokemon-data.ts`）
+## 1) RawPokemonData とパーサ（`src/types/pokemon-enhanced.ts` / `src/types/pokemon-raw.ts`）
 
 役割
 - WASM から返る RawPokemonData を TypeScript へ安全に変換

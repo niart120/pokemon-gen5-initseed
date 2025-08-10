@@ -20,7 +20,7 @@ import {
   RawPokemonParserConfig,
   EncounterTable,
   GenderRatio
-} from '@/types/raw-pokemon';
+} from '@/types/pokemon-raw';
 
 // モックWASMインスタンス作成ヘルパー
 function createMockWasmInstance(data: Partial<RawPokemonData>): WasmRawPokemonDataInstance {
@@ -432,7 +432,7 @@ describe('RawPokemonDataParser', () => {
           {
             species_id: 550, // バスラオ
             name: 'バスラオ',
-            level_config: { fixed_level: 30 },
+            level_config: { min_level: 30, max_level: 30, fixed_level: 30 },
             probability: 100
           }
         ]

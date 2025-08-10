@@ -1,5 +1,5 @@
 import type { EncounterLocationsJson, EncounterSlotJson } from './schema';
-import { EncounterType } from '@/types/raw-pokemon-data';
+import { EncounterType } from '@/types/pokemon-enhanced';
 import type { ROMVersion } from '@/types/rom';
 import type { DomainEncounterTypeName } from '@/types/domain';
 import { encounterTypeToName } from '@/lib/integration/wasm-enums';

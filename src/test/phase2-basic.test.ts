@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { 
   getNatureName, 
   getShinyStatusName,
-} from '../types/raw-pokemon-data';
+} from '../types/pokemon-enhanced';
 import { determineGenderFromSpec } from '../lib/utils/gender-utils';
 import { calculateLevel } from '../data/encounter-tables';
 import { getGeneratedSpeciesById } from '../data/species/generated';
