@@ -4,8 +4,8 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { initWasmForTesting } from './wasm-loader';
-import { parseFromWasmRaw } from '../lib/integration/raw-parser';
-import { resolvePokemon, toUiReadyPokemon } from '../lib/integration/pokemon-resolver';
+import { parseFromWasmRaw } from '../lib/generation/raw-parser';
+import { resolvePokemon, toUiReadyPokemon } from '../lib/generation/pokemon-resolver';
 import { buildResolutionContext } from '../lib/initialization/build-resolution-context';
 import { getGeneratedSpeciesById } from '../data/species/generated';
 

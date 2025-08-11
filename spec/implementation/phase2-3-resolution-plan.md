@@ -6,7 +6,7 @@
 
 方針（決定事項）
 1) エンカウントは既存のJSONテーブル群（src/data/encounters/**）を唯一のソースとする。
-   - PR30 の簡易BASIC_ENCOUNTER_TABLEと独自Resolver（src/lib/integration/resolvers.ts）は廃止。
+  - PR30 の簡易BASIC_ENCOUNTER_TABLEと独自Resolver（src/lib/integration/resolvers.ts）は廃止。
 2) 性別判定は「female閾値（0-255）基準」に統一。
    - gender_value < female_threshold → Female、その以外 → Male。
    - Genderless/固定性別はデータで明示。

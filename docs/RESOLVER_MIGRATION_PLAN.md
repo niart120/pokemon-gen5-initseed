@@ -61,8 +61,8 @@
 ## 変更影響ファイル（初期見立て）
   - （削除）`src/lib/services/wasm-pokemon-service.ts`
   - `src/lib/services/pokemon-integration-service.ts`
-  - `src/lib/integration/pokemon-resolver.ts`（機能補強）
-  - `src/lib/integration/raw-parser.ts`（必要なら型整備のみ）
+  - `src/lib/generation/pokemon-resolver.ts`（機能補強）
+  - `src/lib/generation/raw-parser.ts`（必要なら型整備のみ）
   - `src/lib/integration/pokemon-assembler.ts`（撤去）
   - `src/components/**`（結果リスト、詳細、オプション依存）
   - `src/types/domain.ts`（名称テーブル・enum の参照一元化）

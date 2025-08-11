@@ -11,11 +11,11 @@ WASM PokemonGenerator → RawPokemonData → Integration Service → EnhancedPok
 ```
 
 - 生成エントリは PokemonGenerator（WASM）です。IntegratedSeedSearcher は「初期Seed探索」用であり、生成パイプラインの入口ではありません。
-- 型・パーサは `src/types/pokemon-raw.ts`（WASM境界の snake_case Raw）と Resolver 一連（`src/lib/integration/raw-parser.ts`, `src/lib/integration/pokemon-resolver.ts`）を基準とします。
+- 型・パーサは `src/types/pokemon-raw.ts`（WASM境界の snake_case Raw）と Resolver 一連（`src/lib/generation/raw-parser.ts`, `src/lib/generation/pokemon-resolver.ts`）を基準とします。
 - 遭遇テーブルは JSON データのみに依存し、統合サービスではフォールバックを行いません（テスト用途のサンプルは別途有り）。
 - 種族データは生成済み JSON アダプタ（`src/data/species/generated`）を使用します。
 
-## 1) RawPokemonData とパーサ（`src/types/pokemon-raw.ts` / `src/lib/integration/raw-parser.ts`）
+## 1) RawPokemonData とパーサ（`src/types/pokemon-raw.ts` / `src/lib/generation/raw-parser.ts`）
 
 役割
 - WASM から返る RawPokemonData を TypeScript へ安全に変換
@@ -124,8 +124,8 @@ WASM 生成 → 統合までの最小例：
 
 ```ts
 // 生成 → 統合（擬似コード）
-import { parseFromWasmRaw } from '@/lib/integration/raw-parser';
-import { resolvePokemon, toUiReadyPokemon } from '@/lib/integration/pokemon-resolver';
+import { parseFromWasmRaw } from '@/lib/generation/raw-parser';
+import { resolvePokemon, toUiReadyPokemon } from '@/lib/generation/pokemon-resolver';
 
 async function generateEnhancedPokemon(seed: bigint) {
   const wasmRaw = /* PokemonGenerator.generate_*_bw(...) */ null as any;

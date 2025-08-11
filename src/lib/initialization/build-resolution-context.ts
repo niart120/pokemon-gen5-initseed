@@ -8,7 +8,7 @@
  * It can be extended later to load richer catalogs.
  */
 
-import type { ResolutionContext } from '@/lib/integration/pokemon-resolver';
+import type { ResolutionContext } from '@/lib/generation/pokemon-resolver';
 import type { ROMVersion } from '@/types/rom';
 import type { EncounterTable as UiEncounterTable } from '@/data/encounter-tables';
 import { getEncounterTable } from '@/data/encounter-tables';

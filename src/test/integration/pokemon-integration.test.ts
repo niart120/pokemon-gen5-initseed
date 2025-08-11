@@ -15,7 +15,7 @@ import { describe, test, expect, beforeAll } from 'vitest';
 import { SeedCalculator } from '../../lib/core/seed-calculator';
 import { isWasmReady } from '../../lib/core/wasm-interface';
 import { buildResolutionContext } from '../../lib/initialization/build-resolution-context';
-import { resolvePokemon, toUiReadyPokemon } from '../../lib/integration/pokemon-resolver';
+import { resolvePokemon, toUiReadyPokemon } from '../../lib/generation/pokemon-resolver';
 import type { UnresolvedPokemonData } from '../../types/pokemon-raw';
 
 describe('Integration smoke (WASM fallback + tiny pipeline)', () => {

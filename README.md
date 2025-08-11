@@ -204,7 +204,7 @@ WebAssembly SIMD128命令を活用した4並列SHA-1処理により大幅な性�
 ## 型の境界と単一ソース
 
 - Enumなどのドメイン概念は `src/types/domain.ts` を単一ソースとして利用します。
-- 境界の生データ型は `src/types/pokemon-raw.ts`（snake_case）。ラベル付け等は `src/lib/integration/pokemon-resolver.ts` の `toUiReadyPokemon()` を利用します。
+- 境界の生データ型は `src/types/pokemon-raw.ts`（snake_case）。ラベル付け等は `src/lib/generation/pokemon-resolver.ts` の `toUiReadyPokemon()` を利用します。
 - 性格名（Nature）は `DomainNatureNames`（英語名）に集約しています。
 
 ## E2Eテスト
