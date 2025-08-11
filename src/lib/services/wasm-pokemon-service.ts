@@ -10,7 +10,7 @@
 import { initWasm, getWasm, isWasmReady } from '../core/wasm-interface';
 import type { ROMVersion, ROMRegion, Hardware } from '../../types/rom';
 // New resolver-path imports (non-breaking additions)
-import { parseWasmLikeToRawPokemonData } from '@/lib/integration/raw-parser';
+import { parseFromWasmRaw } from '@/lib/integration/raw-parser';
 import type { RawPokemonData as SnakeRawPokemonData } from '@/types/pokemon-raw';
 import {
   resolvePokemon,
@@ -148,7 +148,7 @@ export class WasmPokemonService {
         BigInt.asUintN(64, request.seed),
         bwConfig
       );
-  return parseWasmLikeToRawPokemonData(wasmRaw as unknown as Record<string, unknown>);
+  return parseFromWasmRaw(wasmRaw as unknown as Record<string, unknown>);
     } finally {
       bwConfig.free();
     }
@@ -181,7 +181,7 @@ export class WasmPokemonService {
       if (!wasmList || wasmList.length === 0) {
         throw new WasmServiceError('No Pokemon generated from WASM batch operation', 'NO_BATCH_RESULTS');
       }
-      const pokemon = wasmList.map((w: unknown) => parseWasmLikeToRawPokemonData(w as Record<string, unknown>));
+  const pokemon = wasmList.map((w: unknown) => parseFromWasmRaw(w as Record<string, unknown>));
       return {
         pokemon,
         stats: {

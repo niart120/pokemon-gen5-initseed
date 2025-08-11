@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { initWasmForTesting } from './wasm-loader';
 import { 
-  parseWasmLikeToRawPokemonData,
+  parseFromWasmRaw,
 } from '../lib/integration/raw-parser';
 import type { RawPokemonData } from '../types/pokemon-raw';
 import { DomainNatureNames } from '../types/domain';
@@ -74,9 +74,9 @@ describe('Phase 2 Integration Tests', () => {
     });
 
     it('should handle invalid WASM data gracefully', () => {
-      expect(() => parseWasmLikeToRawPokemonData(null as any)).toThrow('WASM data is null or undefined');
-      expect(() => parseWasmLikeToRawPokemonData({})).toThrow('Missing required property or method');
-      expect(() => parseWasmLikeToRawPokemonData({ get_seed: 'not a function' } as any)).toThrow('Missing required property or method');
+  expect(() => parseFromWasmRaw(null as any)).toThrow('WASM data is null or undefined');
+  expect(() => parseFromWasmRaw({} as any)).toThrow('Missing required property');
+  expect(() => parseFromWasmRaw({ get_seed: 'not a value' } as any)).toThrow('Missing required property');
     });
 
     it('should expose nature names via domain table', () => {

@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { initWasmForTesting } from './wasm-loader';
-import { parseWasmLikeToRawPokemonData } from '../lib/integration/raw-parser';
+import { parseFromWasmRaw } from '../lib/integration/raw-parser';
 import { resolvePokemon, toUiReadyPokemon } from '../lib/integration/pokemon-resolver';
 import { buildResolutionContext } from '../lib/initialization/build-resolution-context';
 import { getGeneratedSpeciesById } from '../data/species/generated';
@@ -31,7 +31,7 @@ describe('Phase 2 Integration Demo', () => {
     };
 
   // Step 1: Parse raw data (snake_case)
-  const rawData = parseWasmLikeToRawPokemonData(mockWasmData);
+  const rawData = parseFromWasmRaw(mockWasmData as any);
     expect(rawData.nature).toBe(5);
     expect(rawData.pid).toBe(0x12345678);
 
