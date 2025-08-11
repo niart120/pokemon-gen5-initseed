@@ -4,7 +4,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { DomainNatureNames, DomainShinyType } from '../types/domain';
-import { determineGenderFromSpec } from '../lib/utils/gender-utils';
 import { getGeneratedSpeciesById } from '../data/species/generated';
 
 describe('Phase 2 Basic Validation', () => {
@@ -22,13 +21,7 @@ describe('Phase 2 Basic Validation', () => {
       expect(DomainShinyType.Star).toBe(2);
     });
 
-    it('should determine gender correctly (femaleThreshold semantics)', () => {
-      // 50% female → threshold ~128
-      expect(determineGenderFromSpec(100, { type: 'ratio', femaleThreshold: 128 })).toBe('Female');
-      expect(determineGenderFromSpec(150, { type: 'ratio', femaleThreshold: 128 })).toBe('Male');
-      // Genderless
-      expect(determineGenderFromSpec(100, { type: 'genderless' })).toBe('Genderless');
-    });
+  // gender-utils removed as unused; resolver-based gender logic is covered elsewhere
   });
 
   // Encounter Tables: level calculation now handled in resolver; basic tests removed
