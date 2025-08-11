@@ -7,14 +7,14 @@
  * Architecture: Integrates WASM output + encounter tables + species data
  */
 
-import type { RawPokemonData, EnhancedPokemonData, EncounterDetails } from '../../types/pokemon-enhanced';
+import type { RawPokemonData, EnhancedPokemonData, EncounterDetails } from '../../types/pokemon-ui';
 import type { ROMVersion } from '../../types/rom';
 import { 
   getShinyStatusName, 
   getEncounterTypeName, 
   getNatureName // added: for mapping nature ID to name
   // determineGender // removed: use gender-utils with generated dataset
-} from '../../types/pokemon-enhanced';
+} from '../../types/pokemon-ui';
 import { 
   getEncounterTable, 
   getEncounterSlot, 

@@ -7,7 +7,7 @@
  * 生ポケモンデータ - WASM出力の直接的な型表現
  * Rust側のRawPokemonData構造体のgetter methodsと対応
  */
-export interface WasmRawPokemonData {
+export interface RawPokemonData {
   /** 初期シード値 */
   seed: bigint;
   /** PID (32bit) */
@@ -33,7 +33,7 @@ export interface WasmRawPokemonData {
 /**
  * 解析済みポケモンデータ - placeholder値処理とユーティリティ情報を含む
  */
-export interface ParsedPokemonData extends WasmRawPokemonData {
+export interface ParsedPokemonData extends RawPokemonData {
   /** 計算済みレベル (level_rand_valueから算出) */
   calculated_level?: number;
   /** 実際のポケモン種族ID (encounter_slot_valueから変換) */

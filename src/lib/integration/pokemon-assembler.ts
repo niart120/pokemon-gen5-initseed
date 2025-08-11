@@ -11,7 +11,7 @@
  */
 
 import type { ROMVersion, ROMRegion } from '../../types/rom';
-import { EncounterType } from '@/types/pokemon-enhanced';
+import { EncounterType } from '@/types/pokemon-ui';
 export { EncounterType };
 
 // EncounterType はドメイン定義（DomainEncounterType）を再エクスポートしたものを使用する

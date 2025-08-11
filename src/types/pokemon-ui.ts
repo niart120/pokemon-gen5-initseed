@@ -1,6 +1,8 @@
 /**
- * Enhanced Pokemon data types and helpers for UI-facing models
- * 内容は旧 raw-pokemon-data.ts から移設（破壊的変更を許容）
+ * UI-facing Pokemon types and helpers (compat shim replacing pokemon-enhanced.ts)
+ *
+ * Note: This module preserves the previous camelCase RawPokemonData shape for UI/tests
+ * while the domain layer uses snake_case in src/types/pokemon-raw.ts.
  */
 
 import { DomainEncounterType, DomainShinyType, DomainNatureNames } from './domain';
@@ -73,7 +75,7 @@ export const NATURE_NAMES = DomainNatureNames;
 // UI層のエントリポイント: WASMライク入力 → UI向けの camelCase RawPokemonData
 export function parseRawPokemonData(wasmData: unknown): RawPokemonData {
   try {
-  const snake = parseWasmLikeToRawPokemonData(wasmData as Record<string, unknown>);
+    const snake = parseWasmLikeToRawPokemonData(wasmData as Record<string, unknown>);
     return {
       seed: snake.seed,
       pid: snake.pid,

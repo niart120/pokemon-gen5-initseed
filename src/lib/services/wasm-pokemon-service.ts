@@ -9,7 +9,7 @@
 
 import { initWasm, getWasm, isWasmReady } from '../core/wasm-interface';
 import type { ROMVersion, ROMRegion, Hardware } from '../../types/rom';
-import { parseRawPokemonData, type RawPokemonData } from '../../types/pokemon-enhanced';
+import { parseRawPokemonData, type RawPokemonData } from '../../types/pokemon-ui';
 
 /**
  * WASM generation configuration

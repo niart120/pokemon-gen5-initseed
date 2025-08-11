@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { initWasmForTesting } from './wasm-loader';
-import { parseRawPokemonData, getNatureName } from '../types/pokemon-enhanced';
+import { parseRawPokemonData, getNatureName } from '../types/pokemon-ui';
 import { getGeneratedSpeciesById } from '../data/species/generated';
 import { calculateLevel } from '../data/encounter-tables';
 

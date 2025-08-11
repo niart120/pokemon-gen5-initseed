@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { EncounterType as DomainEncounterType } from '../../types/pokemon-enhanced';
+import { EncounterType as DomainEncounterType } from '../../types/pokemon-ui';
 import {
   getEncounterTable,
   getEncounterSlot,

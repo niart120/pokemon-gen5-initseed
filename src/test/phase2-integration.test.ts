@@ -12,7 +12,7 @@ import {
   getShinyStatusName,
   type RawPokemonData,
   type ShinyStatusName 
-} from '../types/pokemon-enhanced';
+} from '../types/pokemon-ui';
 import { determineGenderFromSpec } from '../lib/utils/gender-utils';
 import { 
   WasmPokemonService, 
