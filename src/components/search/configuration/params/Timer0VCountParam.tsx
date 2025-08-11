@@ -14,6 +14,15 @@ export function Timer0VCountParam() {
   const config = searchConditions.timer0VCountConfig;
   const hasConfig = Boolean(config);
 
+  // useEffect依存配列でオブジェクト参照を避けるため、必要なプリミティブ値を抽出
+  const t0min = hasConfig ? config.timer0Range.min : undefined;
+  const t0max = hasConfig ? config.timer0Range.max : undefined;
+  const vmin = hasConfig ? config.vcountRange.min : undefined;
+  const vmax = hasConfig ? config.vcountRange.max : undefined;
+  const auto = hasConfig ? config.useAutoConfiguration : false;
+  const romVersion = searchConditions.romVersion;
+  const romRegion = searchConditions.romRegion;
+
   // Hooks は常に同順で評価される必要があるため、初期値は安全にフォールバック
   const [timer0InputValues, setTimer0InputValues] = useState({
     min: formatHexDisplay(hasConfig ? config.timer0Range.min : 0),
@@ -27,44 +36,42 @@ export function Timer0VCountParam() {
 
   // searchConditionsが外部から変更された場合、inputValuesを同期
   useEffect(() => {
-    if (!hasConfig) return;
+    if (!hasConfig || t0min === undefined || t0max === undefined || vmin === undefined || vmax === undefined) return;
     setTimer0InputValues({
-      min: formatHexDisplay(config.timer0Range.min),
-      max: formatHexDisplay(config.timer0Range.max)
+      min: formatHexDisplay(t0min),
+      max: formatHexDisplay(t0max)
     });
     setVcountInputValues({
-      min: formatHexDisplay(config.vcountRange.min),
-      max: formatHexDisplay(config.vcountRange.max)
+      min: formatHexDisplay(vmin),
+      max: formatHexDisplay(vmax)
     });
-  }, [hasConfig, config, config?.timer0Range, config?.vcountRange]);
+  }, [hasConfig, t0min, t0max, vmin, vmax]);
 
-  // useAutoConfigurationフラグ変更時の自動範囲適用
+  // useAutoConfigurationフラグ変更時の自動範囲適用（冪等更新 + 依存はプリミティブのみ）
   useEffect(() => {
-    if (!hasConfig) return;
-    if (config.useAutoConfiguration) {
-      const timer0Range = getFullTimer0Range(searchConditions.romVersion, searchConditions.romRegion);
-      const validVCounts = getValidVCounts(searchConditions.romVersion, searchConditions.romRegion);
-      
-      if (timer0Range && validVCounts.length > 0) {
-        const minVCount = Math.min(...validVCounts);
-        const maxVCount = Math.max(...validVCounts);
-        
-        setSearchConditions({
-          timer0VCountConfig: {
-            ...config,
-            timer0Range: {
-              min: timer0Range.min,
-              max: timer0Range.max,
-            },
-            vcountRange: {
-              min: minVCount,
-              max: maxVCount,
-            },
-          },
-        });
-      }
+    if (!hasConfig || !auto) return;
+
+    const timer0Range = getFullTimer0Range(romVersion, romRegion);
+    const validVCounts = getValidVCounts(romVersion, romRegion);
+
+    if (timer0Range && validVCounts.length > 0) {
+      const minVCount = Math.min(...validVCounts);
+      const maxVCount = Math.max(...validVCounts);
+
+      // 既に同じ値なら更新しない（無限ループ防止）
+      const sameTimer0 = t0min === timer0Range.min && t0max === timer0Range.max;
+      const sameVCount = vmin === minVCount && vmax === maxVCount;
+      if (sameTimer0 && sameVCount) return;
+
+      setSearchConditions({
+        timer0VCountConfig: {
+          useAutoConfiguration: true,
+          timer0Range: { min: timer0Range.min, max: timer0Range.max },
+          vcountRange: { min: minVCount, max: maxVCount },
+        },
+      });
     }
-  }, [hasConfig, config, config?.useAutoConfiguration, searchConditions.romVersion, searchConditions.romRegion, setSearchConditions]);
+  }, [hasConfig, auto, romVersion, romRegion, t0min, t0max, vmin, vmax, setSearchConditions]);
 
   const handleTimer0InputChange = (field: 'min' | 'max', value: string) => {
     setTimer0InputValues(prev => ({ ...prev, [field]: value }));
