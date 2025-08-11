@@ -14,6 +14,8 @@
 import type { UnresolvedPokemonData, GenderRatio } from '@/types/pokemon-raw';
 import type { EncounterTable } from '@/data/encounter-tables';
 import { DomainNatureNames, DomainShinyType } from '@/types/domain';
+import { getGeneratedSpeciesById, type GeneratedAbilities } from '@/data/species/generated';
+import { formatHexDisplay } from '@/lib/utils/hex-parser';
 
 // Context to supply reference data and environment for resolution
 export interface ResolutionContext {
@@ -23,30 +25,28 @@ export interface ResolutionContext {
 }
 
 // Machine-readable resolved output (no localized strings)
-export interface ResolvedPokemonData {
+// For domain layer keep species ID and ability index; name mapping is UI concern
+export type ResolvedPokemonData = Readonly<{
   // echoes from raw
   seed: bigint;
   pid: number;
   natureId: number;
-  syncApplied: boolean;
-  abilitySlot: number;
-  genderValue: number;
-  encounterSlotValue: number;
-  encounterType: number; // DomainEncounterType numeric
-  levelRandValue: number;
   shinyType: number; // DomainShinyType numeric
-
-  // resolved fields
   speciesId?: number;
   level?: number;
   gender?: 'M' | 'F' | 'N';
-  // For domain layer keep ability index; name mapping is UI concern
   abilityIndex?: 0 | 1 | 2; // 0: ability1, 1: ability2, 2: hidden
-}
+}>;
 
-// Lightweight UI adapter output (still minimal, names handled by UI layer higher up)
-export interface UiReadyPokemonData extends ResolvedPokemonData {
-  natureName: string;
+// Lightweight UI output: only fields needed for display
+export interface UiReadyPokemonData {
+  seedHex: string; // 16進数表記 (0x...)
+  pidHex: string; // 16進数表記 (0x...)
+  speciesName: string; // ローカライズ済み名
+  natureName: string; // ローカライズ済み名
+  abilityName: string; // ローカライズ済み名（隠れ特性含む）
+  gender: 'M' | 'F' | '-' | '?'; // '-'=性別不明/N, '?'=未解決
+  level?: number;
   shinyStatus: 'normal' | 'square' | 'star';
 }
 
@@ -64,12 +64,6 @@ export function resolvePokemon(
     seed: raw.seed,
     pid: raw.pid,
     natureId: raw.nature,
-    syncApplied: raw.sync_applied,
-    abilitySlot: raw.ability_slot,
-    genderValue: raw.gender_value,
-    encounterSlotValue: raw.encounter_slot_value,
-    encounterType: raw.encounter_type,
-    levelRandValue: Number(raw.level_rand_value),
     shinyType: raw.shiny_type,
     speciesId,
     level,
@@ -86,10 +80,29 @@ export function resolveBatch(
 }
 
 // UI adapter helpers (kept here for convenience but still UI-agnostic)
-export function toUiReadyPokemon(data: ResolvedPokemonData): UiReadyPokemonData {
+export function toUiReadyPokemon(
+  data: ResolvedPokemonData,
+  opts: { locale?: 'ja' | 'en' } = {}
+): UiReadyPokemonData {
+  const locale = opts.locale ?? 'ja';
+  const speciesName = getSpeciesName(data.speciesId, locale);
+  const abilityName = getAbilityName(data.speciesId, data.abilityIndex, locale);
+  let gender: 'M' | 'F' | '-' | '?';
+  if (data.gender === 'M' || data.gender === 'F') {
+    gender = data.gender;
+  } else if (data.gender === 'N') {
+    gender = '-';
+  } else {
+    gender = '?';
+  }
   return {
-    ...data,
+    seedHex: formatHexDisplay(data.seed, 16, true),
+    pidHex: formatHexDisplay(data.pid >>> 0, 8, true),
+    speciesName,
     natureName: getNatureName(data.natureId),
+    abilityName,
+    gender,
+    level: data.level,
     shinyStatus: toShinyStatus(data.shinyType),
   };
 }
@@ -198,4 +211,38 @@ function toShinyStatus(shinyType: number): 'normal' | 'square' | 'star' {
     default:
       return 'normal';
   }
+}
+
+// ======== UI adapter helpers (name/formatting) ========
+
+// Hex formatting unified via formatHexDisplay()
+
+function getSpeciesName(id: number | undefined, locale: 'ja' | 'en'): string {
+  if (!id) return 'Unknown';
+  const s = getGeneratedSpeciesById(id);
+  if (!s) return 'Unknown';
+  return locale === 'ja' ? s.names.ja : s.names.en;
+}
+
+function getAbilityName(
+  speciesId: number | undefined,
+  abilityIndex: 0 | 1 | 2 | undefined,
+  locale: 'ja' | 'en'
+): string {
+  if (!speciesId || abilityIndex == null) return 'Unknown';
+  const s = getGeneratedSpeciesById(speciesId);
+  if (!s) return 'Unknown';
+  const a = selectAbilityByIndex(abilityIndex, s.abilities);
+  if (!a) return 'Unknown';
+  return locale === 'ja' ? a.names.ja : a.names.en;
+}
+
+function selectAbilityByIndex(
+  idx: 0 | 1 | 2,
+  abilities: GeneratedAbilities
+): { key: string; names: { en: string; ja: string } } | null {
+  if (idx === 0) return abilities.ability1;
+  if (idx === 1) return abilities.ability2;
+  if (idx === 2) return abilities.hidden;
+  return null;
 }

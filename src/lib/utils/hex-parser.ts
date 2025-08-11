@@ -54,9 +54,13 @@ export function parseHexInput(input: string, maxValue?: number): number | null {
  * @param uppercase - Use uppercase letters (default: true)
  * @returns Formatted hex string
  */
-export function formatHexDisplay(value: number, minDigits: number = 1, uppercase: boolean = true): string {
-  const hex = value.toString(16).padStart(minDigits, '0');
-  return uppercase ? hex.toUpperCase() : hex;
+export function formatHexDisplay(
+  value: number | bigint,
+  minDigits: number = 1,
+  uppercase: boolean = true,
+): string {
+  const hexRaw = (typeof value === 'bigint' ? value.toString(16) : value.toString(16)).padStart(minDigits, '0');
+  return uppercase ? hexRaw.toUpperCase() : hexRaw;
 }
 
 /**
