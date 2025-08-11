@@ -8,7 +8,7 @@
  * - 遭遇スロット/レベル分布: encounter-selection.test.ts
  * - 統合データ処理/同期ルール/特殊遭遇: resolver 系テストに統合（assembler は廃止）
  * - 性別境界: gender-threshold.test.ts
- * - WASM/サービス連携: wasm-service.test.ts, wasm-node.test.ts, phase2-* tests
+ * - WASM/サービス連携: wasm-node.test.ts, phase2-* tests（wasm-serviceは廃止済みでプレースホルダ）
  */
 
 import { describe, test, expect, beforeAll } from 'vitest';
@@ -54,7 +54,7 @@ describe('Integration smoke (WASM fallback + tiny pipeline)', () => {
       gender_value: 100,
       encounter_slot_value: 0,
       encounter_type: 0,
-  level_rand_value: 2n,
+      level_rand_value: 2n,
       shiny_type: 0,
     };
 

@@ -33,7 +33,7 @@ import { DevelopmentPerformanceAnalyzer } from '@/test-utils/profiling/developme
 ### WebAssembly 境界
 - wasm-bindgen 生成物の直接参照は禁止
 - 必ず `src/lib/core/wasm-interface.ts` を経由してアクセスする
-- enum 等の相互変換は `src/lib/integration/wasm-enums.ts` に集約する
+- enum 等の相互変換をまとめる専用モジュールは廃止。必要に応じて境界レイヤー（Worker/Resolver）で最小実装
 
 ### 禁止事項
 - コア計算処理の新規TypeScript実装（WebAssembly使用必須）

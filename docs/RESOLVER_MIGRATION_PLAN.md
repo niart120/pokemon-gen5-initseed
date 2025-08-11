@@ -9,7 +9,7 @@
 ## マイルストーン分割と DoD
 
 ### M1: Services を resolver 出力に乗せ替え
-  - `src/lib/services/wasm-pokemon-service.ts`
+  - （削除）`src/lib/services/wasm-pokemon-service.ts`
   - `src/lib/services/pokemon-integration-service.ts`
   - 返却を `snake_case Raw` もしくは `ResolvedPokemonData` に統一。
   - 互換 API（`parseRawPokemonData` 等）呼び出しを廃止し、`raw-parser.ts` + `pokemon-resolver.ts` を直結。
@@ -44,7 +44,7 @@
   - [ ] `pokemon-ui.ts` の全使用箇所を CI で検出できるよう ESLint ルール/禁則コメントを追加（暫定）。
   - [ ] `pokemon-ui.ts` の全エクスポートに `/** @deprecated Use resolver */` を付与。
 
-  - [ ] `wasm-pokemon-service.ts` が `parseFromWasmRaw` → `resolvePokemon/resolveBatch` の直列パイプを返す。
+  - [ ] 生成は PokemonGenerator 直呼び出しに変更。`parseFromWasmRaw` → `resolvePokemon/resolveBatch` を直接利用。
   - [ ] `pokemon-integration-service.ts` も同様に統一。
   - [ ] `ResolutionContext` の生成と DI（encounter tables、species、abilities、gender ratios）。初期化時に一度構築し、Zustand またはシングルトンで共有。
 
@@ -59,7 +59,7 @@
 
 
 ## 変更影響ファイル（初期見立て）
-  - `src/lib/services/wasm-pokemon-service.ts`
+  - （削除）`src/lib/services/wasm-pokemon-service.ts`
   - `src/lib/services/pokemon-integration-service.ts`
   - `src/lib/integration/pokemon-resolver.ts`（機能補強）
   - `src/lib/integration/raw-parser.ts`（必要なら型整備のみ）
@@ -99,7 +99,7 @@
 ## 着手順（次アクション）
 1. `pokemon-ui.ts` の全エクスポートに `@deprecated` を付与し ESLint 禁則（import 監視）を追加。
 2. `buildResolutionContext()` を `src/lib/initialization/` に追加（Data 層からの収集 + キャッシュ）。
-3. `wasm-pokemon-service.ts` を resolver 直結に切替（UI 返却は `toUiReadyPokemon`）。
+3. 生成→Resolver の直列化（UI 返却は `toUiReadyPokemon`）。
 4. 影響 UI を 1 画面ずつ `UiReadyPokemonData` へ移行（PR2）。
 5. Assembler を参照 0 件にして撤去（PR3）。
 6. 互換モジュール削除（PR4）。

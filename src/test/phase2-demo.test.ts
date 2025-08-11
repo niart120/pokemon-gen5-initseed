@@ -25,7 +25,7 @@ describe('Phase 2 Integration Demo', () => {
       get_gender_value: () => 100,
       get_encounter_slot_value: () => 0,
       get_encounter_type: () => 0,
-  get_level_rand_value: () => 42n,
+      get_level_rand_value: () => 42n,
       get_shiny_type: () => 0,
     };
 
