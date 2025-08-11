@@ -1,89 +1,65 @@
-# Pokemon Assembler Integration - Phase 2-5
+# Resolver Integration - Phase 2-5 (assembler 廃止)
 
 ## Overview
 
-This module implements the Pokemon data assembler for Phase 2-5: データ統合処理, which integrates WASM raw values with encounter tables and business logic.
+Resolver は WASM の Raw 出力（snake_case）を、遭遇テーブル/種族データを用いて解決するドメイン層です。旧 pokemon-assembler は廃止され、`pokemon-resolver.ts` と `build-resolution-context.ts` を利用します。
 
 ## Key Features
 
 ### 1. Data Integration
-- Combines raw WASM data (`RawPokemonData`) with encounter table information
-- Resolves encounter slot values to actual Pokemon species
-- Calculates levels, abilities, and gender based on random values
-- Provides enhanced Pokemon data with complete metadata
+- Raw WASM (`types/pokemon-raw.ts`) → `resolvePokemon()` で speciesId/level/gender 等を解決
+- 遭遇スロット/レベルは `data/encounter-tables` と `buildResolutionContext()` のテーブルに基づく
+- UI 名称は `toUiReadyPokemon()` で最低限を付与（i18nは上位層）
 
 ### 2. Special Encounter Handling
-- **Dust Cloud Encounters**: Determines content type (Pokemon, Item, or Gem)
-- **Item Appearance Logic**: Calculates specific item IDs for dust cloud encounters
-- **Encounter Type Support**: Handles all encounter types from normal wild to roaming
+- 旧 assembler の砂煙ロジックは削除。必要なら resolver/コンテキスト層に仕様化して追加する。
 
 ### 3. Sync Rule Enforcement
-- **Wild Encounters**: Sync applies to normal, surfing, fishing, and special encounters
-- **Static Encounters**: Sync applies only to static symbols, not starters/fossils/events
-- **Roaming Encounters**: **Sync explicitly does NOT apply** (critical requirement)
-- **Validation**: Detects and reports incorrect sync applications
+- シンクロ適用可能性は DomainEncounterType と仕様に基づいてテストで検証。
 
 ## Usage
 
 ```typescript
-import { PokemonAssembler, createSampleEncounterTables, EncounterType } from '@/lib/integration/pokemon-assembler';
+import { buildResolutionContext } from '@/lib/initialization/build-resolution-context';
+import { resolvePokemon, toUiReadyPokemon } from '@/lib/integration/pokemon-resolver';
+import type { RawPokemonData } from '@/types/pokemon-raw';
 
-// Create assembler with encounter tables
-const assembler = new PokemonAssembler('B', 'JPN', createSampleEncounterTables());
-
-// Process raw WASM data
-const rawData: RawPokemonData = {
-  seed: 0x12345678,
+const ctx = buildResolutionContext({ version: 'B', location: 'Route1', encounterType: 0 });
+const raw: RawPokemonData = {
+  seed: 0x12345678n,
   pid: 0x87654321,
   nature: 12,
-  syncApplied: true,
-  abilitySlot: 1,
-  genderValue: 100,
-  encounterSlotValue: 0,
-  encounterType: EncounterType.Normal,
-  levelRandValue: 2,
-  shinyType: 0,
+  sync_applied: true,
+  ability_slot: 1,
+  gender_value: 100,
+  encounter_slot_value: 0,
+  encounter_type: 0,
+  level_rand_value: 2,
+  shiny_type: 0,
 };
-
-// Get enhanced data
-const enhanced = assembler.assembleData(rawData);
-
-// Validate sync rules
-const validation = assembler.validateSyncRules([enhanced]);
-if (!validation.isValid) {
-  console.log('Sync rule violations:', validation.violations);
-}
+const resolved = resolvePokemon(raw, ctx);
+const ui = toUiReadyPokemon(resolved);
 ```
 
 ## Type Definitions
 
-### `RawPokemonData`
-Raw data from WASM calculations:
-- `seed`: Initial seed value
-- `pid`: Pokemon ID
-- `nature`: Nature value (0-24)
-- `syncApplied`: Whether sync was applied
-- `abilitySlot`: Ability slot (0-1)
-- `genderValue`: Gender random value (0-255)
-- `encounterSlotValue`: Encounter slot index
-- `encounterType`: Type of encounter
-- `levelRandValue`: Level random value
-- `shinyType`: Shiny type (0: normal, 1: square, 2: star)
+### `RawPokemonData` (snake_case)
+WASM 計算結果（snake_case）:
+- `seed`: bigint 初期seed
+- `pid`: number
+- `nature`: 0-24
+- `sync_applied`: boolean
+- `ability_slot`: 0-2
+- `gender_value`: 0-255
+- `encounter_slot_value`: number
+- `encounter_type`: DomainEncounterType number
+- `level_rand_value`: number
+- `shiny_type`: 0(normal)/1(square)/2(star)
 
-### `EnhancedPokemonData`
-Enhanced data with resolved information:
-- All fields from `RawPokemonData` (except `shinyType` replaced with string version)
-- `species`: Resolved Pokemon species ID
-- `level`: Calculated level
-- `ability`: Resolved ability ID
-- `gender`: Resolved gender (0: male, 1: female, 2: genderless)
-- `isShiny`: Boolean shiny status
-- `shinyType`: String shiny type ('normal', 'square', 'star')
-- `rawShinyType`: Original numeric shiny value
-- `dustCloudContent?`: Dust cloud content type (for dust cloud encounters)
-- `itemId?`: Item ID (for dust cloud items/gems)
-- `syncEligible`: Whether sync can apply to this encounter type
-- `syncAppliedCorrectly`: Whether sync was applied according to rules
+### `ResolvedPokemonData` / `UiReadyPokemonData`
+`resolvePokemon()` の出力（ID中心）と、`toUiReadyPokemon()` の最小UI付与:
+- `speciesId?`, `level?`, `gender?` などの解決済みフィールド
+- `natureName`, `shinyStatus` は UI 便宜のための付加
 
 ## Encounter Types
 
@@ -109,10 +85,7 @@ Enhanced data with resolved information:
 ## Special Features
 
 ### Dust Cloud Logic
-For `EncounterType.DustCloud`, determines content based on PID:
-- 60% chance: Pokemon encounter
-- 25% chance: Item encounter (with specific item ID)
-- 15% chance: Gem encounter (with gem item ID)
+旧ロジックは削除。必要であれば domain 仕様策定後に追加。
 
 ### Sync Rule Validation
 The `validateSyncRules()` method ensures:
@@ -122,13 +95,7 @@ The `validateSyncRules()` method ensures:
 
 ## Testing
 
-Comprehensive test suite covers:
-- Basic data integration and transformation
-- All encounter type processing
-- Sync rule enforcement (especially roaming encounter validation)
-- Special encounter logic (dust cloud content determination)
-- Batch processing capabilities
-- Representative encounter type output structure validation
+テストは resolver 統合に更新されました。`src/test/phase2-integration.test.ts` を参照してください。
 
 ## Implementation Notes
 
@@ -141,7 +108,7 @@ Comprehensive test suite covers:
 ## Constraints Satisfied
 
 ✅ **Raw parsed values + encounter table + resolution logic integration**  
-✅ **Special encounter (dust cloud) item appearance determination**  
+✅ ~~Special encounter (dust cloud) item appearance determination~~（一時撤去）  
 ✅ **Strict sync application scope (wild only, roaming excluded)**  
 ✅ **Roaming sync non-application testing**  
 ✅ **Representative encounter type validation**  

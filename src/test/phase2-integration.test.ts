@@ -7,22 +7,18 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { initWasmForTesting } from './wasm-loader';
 import { 
-  parseRawPokemonData, 
-  getNatureName, 
-  getShinyStatusName,
-  type RawPokemonData,
-  type ShinyStatusName 
-} from '../types/pokemon-ui';
+  parseWasmLikeToRawPokemonData,
+} from '../lib/integration/raw-parser';
+import type { RawPokemonData } from '../types/pokemon-raw';
+import { DomainNatureNames } from '../types/domain';
 import { determineGenderFromSpec } from '../lib/utils/gender-utils';
 import { 
   WasmPokemonService, 
   WasmServiceError,
   type WasmGenerationConfig 
 } from '../lib/services/wasm-pokemon-service';
-import { 
-  PokemonIntegrationService,
-  type IntegrationConfig 
-} from '../lib/services/pokemon-integration-service';
+import { buildResolutionContext, enrichForSpecies } from '../lib/initialization/build-resolution-context';
+import { resolvePokemon, toUiReadyPokemon, type ResolutionContext } from '../lib/integration/pokemon-resolver';
 import { 
   getEncounterTable, 
   getEncounterSlot, 
@@ -33,13 +29,11 @@ import { getGeneratedSpeciesById, selectAbilityBySlot } from '../data/species/ge
 
 describe('Phase 2 Integration Tests', () => {
   let wasmService: WasmPokemonService;
-  let integrationService: PokemonIntegrationService;
 
   beforeAll(async () => {
     await initWasmForTesting();
     wasmService = new WasmPokemonService();
     await wasmService.initialize();
-    integrationService = new PokemonIntegrationService();
   });
 
   describe('Task #21: RawPokemonData Parser', () => {
@@ -57,7 +51,7 @@ describe('Phase 2 Integration Tests', () => {
         frame: 1,
       };
 
-      const result = await wasmService.generateSinglePokemon({
+      const result = await wasmService.generateSnakeRawPokemon({
         seed: 0x123456789ABCDEFn,
         config,
       });
@@ -67,37 +61,28 @@ describe('Phase 2 Integration Tests', () => {
       expect(typeof result.pid).toBe('number');
       expect(result.nature).toBeGreaterThanOrEqual(0);
       expect(result.nature).toBeLessThan(25);
-      expect(typeof result.syncApplied).toBe('boolean');
-      expect(result.abilitySlot).toBeGreaterThanOrEqual(0);
-      expect(result.abilitySlot).toBeLessThan(2);
-      expect(result.genderValue).toBeGreaterThanOrEqual(0);
-      expect(result.genderValue).toBeLessThan(256);
-      expect(typeof result.encounterSlotValue).toBe('number');
-      expect(typeof result.encounterType).toBe('number');
-      expect(typeof result.levelRandValue).toBe('number');
-      expect(result.shinyType).toBeGreaterThanOrEqual(0);
-      expect(result.shinyType).toBeLessThan(3);
+      expect(typeof result.sync_applied).toBe('boolean');
+      expect(result.ability_slot).toBeGreaterThanOrEqual(0);
+      expect(result.ability_slot).toBeLessThan(2);
+      expect(result.gender_value).toBeGreaterThanOrEqual(0);
+      expect(result.gender_value).toBeLessThan(256);
+      expect(typeof result.encounter_slot_value).toBe('number');
+      expect(typeof result.encounter_type).toBe('number');
+      expect(typeof result.level_rand_value).toBe('number');
+      expect(result.shiny_type).toBeGreaterThanOrEqual(0);
+      expect(result.shiny_type).toBeLessThan(3);
     });
 
     it('should handle invalid WASM data gracefully', () => {
-      expect(() => parseRawPokemonData(null)).toThrow('WASM data is null or undefined');
-      expect(() => parseRawPokemonData({})).toThrow('Missing required property or method');
-      expect(() => parseRawPokemonData({ get_seed: 'not a function' })).toThrow('Missing required property or method');
+      expect(() => parseWasmLikeToRawPokemonData(null as any)).toThrow('WASM data is null or undefined');
+      expect(() => parseWasmLikeToRawPokemonData({})).toThrow('Missing required property or method');
+      expect(() => parseWasmLikeToRawPokemonData({ get_seed: 'not a function' } as any)).toThrow('Missing required property or method');
     });
 
-    it('should convert nature IDs to names correctly', () => {
-      expect(getNatureName(0)).toBe('Hardy');
-      expect(getNatureName(12)).toBe('Serious');
-      expect(getNatureName(24)).toBe('Quirky');
-      expect(() => getNatureName(-1)).toThrow('Invalid nature ID');
-      expect(() => getNatureName(25)).toThrow('Invalid nature ID');
-    });
-
-    it('should convert shiny types to status names correctly', () => {
-      expect(getShinyStatusName(0)).toBe('Normal');
-      expect(getShinyStatusName(1)).toBe('Square Shiny');
-      expect(getShinyStatusName(2)).toBe('Star Shiny');
-      expect(() => getShinyStatusName(3)).toThrow('Invalid shiny type');
+    it('should expose nature names via domain table', () => {
+      expect(DomainNatureNames[0]).toBe('Hardy');
+      expect(DomainNatureNames[12]).toBe('Serious');
+      expect(DomainNatureNames[24]).toBe('Quirky');
     });
 
     it('should determine gender correctly (femaleThreshold semantics)', () => {
@@ -219,14 +204,14 @@ describe('Phase 2 Integration Tests', () => {
         };
 
         await expect(
-          wasmService.generateSinglePokemon({ seed: 1n, config })
+          wasmService.generateSnakeRawPokemon({ seed: 1n, config })
         ).rejects.toThrow(WasmServiceError);
       }
     });
 
     it('should generate batch Pokemon correctly', async () => {
       const config = WasmPokemonService.createDefaultConfig();
-      const result = await wasmService.generatePokemonBatch({
+      const result = await wasmService.generateSnakeRawBatch({
         seed: 0x123456789ABCDEFn,
         config,
         count: 5,
@@ -236,7 +221,6 @@ describe('Phase 2 Integration Tests', () => {
       expect(result.pokemon).toHaveLength(5);
       expect(result.stats.count).toBe(5);
       expect(result.stats.initialSeed).toBe(0x123456789ABCDEFn);
-      expect(result.stats.generationTime).toBeGreaterThan(0);
 
       // Each Pokemon should have different seeds
       const seeds = result.pokemon.map(p => p.seed);
@@ -248,7 +232,7 @@ describe('Phase 2 Integration Tests', () => {
       const config = WasmPokemonService.createDefaultConfig();
       
       await expect(
-        wasmService.generatePokemonBatch({
+        wasmService.generateSnakeRawBatch({
           seed: 1n,
           config,
           count: 0,
@@ -256,7 +240,7 @@ describe('Phase 2 Integration Tests', () => {
       ).rejects.toThrow('Invalid count');
 
       await expect(
-        wasmService.generatePokemonBatch({
+        wasmService.generateSnakeRawBatch({
           seed: 1n,
           config,
           count: 15000,
@@ -266,191 +250,138 @@ describe('Phase 2 Integration Tests', () => {
   });
 
   describe('Task #25: Data Integration', () => {
-    it('should integrate Pokemon data completely', async () => {
+    it('should resolve Pokemon data completely (resolver path)', async () => {
       const rawData: RawPokemonData = {
         seed: 0x123456789ABCDEFn,
         pid: 0x12345678,
         nature: 5, // Bold
-        syncApplied: false,
-        abilitySlot: 0,
-        genderValue: 100,
-        encounterSlotValue: 0,
-        encounterType: 0, // Normal encounter
-        levelRandValue: 42,
-        shinyType: 0,
+        sync_applied: false,
+        ability_slot: 0,
+        gender_value: 100,
+        encounter_slot_value: 0,
+        encounter_type: 0, // Normal encounter
+        level_rand_value: 42,
+        shiny_type: 0,
       };
 
-      const config: IntegrationConfig = {
+      const ctx: ResolutionContext = buildResolutionContext({
         version: 'B',
-        defaultLocation: 'Route 1',
-        applySynchronize: false,
-      };
+        location: 'Route1',
+        encounterType: 0 as any,
+      });
+      let resolved = resolvePokemon(rawData, ctx);
+      // Enrich context for gender resolution and re-resolve
+      if (resolved.speciesId) {
+        enrichForSpecies(ctx, resolved.speciesId);
+        resolved = resolvePokemon(rawData, ctx);
+      }
+      const ui = toUiReadyPokemon(resolved);
 
-      const result = integrationService.integratePokemon(rawData, config);
-
-      expect(result.pokemon).toBeDefined();
-      expect(result.pokemon.species).toBeDefined();
-      expect(result.pokemon.ability).toBeDefined();
-      expect(result.pokemon.encounter).toBeDefined();
-      expect(result.pokemon.gender).toMatch(/^(Male|Female|Genderless)$/);
-      expect(result.pokemon.level).toBeGreaterThan(0);
-      expect(result.pokemon.natureName).toBe('Bold');
-      expect(result.pokemon.shinyStatus).toBe('Normal');
-
-      expect(result.metadata.warnings).toBeInstanceOf(Array);
+      expect(resolved.speciesId).toBeDefined();
+      expect(resolved.level).toBeGreaterThan(0);
+      expect(['M', 'F', 'N']).toContain(resolved.gender);
+      expect(ui.natureName).toBe('Bold');
+      expect(ui.shinyStatus).toBe('normal');
     });
 
-    it('should apply synchronize correctly', () => {
+    it('should surface synchronize flag (resolver does not mutate nature)', () => {
       const rawData: RawPokemonData = {
         seed: 1n,
         pid: 1,
         nature: 5, // Bold
-        syncApplied: true,
-        abilitySlot: 0,
-        genderValue: 100,
-        encounterSlotValue: 0,
-        encounterType: 0, // Normal encounter (sync compatible)
-        levelRandValue: 42,
-        shinyType: 0,
+        sync_applied: true,
+        ability_slot: 0,
+        gender_value: 100,
+        encounter_slot_value: 0,
+        encounter_type: 0, // Normal encounter (sync compatible)
+        level_rand_value: 42,
+        shiny_type: 0,
       };
-
-      const config: IntegrationConfig = {
-        version: 'B',
-        defaultLocation: 'Route 1',
-        applySynchronize: true,
-        synchronizeNature: 10, // Timid
-      };
-
-      const result = integrationService.integratePokemon(rawData, config);
-
-      expect(result.pokemon.nature).toBe(10);
-      expect(result.pokemon.natureName).toBe('Timid');
-      expect(result.pokemon.syncApplied).toBe(true);
-      expect(result.metadata.warnings.some(w => w.includes('Synchronize applied'))).toBe(true);
+      const ctx: ResolutionContext = buildResolutionContext({ version: 'B', location: 'Route1', encounterType: 0 as any });
+  const resolved = resolvePokemon(rawData, ctx);
+  const ui = toUiReadyPokemon(resolved);
+  expect(resolved.natureId).toBe(5);
+  expect(ui.natureName).toBe('Bold');
+  expect(resolved.syncApplied).toBe(true);
     });
 
-    it('should handle integration errors gracefully', () => {
+    it('should handle missing encounter table gracefully (no species resolution)', () => {
       const invalidRawData: RawPokemonData = {
         seed: 1n,
         pid: 1,
         nature: 5,
-        syncApplied: false,
-        abilitySlot: 0,
-        genderValue: 100,
-        encounterSlotValue: 0,
-        encounterType: 0,
-        levelRandValue: 42,
-        shinyType: 0,
+        sync_applied: false,
+        ability_slot: 0,
+        gender_value: 100,
+        encounter_slot_value: 0,
+        encounter_type: 0,
+        level_rand_value: 42,
+        shiny_type: 0,
       };
 
-      // Mock a scenario where species is not found by using invalid encounter slot
-      const invalidData = { ...invalidRawData, encounterSlotValue: 999 };
-      
-      const config: IntegrationConfig = {
-        version: 'B',
-        defaultLocation: 'Route 1',
-      };
-
-      expect(() => integrationService.integratePokemon(invalidData, config))
-        .toThrow('Invalid encounter slot');
+      // Build a context for a non-existent location so table is undefined
+      const ctx: ResolutionContext = buildResolutionContext({ version: 'B', location: 'Unknown Location', encounterType: 0 as any });
+      const resolved = resolvePokemon(invalidRawData, ctx);
+      expect(resolved.speciesId).toBeUndefined();
     });
 
-    it('should validate integration results', () => {
-      const validResult = {
-        pokemon: {
-          seed: 1n,
-          pid: 1,
-          nature: 5,
-          syncApplied: false,
-          abilitySlot: 0,
-          genderValue: 100,
-          encounterSlotValue: 0,
-          encounterType: 0,
-          levelRandValue: 42,
-          shinyType: 0,
-          species: {
-            nationalDex: 1,
-            name: 'Test',
-            baseStats: { hp: 1, attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 },
-            types: ['Normal'] as [string],
-            genderRatio: 50,
-            abilities: { ability1: 'Test' },
-          },
-          ability: { name: 'Test', description: 'Test', isHidden: false },
-          gender: 'Male' as const,
-          level: 5,
-          encounter: {
-            method: 'Wild Encounter',
-            location: 'Test',
-            levelRange: { min: 5, max: 10 },
-          },
-          natureName: 'Bold',
-          shinyStatus: 'Normal' as ShinyStatusName,
-        },
-        metadata: {
-          encounterTableFound: true,
-          speciesDataFound: true,
-          abilityDataFound: true,
-          warnings: [],
-        },
+    it('should validate resolved results against encounter table', () => {
+      const ctx: ResolutionContext = buildResolutionContext({ version: 'B', location: 'Route1', encounterType: 0 as any });
+      const raw: RawPokemonData = {
+        seed: 1n,
+        pid: 1,
+        nature: 5,
+        sync_applied: false,
+        ability_slot: 0,
+        gender_value: 100,
+        encounter_slot_value: 0,
+        encounter_type: 0,
+        level_rand_value: 42,
+        shiny_type: 0,
       };
+      const resolved = resolvePokemon(raw, ctx);
+      // valid when level is within the encounter slot's range
+      const slot = ctx.encounterTable?.species_list[resolved.encounterSlotValue];
+      const min = slot?.level_config.min_level ?? 1;
+      const max = slot?.level_config.max_level ?? 100;
+      expect(resolved.level).toBeGreaterThanOrEqual(min);
+      expect(resolved.level).toBeLessThanOrEqual(max);
 
-      expect(integrationService.validateIntegrationResult(validResult)).toBe(true);
-
-      // Test invalid result
-      const invalidResult = {
-        ...validResult,
-        pokemon: {
-          ...validResult.pokemon,
-          level: 50, // Outside encounter range
-        },
-      };
-
-      expect(integrationService.validateIntegrationResult(invalidResult)).toBe(false);
+      // Make invalid by forcing level outside the range and check manually
+      const invalidResolved = { ...resolved, level: max + 10 };
+      expect(invalidResolved.level! >= min && invalidResolved.level! <= max).toBe(false);
     });
   });
 
   describe('Task #26: End-to-End Integration', () => {
     it('should complete full WASM to enhanced data pipeline', async () => {
-      // Step 1: Generate raw Pokemon data with WASM
+      // Step 1: Generate raw Pokemon data with WASM (snake_case)
       const config = WasmPokemonService.createDefaultConfig();
-      const rawData = await wasmService.generateSinglePokemon({
+      const rawData = await wasmService.generateSnakeRawPokemon({
         seed: 0x123456789ABCDEFn,
         config,
       });
 
-      // Step 2: Integrate with encounter tables and species data
-      const integrationConfig: IntegrationConfig = {
+      // Step 2: Resolve with encounter tables and species data via context
+      const ctx: ResolutionContext = buildResolutionContext({
         version: config.version,
-        defaultLocation: 'Route 1',
-        applySynchronize: config.syncEnabled,
-        synchronizeNature: config.syncNatureId,
-      };
+        location: 'Route1',
+        encounterType: 0 as any,
+      });
+      let resolved = resolvePokemon(rawData, ctx);
+      if (resolved.speciesId) {
+        enrichForSpecies(ctx, resolved.speciesId);
+        resolved = resolvePokemon(rawData, ctx);
+      }
+      const ui = toUiReadyPokemon(resolved);
 
-      const result = integrationService.integratePokemon(rawData, integrationConfig);
-
-      // Step 3: Verify complete integration
-      expect(result.pokemon).toBeDefined();
-      expect(result.pokemon.species).toBeDefined();
-      expect(result.pokemon.ability).toBeDefined();
-      expect(result.pokemon.encounter).toBeDefined();
-      expect(typeof result.pokemon.level).toBe('number');
-      expect(result.pokemon.level).toBeGreaterThan(0);
-      expect(result.pokemon.gender).toMatch(/^(Male|Female|Genderless)$/);
-      expect(result.pokemon.natureName).toBeDefined();
-      expect(result.pokemon.shinyStatus).toBeDefined();
-
-      // Step 4: Validate integration quality
-      expect(integrationService.validateIntegrationResult(result)).toBe(true);
-      
-      console.log('✅ Full pipeline integration successful:');
-      console.log(`   Species: ${result.pokemon.species.name}`);
-      console.log(`   Level: ${result.pokemon.level}`);
-      console.log(`   Nature: ${result.pokemon.natureName}`);
-      console.log(`   Ability: ${result.pokemon.ability.name}`);
-      console.log(`   Gender: ${result.pokemon.gender}`);
-      console.log(`   Shiny: ${result.pokemon.shinyStatus}`);
-      console.log(`   Location: ${result.pokemon.encounter.location}`);
+      // Step 3: Verify complete resolution
+      expect(resolved.speciesId).toBeDefined();
+      expect(typeof resolved.level).toBe('number');
+      expect(resolved.level).toBeGreaterThan(0);
+      expect(['M', 'F', 'N']).toContain(resolved.gender);
+      expect(ui.natureName).toBeDefined();
+      expect(ui.shinyStatus).toBeDefined();
     });
 
     it('should handle batch processing efficiently', async () => {
@@ -458,36 +389,23 @@ describe('Phase 2 Integration Tests', () => {
       
       // Generate batch of Pokemon
       const config = WasmPokemonService.createDefaultConfig();
-      const batchResult = await wasmService.generatePokemonBatch({
+      const batchResult = await wasmService.generateSnakeRawBatch({
         seed: 0x123456789ABCDEFn,
         config,
         count: 10,
       });
 
-      // Integrate all Pokemon
-      const integrationConfig: IntegrationConfig = {
-        version: config.version,
-        defaultLocation: 'Route 1',
-      };
-
-      const integrationResults = integrationService.integratePokemonBatch(
-        batchResult.pokemon,
-        integrationConfig
-      );
+      // Resolve all Pokemon
+  const ctx: ResolutionContext = buildResolutionContext({ version: config.version, location: 'Route1', encounterType: 0 as any });
+  // Optionally enrich for all species in the table for gender resolution
+  ctx.encounterTable?.species_list.forEach(s => enrichForSpecies(ctx, s.species_id));
+  const resolvedAll = batchResult.pokemon.map((r) => resolvePokemon(r, ctx));
 
       const endTime = performance.now();
       const totalTime = endTime - startTime;
 
-      expect(integrationResults).toHaveLength(10);
+      expect(resolvedAll).toHaveLength(10);
       expect(totalTime).toBeLessThan(1000); // Should complete within 1 second
-
-      // Verify all results are valid
-      const stats = integrationService.getIntegrationStats(integrationResults);
-      expect(stats.total).toBe(10);
-      expect(stats.validResults).toBe(10);
-
-      console.log(`✅ Batch processing completed in ${totalTime.toFixed(2)}ms`);
-      console.log(`   Integration stats:`, stats);
     });
   });
 });

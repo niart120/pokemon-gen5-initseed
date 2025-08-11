@@ -5,4 +5,4 @@ Use these entry points:
 - JSON loader internals: `src/data/encounters/loader.ts`, `schema.ts`
 
 The legacy sample modules (types.ts, rates.ts, tables.ts) have been removed.
-Rely on the domain enums via `src/types/pokemon-enhanced.ts` (re-export) or import directly from `src/types/domain.ts`.
+Rely on the domain enums directly from `src/types/domain.ts`.

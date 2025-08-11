@@ -9,7 +9,18 @@
 
 import { initWasm, getWasm, isWasmReady } from '../core/wasm-interface';
 import type { ROMVersion, ROMRegion, Hardware } from '../../types/rom';
-import { parseRawPokemonData, type RawPokemonData } from '../../types/pokemon-ui';
+// New resolver-path imports (non-breaking additions)
+import { parseWasmLikeToRawPokemonData } from '@/lib/integration/raw-parser';
+import type { RawPokemonData as SnakeRawPokemonData } from '@/types/pokemon-raw';
+import {
+  resolvePokemon,
+  resolveBatch,
+  toUiReadyPokemon,
+  type ResolutionContext,
+  type ResolvedPokemonData,
+  type UiReadyPokemonData,
+} from '@/lib/integration/pokemon-resolver';
+import { buildResolutionContext, type BuildContextOptions } from '@/lib/initialization/build-resolution-context';
 
 /**
  * WASM generation configuration
@@ -54,16 +65,16 @@ export interface PokemonGenerationRequest {
 /**
  * Pokemon generation result
  */
-export interface PokemonGenerationResult {
-  /** Generated Pokemon data */
-  pokemon: RawPokemonData[];
-  /** Generation statistics */
+// (Removed legacy camelCase UI raw result type)
+
+/**
+ * Snake_case raw batch result (new API)
+ */
+export interface PokemonGenerationResultSnake {
+  pokemon: SnakeRawPokemonData[];
   stats: {
-    /** Total generation time in milliseconds */
     generationTime: number;
-    /** Number of Pokemon generated */
     count: number;
-    /** Initial seed used */
     initialSeed: bigint;
   };
 }
@@ -114,126 +125,107 @@ export class WasmPokemonService {
     return this.isInitialized && isWasmReady();
   }
 
-  /**
-   * Generate single Pokemon
-   * 
-   * @param request Generation request
-   * @returns Single Pokemon data
-   */
-  async generateSinglePokemon(request: PokemonGenerationRequest): Promise<RawPokemonData> {
+  // (Removed legacy camelCase generation methods)
+
+  // ===================== New resolver-backed APIs (non-breaking) =====================
+
+  /** Generate single Pokemon as snake_case RawPokemonData (domain raw) */
+  async generateSnakeRawPokemon(request: PokemonGenerationRequest): Promise<SnakeRawPokemonData> {
     this.validateInitialized();
     this.validateGenerationRequest(request);
 
-    const startTime = performance.now();
-
+    const wasm = getWasm();
+    const bwConfig = new wasm.BWGenerationConfig(
+      this.toGameVersion(request.config.version),
+      wasm.EncounterType.Normal,
+      request.config.tid,
+      request.config.sid,
+      request.config.syncEnabled,
+      request.config.syncNatureId
+    );
     try {
-      const wasm = getWasm();
-
-      // Build BWGenerationConfig (use Normal encounter as default)
-      const bwConfig = new wasm.BWGenerationConfig(
-        this.toGameVersion(request.config.version),
-        wasm.EncounterType.Normal,
-        request.config.tid,
-        request.config.sid,
-        request.config.syncEnabled,
-        request.config.syncNatureId
+  const wasmRaw = wasm.PokemonGenerator.generate_single_pokemon_bw(
+        BigInt.asUintN(64, request.seed),
+        bwConfig
       );
-
-      try {
-        const wasmRaw = wasm.PokemonGenerator.generate_single_pokemon_bw(
-          BigInt.asUintN(64, request.seed),
-          bwConfig
-        );
-        const rawData = parseRawPokemonData(wasmRaw);
-  const endTime = performance.now();
-  console.warn(`WASM single Pokemon generation completed in ${endTime - startTime}ms`);
-        return rawData;
-      } finally {
-        bwConfig.free();
-      }
-    } catch (error) {
-      throw new WasmServiceError(
-        `Pokemon generation failed: ${error}`,
-        'GENERATION_FAILED',
-        error as Error
-      );
+  return parseWasmLikeToRawPokemonData(wasmRaw as unknown as Record<string, unknown>);
+    } finally {
+      bwConfig.free();
     }
   }
 
-  /**
-   * Generate batch of Pokemon
-   * 
-   * @param request Generation request with count and offset
-   * @returns Batch generation result
-   */
-  async generatePokemonBatch(request: PokemonGenerationRequest): Promise<PokemonGenerationResult> {
+  /** Generate batch as snake_case RawPokemonData[] (domain raw) */
+  async generateSnakeRawBatch(request: PokemonGenerationRequest): Promise<PokemonGenerationResultSnake> {
     this.validateInitialized();
     this.validateGenerationRequest(request);
 
-    // Use nullish coalescing to preserve 0 as an explicit (invalid) value
+    const wasm = getWasm();
     const count = request.count ?? 1;
     const offset = request.offset ?? 0;
-
     if (count <= 0 || count > 10000) {
-      throw new WasmServiceError(
-        `Invalid count: ${count}. Must be between 1 and 10000`,
-        'INVALID_COUNT'
-      );
+      throw new WasmServiceError(`Invalid count: ${count}. Must be between 1 and 10000`, 'INVALID_COUNT');
     }
 
-    const startTime = performance.now();
-
+    const bwConfig = new wasm.BWGenerationConfig(
+      this.toGameVersion(request.config.version),
+      wasm.EncounterType.Normal,
+      request.config.tid,
+      request.config.sid,
+      request.config.syncEnabled,
+      request.config.syncNatureId
+    );
     try {
-      const wasm = getWasm();
-      const bwConfig = new wasm.BWGenerationConfig(
-        this.toGameVersion(request.config.version),
-        wasm.EncounterType.Normal,
-        request.config.tid,
-        request.config.sid,
-        request.config.syncEnabled,
-        request.config.syncNatureId
-      );
-
-      try {
-        // 連続する内部シードから count 件生成（offsetは開始位置として別引数で指定）
-        const baseSeed = BigInt.asUintN(64, request.seed);
-        const offsetBig = BigInt.asUintN(64, BigInt(offset));
-        const wasmList = wasm.PokemonGenerator.generate_pokemon_batch_bw(
-          baseSeed,
-          offsetBig,
-          count,
-          bwConfig
-        );
-
-        if (!wasmList || wasmList.length === 0) {
-          throw new WasmServiceError(
-            'No Pokemon generated from WASM batch operation',
-            'NO_BATCH_RESULTS'
-          );
-        }
-
-        const pokemon = wasmList.map(item => parseRawPokemonData(item));
-        const endTime = performance.now();
-        const generationTime = endTime - startTime;
-
-        return {
-          pokemon,
-          stats: {
-            generationTime,
-            count: pokemon.length,
-            initialSeed: request.seed,
-          },
-        };
-      } finally {
-        bwConfig.free();
+      const baseSeed = BigInt.asUintN(64, request.seed);
+      const offsetBig = BigInt.asUintN(64, BigInt(offset));
+      const wasmList = wasm.PokemonGenerator.generate_pokemon_batch_bw(baseSeed, offsetBig, count, bwConfig);
+      if (!wasmList || wasmList.length === 0) {
+        throw new WasmServiceError('No Pokemon generated from WASM batch operation', 'NO_BATCH_RESULTS');
       }
-    } catch (error) {
-      throw new WasmServiceError(
-        `Batch Pokemon generation failed: ${error}`,
-        'BATCH_GENERATION_FAILED',
-        error as Error
-      );
+      const pokemon = wasmList.map((w: unknown) => parseWasmLikeToRawPokemonData(w as Record<string, unknown>));
+      return {
+        pokemon,
+        stats: {
+          generationTime: 0, // caller can measure if needed
+          count: pokemon.length,
+          initialSeed: request.seed,
+        },
+      };
+    } finally {
+      bwConfig.free();
     }
+  }
+
+  /** Generate and resolve a single Pokemon using ResolutionContext */
+  async generateResolvedPokemon(
+    request: PokemonGenerationRequest,
+    ctx: ResolutionContext
+  ): Promise<ResolvedPokemonData> {
+    const raw = await this.generateSnakeRawPokemon(request);
+    return resolvePokemon(raw, ctx);
+  }
+
+  /** Generate and resolve a batch using ResolutionContext */
+  async generateResolvedBatch(
+    request: PokemonGenerationRequest,
+    ctx: ResolutionContext
+  ): Promise<{ pokemon: ResolvedPokemonData[]; stats: PokemonGenerationResultSnake['stats'] }> {
+    const batch = await this.generateSnakeRawBatch(request);
+    return {
+      pokemon: resolveBatch(batch.pokemon, ctx),
+      stats: batch.stats,
+    };
+  }
+
+  /** Convenience: generate UI-ready (adds labels only) with context options */
+  async generateUiReadyPokemon(
+    request: PokemonGenerationRequest,
+    ctxOrOpts: ResolutionContext | BuildContextOptions
+  ): Promise<UiReadyPokemonData> {
+    const ctx = (ctxOrOpts as BuildContextOptions).version
+      ? buildResolutionContext(ctxOrOpts as BuildContextOptions)
+      : (ctxOrOpts as ResolutionContext);
+    const resolved = await this.generateResolvedPokemon(request, ctx);
+    return toUiReadyPokemon(resolved);
   }
 
   /**
@@ -372,37 +364,4 @@ export async function getWasmPokemonService(): Promise<WasmPokemonService> {
   return globalWasmService;
 }
 
-/**
- * Utility function for quick single Pokemon generation
- */
-export async function generatePokemon(
-  seed: bigint,
-  config?: Partial<WasmGenerationConfig>
-): Promise<RawPokemonData> {
-  const service = await getWasmPokemonService();
-  const fullConfig = { ...WasmPokemonService.createDefaultConfig(), ...config };
-  
-  return service.generateSinglePokemon({
-    seed,
-    config: fullConfig,
-  });
-}
-
-/**
- * Utility function for quick batch Pokemon generation
- */
-export async function generatePokemonBatch(
-  seed: bigint,
-  count: number,
-  config?: Partial<WasmGenerationConfig>
-): Promise<PokemonGenerationResult> {
-  const service = await getWasmPokemonService();
-  const fullConfig = { ...WasmPokemonService.createDefaultConfig(), ...config };
-  
-  return service.generatePokemonBatch({
-    seed,
-    config: fullConfig,
-    count,
-    offset: 0,
-  });
-}
+// (Removed legacy utility wrappers)

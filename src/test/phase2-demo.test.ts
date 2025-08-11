@@ -4,7 +4,9 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { initWasmForTesting } from './wasm-loader';
-import { parseRawPokemonData, getNatureName } from '../types/pokemon-ui';
+import { parseWasmLikeToRawPokemonData } from '../lib/integration/raw-parser';
+import { resolvePokemon, toUiReadyPokemon } from '../lib/integration/pokemon-resolver';
+import { buildResolutionContext } from '../lib/initialization/build-resolution-context';
 import { getGeneratedSpeciesById } from '../data/species/generated';
 import { calculateLevel } from '../data/encounter-tables';
 
@@ -28,14 +30,16 @@ describe('Phase 2 Integration Demo', () => {
       get_shiny_type: () => 0,
     };
 
-    // Step 1: Parse raw data
-    const rawData = parseRawPokemonData(mockWasmData);
+  // Step 1: Parse raw data (snake_case)
+  const rawData = parseWasmLikeToRawPokemonData(mockWasmData);
     expect(rawData.nature).toBe(5);
     expect(rawData.pid).toBe(0x12345678);
 
-    // Step 2: Get nature name
-    const natureName = getNatureName(rawData.nature);
-    expect(natureName).toBe('Bold');
+  // Step 2: Resolve domain outputs and get UI-ready view
+  const ctx = buildResolutionContext({ version: 'B', location: 'Route 1', encounterType: 0 });
+  const resolved = resolvePokemon(rawData, ctx);
+  const uiReady = toUiReadyPokemon(resolved);
+  expect(uiReady.natureName).toBeDefined();
 
     // Step 3: Get species data (assuming encounter slot 0 gives us Patrat)
   const species = getGeneratedSpeciesById(504); // Patrat
@@ -43,22 +47,21 @@ describe('Phase 2 Integration Demo', () => {
   expect(species?.names.en).toBe('Patrat');
 
     // Step 4: Calculate level
-    const level = calculateLevel(rawData.levelRandValue, { min: 2, max: 4 });
+  const level = calculateLevel(rawData.level_rand_value, { min: 2, max: 4 });
     expect(level).toBeGreaterThanOrEqual(2);
     expect(level).toBeLessThanOrEqual(4);
 
-    console.log('✅ Phase 2 integration demo successful:');
+  console.log('✅ Phase 2 integration demo successful:');
     console.log(`   Seed: ${rawData.seed}`);
   console.log(`   Species: ${species?.names.en}`);
-    console.log(`   Nature: ${natureName}`);
+  console.log(`   Nature: ${uiReady.natureName}`);
     console.log(`   Level: ${level}`);
     console.log(`   PID: 0x${rawData.pid.toString(16)}`);
   });
 
   it('should validate all Phase 2 components work together', () => {
     // Test that all our main utilities work
-    expect(getNatureName(0)).toBe('Hardy');
-    expect(getNatureName(24)).toBe('Quirky');
+  // Nature name validation is now via Domain table in resolver; omitted here
 
   const snivy = getGeneratedSpeciesById(495);
   expect(snivy?.names.en).toBe('Snivy');

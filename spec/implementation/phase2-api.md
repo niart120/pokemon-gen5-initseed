@@ -11,11 +11,11 @@ WASM PokemonGenerator → RawPokemonData → Integration Service → EnhancedPok
 ```
 
 - 生成エントリは PokemonGenerator（WASM）です。IntegratedSeedSearcher は「初期Seed探索」用であり、生成パイプラインの入口ではありません。
-- 型・パーサは `src/types/pokemon-enhanced.ts`（UI向けヘルパ含む）と `src/types/pokemon-raw.ts`（WASM層）を基準とします。
+- 型・パーサは `src/types/pokemon-raw.ts`（WASM境界の snake_case Raw）と Resolver 一連（`src/lib/integration/raw-parser.ts`, `src/lib/integration/pokemon-resolver.ts`）を基準とします。
 - 遭遇テーブルは JSON データのみに依存し、統合サービスではフォールバックを行いません（テスト用途のサンプルは別途有り）。
 - 種族データは生成済み JSON アダプタ（`src/data/species/generated`）を使用します。
 
-## 1) RawPokemonData とパーサ（`src/types/pokemon-enhanced.ts` / `src/types/pokemon-raw.ts`）
+## 1) RawPokemonData とパーサ（`src/types/pokemon-raw.ts` / `src/lib/integration/raw-parser.ts`）
 
 役割
 - WASM から返る RawPokemonData を TypeScript へ安全に変換
@@ -62,7 +62,7 @@ WASM PokemonGenerator → RawPokemonData → Integration Service → EnhancedPok
 備考
 - 実装は `BWGenerationConfig` を構築し `PokemonGenerator.generate_*_bw` を呼び出します。
 
-## 3) 統合サービス（`src/lib/services/pokemon-integration-service.ts`）
+## 3) 統合サービス（Resolverベース: `src/lib/services/wasm-pokemon-service.ts`）
 
 役割
 - RawPokemonData + 遭遇テーブル + 生成種族データ を結合し EnhancedPokemonData を作成
@@ -137,7 +137,7 @@ WASM 生成 → 統合までの最小例：
 
 ```ts
 import { getWasmPokemonService } from '@/lib/services/wasm-pokemon-service';
-import { getIntegrationService } from '@/lib/services/pokemon-integration-service';
+// 旧統合サービスは廃止。Resolver + WASMサービスの新APIを利用してください。
 
 async function generateEnhancedPokemon(seed: bigint) {
   const wasmService = await getWasmPokemonService();
@@ -167,7 +167,7 @@ async function generateEnhancedPokemon(seed: bigint) {
 
 ```ts
 import { WasmServiceError } from '@/lib/services/wasm-pokemon-service';
-import { IntegrationError } from '@/lib/services/pokemon-integration-service';
+// IntegrationError は廃止。必要なら WasmServiceError を使用。
 
 try {
   const p = await generateEnhancedPokemon(0x12345678n);

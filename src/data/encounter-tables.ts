@@ -10,7 +10,7 @@
  * - Bulbapedia / Serebii (補助参照)
  */
 
-import { EncounterType } from '../types/pokemon-ui';
+import type { DomainEncounterType as EncounterType } from '../types/domain';
 import { encounterTypeToName } from '@/lib/integration/wasm-enums';
 import type { ROMVersion } from '../types/rom';
 import { ensureEncounterRegistryLoaded, getEncounterFromRegistry } from './encounters/loader';
