@@ -73,15 +73,17 @@ export async function initWasm(): Promise<WasmModule> {
       const module = await import('../../wasm/wasm_pkg.js');
 
       // Node(vitest) 環境では fetch が file: URL をサポートしないため、
-      // 可能ならバイト列を直接渡す
+      // 可能ならバイト列を直接渡す。Web/Worker では URL を渡す。
       let initArg: WasmInitArg;
-      if (typeof window === 'undefined') {
+      const isNode = typeof process !== 'undefined' && !!(process as any).versions?.node;
+      if (isNode) {
         const fs = await import('fs');
         const path = await import('path');
         const wasmPath = path.join(process.cwd(), 'src/wasm/wasm_pkg_bg.wasm');
         const bytes = fs.readFileSync(wasmPath);
         initArg = { module_or_path: bytes };
       } else {
+        // ブラウザ/Worker 環境（window が未定義でも WorkerGlobalScope で動作）
         initArg = { module_or_path: new URL('../../wasm/wasm_pkg_bg.wasm', import.meta.url) };
       }
 
