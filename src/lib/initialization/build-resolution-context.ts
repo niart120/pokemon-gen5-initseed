@@ -49,24 +49,9 @@ export function buildResolutionContext(opts: BuildContextOptions): ResolutionCon
   );
 
   const ctx: ResolutionContext = {
-    encounterTable: table
-      ? {
-          encounter_type: opts.encounterType,
-          area_name: table.location,
-          version: opts.version.includes('2') ? 'BW2' : 'BW',
-          species_list: table.slots.map((s) => ({
-            species_id: s.speciesId,
-            name: '',
-            level_config: {
-              min_level: s.levelRange.min,
-              max_level: s.levelRange.max,
-            },
-            probability: s.rate,
-          })),
-        }
-      : undefined,
+    encounterTable: table ?? undefined,
     // For now, we don’t prebuild these large maps; resolver helpers receive undefined gracefully.
-    // Follow-ups: Precompute gender/abilities maps by scanning species_list once.
+  // Follow-ups: Precompute gender/abilities maps by scanning slots once.
     genderRatios: undefined,
     abilityCatalog: undefined,
   };
@@ -85,15 +70,15 @@ export function enrichForSpecies(ctx: ResolutionContext, speciesId: number): voi
   if (!ctx.genderRatios.has(speciesId)) {
     const gender = s.gender;
     if (gender.type === 'genderless') {
-      ctx.genderRatios.set(speciesId, { male_ratio: 0, female_ratio: 0, genderless: true });
+  ctx.genderRatios.set(speciesId, { threshold: 0, genderless: true });
     } else if (gender.type === 'fixed') {
-      // fixed male/female: map to threshold extremes
-      const thr = gender.fixed === 'male' ? 255 : 0;
-      ctx.genderRatios.set(speciesId, { male_ratio: thr, female_ratio: 255 - thr, genderless: false });
+      // fixed male/female: map to threshold extremes (male: 0 -> always male, female: 256 -> always female)
+      const thr = gender.fixed === 'male' ? 0 : 256;
+      ctx.genderRatios.set(speciesId, { threshold: thr, genderless: false });
     } else if (gender.type === 'ratio') {
       // femaleThreshold: value in [0..255], female if gender_value < threshold
       const thr = Math.max(0, Math.min(255, gender.femaleThreshold ?? 127));
-      ctx.genderRatios.set(speciesId, { male_ratio: thr, female_ratio: 255 - thr, genderless: false });
+  ctx.genderRatios.set(speciesId, { threshold: thr, genderless: false });
     }
   }
 

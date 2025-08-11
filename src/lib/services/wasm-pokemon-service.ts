@@ -11,7 +11,7 @@ import { initWasm, getWasm, isWasmReady } from '../core/wasm-interface';
 import type { ROMVersion, ROMRegion, Hardware } from '../../types/rom';
 // New resolver-path imports (non-breaking additions)
 import { parseFromWasmRaw } from '@/lib/integration/raw-parser';
-import type { RawPokemonData as SnakeRawPokemonData } from '@/types/pokemon-raw';
+import type { UnresolvedPokemonData } from '@/types/pokemon-raw';
 import {
   resolvePokemon,
   resolveBatch,
@@ -71,7 +71,7 @@ export interface PokemonGenerationRequest {
  * Snake_case raw batch result (new API)
  */
 export interface PokemonGenerationResultSnake {
-  pokemon: SnakeRawPokemonData[];
+  pokemon: UnresolvedPokemonData[];
   stats: {
     generationTime: number;
     count: number;
@@ -130,7 +130,7 @@ export class WasmPokemonService {
   // ===================== New resolver-backed APIs (non-breaking) =====================
 
   /** Generate single Pokemon as snake_case RawPokemonData (domain raw) */
-  async generateSnakeRawPokemon(request: PokemonGenerationRequest): Promise<SnakeRawPokemonData> {
+  async generateSnakeRawPokemon(request: PokemonGenerationRequest): Promise<UnresolvedPokemonData> {
     this.validateInitialized();
     this.validateGenerationRequest(request);
 

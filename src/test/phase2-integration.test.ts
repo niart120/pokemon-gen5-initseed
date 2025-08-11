@@ -9,7 +9,7 @@ import { initWasmForTesting } from './wasm-loader';
 import { 
   parseFromWasmRaw,
 } from '../lib/integration/raw-parser';
-import type { RawPokemonData } from '../types/pokemon-raw';
+import type { UnresolvedPokemonData } from '../types/pokemon-raw';
 import { DomainNatureNames } from '../types/domain';
 import { determineGenderFromSpec } from '../lib/utils/gender-utils';
 import { 
@@ -19,12 +19,7 @@ import {
 } from '../lib/services/wasm-pokemon-service';
 import { buildResolutionContext, enrichForSpecies } from '../lib/initialization/build-resolution-context';
 import { resolvePokemon, toUiReadyPokemon, type ResolutionContext } from '../lib/integration/pokemon-resolver';
-import { 
-  getEncounterTable, 
-  getEncounterSlot, 
-  calculateLevel,
-  validateEncounterTable 
-} from '../data/encounter-tables';
+import { getEncounterTable, getEncounterSlot } from '../data/encounter-tables';
 import { getGeneratedSpeciesById, selectAbilityBySlot } from '../data/species/generated';
 
 describe('Phase 2 Integration Tests', () => {
@@ -68,7 +63,7 @@ describe('Phase 2 Integration Tests', () => {
       expect(result.gender_value).toBeLessThan(256);
       expect(typeof result.encounter_slot_value).toBe('number');
       expect(typeof result.encounter_type).toBe('number');
-      expect(typeof result.level_rand_value).toBe('number');
+  expect(typeof result.level_rand_value).toBe('bigint');
       expect(result.shiny_type).toBeGreaterThanOrEqual(0);
       expect(result.shiny_type).toBeLessThan(3);
     });
@@ -101,11 +96,10 @@ describe('Phase 2 Integration Tests', () => {
   });
 
   describe('Task #22: Encounter Tables', () => {
-    it('should have valid encounter table structure', () => {
+  it('should have valid encounter table structure', () => {
       const table = getEncounterTable('B', 'Route1', 0); // Normal encounter
       
       if (table) {
-        expect(validateEncounterTable(table)).toBe(true);
         expect(table.slots.length).toBeGreaterThan(0);
         expect(table.location).toBeDefined();
         expect(table.method).toBeDefined();
@@ -113,18 +107,7 @@ describe('Phase 2 Integration Tests', () => {
       }
     });
 
-    it('should calculate levels correctly', () => {
-      const levelRange = { min: 5, max: 7 };
-      
-      // Test deterministic level calculation
-      expect(calculateLevel(0, levelRange)).toBe(5);
-      expect(calculateLevel(1, levelRange)).toBe(6);
-      expect(calculateLevel(2, levelRange)).toBe(7);
-      expect(calculateLevel(3, levelRange)).toBe(5); // Wraps around
-      
-      // Test single level range
-      expect(calculateLevel(999, { min: 10, max: 10 })).toBe(10);
-    });
+  // Level calculation now validated within resolver; removed standalone test
 
     it('should handle encounter slot lookup', () => {
       const table = {
@@ -251,7 +234,7 @@ describe('Phase 2 Integration Tests', () => {
 
   describe('Task #25: Data Integration', () => {
     it('should resolve Pokemon data completely (resolver path)', async () => {
-      const rawData: RawPokemonData = {
+  const rawData: UnresolvedPokemonData = {
         seed: 0x123456789ABCDEFn,
         pid: 0x12345678,
         nature: 5, // Bold
@@ -260,7 +243,7 @@ describe('Phase 2 Integration Tests', () => {
         gender_value: 100,
         encounter_slot_value: 0,
         encounter_type: 0, // Normal encounter
-        level_rand_value: 42,
+  level_rand_value: 42n,
         shiny_type: 0,
       };
 
@@ -285,7 +268,7 @@ describe('Phase 2 Integration Tests', () => {
     });
 
     it('should surface synchronize flag (resolver does not mutate nature)', () => {
-      const rawData: RawPokemonData = {
+  const rawData: UnresolvedPokemonData = {
         seed: 1n,
         pid: 1,
         nature: 5, // Bold
@@ -294,7 +277,7 @@ describe('Phase 2 Integration Tests', () => {
         gender_value: 100,
         encounter_slot_value: 0,
         encounter_type: 0, // Normal encounter (sync compatible)
-        level_rand_value: 42,
+  level_rand_value: 42n,
         shiny_type: 0,
       };
       const ctx: ResolutionContext = buildResolutionContext({ version: 'B', location: 'Route1', encounterType: 0 as any });
@@ -306,7 +289,7 @@ describe('Phase 2 Integration Tests', () => {
     });
 
     it('should handle missing encounter table gracefully (no species resolution)', () => {
-      const invalidRawData: RawPokemonData = {
+  const invalidRawData: UnresolvedPokemonData = {
         seed: 1n,
         pid: 1,
         nature: 5,
@@ -315,7 +298,7 @@ describe('Phase 2 Integration Tests', () => {
         gender_value: 100,
         encounter_slot_value: 0,
         encounter_type: 0,
-        level_rand_value: 42,
+  level_rand_value: 42n,
         shiny_type: 0,
       };
 
@@ -327,7 +310,7 @@ describe('Phase 2 Integration Tests', () => {
 
     it('should validate resolved results against encounter table', () => {
       const ctx: ResolutionContext = buildResolutionContext({ version: 'B', location: 'Route1', encounterType: 0 as any });
-      const raw: RawPokemonData = {
+  const raw: UnresolvedPokemonData = {
         seed: 1n,
         pid: 1,
         nature: 5,
@@ -336,14 +319,14 @@ describe('Phase 2 Integration Tests', () => {
         gender_value: 100,
         encounter_slot_value: 0,
         encounter_type: 0,
-        level_rand_value: 42,
+  level_rand_value: 42n,
         shiny_type: 0,
       };
       const resolved = resolvePokemon(raw, ctx);
       // valid when level is within the encounter slot's range
-      const slot = ctx.encounterTable?.species_list[resolved.encounterSlotValue];
-      const min = slot?.level_config.min_level ?? 1;
-      const max = slot?.level_config.max_level ?? 100;
+  const slot = ctx.encounterTable?.slots[resolved.encounterSlotValue];
+  const min = slot?.levelRange.min ?? 1;
+  const max = slot?.levelRange.max ?? 100;
       expect(resolved.level).toBeGreaterThanOrEqual(min);
       expect(resolved.level).toBeLessThanOrEqual(max);
 
@@ -398,7 +381,7 @@ describe('Phase 2 Integration Tests', () => {
       // Resolve all Pokemon
   const ctx: ResolutionContext = buildResolutionContext({ version: config.version, location: 'Route1', encounterType: 0 as any });
   // Optionally enrich for all species in the table for gender resolution
-  ctx.encounterTable?.species_list.forEach(s => enrichForSpecies(ctx, s.species_id));
+  ctx.encounterTable?.slots.forEach(s => enrichForSpecies(ctx, s.speciesId));
   const resolvedAll = batchResult.pokemon.map((r) => resolvePokemon(r, ctx));
 
       const endTime = performance.now();

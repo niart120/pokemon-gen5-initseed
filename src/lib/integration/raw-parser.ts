@@ -4,7 +4,7 @@
  * 互換性拡張は行わず、get_* のアクセサ（readonlyプロパティ）または0引数関数のみを許可する。
  */
 
-import { RawPokemonData } from '@/types/pokemon-raw';
+import { UnresolvedPokemonData } from '@/types/pokemon-raw';
 
 /**
  * WASMライク入力アダプタ: wasm-bindgenインスタンス or 同等のgetterを持つオブジェクトから
@@ -13,7 +13,7 @@ import { RawPokemonData } from '@/types/pokemon-raw';
  * 役割: インテグレーション境界で入力のゆらぎを吸収し、以降は型安全な RawPokemonData に揃える。
  * 想定利用先: 上位のUI層アダプタ（例: parseRawPokemonData）など。
  */
-export function parseFromWasmRaw(wasmData: unknown): RawPokemonData {
+export function parseFromWasmRaw(wasmData: unknown): UnresolvedPokemonData {
   if (!wasmData) {
     throw new Error('WASM data is null or undefined');
   }
@@ -70,7 +70,7 @@ export function parseFromWasmRaw(wasmData: unknown): RawPokemonData {
   const levelRandValue = readField('get_level_rand_value');
   const shinyType = readField('get_shiny_type');
 
-    return {
+  return {
       seed: toBigInt(seedVal),
       pid: toNumber(pid),
       nature: toNumber(nature),
@@ -79,10 +79,10 @@ export function parseFromWasmRaw(wasmData: unknown): RawPokemonData {
       gender_value: toNumber(genderValue),
       encounter_slot_value: toNumber(encounterSlotValue),
       encounter_type: toNumber(encounterType),
-      level_rand_value: toNumber(levelRandValue),
+      level_rand_value: toBigInt(levelRandValue),
       shiny_type: toNumber(shinyType),
     };
   } catch (error) {
-    throw new Error(`Failed to adapt WASM RawPokemonData: ${error}`);
+  throw new Error(`Failed to adapt WASM UnresolvedPokemonData: ${error}`);
   }
 }

@@ -8,7 +8,6 @@ import { parseFromWasmRaw } from '../lib/integration/raw-parser';
 import { resolvePokemon, toUiReadyPokemon } from '../lib/integration/pokemon-resolver';
 import { buildResolutionContext } from '../lib/initialization/build-resolution-context';
 import { getGeneratedSpeciesById } from '../data/species/generated';
-import { calculateLevel } from '../data/encounter-tables';
 
 describe('Phase 2 Integration Demo', () => {
   beforeAll(async () => {
@@ -26,7 +25,7 @@ describe('Phase 2 Integration Demo', () => {
       get_gender_value: () => 100,
       get_encounter_slot_value: () => 0,
       get_encounter_type: () => 0,
-      get_level_rand_value: () => 42,
+  get_level_rand_value: () => 42n,
       get_shiny_type: () => 0,
     };
 
@@ -46,16 +45,11 @@ describe('Phase 2 Integration Demo', () => {
   expect(species).toBeDefined();
   expect(species?.names.en).toBe('Patrat');
 
-    // Step 4: Calculate level
-  const level = calculateLevel(rawData.level_rand_value, { min: 2, max: 4 });
-    expect(level).toBeGreaterThanOrEqual(2);
-    expect(level).toBeLessThanOrEqual(4);
-
   console.log('✅ Phase 2 integration demo successful:');
     console.log(`   Seed: ${rawData.seed}`);
   console.log(`   Species: ${species?.names.en}`);
   console.log(`   Nature: ${uiReady.natureName}`);
-    console.log(`   Level: ${level}`);
+  // Level is now resolved inside resolver; omit here
     console.log(`   PID: 0x${rawData.pid.toString(16)}`);
   });
 
@@ -65,9 +59,6 @@ describe('Phase 2 Integration Demo', () => {
 
   const snivy = getGeneratedSpeciesById(495);
   expect(snivy?.names.en).toBe('Snivy');
-
-    const level = calculateLevel(5, { min: 10, max: 15 });
-    expect(level).toBe(15); // 10 + (5 % 6) = 15
 
     console.log('✅ All Phase 2 utilities validated');
   });

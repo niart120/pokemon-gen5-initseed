@@ -16,7 +16,7 @@ import { SeedCalculator } from '../../lib/core/seed-calculator';
 import { isWasmReady } from '../../lib/core/wasm-interface';
 import { buildResolutionContext } from '../../lib/initialization/build-resolution-context';
 import { resolvePokemon, toUiReadyPokemon } from '../../lib/integration/pokemon-resolver';
-import type { RawPokemonData } from '../../types/pokemon-raw';
+import type { UnresolvedPokemonData } from '../../types/pokemon-raw';
 
 describe('Integration smoke (WASM fallback + tiny pipeline)', () => {
   let calculator: SeedCalculator;
@@ -45,7 +45,7 @@ describe('Integration smoke (WASM fallback + tiny pipeline)', () => {
   test('最小統合パス: resolverで基本解決が得られる', () => {
     // Route1 の通常エンカウントテーブルで解決
     const ctx = buildResolutionContext({ version: 'B', location: 'Route1', encounterType: 0 as any });
-    const raw: RawPokemonData = {
+  const raw: UnresolvedPokemonData = {
       seed: 0x12345678n,
       pid: 0x87654321,
       nature: 12,
@@ -54,7 +54,7 @@ describe('Integration smoke (WASM fallback + tiny pipeline)', () => {
       gender_value: 100,
       encounter_slot_value: 0,
       encounter_type: 0,
-      level_rand_value: 2,
+  level_rand_value: 2n,
       shiny_type: 0,
     };
 

@@ -95,11 +95,14 @@ EnhancedPokemonData へのマッピング注意
 ## 4) 遭遇テーブル（`src/data/encounter-tables.ts`）
 
 役割
-- `getEncounterTable(version, location, method)` / `getEncounterSlot(table, slotValue)` / `calculateLevel(levelRandValue, range)` を提供
+- `getEncounterTable(version, location, method)` / `getEncounterSlot(table, slotValue)` を提供（レベル計算は Resolver 側に集約）
 
 方針
 - 統合サービスは JSON テーブル必須（フォールバック無し）。
 - テスト/デモ向けのサンプルはアセンブラ側（後述）で提供。
+
+備考
+- レベル計算は `pokemon-resolver.ts` にて Raw の `level_rand_value` とスロットの `levelRange` を用いて実装（一元化）。
 
 出典（実装に合わせる）
 - 遭遇テーブル: pokebook.jp（BW/BW2 の各ページ）

@@ -22,10 +22,10 @@ Resolver は WASM の Raw 出力（snake_case）を、遭遇テーブル/種族�
 ```typescript
 import { buildResolutionContext } from '@/lib/initialization/build-resolution-context';
 import { resolvePokemon, toUiReadyPokemon } from '@/lib/integration/pokemon-resolver';
-import type { RawPokemonData } from '@/types/pokemon-raw';
+import type { UnresolvedPokemonData } from '@/types/pokemon-raw';
 
 const ctx = buildResolutionContext({ version: 'B', location: 'Route1', encounterType: 0 });
-const raw: RawPokemonData = {
+const raw: UnresolvedPokemonData = {
   seed: 0x12345678n,
   pid: 0x87654321,
   nature: 12,
@@ -43,7 +43,7 @@ const ui = toUiReadyPokemon(resolved);
 
 ## Type Definitions
 
-### `RawPokemonData` (snake_case)
+### `UnresolvedPokemonData` (snake_case)
 WASM 計算結果（snake_case）:
 - `seed`: bigint 初期seed
 - `pid`: number

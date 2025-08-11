@@ -11,12 +11,9 @@
  * - Encounter table/gender ratio/ability catalog are provided via context.
  */
 
-import type {
-  RawPokemonData as WasmRawPokemonData,
-  EncounterTable,
-  GenderRatio,
-} from '@/types/pokemon-raw';
-import { DomainEncounterType, DomainNatureNames, DomainShinyType } from '@/types/domain';
+import type { UnresolvedPokemonData, GenderRatio } from '@/types/pokemon-raw';
+import type { EncounterTable } from '@/data/encounter-tables';
+import { DomainNatureNames, DomainShinyType } from '@/types/domain';
 
 // Context to supply reference data and environment for resolution
 export interface ResolutionContext {
@@ -55,7 +52,7 @@ export interface UiReadyPokemonData extends ResolvedPokemonData {
 
 // Public API
 export function resolvePokemon(
-  raw: WasmRawPokemonData,
+  raw: UnresolvedPokemonData,
   ctx: ResolutionContext
 ): ResolvedPokemonData {
   const speciesId = resolveSpeciesId(raw, ctx.encounterTable);
@@ -72,7 +69,7 @@ export function resolvePokemon(
     genderValue: raw.gender_value,
     encounterSlotValue: raw.encounter_slot_value,
     encounterType: raw.encounter_type,
-    levelRandValue: raw.level_rand_value,
+    levelRandValue: Number(raw.level_rand_value),
     shinyType: raw.shiny_type,
     speciesId,
     level,
@@ -82,7 +79,7 @@ export function resolvePokemon(
 }
 
 export function resolveBatch(
-  raws: WasmRawPokemonData[],
+  raws: UnresolvedPokemonData[],
   ctx: ResolutionContext
 ): ResolvedPokemonData[] {
   return raws.map((r) => resolvePokemon(r, ctx));
@@ -100,31 +97,35 @@ export function toUiReadyPokemon(data: ResolvedPokemonData): UiReadyPokemonData 
 // =============== internal helpers ===============
 
 function resolveSpeciesId(
-  raw: WasmRawPokemonData,
+  raw: UnresolvedPokemonData,
   table?: EncounterTable
 ): number | undefined {
-  if (!table || !table.species_list?.length) return undefined;
+  if (!table || !table.slots?.length) return undefined;
 
   // Basic policy: use encounter_slot_value as index if within range.
   // If values encode probability or different mapping, replace here later.
   const idx = raw.encounter_slot_value;
-  const list = table.species_list;
-  if (idx >= 0 && idx < list.length) return list[idx]?.species_id;
+  const list = table.slots;
+  if (idx >= 0 && idx < list.length) return list[idx]?.speciesId;
 
   // Fallback: modulo mapping to avoid throwing in early wiring
-  return list[Math.abs(idx) % list.length]?.species_id;
+  return list[Math.abs(idx) % list.length]?.speciesId;
 }
 
 function resolveLevel(
-  raw: WasmRawPokemonData,
+  raw: UnresolvedPokemonData,
   table?: EncounterTable
 ): number | undefined {
-  // Static encounters (>= 10) use fixed levels when provided
-  if (raw.encounter_type >= DomainEncounterType.StaticSymbol && table) {
+  // 仕様（BW/BW2）のレベル計算ロジックに基づく一元実装
+  // 式: (rand >> 32) * 0xFFFF / 0x290 >> 32 % (max - min + 1) + min
+  // 前提: 現在の raw.level_rand_value(u32) が (rand >> 32) に相当する
+
+  // 固定レベル（min===max）指定がある場合はそれを優先
+  if (table) {
     const index = resolveSpeciesIndexSafe(raw, table);
     if (index != null) {
-      const cfg = table.species_list[index]?.level_config;
-      if (cfg?.fixed_level != null) return cfg.fixed_level;
+      const range0 = table.slots[index]?.levelRange;
+      if (range0 && range0.min === range0.max) return range0.min;
     }
   }
 
@@ -132,23 +133,25 @@ function resolveLevel(
   const index = resolveSpeciesIndexSafe(raw, table);
   if (index == null) return undefined;
 
-  const cfg = table.species_list[index]?.level_config;
+  const cfg = table.slots[index]?.levelRange;
   if (!cfg) return undefined;
-  if (cfg.fixed_level != null) return cfg.fixed_level;
 
-  const min = cfg.min_level;
-  const max = cfg.max_level;
+  const min = cfg.min;
+  const max = cfg.max;
   if (min == null || max == null || max < min) return undefined;
-
   const range = max - min + 1;
-  // level_rand_value is 0..0xFFFFFFFF → [0,1) ratio
-  const ratio = raw.level_rand_value / 0x100000000;
-  const offset = Math.floor(ratio * range);
+
+  // BigIntで厳密に演算
+  const upper32 = BigInt(Number(raw.level_rand_value) >>> 0); // (rand >> 32) に対応するu32
+  const t1 = upper32 * 0xFFFFn;
+  const t2 = t1 / 0x290n;
+  const x = t2 >> 32n; // ((upper32 * 0xFFFF) / 0x290) の上位32bit
+  const offset = Number(x % BigInt(range));
   return min + offset;
 }
 
 function resolveGender(
-  raw: WasmRawPokemonData,
+  raw: UnresolvedPokemonData,
   speciesId: number | undefined,
   ratios?: Map<number, GenderRatio>
 ): 'M' | 'F' | 'N' | undefined {
@@ -156,12 +159,12 @@ function resolveGender(
   const r = ratios.get(speciesId);
   if (!r) return undefined;
   if (r.genderless) return 'N';
-  // female if value < female_threshold
-  const femaleThreshold = r.male_ratio; // naming in schema; threshold semantics per docs
+  // female if value < threshold
+  const femaleThreshold = r.threshold;
   return raw.gender_value < femaleThreshold ? 'F' : 'M';
 }
 
-function resolveAbilityIndex(raw: WasmRawPokemonData): 0 | 1 | 2 | undefined {
+function resolveAbilityIndex(raw: UnresolvedPokemonData): 0 | 1 | 2 | undefined {
   if (raw.ability_slot === 0) return 0;
   if (raw.ability_slot === 1) return 1;
   if (raw.ability_slot === 2) return 2;
@@ -169,12 +172,12 @@ function resolveAbilityIndex(raw: WasmRawPokemonData): 0 | 1 | 2 | undefined {
 }
 
 function resolveSpeciesIndexSafe(
-  raw: WasmRawPokemonData,
+  raw: UnresolvedPokemonData,
   table: EncounterTable
 ): number | undefined {
   const idx = raw.encounter_slot_value;
-  if (idx >= 0 && idx < table.species_list.length) return idx;
-  return Math.abs(idx) % table.species_list.length;
+  if (idx >= 0 && idx < table.slots.length) return idx;
+  return Math.abs(idx) % table.slots.length;
 }
 
 function getNatureName(natureId: number): string {

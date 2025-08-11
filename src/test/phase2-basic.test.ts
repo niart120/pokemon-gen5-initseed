@@ -5,7 +5,6 @@
 import { describe, it, expect } from 'vitest';
 import { DomainNatureNames, DomainShinyType } from '../types/domain';
 import { determineGenderFromSpec } from '../lib/utils/gender-utils';
-import { calculateLevel } from '../data/encounter-tables';
 import { getGeneratedSpeciesById } from '../data/species/generated';
 
 describe('Phase 2 Basic Validation', () => {
@@ -32,14 +31,7 @@ describe('Phase 2 Basic Validation', () => {
     });
   });
 
-  describe('Encounter Tables', () => {
-    it('should calculate levels correctly', () => {
-      expect(calculateLevel(0, { min: 5, max: 7 })).toBe(5);
-      expect(calculateLevel(1, { min: 5, max: 7 })).toBe(6);
-      expect(calculateLevel(2, { min: 5, max: 7 })).toBe(7);
-      expect(calculateLevel(10, { min: 10, max: 10 })).toBe(10);
-    });
-  });
+  // Encounter Tables: level calculation now handled in resolver; basic tests removed
 
   describe('Pokemon Species (generated)', () => {
     it('should have generated species data for Gen 5 starters', () => {
