@@ -3,12 +3,10 @@
 This directory contains unit and integration tests for the Gen5 seed searcher. Keep tests practical and integration-oriented; avoid duplicating internal formulas unless necessary.
 
 ## Structure
-- integration/: End-to-end and cross-module tests
-  - pokemon-assembler.test.ts: core assembly logic
-  - raw-parser.test.ts: WASM → Raw data parsing
-  - wasm-service.test.ts: API adapters, conversions, validation
+  raw-parser.test.ts: WASM → Raw data parsing
+  - （削除済み）旧サービス層プレースホルダテストは廃止（resolver + workers へ完全移行）
   - encounter-selection.test.ts: data-driven encounter table checks
-  - Note: sync eligibility and special encounters are covered in pokemon-assembler.test.ts
+  - phase2-integration.test.ts: resolver パイプラインの統合検証（sync など含む）
 - other tests reside next to their subjects under src/test/*
 
 ## Conventions

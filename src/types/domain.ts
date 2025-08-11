@@ -3,7 +3,7 @@
  *
  * Note:
  * - Numeric values are aligned with WASM enums but kept separate from runtime WASM exports.
- * - Use these in application code; conversions at the WASM boundary live in lib/integration.
+ * - Use these in application code; conversions at the WASM boundary live in lib/generation.
  */
 
 export enum DomainGameVersion {

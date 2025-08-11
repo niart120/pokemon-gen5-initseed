@@ -5,12 +5,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { EncounterType as DomainEncounterType } from '../../types/pokemon-enhanced';
-import {
-  getEncounterTable,
-  getEncounterSlot,
-  calculateLevel,
-} from '../../data/encounter-tables';
+import { DomainEncounterType as DomainEncounterType } from '../../types/domain';
+import { getEncounterTable, getEncounterSlot } from '../../data/encounter-tables';
 
 describe('Encounter Selection Integration Tests (JSON datasets)', () => {
   it('should load encounter table for a known location/method', () => {
@@ -33,13 +29,5 @@ describe('Encounter Selection Integration Tests (JSON datasets)', () => {
     expect(slot0.levelRange.min).toBeLessThanOrEqual(slot0.levelRange.max);
   });
 
-  it('should calculate level deterministically with rand modulo', () => {
-    // range 5..7 → rand%3
-    expect(calculateLevel(0, { min: 5, max: 7 })).toBe(5);
-    expect(calculateLevel(1, { min: 5, max: 7 })).toBe(6);
-    expect(calculateLevel(2, { min: 5, max: 7 })).toBe(7);
-    expect(calculateLevel(3, { min: 5, max: 7 })).toBe(5);
-    // single level
-    expect(calculateLevel(999, { min: 10, max: 10 })).toBe(10);
-  });
+  // Level calculation now validated via resolver; deterministic modulo test removed
 });

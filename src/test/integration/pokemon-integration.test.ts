@@ -6,21 +6,17 @@
  *
  * 詳細検証の担当:
  * - 遭遇スロット/レベル分布: encounter-selection.test.ts
- * - 統合データ処理/同期ルール/特殊遭遇: pokemon-assembler.test.ts
+ * - 統合データ処理/同期ルール/特殊遭遇: resolver 系テストに統合（assembler は廃止）
  * - 性別境界: gender-threshold.test.ts
- * - WASM/サービス連携: wasm-service.test.ts, wasm-node.test.ts, phase2-* tests
+ * - WASM/サービス連携: wasm-node.test.ts, phase2-* tests（wasm-serviceは廃止済みでプレースホルダ）
  */
 
 import { describe, test, expect, beforeAll } from 'vitest';
 import { SeedCalculator } from '../../lib/core/seed-calculator';
 import { isWasmReady } from '../../lib/core/wasm-interface';
-import {
-  createAssemblerContext,
-  createSampleEncounterTables,
-  assembleData,
-  EncounterType,
-  type RawPokemonData,
-} from '../../lib/integration/pokemon-assembler';
+import { buildResolutionContext } from '../../lib/initialization/build-resolution-context';
+import { resolvePokemon, toUiReadyPokemon } from '../../lib/generation/pokemon-resolver';
+import type { UnresolvedPokemonData } from '../../types/pokemon-raw';
 
 describe('Integration smoke (WASM fallback + tiny pipeline)', () => {
   let calculator: SeedCalculator;
@@ -46,25 +42,28 @@ describe('Integration smoke (WASM fallback + tiny pipeline)', () => {
     }
   });
 
-  test('最小統合パス: assembleDataで基本拡張が得られる', () => {
-    const ctx = createAssemblerContext('B', 'JPN', createSampleEncounterTables());
-    const raw: RawPokemonData = {
-      seed: 0x12345678,
+  test('最小統合パス: resolverで基本解決が得られる', () => {
+    // Route1 の通常エンカウントテーブルで解決
+    const ctx = buildResolutionContext({ version: 'B', location: 'Route1', encounterType: 0 as any });
+  const raw: UnresolvedPokemonData = {
+      seed: 0x12345678n,
       pid: 0x87654321,
       nature: 12,
-      syncApplied: false,
-      abilitySlot: 1,
-      genderValue: 100,
-      encounterSlotValue: 0,
-      encounterType: EncounterType.Normal,
-      levelRandValue: 2,
-      shinyType: 0,
+      sync_applied: false,
+      ability_slot: 1,
+      gender_value: 100,
+      encounter_slot_value: 0,
+      encounter_type: 0,
+      level_rand_value: 2n,
+      shiny_type: 0,
     };
 
-    const enhanced = assembleData(ctx, raw);
+    const resolved = resolvePokemon(raw, ctx);
+    const ui = toUiReadyPokemon(resolved);
     // 極小スモーク: 正常に主要フィールドが生成されることのみ確認
-    expect(enhanced.species).toBeGreaterThan(0);
-    expect(enhanced.level).toBeGreaterThan(0);
-    expect(typeof enhanced.gender).toBe('number');
+    expect(resolved.speciesId).toBeGreaterThan(0);
+    expect(resolved.level).toBeGreaterThan(0);
+    expect(['M', 'F', 'N', undefined]).toContain(resolved.gender);
+    expect(typeof ui.natureName).toBe('string');
   });
 });

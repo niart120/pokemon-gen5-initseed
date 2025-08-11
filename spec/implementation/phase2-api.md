@@ -11,11 +11,11 @@ WASM PokemonGenerator → RawPokemonData → Integration Service → EnhancedPok
 ```
 
 - 生成エントリは PokemonGenerator（WASM）です。IntegratedSeedSearcher は「初期Seed探索」用であり、生成パイプラインの入口ではありません。
-- 型・パーサは `src/types/pokemon-enhanced.ts`（UI向けヘルパ含む）と `src/types/pokemon-raw.ts`（WASM層）を基準とします。
+- 型・パーサは `src/types/pokemon-raw.ts`（WASM境界の snake_case Raw）と Resolver 一連（`src/lib/generation/raw-parser.ts`, `src/lib/generation/pokemon-resolver.ts`）を基準とします。
 - 遭遇テーブルは JSON データのみに依存し、統合サービスではフォールバックを行いません（テスト用途のサンプルは別途有り）。
 - 種族データは生成済み JSON アダプタ（`src/data/species/generated`）を使用します。
 
-## 1) RawPokemonData とパーサ（`src/types/pokemon-enhanced.ts` / `src/types/pokemon-raw.ts`）
+## 1) RawPokemonData とパーサ（`src/types/pokemon-raw.ts` / `src/lib/generation/raw-parser.ts`）
 
 役割
 - WASM から返る RawPokemonData を TypeScript へ安全に変換
@@ -33,36 +33,27 @@ WASM PokemonGenerator → RawPokemonData → Integration Service → EnhancedPok
 補足
 - enum EncounterType/ShinyType を公開
 
-## 2) WASM 生成サービス（`src/lib/services/wasm-pokemon-service.ts`）
+## 2) WASM 生成サービス（廃止済み）
 
 役割
-- PokemonGenerator の高水準ラッパ。入力検証と例外を一元化
+- 以前は PokemonGenerator の高水準ラッパ（入力検証/例外一元化）を提供していましたが、現在は Worker/Resolver 境界に集約しました。
 
 公開型
-- WasmGenerationConfig: version/region/hardware/tid/sid/syncEnabled/syncNatureId/macAddress/keyInput/frame
-- PokemonGenerationRequest: seed/config/(count/offset)
-- PokemonGenerationResult: pokemon[]/stats（時間・件数・初期seed）
+- 専用の公開型は提供しません。必要に応じて呼び出し側で最小の型を定義してください。
 
 公開クラス
-- WasmPokemonService
-  - initialize(): WASM 初期化
-  - isReady(): 準備完了判定
-  - generateSinglePokemon(req): RawPokemonData を 1 件生成
-  - generatePokemonBatch(req): RawPokemonData を複数生成
-  - static createDefaultConfig(): デモ用既定設定
+- なし（削除済み）
 
 ユーティリティ
-- getWasmPokemonService(): シングルトン取得（内部で initialize）
-- generatePokemon(seed, config?): 1件生成の簡易関数
-- generatePokemonBatch(seed, count, config?): 複数生成の簡易関数
+- なし（削除済み）
 
 エラー
-- WasmServiceError（code: WASM_INIT_FAILED/GENERATION_FAILED/BATCH_GENERATION_FAILED/NOT_INITIALIZED/…）
+- 呼び出し側で try/catch によりハンドリングしてください。
 
 備考
-- 実装は `BWGenerationConfig` を構築し `PokemonGenerator.generate_*_bw` を呼び出します。
+- 生成は PokemonGenerator を直接呼び出してください。
 
-## 3) 統合サービス（`src/lib/services/pokemon-integration-service.ts`）
+## 3) 統合サービス（Resolverベース）
 
 役割
 - RawPokemonData + 遭遇テーブル + 生成種族データ を結合し EnhancedPokemonData を作成
@@ -72,14 +63,7 @@ WASM PokemonGenerator → RawPokemonData → Integration Service → EnhancedPok
 - IntegrationResult: pokemon（Enhanced）+ metadata（found フラグ・warnings）
 
 公開クラス/関数
-- PokemonIntegrationService
-  - integratePokemon(raw, config): 1件統合
-  - integratePokemonBatch(raws, config): 複数統合
-  - validateIntegrationResult(result): レベル範囲/性格/特性スロット等の整合性検証
-  - getIntegrationStats(results): 統計集計
-- getIntegrationService(): シングルトン
-- integratePokemon()/integratePokemonBatch(): ユーティリティ
-- createDefaultIntegrationConfig(): 既定設定作成
+- シングルトン/サービス層は提供しません。`pokemon-resolver.ts` の関数群を直接利用します。
 
 エラー/方針
 - IntegrationError（code: MISSING_ENCOUNTER_TABLE など）
@@ -95,11 +79,14 @@ EnhancedPokemonData へのマッピング注意
 ## 4) 遭遇テーブル（`src/data/encounter-tables.ts`）
 
 役割
-- `getEncounterTable(version, location, method)` / `getEncounterSlot(table, slotValue)` / `calculateLevel(levelRandValue, range)` を提供
+- `getEncounterTable(version, location, method)` / `getEncounterSlot(table, slotValue)` を提供（レベル計算は Resolver 側に集約）
 
 方針
 - 統合サービスは JSON テーブル必須（フォールバック無し）。
 - テスト/デモ向けのサンプルはアセンブラ側（後述）で提供。
+
+備考
+- レベル計算は `pokemon-resolver.ts` にて Raw の `level_rand_value` とスロットの `levelRange` を用いて実装（一元化）。
 
 出典（実装に合わせる）
 - 遭遇テーブル: pokebook.jp（BW/BW2 の各ページ）
@@ -136,55 +123,28 @@ EnhancedPokemonData へのマッピング注意
 WASM 生成 → 統合までの最小例：
 
 ```ts
-import { getWasmPokemonService } from '@/lib/services/wasm-pokemon-service';
-import { getIntegrationService } from '@/lib/services/pokemon-integration-service';
+// 生成 → 統合（擬似コード）
+import { parseFromWasmRaw } from '@/lib/generation/raw-parser';
+import { resolvePokemon, toUiReadyPokemon } from '@/lib/generation/pokemon-resolver';
 
 async function generateEnhancedPokemon(seed: bigint) {
-  const wasmService = await getWasmPokemonService();
-  const rawData = await wasmService.generateSinglePokemon({
-    seed,
-    config: {
-      version: 'B', region: 'JPN', hardware: 'DS',
-      tid: 12345, sid: 54321,
-      syncEnabled: true, syncNatureId: 10,
-      macAddress: [0, 0, 0, 0, 0, 0], keyInput: 0, frame: 1,
-    },
-  });
-
-  const integration = getIntegrationService();
-  const result = integration.integratePokemon(rawData, {
-    version: 'B',
-    defaultLocation: 'Route 1',
-    applySynchronize: true,
-    synchronizeNature: 10,
-  });
-
-  return result.pokemon;
+  const wasmRaw = /* PokemonGenerator.generate_*_bw(...) */ null as any;
+  const raw = parseFromWasmRaw(wasmRaw);
+  const ctx = /* buildResolutionContext(...) */ null as any;
+  const enhanced = resolvePokemon(ctx, raw);
+  return toUiReadyPokemon(enhanced);
 }
 ```
 
 ## エラー処理
 
-```ts
-import { WasmServiceError } from '@/lib/services/wasm-pokemon-service';
-import { IntegrationError } from '@/lib/services/pokemon-integration-service';
-
-try {
-  const p = await generateEnhancedPokemon(0x12345678n);
-} catch (e) {
-  if (e instanceof WasmServiceError) {
-    // 初期化・生成時のエラー
-  } else if (e instanceof IntegrationError) {
-    // 遭遇テーブル未発見などの統合エラー
-  }
-}
-```
+> 例外は呼び出し側で適切にハンドリングしてください。
 
 ## テスト
 
 - 統合テスト: `src/test/phase2-integration.test.ts`
 - アセンブラ検証: `src/test/integration/pokemon-assembler.test.ts`
-- 生成サービス: `src/test/integration/wasm-service.test.ts`
+- 生成サービス: （廃止）
 
 ## データ出典（現行実装に準拠）
 

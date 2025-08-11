@@ -10,8 +10,7 @@
  * - Bulbapedia / Serebii (補助参照)
  */
 
-import { EncounterType } from '../types/pokemon-enhanced';
-import { encounterTypeToName } from '@/lib/integration/wasm-enums';
+import type { DomainEncounterType as EncounterType } from '../types/domain';
 import type { ROMVersion } from '../types/rom';
 import { ensureEncounterRegistryLoaded, getEncounterFromRegistry } from './encounters/loader';
 
@@ -44,31 +43,7 @@ export interface EncounterTable {
   slots: EncounterSlot[];
 }
 
-/**
- * 内部キー用ロケーション正規化
- * - 空白・ハイフン・アンダースコアなどを除去
- * - エイリアス（名称変換）は行わない
- */
-function normalizeLocationKey(location: string): string {
-  return location
-    .trim()
-    // 全角/半角空白を除去
-    .replace(/[\u3000\s]+/g, '')
-    // 各種ダッシュ・ハイフン・アンダースコア・ドットを除去
-    .replace(/[‐‑‒–—−\-_.]/g, '');
-}
-
-/**
- * Encounter table key for lookup
- */
-export function getEncounterTableKey(
-  version: ROMVersion,
-  location: string,
-  method: EncounterType
-): string {
-  // Use centralized converter to avoid enum reverse-indexing
-  return `${version}_${normalizeLocationKey(location)}_${encounterTypeToName(method as number)}`;
-}
+// Key生成関数は不要になったため削除（ローダ側に集約）
 
 /**
  * Look up encounter table
@@ -107,47 +82,4 @@ export function getEncounterSlot(
   }
   return table.slots[slotValue];
 }
-
-/**
- * Calculate actual level from level random value and level range
- * 
- * This implements the BW/BW2 level calculation algorithm:
- * level = min + (randValue % (max - min + 1))
- * 
- * @param levelRandValue Random value from WASM (32-bit)
- * @param levelRange Level range from encounter slot
- * @returns Calculated level
- */
-export function calculateLevel(
-  levelRandValue: number,
-  levelRange: { min: number; max: number }
-): number {
-  if (levelRange.min === levelRange.max) {
-    return levelRange.min;
-  }
-  
-  const range = levelRange.max - levelRange.min + 1;
-  return levelRange.min + (levelRandValue % range);
-}
-
-/**
- * Default encounter tables for testing and fallback
- * 
- * These are minimal encounter tables used when specific location data
- * is not available or for testing purposes.
- */
-export const DEFAULT_ENCOUNTER_TABLES = undefined as unknown as never;
-
-/**
- * Get default encounter table for a given encounter type
- */
-export function getDefaultEncounterTable(_: EncounterType): EncounterTable {
-  throw new Error('Default encounter tables are disabled. JSON datasets are required.');
-}
-
-/**
- * Validate encounter table structure
- */
-export function validateEncounterTable(_: EncounterTable): boolean {
-  return true;
-}
+// デフォルトテーブル/検証スタブは不要になったため削除

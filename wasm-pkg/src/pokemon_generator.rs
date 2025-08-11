@@ -53,8 +53,8 @@ impl RawPokemonData {
     pub fn get_encounter_slot_value(&self) -> u8 { self.encounter_slot_value }
     
     #[wasm_bindgen(getter)]
-    pub fn get_level_rand_value(&self) -> u32 { self.level_rand_value }
-    
+    pub fn get_level_rand_value(&self) -> u64 { self.level_rand_value as u64 }
+
     #[wasm_bindgen(getter)]
     pub fn get_shiny_type(&self) -> u8 { self.shiny_type }
     

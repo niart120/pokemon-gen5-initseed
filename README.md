@@ -142,7 +142,7 @@ npm run dev
 - ユーティリティは `src/lib/utils/<module>` を明示的にインポート（バレル禁止）
     - 例: `import { toMacUint8Array } from '@/lib/utils/mac-address'`
 - wasm-bindgen 生成物の直接参照は禁止。必ず `src/lib/core/wasm-interface.ts` を経由
-- enum 等の変換は `src/lib/integration/wasm-enums.ts` に集約
+- enum 変換の専用モジュールは廃止。必要な最小限の変換は各境界（Worker/Resolver）でローカル実装
 
 ## GitHub Copilot対応
 
@@ -204,7 +204,7 @@ WebAssembly SIMD128命令を活用した4並列SHA-1処理により大幅な性�
 ## 型の境界と単一ソース
 
 - Enumなどのドメイン概念は `src/types/domain.ts` を単一ソースとして利用します。
-- WASM層の生データ型は `src/types/pokemon-raw.ts`、UI向けの拡張モデルとヘルパーは `src/types/pokemon-enhanced.ts`。
+- 境界の生データ型は `src/types/pokemon-raw.ts`（snake_case）。ラベル付け等は `src/lib/generation/pokemon-resolver.ts` の `toUiReadyPokemon()` を利用します。
 - 性格名（Nature）は `DomainNatureNames`（英語名）に集約しています。
 
 ## E2Eテスト

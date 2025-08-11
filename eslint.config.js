@@ -35,14 +35,23 @@ export default tseslint.config(
     // legacy encounter/species modules
     { name: '@/data/encounters', message: 'legacy encounters barrel は使用禁止です。src/data/encounter-tables を使用してください。' },
     { name: '@/data/encounters/index', message: 'legacy encounters barrel は使用禁止です。src/data/encounter-tables を使用してください。' },
-  { name: '@/data/encounters/types', message: 'EncounterType は types/domain.ts もしくは types/pokemon-enhanced.ts の再エクスポート経由を使用してください。' },
+  { name: '@/data/encounters/types', message: 'EncounterType は types/domain.ts を使用してください（互換再エクスポートは廃止）。' },
     { name: '@/data/encounters/rates', message: '固定レート表は使用禁止です。JSON データに基づく処理に移行してください。' },
     { name: '@/data/encounters/tables', message: 'サンプルテーブルは使用禁止です。JSON ローダー＋encounter-tables を使用してください。' },
-    { name: '@/data/pokemon-species', message: '旧TS種族データは使用禁止です。data/species/generated を使用してください。' }
+  { name: '@/data/pokemon-species', message: '旧TS種族データは使用禁止です。data/species/generated を使用してください。' },
+  // removed legacy compat/shim files
+  { name: '@/types/pokemon-ui', message: '互換UI型は撤去済みです。resolver の出力（toUiReadyPokemon など）を使用してください。' },
+  { name: 'src/types/pokemon-ui', message: '互換UI型は撤去済みです。resolver の出力（toUiReadyPokemon など）を使用してください。' },
+  { name: '@/lib/services/pokemon-integration-service', message: '旧統合サービスは撤去済みです。resolver + WASM generator 直結の方針に従ってください。' },
+  { name: 'src/lib/services/pokemon-integration-service', message: '旧統合サービスは撤去済みです。resolver + WASM generator 直結の方針に従ってください。' }
+  ,
+  // assembler (test-only harness) は廃止
+  { name: '@/lib/integration/pokemon-assembler', message: 'pokemon-assembler は廃止されました。pokemon-resolver + buildResolutionContext を使用してください。' },
+  { name: 'src/lib/integration/pokemon-assembler', message: 'pokemon-assembler は廃止されました。pokemon-resolver + buildResolutionContext を使用してください。' }
           ],
           patterns: [
             { group: ['**/types/pokemon', '@/types/pokemon'], message: 'types/pokemon は削除済みです。types/rom・types/search・types/parallel を使用してください。' },
-            { group: ['**/wasm/wasm_pkg', '@/wasm/wasm_pkg'], message: 'wasm_pkg の直接参照は禁止です。lib/core/wasm-interface と lib/integration/wasm-enums を経由してください。' },
+            { group: ['**/wasm/wasm_pkg', '@/wasm/wasm_pkg'], message: 'wasm_pkg の直接参照は禁止です。lib/core/wasm-interface を経由してください。' },
             { group: ['**/src/utils/*', '@/utils/*', 'src/utils/*'], message: 'src/utils は削除済みです。代わりに src/lib/utils 配下の明示的なモジュールをインポートしてください。' }
           ]
         }
