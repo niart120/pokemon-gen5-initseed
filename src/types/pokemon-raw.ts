@@ -77,7 +77,6 @@ export enum PlaceholderValue {
  * エンカウントタイプ列挙
  * WASM側のEncounterTypeと対応
  */
-import type { DomainEncounterType as DomainEncounterTypeT } from './domain';
 import { DomainEncounterType } from './domain';
 import { DomainShinyType } from './domain';
 export { DomainEncounterType as EncounterType };
@@ -140,7 +139,7 @@ export interface EncounterSpecies {
  */
 export interface EncounterTable {
   /** エンカウントタイプ */
-  encounter_type: DomainEncounterTypeT;
+  encounter_type: DomainEncounterType;
   /** エリア名 */
   area_name: string;
   /** ゲームバージョン */
