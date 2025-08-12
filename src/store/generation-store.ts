@@ -22,7 +22,7 @@ export interface GenerationSliceState {
   lastCompletion: GenerationCompletion | null;
   error: string | null;
   filters: GenerationFilters;
-  metrics: { startTime?: number; lastUpdateTime?: number };
+  metrics: { startTime?: number; lastUpdateTime?: number; shinyCount?: number };
   internalFlags: { receivedAnyBatch: boolean };
 }
 
@@ -140,7 +140,10 @@ export const createGenerationSlice = (set: any, get: any): GenerationSlice => ({
       if (state.results.length >= (state.params?.maxResults || Infinity)) return {};
       const capacityLeft = (state.params?.maxResults || Infinity) - state.results.length;
       const slice = b.results.slice(0, capacityLeft);
-      return { results: state.results.concat(slice), internalFlags: { receivedAnyBatch: true } };
+  let shinyAdd = 0;
+  for (let i = 0; i < slice.length; i++) if (slice[i].shiny_type !== 0) shinyAdd++;
+  const shinyCount = (state.metrics.shinyCount || 0) + shinyAdd;
+  return { results: state.results.concat(slice), internalFlags: { receivedAnyBatch: true }, metrics: { ...state.metrics, shinyCount } };
     });
   },
   _onWorkerComplete: (c) => {
@@ -164,3 +167,27 @@ export const bindGenerationManager = (get: () => GenerationSlice) => {
 };
 
 export const getGenerationManager = () => manager;
+
+// --- Selectors (B1) ---
+export const selectThroughputEma = (s: GenerationSlice): number | null => {
+  const t = s.progress?.throughputEma ?? s.progress?.throughputRaw ?? s.progress?.throughput;
+  return typeof t === 'number' && isFinite(t) && t > 0 ? t : null;
+};
+
+export const selectEtaFormatted = (s: GenerationSlice): string | null => {
+  const p = s.progress;
+  if (!p) return null;
+  const ema = selectThroughputEma(s);
+  if (!ema) return null;
+  const remaining = (p.totalAdvances - p.processedAdvances);
+  if (!(remaining > 0)) return '00:00';
+  const sec = remaining / ema;
+  if (!isFinite(sec) || sec <= 0) return null;
+  const hrs = Math.floor(sec / 3600);
+  const mins = Math.floor((sec % 3600) / 60);
+  const secs = Math.floor(sec % 60);
+  if (hrs > 0) return `${hrs}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  return `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+};
+
+export const selectShinyCount = (s: GenerationSlice): number => s.metrics.shinyCount || 0;
