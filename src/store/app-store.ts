@@ -321,9 +321,21 @@ export const useAppStore = create<AppStore>()(
       version: 3,
       partialize: (state) => {
         // Generation slice を hex 変換して含めつつ BigInt を除去
-        const { params, draftParams, validationErrors, status, progress, results, lastCompletion, error, filters, metrics, internalFlags, ...rest } = state as any;
+        // 不要キーを除外した shallow copy を作成
+        const clone: any = { ...(state as any) };
+        delete clone.params;
+        delete clone.draftParams;
+        delete clone.validationErrors;
+        delete clone.status;
+        delete clone.progress;
+        delete clone.results;
+        delete clone.lastCompletion;
+        delete clone.error;
+        delete clone.filters;
+        delete clone.metrics;
+        delete clone.internalFlags;
         return {
-          ...rest,
+          ...clone,
           __generation: serializeGenerationSlice(state),
         } as any;
       },
