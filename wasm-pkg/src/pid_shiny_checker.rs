@@ -215,10 +215,11 @@ impl ShinyChecker {
     /// # Returns
     /// 色違いタイプ
     pub fn get_shiny_type(shiny_value: u16) -> ShinyType {
+        // 第5世代仕様: shiny_value == 0 が最もレア (Square)、1..=7 が一般的 (Star)
         match shiny_value {
-            0 => ShinyType::Star,      // 星形色違い
-            1..=7 => ShinyType::Square, // 四角い色違い
-            _ => ShinyType::Normal,    // 通常
+            0 => ShinyType::Square,     // 四角い色違い (最レア)
+            1..=7 => ShinyType::Star,   // 星形色違い (通常の色違い範囲)
+            _ => ShinyType::Normal,     // 通常
         }
     }
 
@@ -455,7 +456,7 @@ mod tests {
         let pid = 0x00000000; // shiny value = 0
         
         assert!(ShinyChecker::is_shiny(tid, sid, pid));
-        assert_eq!(ShinyChecker::check_shiny_type(tid, sid, pid), ShinyType::Star);
+    assert_eq!(ShinyChecker::check_shiny_type(tid, sid, pid), ShinyType::Square);
         
         // 色違いでない場合
         let pid_normal = 0x12345678;
@@ -465,9 +466,9 @@ mod tests {
 
     #[test]
     fn test_shiny_type_classification() {
-        assert_eq!(ShinyChecker::get_shiny_type(0), ShinyType::Star);
-        assert_eq!(ShinyChecker::get_shiny_type(1), ShinyType::Square);
-        assert_eq!(ShinyChecker::get_shiny_type(7), ShinyType::Square);
+    assert_eq!(ShinyChecker::get_shiny_type(0), ShinyType::Square);
+    assert_eq!(ShinyChecker::get_shiny_type(1), ShinyType::Star);
+    assert_eq!(ShinyChecker::get_shiny_type(7), ShinyType::Star);
         assert_eq!(ShinyChecker::get_shiny_type(8), ShinyType::Normal);
         assert_eq!(ShinyChecker::get_shiny_type(100), ShinyType::Normal);
     }
@@ -531,9 +532,9 @@ mod tests {
         
         let results = ShinyChecker::batch_shiny_type_check(tid, sid, &pids);
         assert_eq!(results.len(), 3);
-        assert_eq!(results[0], ShinyType::Star);   // shiny value = 0
+    assert_eq!(results[0], ShinyType::Square); // shiny value = 0
         assert_eq!(results[1], ShinyType::Normal); // 色違いでない
-        assert_eq!(results[2], ShinyType::Square); // shiny value = 1
+    assert_eq!(results[2], ShinyType::Star);   // shiny value = 1
     }
 
     #[test]
@@ -569,7 +570,7 @@ mod tests {
         let shiny_value = ShinyChecker::get_shiny_value(tid, sid, pid);
         assert_eq!(shiny_value, 0x0000); // すべてFFFFの場合、XORで0になる
         assert!(ShinyChecker::is_shiny(tid, sid, pid));
-        assert_eq!(ShinyChecker::check_shiny_type(tid, sid, pid), ShinyType::Star);
+    assert_eq!(ShinyChecker::check_shiny_type(tid, sid, pid), ShinyType::Square);
         
         // 最小値でのテスト
         let tid = 0x0000;
@@ -579,7 +580,7 @@ mod tests {
         let shiny_value = ShinyChecker::get_shiny_value(tid, sid, pid);
         assert_eq!(shiny_value, 0x0000);
         assert!(ShinyChecker::is_shiny(tid, sid, pid));
-        assert_eq!(ShinyChecker::check_shiny_type(tid, sid, pid), ShinyType::Star);
+    assert_eq!(ShinyChecker::check_shiny_type(tid, sid, pid), ShinyType::Square);
         
         // 境界値テスト - 色違い閾値の境界
         let tid = 0x0000;
@@ -588,7 +589,7 @@ mod tests {
         // shiny_value = 7 (最大の色違い値)
         let pid_shiny_7 = 0x00070000; // XOR結果が7になるPID
         assert!(ShinyChecker::is_shiny(tid, sid, pid_shiny_7));
-        assert_eq!(ShinyChecker::check_shiny_type(tid, sid, pid_shiny_7), ShinyType::Square);
+    assert_eq!(ShinyChecker::check_shiny_type(tid, sid, pid_shiny_7), ShinyType::Star);
         
         // shiny_value = 8 (色違いでない最小値)
         let pid_normal_8 = 0x00080000; // XOR結果が8になるPID
