@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pidHex, seedHex, natureName, shinyLabel } from '@/lib/utils/format-display';
+import { pidHex, seedHex, natureName, shinyLabel, shinyDomainStatus, adaptGenerationResultDisplay } from '@/lib/utils/format-display';
 import { DomainNatureNames, DomainShinyType } from '@/types/domain';
 
 // Helper to build a bigint near 0xFFFFFFFFFFFFFFFF boundary (though we only display 16 digits)
@@ -48,6 +48,45 @@ describe('format-display', () => {
     });
     it('returns Unknown for unsupported', () => {
       expect(shinyLabel(9999)).toBe('Unknown');
+    });
+  });
+
+  describe('shinyDomainStatus', () => {
+    it('maps shiny domain status values', () => {
+      expect(shinyDomainStatus(DomainShinyType.Normal)).toBe('normal');
+      expect(shinyDomainStatus(DomainShinyType.Square)).toBe('square');
+      expect(shinyDomainStatus(DomainShinyType.Star)).toBe('star');
+    });
+    it('defaults unknown to normal', () => {
+      expect(shinyDomainStatus(12345)).toBe('normal');
+    });
+  });
+
+  describe('adaptGenerationResultDisplay', () => {
+    it('adapts core fields', () => {
+      const adapted = adaptGenerationResultDisplay({
+        advance: 42,
+        pid: 0x1234ABCD,
+        nature: 5,
+        shiny_type: DomainShinyType.Square,
+        // unused fields for display omitted
+      } as any);
+      expect(adapted).toEqual({
+        advance: 42,
+        pidHex: '1234ABCD',
+        natureName: DomainNatureNames[5],
+        shinyLabel: 'Square',
+      });
+    });
+    it('handles out-of-range nature & unknown shiny', () => {
+      const adapted = adaptGenerationResultDisplay({
+        advance: 1,
+        pid: 0,
+        nature: 999,
+        shiny_type: 999,
+      } as any);
+      expect(adapted.natureName).toBe('Unknown');
+      expect(['No','Square','Star','Unknown']).toContain(adapted.shinyLabel);
     });
   });
 });
