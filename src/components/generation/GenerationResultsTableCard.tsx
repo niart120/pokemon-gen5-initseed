@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAppStore } from '@/store/app-store';
 import { selectFilteredSortedResults } from '@/store/generation-store';
+import { pidHex, natureName, shinyLabel } from '@/lib/utils/format-display';
 
 export const GenerationResultsTableCard: React.FC = () => {
   const results = useAppStore(selectFilteredSortedResults);
@@ -23,9 +24,9 @@ export const GenerationResultsTableCard: React.FC = () => {
             {results.map(r=> (
               <tr key={r.advance} className="odd:bg-background even:bg-muted/30">
                 <td className="px-2 py-1 font-mono">{r.advance}</td>
-                <td className="px-2 py-1 font-mono">0x{(r.pid>>>0).toString(16).padStart(8,'0')}</td>
-                <td className="px-2 py-1">{r.nature}</td>
-                <td className="px-2 py-1">{r.shiny_type===0?'No':(r.shiny_type===1?'Square':'Star')}</td>
+                <td className="px-2 py-1 font-mono">{pidHex(r.pid)}</td>
+                <td className="px-2 py-1">{natureName(r.nature)}</td>
+                <td className="px-2 py-1">{shinyLabel(r.shiny_type)}</td>
               </tr>
             ))}
           </tbody>

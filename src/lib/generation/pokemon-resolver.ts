@@ -13,7 +13,7 @@
 
 import type { UnresolvedPokemonData, GenderRatio } from '@/types/pokemon-raw';
 import type { EncounterTable } from '@/data/encounter-tables';
-import { DomainNatureNames, DomainShinyType } from '@/types/domain';
+import { natureName as formatNatureName, shinyDomainStatus } from '@/lib/utils/format-display';
 import { getGeneratedSpeciesById, type GeneratedAbilities } from '@/data/species/generated';
 import { formatHexDisplay } from '@/lib/utils/hex-parser';
 
@@ -99,11 +99,11 @@ export function toUiReadyPokemon(
     seedHex: formatHexDisplay(data.seed, 16, true),
     pidHex: formatHexDisplay(data.pid >>> 0, 8, true),
     speciesName,
-    natureName: getNatureName(data.natureId),
+  natureName: formatNatureName(data.natureId),
     abilityName,
     gender,
     level: data.level,
-    shinyStatus: toShinyStatus(data.shinyType),
+  shinyStatus: shinyDomainStatus(data.shinyType),
   };
 }
 
@@ -193,25 +193,7 @@ function resolveSpeciesIndexSafe(
   return Math.abs(idx) % table.slots.length;
 }
 
-function getNatureName(natureId: number): string {
-  if (natureId < 0 || natureId >= DomainNatureNames.length) {
-    return 'Unknown';
-  }
-  return DomainNatureNames[natureId];
-}
-
-function toShinyStatus(shinyType: number): 'normal' | 'square' | 'star' {
-  switch (shinyType) {
-    case DomainShinyType.Normal:
-      return 'normal';
-    case DomainShinyType.Square:
-      return 'square';
-    case DomainShinyType.Star:
-      return 'star';
-    default:
-      return 'normal';
-  }
-}
+// (moved) nature/shiny formatting now lives in format-display.ts
 
 // ======== UI adapter helpers (name/formatting) ========
 
