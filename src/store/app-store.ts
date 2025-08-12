@@ -309,41 +309,35 @@ export const useAppStore = create<AppStore>()(
   }),
     {
       name: 'app-store',
-      version: 3,
-      // persist: generation の volatile (progress/results) を除外しつつ最小構造を保存
-      partialize: (state: AppStore) => {
-        const rest = { ...state } as Partial<AppStore>;
-        delete rest.progress;
-        delete rest.results;
-        return ({
-          ...(rest as unknown as AppStore),
-          __generation: extractGenerationForPersist(state),
-        }) as unknown as AppStore;
-      },
+      version: 1,
+      partialize: (state: AppStore) => ({
+        searchConditions: state.searchConditions,
+        targetSeeds: state.targetSeeds,
+        parallelSearchSettings: state.parallelSearchSettings,
+        activeTab: state.activeTab,
+        wakeLockEnabled: state.wakeLockEnabled,
+        targetSeedInput: state.targetSeedInput,
+        presets: state.presets,
+        __generation: extractGenerationForPersist(state),
+      }) as unknown as AppStore,
       merge: (persisted: unknown, current: AppStore) => {
         if (!persisted || typeof persisted !== 'object') return current;
-        const persistedObjAll = { ...(persisted as Partial<AppStore> & { __generation?: unknown }) };
-        const genRaw = persistedObjAll.__generation;
-        delete (persistedObjAll as Record<string, unknown>).__generation;
-        const revived = genRaw ? reviveGenerationMinimal(genRaw) : {};
-        return ({
+        const { __generation, ...rest } = persisted as Partial<AppStore> & { __generation?: unknown };
+        const revived = __generation ? reviveGenerationMinimal(__generation) : {};
+        return {
           ...current,
-          ...persistedObjAll,
+          ...rest,
           ...revived,
-          progress: current.progress,
+          searchResults: [],
+          searchProgress: { ...defaultSearchProgress },
+          parallelProgress: null,
+          lastSearchDuration: null,
           results: current.results,
-        }) as AppStore;
+          progress: current.progress,
+        } as AppStore;
       },
-      migrate: (persistedState: unknown, version: number) => {
-        if (!persistedState || typeof persistedState !== 'object') return persistedState as AppStore;
-        if (version < 3) {
-          const ps = persistedState as Partial<AppStore> & { __generation?: PersistedGenerationMinimal };
-          if (!ps.__generation && ps.params) {
-            ps.__generation = extractGenerationForPersist(ps as AppStore);
-          }
-        }
-        return persistedState as AppStore;
-      },
+      // migrate 不要（新キーで旧スキーマ非対応）
+      migrate: (s) => s as AppStore,
     },
    ),
 );

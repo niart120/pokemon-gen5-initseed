@@ -30,7 +30,7 @@ export function SearchPanel() {
   const convertToSearchResults: SearchResult[] = useMemo(() => {
     return searchResults.map(result => ({
       seed: result.seed,
-      dateTime: result.datetime,
+      datetime: result.datetime,
       timer0: result.timer0,
       vcount: result.vcount,
       romVersion: result.conditions.romVersion,
