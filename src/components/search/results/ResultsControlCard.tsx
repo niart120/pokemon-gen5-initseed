@@ -36,7 +36,7 @@ export function ResultsControlCard({
       <CardHeader className="pb-0 flex-shrink-0">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Funnel size={20} />
+            <Funnel size={20} className="opacity-80" />
             Results Control
           </div>
           <div className="flex gap-2">

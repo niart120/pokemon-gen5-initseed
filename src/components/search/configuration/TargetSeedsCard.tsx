@@ -85,7 +85,7 @@ export function TargetSeedsCard() {
       <CardHeader className="pb-0 flex-shrink-0">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center gap-2">
-            <Target size={20} />
+            <Target size={20} className="opacity-80" />
             Target Seeds
           </div>
           <div className="flex gap-2">

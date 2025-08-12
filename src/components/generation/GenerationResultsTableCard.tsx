@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
+import { Table } from '@phosphor-icons/react';
 import { useAppStore } from '@/store/app-store';
 import { selectFilteredSortedResults } from '@/store/generation-store';
 import { pidHex, natureName, shinyLabel } from '@/lib/utils/format-display';
@@ -10,8 +11,8 @@ export const GenerationResultsTableCard: React.FC = () => {
   const total = useAppStore(s => s.results.length);
   return (
     <Card className="py-2 flex flex-col flex-1 min-h-0" aria-labelledby="gen-results-table-title" role="region">
-      <StandardCardHeader title={<span id="gen-results-table-title">Results ({results.length}) / Total {total}</span>} />
-      <StandardCardContent className="flex-1 min-h-0 p-0 overflow-auto">
+      <StandardCardHeader icon={<Table size={20} className="opacity-80" />} title={<span id="gen-results-table-title">Results ({results.length}) / Total {total}</span>} />
+      <StandardCardContent className="p-0 overflow-auto">
         <table className="min-w-full text-xs" aria-describedby="gen-results-table-desc">
           <caption id="gen-results-table-desc" className="sr-only">Filtered generation results list.</caption>
           <thead className="sticky top-0 bg-muted text-[11px]">

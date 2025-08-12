@@ -29,7 +29,7 @@ export const GenerationParamsCard: React.FC = () => {
   return (
     <Card className="py-2 flex flex-col gap-2 h-full" aria-labelledby="gen-params-title" role="form">
       <StandardCardHeader icon={<Gear size={20} className="opacity-80" />} title={<span id="gen-params-title">Generation Parameters</span>} />
-      <StandardCardContent className="flex-1 min-h-0 space-y-4">
+      <StandardCardContent>
   {/* Basics */}
   <section aria-labelledby="gen-basics" className="space-y-2" role="group">
           <h4 id="gen-basics" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Basics</h4>

@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { StandardCardHeader, StandardCardContent, MetricsGrid } from '@/components/ui/card-helpers';
+import { ChartBar } from '@phosphor-icons/react';
 import { useAppStore } from '@/store/app-store';
 import { selectThroughputEma, selectEtaFormatted, selectShinyCount } from '@/store/generation-store';
 
@@ -33,7 +34,7 @@ export const GenerationProgressCard: React.FC = () => {
 
   return (
     <Card className="py-2 flex flex-col gap-2" aria-labelledby="gen-progress-title" role="region">
-      <StandardCardHeader title={<span id="gen-progress-title">Generation Progress</span>} />
+      <StandardCardHeader icon={<ChartBar size={20} className="opacity-80" />} title={<span id="gen-progress-title">Generation Progress</span>} />
       <StandardCardContent>
         <div>
           <Badge variant="outline" className="text-xs" aria-label="Current status">{statusText}</Badge>

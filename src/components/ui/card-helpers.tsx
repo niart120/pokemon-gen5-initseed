@@ -24,7 +24,7 @@ interface StandardCardContentProps {
   className?: string;
 }
 export function StandardCardContent({ children, className }: StandardCardContentProps) {
-  return <CardContent className={cn('pt-0 flex flex-col gap-2', className)}>{children}</CardContent>;
+  return <CardContent className={cn('space-y-2 flex-1 min-h-0 flex flex-col overflow-y-auto', className)}>{children}</CardContent>;
 }
 
 // 単純なメトリクスグリッド: ラベル + 値 (mono)

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
+import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
 import { Separator } from '@/components/ui/separator';
 import { Gear } from '@phosphor-icons/react';
 import { Timer0VCountParam } from './params/Timer0VCountParam';
@@ -9,13 +10,8 @@ import { MACAddressParam } from './params/MACAddressParam';
 export function ParameterConfigurationCard() {
   return (
     <Card className="py-2 flex flex-col h-full gap-2">
-      <CardHeader className="pb-0 flex-shrink-0">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Gear size={20} />
-          Parameters
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 flex-1 flex flex-col min-h-0 overflow-y-auto">
+      <StandardCardHeader icon={<Gear size={20} className="opacity-80" />} title="Parameters" />
+      <StandardCardContent>
         {/* Timer0 & VCount 設定 */}
         <Timer0VCountParam />
         
@@ -28,7 +24,7 @@ export function ParameterConfigurationCard() {
         
         {/* MACアドレス設定 */}
         <MACAddressParam />
-      </CardContent>
+      </StandardCardContent>
     </Card>
   );
 }

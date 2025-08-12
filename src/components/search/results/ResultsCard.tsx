@@ -46,7 +46,7 @@ export function ResultsCard({
     <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full min-h-96'}`}>
       <CardHeader className="pb-0 flex-shrink-0">
         <CardTitle className="flex items-center gap-2 flex-wrap">
-          <Hash size={20} className="flex-shrink-0" />
+          <Hash size={20} className="flex-shrink-0 opacity-80" />
           <span className="flex-shrink-0">Search Results</span>
           <Badge variant="secondary" className="flex-shrink-0">
             {filteredResultsCount} result{filteredResultsCount !== 1 ? 's' : ''}

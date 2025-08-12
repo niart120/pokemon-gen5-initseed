@@ -54,7 +54,7 @@ export function SearchProgressCard() {
       <CardHeader className="pb-0 flex-shrink-0">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center gap-2">
-            <ChartBar size={20} />
+            <ChartBar size={20} className="opacity-80" />
             Search Progress
           </div>
           {isParallelMode && parallelProgress && totalWorkerCount > 0 && (
