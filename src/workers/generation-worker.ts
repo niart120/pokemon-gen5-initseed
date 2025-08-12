@@ -7,6 +7,7 @@ import {
   type GenerationParams,
   type GenerationProgress,
   validateGenerationParams,
+  FIXED_PROGRESS_INTERVAL_MS,
 } from '@/types/generation';
 
 interface InternalState {
@@ -24,7 +25,7 @@ function post(message: GenerationWorkerResponse) {
   ctx.postMessage(message);
 }
 
-const DEFAULT_PROGRESS_INTERVAL = 500;
+const DEFAULT_PROGRESS_INTERVAL = FIXED_PROGRESS_INTERVAL_MS; // 仕様: 固定間隔
 const DUMMY_STEP = 1000; // 1 tick で進めるダミーadvance数 (テスト容易性優先)
 
 const state: InternalState = {
@@ -81,7 +82,7 @@ function handleStart(params: GenerationParams) {
   }
   cleanupInterval();
 
-  const progressInterval = params.progressIntervalMs || DEFAULT_PROGRESS_INTERVAL;
+  const progressInterval = DEFAULT_PROGRESS_INTERVAL;
   state.params = params;
   state.startTime = performance.now();
   state.progress = {
@@ -132,8 +133,7 @@ function handlePause() {
 function handleResume() {
   if (state.progress.status !== 'paused' || !state.params) return;
   state.progress.status = 'running';
-  const interval = state.params.progressIntervalMs || DEFAULT_PROGRESS_INTERVAL;
-  state.intervalId = setInterval(tick, interval) as unknown as number;
+  state.intervalId = setInterval(tick, DEFAULT_PROGRESS_INTERVAL) as unknown as number;
   post({ type: 'RESUMED' });
 }
 

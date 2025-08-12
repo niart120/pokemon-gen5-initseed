@@ -5,7 +5,10 @@ import type { ROMVersion, ROMRegion, Hardware } from '../types/rom';
 import type { ParallelSearchSettings, AggregatedProgress } from '../types/parallel';
 import { DEMO_TARGET_SEEDS } from '../data/default-seeds';
 
-interface AppStore {
+import type { GenerationSlice } from './generation-store';
+import { createGenerationSlice, bindGenerationManager } from './generation-store';
+
+interface AppStore extends GenerationSlice {
   // Search conditions
   searchConditions: SearchConditions;
   setSearchConditions: (conditions: Partial<SearchConditions>) => void;
@@ -125,9 +128,63 @@ if (import.meta.env.DEV) {
   console.warn('Using demo target seeds:', DEMO_TARGET_SEEDS.map(s => '0x' + s.toString(16).padStart(8, '0')));
 }
 
+// --- BigInt <-> hex シリアライズ補助 ---
+const biToHex = (v: bigint) => '0x' + v.toString(16);
+const reviveHexBigInt = (v: any) => (typeof v === 'string' && /^0x[0-9a-fA-F]+$/.test(v) ? BigInt(v) : v);
+
+function serializeGenerationSlice(state: AppStore) {
+  // generation 関連 BigInt を hex 文字列へ。結果配列は揮発性のため persist しない。
+  const genKeys: (keyof GenerationSlice)[] = [
+    'params','draftParams','validationErrors','status','progress','results','lastCompletion','error','filters','metrics','internalFlags'
+  ];
+  const serialized: any = {};
+  for (const k of genKeys) {
+    (serialized as any)[k] = (state as any)[k];
+  }
+  if (serialized.params) {
+    serialized.params = {
+      ...serialized.params,
+      baseSeed: biToHex(serialized.params.baseSeed),
+      offset: biToHex(serialized.params.offset),
+    };
+  }
+  if (serialized.draftParams) {
+    const dp = { ...serialized.draftParams };
+    if (typeof dp.baseSeed === 'bigint') dp.baseSeed = biToHex(dp.baseSeed);
+    if (typeof dp.offset === 'bigint') dp.offset = biToHex(dp.offset);
+    serialized.draftParams = dp;
+  }
+  // 非永続フィールド調整
+  serialized.results = []; // 大量 & BigInt 含むため破棄
+  serialized.progress = null; // 再開時は再計測
+  return serialized;
+}
+
+function reviveGenerationSlice(persisted: any): Partial<GenerationSlice> {
+  if (!persisted) return {};
+  const restored: any = { ...persisted };
+  if (restored.params) {
+    restored.params = {
+      ...restored.params,
+      baseSeed: reviveHexBigInt(restored.params.baseSeed),
+      offset: reviveHexBigInt(restored.params.offset),
+    };
+  }
+  if (restored.draftParams) {
+    const dp = { ...restored.draftParams };
+    if (typeof dp.baseSeed === 'string') dp.baseSeed = reviveHexBigInt(dp.baseSeed);
+    if (typeof dp.offset === 'string') dp.offset = reviveHexBigInt(dp.offset);
+    restored.draftParams = dp;
+  }
+  return restored;
+}
+
 export const useAppStore = create<AppStore>()(
   persist(
-    (set, _get, _api) => ({
+    (set, get, _api) => ({
+      // Generation slice 注入
+      ...createGenerationSlice(set, get),
+      // 元々の AppStore フィールド
       // Search conditions
       searchConditions: defaultSearchConditions,
       setSearchConditions: (conditions) =>
@@ -258,15 +315,45 @@ export const useAppStore = create<AppStore>()(
           }
           return state;
         }),
-    }),
+  }),
     {
       name: 'app-store',
-      version: 2,
-      migrate: (persistedState: unknown, _version: number) => {
-        // ここでは単純にそのまま返す（将来のマイグレーション時に更新）
-        return persistedState as unknown as AppStore;
+      version: 3,
+      partialize: (state) => {
+        // Generation slice を hex 変換して含めつつ BigInt を除去
+        const { params, draftParams, validationErrors, status, progress, results, lastCompletion, error, filters, metrics, internalFlags, ...rest } = state as any;
+        return {
+          ...rest,
+          __generation: serializeGenerationSlice(state),
+        } as any;
       },
-      // ...existing code...
+      merge: (persisted: any, current: any) => {
+        if (!persisted) return current;
+        const { __generation, ...rest } = persisted;
+        if (__generation) {
+          const revived = reviveGenerationSlice(__generation);
+          return {
+            ...current,
+            ...rest,
+            ...revived,
+          };
+        }
+        return { ...current, ...persisted };
+      },
+      migrate: (persistedState: any, version: number) => {
+        if (!persistedState) return persistedState;
+        // v2 -> v3: wrap generation slice under __generation; nothing else needed
+        if (version < 3) {
+          // Best-effort: detect generation keys and convert if present directly
+          if (persistedState.params || persistedState.draftParams) {
+            persistedState.__generation = serializeGenerationSlice(persistedState as AppStore);
+          }
+        }
+        return persistedState;
+      },
     },
   ),
 );
+
+// バインド（store インスタンス生成後）
+bindGenerationManager(() => useAppStore.getState());

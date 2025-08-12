@@ -20,7 +20,6 @@ export interface GenerationParams {
   syncNatureId: number;    // 0-24
   stopAtFirstShiny: boolean;
   stopOnCap: boolean;      // maxResults 到達で終了するか（デフォルト true）
-  progressIntervalMs: number; // 進捗通知間隔 (ms)
   batchSize: number;       // 1バッチ生成数 (推奨 1000, ≤ 10000)
 }
 
@@ -28,20 +27,10 @@ export interface NormalizedGenerationParams extends GenerationParams {
   // 正規化後 (境界補正/デフォルト適用済み)
 }
 
-// --- RawLike (worker送出最小構造) ---
-export interface GenerationRawLike {
-  seed: bigint;
-  pid: number;
-  nature: number;
-  ability_slot: number;
-  gender_value: number;
-  encounter_slot_value: number;
-  encounter_type: number;
-  level_rand_value: bigint;
-  shiny_type: number;
-  sync_applied: boolean;
-  advance: number; // offset + index
-}
+// --- Result 型 ---
+// WASM生データ(UnresolvedPokemonData) に generation 文脈上の advance を付与した最小構造。
+// これを worker から直接送出し UI/store が保持する。重複構造を避けるため専用RawLikeは用意しない。
+export type GenerationResult = UnresolvedPokemonData & { advance: number };
 
 // --- Progress / Results ---
 export interface GenerationProgress {
@@ -57,9 +46,12 @@ export interface GenerationProgress {
 export interface GenerationResultBatch {
   batchIndex: number;
   batchSize: number;
-  results: GenerationRawLike[]; // plain objects (postMessage structured clone OK / bigint)
+  results: GenerationResult[]; // plain objects (postMessage structured clone OK / bigint)
   cumulativeResults: number;
 }
+
+// 固定進捗通知間隔 (ms) - UI/worker 双方で参照
+export const FIXED_PROGRESS_INTERVAL_MS = 250 as const;
 
 export type GenerationCompletion = {
   reason: 'max-advances' | 'max-results' | 'first-shiny' | 'stopped' | 'error';
@@ -70,6 +62,27 @@ export type GenerationCompletion = {
 };
 
 export type GenerationErrorCategory = 'VALIDATION' | 'WASM_INIT' | 'RUNTIME' | 'ABORTED';
+
+// --- Completion Reason Labels ---
+export const GENERATION_COMPLETION_REASON_LABELS: Record<GenerationCompletion['reason'], string> = {
+  'max-advances': '列挙上限到達',
+  'max-results': '結果件数上限到達',
+  'first-shiny': '最初の色違い発見',
+  'stopped': 'ユーザー停止',
+  'error': 'エラー終了',
+};
+
+export const GENERATION_COMPLETION_REASON_DESCRIPTIONS: Partial<Record<GenerationCompletion['reason'], string>> = {
+  'max-advances': '指定した最大advance数に達したため終了しました。',
+  'max-results': '結果保持件数が上限に達したため終了しました。',
+  'first-shiny': '色違い検出オプションにより終了しました。',
+  'stopped': 'ユーザー操作により中断されました。',
+  'error': '実行中にエラーが発生しました。',
+};
+
+export function getGenerationCompletionLabel(reason: GenerationCompletion['reason']): string {
+  return GENERATION_COMPLETION_REASON_LABELS[reason] ?? reason;
+}
 
 // --- Worker Messages ---
 export type GenerationWorkerRequest =
@@ -104,29 +117,25 @@ export function isProgress(msg: GenerationWorkerResponse): msg is Extract<Genera
 }
 
 // --- Adapter Helper ---
-export function rawLikeToUnresolved(r: GenerationRawLike): UnresolvedPokemonData {
-  return {
-    seed: r.seed,
-    pid: r.pid,
-    nature: r.nature,
-    sync_applied: r.sync_applied,
-    ability_slot: r.ability_slot,
-    gender_value: r.gender_value,
-    encounter_slot_value: r.encounter_slot_value,
-    encounter_type: r.encounter_type,
-    level_rand_value: r.level_rand_value,
-    shiny_type: r.shiny_type,
-  };
-}
+// rawLikeToUnresolved は重複となるため削除 (必要なら GenerationResult をそのまま利用)
 
 // --- Validation ---
 export function validateGenerationParams(p: GenerationParams): string[] {
   const errors: string[] = [];
+  // 基本範囲
   if (p.maxAdvances < 1 || p.maxAdvances > 1_000_000) errors.push('maxAdvances out of range');
   if (p.maxResults < 1 || p.maxResults > 100_000) errors.push('maxResults out of range');
   if (p.batchSize < 1 || p.batchSize > 10_000) errors.push('batchSize out of range');
   if (p.syncNatureId < 0 || p.syncNatureId > 24) errors.push('syncNatureId out of range');
   if (p.tid < 0 || p.tid > 65535) errors.push('tid out of range');
   if (p.sid < 0 || p.sid > 65535) errors.push('sid out of range');
+  // 追加簡素チェック
+  if (p.baseSeed < 0n) errors.push('baseSeed must be non-negative');
+  if (p.offset < 0n) errors.push('offset must be non-negative');
+  if (p.offset >= BigInt(p.maxAdvances)) errors.push('offset must be < maxAdvances');
+  if (p.batchSize > p.maxAdvances) errors.push('batchSize must be <= maxAdvances');
+  const allowedEncounter = new Set([0,1,2,3,4,5,6,7,10,11,12,13,20]);
+  if (!allowedEncounter.has(p.encounterType)) errors.push('encounterType invalid');
+  if (p.maxResults > p.maxAdvances) errors.push('maxResults should be <= maxAdvances');
   return errors;
 }

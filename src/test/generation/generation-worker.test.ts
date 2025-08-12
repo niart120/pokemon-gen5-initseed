@@ -22,7 +22,6 @@ function makeParams(maxAdvances = 3000) {
     syncNatureId: 0,
     stopAtFirstShiny: false,
     stopOnCap: true,
-    progressIntervalMs: 50,
     batchSize: 1000,
   };
 }
