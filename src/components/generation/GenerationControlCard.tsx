@@ -1,39 +1,114 @@
 import React, { useCallback } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
+import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
+import { Button } from '@/components/ui/button';
+import { Play, Pause, Square } from '@phosphor-icons/react';
 import { useAppStore } from '@/store/app-store';
 
 export const GenerationControlCard: React.FC = () => {
   const {
-    validateDraft, validationErrors, startGeneration, pauseGeneration, resumeGeneration, stopGeneration,
-    status, lastCompletion
+    validateDraft,
+    validationErrors,
+    startGeneration,
+    pauseGeneration,
+    resumeGeneration,
+    stopGeneration,
+    status,
+    lastCompletion
   } = useAppStore();
 
-  const onStart = useCallback(async () => {
+  const handleStart = useCallback(async () => {
     validateDraft();
     if (validationErrors.length === 0) {
       await startGeneration();
     }
   }, [validateDraft, validationErrors, startGeneration]);
 
+  const isStarting = status === 'starting';
+  const isRunning = status === 'running';
+  const isPaused = status === 'paused';
+  // 再開可能状態: 初期(idle) または 完了(completed) / error 終了後
+  const canStart = status === 'idle' || status === 'completed' || status === 'error';
+
   return (
-    <Card className="p-3 flex flex-col gap-2">
-      <CardHeader className="py-0">
-        <CardTitle className="text-sm">Generation Control</CardTitle>
-      </CardHeader>
-      <CardContent className="p-0 flex flex-col gap-2">
-        {validationErrors.length > 0 && (
-          <div className="text-red-500 text-xs space-y-0.5" role="alert" aria-live="polite">
-            {validationErrors.map((e,i)=>(<div key={i}>{e}</div>))}
+    <Card className="py-2 flex flex-col gap-2" aria-labelledby="gen-control-title">
+      <StandardCardHeader icon={<Play size={20} className="opacity-80" />} title={<span id="gen-control-title">Generation Control</span>} />
+      <StandardCardContent>
+  {validationErrors.length > 0 && (
+          <div
+            className="text-destructive text-xs space-y-0.5"
+            role="alert"
+            aria-live="polite"
+            data-testid="gen-validation-errors"
+          >
+            {validationErrors.map((e, i) => (
+              <div key={i}>{e}</div>
+            ))}
           </div>
         )}
-        <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={onStart} disabled={status==='running'||status==='paused'||status==='starting'} className="px-3 py-1 text-xs rounded bg-green-600 text-white disabled:opacity-50">Start</button>
-          <button onClick={pauseGeneration} disabled={status!=='running'} className="px-3 py-1 text-xs rounded bg-yellow-600 text-white disabled:opacity-50">Pause</button>
-            <button onClick={resumeGeneration} disabled={status!=='paused'} className="px-3 py-1 text-xs rounded bg-blue-600 text-white disabled:opacity-50">Resume</button>
-          <button onClick={stopGeneration} disabled={(status!=='running' && status!=='paused')} className="px-3 py-1 text-xs rounded bg-red-600 text-white disabled:opacity-50">Stop</button>
-          <div className="text-xs text-muted-foreground">Status: {status}{lastCompletion?` (${lastCompletion.reason})`:''}</div>
+  <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Generation execution controls">
+          {canStart && (
+            <Button
+              size="sm"
+              onClick={handleStart}
+              disabled={isStarting}
+              className="flex-1"
+              data-testid="gen-start-btn"
+            >
+              <Play size={16} className="mr-2" />
+              {isStarting ? 'Starting…' : 'Start'}
+            </Button>
+          )}
+          {isRunning && (
+            <>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={pauseGeneration}
+                className="flex-1"
+                data-testid="gen-pause-btn"
+              >
+                <Pause size={16} className="mr-2" />
+                Pause
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={stopGeneration}
+                data-testid="gen-stop-btn"
+              >
+                <Square size={16} className="mr-2" />
+                Stop
+              </Button>
+            </>
+          )}
+          {isPaused && (
+            <>
+              <Button
+                size="sm"
+                onClick={resumeGeneration}
+                className="flex-1"
+                data-testid="gen-resume-btn"
+              >
+                <Play size={16} className="mr-2" />
+                Resume
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={stopGeneration}
+                data-testid="gen-stop-btn"
+              >
+                <Square size={16} className="mr-2" />
+                Stop
+              </Button>
+            </>
+          )}
+          <div className="text-xs text-muted-foreground ml-auto" aria-live="polite">
+            Status: {status}{lastCompletion ? ` (${lastCompletion.reason})` : ''}
+          </div>
         </div>
-      </CardContent>
+  </StandardCardContent>
     </Card>
   );
 };

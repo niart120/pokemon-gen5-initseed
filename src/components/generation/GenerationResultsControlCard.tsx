@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
+import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
 import { useAppStore } from '@/store/app-store';
 import { exportGenerationResults } from '@/lib/export/generation-exporter';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { FunnelSimple, DownloadSimple, Trash, ArrowsDownUp } from '@phosphor-icons/react';
 
 export const GenerationResultsControlCard: React.FC = () => {
   const { filters, applyFilters, resetGenerationFilters, results, clearResults } = useAppStore();
@@ -36,79 +44,83 @@ export const GenerationResultsControlCard: React.FC = () => {
   };
 
   return (
-    <Card className="p-3 flex flex-col gap-2">
-      <CardHeader className="py-0"><CardTitle className="text-sm flex justify-between items-center">Results Control
-        <div className="flex gap-2 text-[10px]" role="group" aria-label="Export and utility buttons">
-          <button className="px-2 py-1 border rounded" onClick={()=>onExport('csv')} disabled={!results.length} aria-disabled={!results.length} aria-label="Export CSV">CSV</button>
-          <button className="px-2 py-1 border rounded" onClick={()=>onExport('json')} disabled={!results.length} aria-disabled={!results.length} aria-label="Export JSON">JSON</button>
-            <button className="px-2 py-1 border rounded" onClick={()=>onExport('txt')} disabled={!results.length} aria-disabled={!results.length} aria-label="Export text">TXT</button>
-          <button className="px-2 py-1 border rounded text-red-600" onClick={clearResults} disabled={!results.length} aria-disabled={!results.length}>Clear</button>
-          <button className="px-2 py-1 border rounded" onClick={resetGenerationFilters}>Reset</button>
+    <Card className="py-2 flex flex-col gap-2" aria-labelledby="gen-results-control-title" role="region">
+      <StandardCardHeader icon={<FunnelSimple size={20} className="opacity-80" />} title={<span id="gen-results-control-title">Results Control</span>} />
+      <StandardCardContent className="space-y-4">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Export and utility buttons">
+          <Button size="sm" variant="outline" disabled={!results.length} onClick={()=>onExport('csv')}><DownloadSimple size={14}/>CSV</Button>
+          <Button size="sm" variant="outline" disabled={!results.length} onClick={()=>onExport('json')}><DownloadSimple size={14}/>JSON</Button>
+          <Button size="sm" variant="outline" disabled={!results.length} onClick={()=>onExport('txt')}><DownloadSimple size={14}/>TXT</Button>
+          <Button size="sm" variant="destructive" disabled={!results.length} onClick={clearResults}><Trash size={14}/>Clear</Button>
+          <Button size="sm" variant="ghost" onClick={resetGenerationFilters}>Reset</Button>
         </div>
-      </CardTitle></CardHeader>
-      <CardContent className="p-0 flex flex-col gap-3 text-xs" as-child>
-        <form onSubmit={e=> e.preventDefault()} className="flex flex-col gap-3">
-          <fieldset className="flex flex-wrap gap-4 items-center">
-            <legend className="sr-only">Sorting and primary filters</legend>
-            <label className="flex items-center gap-1" aria-label="Show only shiny results">
-              <input type="checkbox" checked={filters.shinyOnly} onChange={e=>applyFilters({ shinyOnly: e.target.checked })} aria-checked={filters.shinyOnly} /> ShinyOnly
-            </label>
-            <div className="flex items-center gap-1" aria-label="Sort controls">
-              <span className="sr-only" id="sort-field-label">Sort field</span>
-              <select
-                aria-labelledby="sort-field-label"
-                value={filters.sortField}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                  const v = e.target.value as 'advance' | 'pid' | 'nature' | 'shiny';
-                  applyFilters({ sortField: v });
-                }}
-                className="border rounded px-1 py-0.5"
-              >
-                <option value="advance">Advance</option>
-                <option value="pid">PID</option>
-                <option value="nature">Nature</option>
-                <option value="shiny">Shiny</option>
-              </select>
-              <span className="sr-only" id="sort-order-label">Sort order</span>
-              <select
-                aria-labelledby="sort-order-label"
-                value={filters.sortOrder}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                  const v = e.target.value === 'desc' ? 'desc' : 'asc';
-                  applyFilters({ sortOrder: v });
-                }}
-                className="border rounded px-1 py-0.5"
-              >
-                <option value="asc">Asc</option>
-                <option value="desc">Desc</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-1" aria-label="Advance range filter">
-              <label className="sr-only" htmlFor="adv-min">Advance minimum</label>
-              <input id="adv-min" value={advMin} onChange={e=>setAdvMin(e.target.value)} placeholder="min" className="w-16 border rounded px-1 py-0.5" inputMode="numeric" aria-describedby="adv-range-hint" />
-              <label className="sr-only" htmlFor="adv-max">Advance maximum</label>
-              <input id="adv-max" value={advMax} onChange={e=>setAdvMax(e.target.value)} placeholder="max" className="w-16 border rounded px-1 py-0.5" inputMode="numeric" aria-describedby="adv-range-hint" />
-              <button type="button" className="px-2 py-0.5 border rounded" onClick={onApplyAdvRange} aria-label="Apply advance range">Set</button>
-              <span id="adv-range-hint" className="sr-only">Set minimum and/or maximum advance indices</span>
+  <Separator />
+  <form onSubmit={e=> e.preventDefault()} className="flex flex-col gap-4 text-xs" aria-describedby="results-filter-hint">
+          {/* Primary filters & sorting */}
+          <fieldset className="space-y-3" aria-labelledby="gf-primary-label" role="group">
+            <div id="gf-primary-label" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">Primary</div>
+            <div className="flex flex-wrap gap-4 items-center">
+              <div className="flex items-center gap-2">
+                <Checkbox id="shiny-only" aria-labelledby="lbl-shiny-only" checked={filters.shinyOnly} onCheckedChange={v=>applyFilters({ shinyOnly: Boolean(v) })} />
+                <Label id="lbl-shiny-only" htmlFor="shiny-only" className="text-xs">Shiny Only</Label>
+              </div>
+              <div className="flex items-center gap-2" aria-label="Sort controls">
+                <span id="sort-field-label" className="sr-only">Sort field</span>
+                <Select value={filters.sortField} onValueChange={v=>applyFilters({ sortField: v as typeof filters.sortField })}>
+                  <SelectTrigger id="sort-field" size="sm" className="w-[110px]" aria-labelledby="sort-field sort-field-label">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="advance">Advance</SelectItem>
+                    <SelectItem value="pid">PID</SelectItem>
+                    <SelectItem value="nature">Nature</SelectItem>
+                    <SelectItem value="shiny">Shiny</SelectItem>
+                  </SelectContent>
+                </Select>
+                <ArrowsDownUp size={14} className="opacity-50" aria-hidden="true" />
+                <span id="sort-order-label" className="sr-only">Sort order</span>
+                <Select value={filters.sortOrder} onValueChange={v=>applyFilters({ sortOrder: v as typeof filters.sortOrder })}>
+                  <SelectTrigger id="sort-order" size="sm" className="w-[80px]" aria-labelledby="sort-order sort-order-label">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asc">Asc</SelectItem>
+                    <SelectItem value="desc">Desc</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-1" aria-label="Advance range filter">
+                <Label htmlFor="adv-min" className="sr-only">Advance minimum</Label>
+                <Input id="adv-min" value={advMin} onChange={e=>setAdvMin(e.target.value)} placeholder="min" className="h-8 w-20" inputMode="numeric" aria-describedby="adv-range-hint" />
+                <Label htmlFor="adv-max" className="sr-only">Advance maximum</Label>
+                <Input id="adv-max" value={advMax} onChange={e=>setAdvMax(e.target.value)} placeholder="max" className="h-8 w-20" inputMode="numeric" aria-describedby="adv-range-hint" />
+                <Button type="button" size="sm" variant="secondary" onClick={onApplyAdvRange}>Set</Button>
+                <span id="adv-range-hint" className="sr-only">Set minimum and/or maximum advance indices</span>
+              </div>
             </div>
           </fieldset>
-          <fieldset className="flex flex-wrap gap-4 items-center">
-            <legend className="sr-only">Secondary filters</legend>
-            <div className="flex items-center gap-1" aria-label="Nature ID list filter">
-              <label className="sr-only" htmlFor="nature-input">Nature IDs (comma separated)</label>
-              <input id="nature-input" value={natureInput} onChange={e=>setNatureInput(e.target.value)} placeholder="1,2,6" className="w-40 border rounded px-1 py-0.5" aria-describedby="nature-hint" />
-              <button type="button" className="px-2 py-0.5 border rounded" onClick={onApplyNature} aria-label="Apply nature IDs">Apply</button>
-              <span id="nature-hint" className="sr-only">Enter nature IDs 0 to 24 separated by commas</span>
-            </div>
-            <div className="flex items-center gap-1" aria-label="Shiny type list filter">
-              <label className="sr-only" htmlFor="shiny-types-input">Shiny types (comma separated)</label>
-              <input id="shiny-types-input" value={shinyTypesInput} onChange={e=>setShinyTypesInput(e.target.value)} placeholder="1,2" className="w-24 border rounded px-1 py-0.5" aria-describedby="shiny-types-hint" />
-              <button type="button" className="px-2 py-0.5 border rounded" onClick={onApplyShinyTypes} aria-label="Apply shiny types">Apply</button>
-              <span id="shiny-types-hint" className="sr-only">Enter shiny type codes 0 normal 1 square 2 star separated by commas</span>
-            </div>
-          </fieldset>
-        </form>
-      </CardContent>
+          <Separator />
+          {/* Secondary filters */}
+            <fieldset className="space-y-3" aria-labelledby="gf-secondary-label" role="group">
+              <div id="gf-secondary-label" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">Secondary</div>
+              <div className="flex flex-wrap gap-6 items-center">
+                <div className="flex items-center gap-2" aria-label="Nature ID list filter">
+                  <Label htmlFor="nature-input" className="sr-only">Nature IDs (comma separated)</Label>
+                  <Input id="nature-input" value={natureInput} onChange={e=>setNatureInput(e.target.value)} placeholder="1,2,6" className="h-8 w-40" aria-describedby="nature-hint" />
+                  <Button type="button" size="sm" variant="secondary" onClick={onApplyNature}>Apply</Button>
+                  <span id="nature-hint" className="sr-only">Enter nature IDs 0 to 24 separated by commas</span>
+                </div>
+                <div className="flex items-center gap-2" aria-label="Shiny type list filter">
+                  <Label htmlFor="shiny-types-input" className="sr-only">Shiny types (comma separated)</Label>
+                  <Input id="shiny-types-input" value={shinyTypesInput} onChange={e=>setShinyTypesInput(e.target.value)} placeholder="1,2" className="h-8 w-28" aria-describedby="shiny-types-hint" />
+                  <Button type="button" size="sm" variant="secondary" onClick={onApplyShinyTypes}>Apply</Button>
+                  <span id="shiny-types-hint" className="sr-only">Enter shiny type codes 0 normal 1 square 2 star separated by commas</span>
+                </div>
+              </div>
+            </fieldset>
+  </form>
+  <div id="results-filter-hint" className="sr-only" aria-live="polite">Results filtering controls configured.</div>
+      </StandardCardContent>
     </Card>
   );
 };

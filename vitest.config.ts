@@ -10,11 +10,13 @@ export default defineConfig({
   plugins: [wasm(), topLevelAwait()],
   test: {
     globals: true,
-    environment: 'node', // Node.js環境でWebAssemblyをテスト
+    // WebAssemblyロジックは node 環境でも動作するが、Reactコンポーネント（Testing Library）にはDOMが必要。
+    // happy-dom を統一利用。純Rustテストに影響する場合は、将来ファイルパターンで分離可能。
+    environment: 'happy-dom',
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', 'dist', '.git', '.cache'],
     setupFiles: ['./src/test/setup.ts'],
-    testTimeout: 10000, // WebAssembly読み込みのため長めに設定
+    testTimeout: 10000,
   },
   resolve: {
     alias: {

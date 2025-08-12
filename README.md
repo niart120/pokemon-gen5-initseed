@@ -18,6 +18,17 @@
 - **エクスポート**: CSV/JSON/テキスト形式での結果出力
 - **包括的テスト環境**: Playwright-MCP によるE2Eテスト自動化、開発・統合テストページによる品質保証
 
+### アクセシビリティ
+
+Generation/Search パネルの主要カードは aria 属性整備 + 自動検査 (jest-axe) により回帰検出を行う。
+
+- ガイド: `docs/ACCESSIBILITY_GUIDE.md`
+- ローカル検査 (対象カード a11y):
+    ```bash
+    npm run test -- --runTestsByPath src/test/generation/a11y-generation-cards.test.tsx
+    ```
+    0違反を維持すること。
+
 ## Generation 機能概要 (Phase3-4 MVP)
 
 初期Seedから連続する乱数列を列挙し、ポケモン生成コア属性 (PID, 性格, 特性スロット, 色違い種別, スロット値, 同期適用) を WebWorker + WASM でストリーミング取得します。Search (SHA-1 初期Seed探索) と独立したタブ/ストア領域を持ち、相互に干渉しません。
