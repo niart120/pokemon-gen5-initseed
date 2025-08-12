@@ -23,9 +23,7 @@ export interface GenerationParams {
   batchSize: number;       // 1バッチ生成数 (推奨 1000, ≤ 10000)
 }
 
-export interface NormalizedGenerationParams extends GenerationParams {
-  // 正規化後 (境界補正/デフォルト適用済み)
-}
+export type NormalizedGenerationParams = GenerationParams; // 正規化後 (境界補正/デフォルト適用済み)
 
 // --- Result 型 ---
 // WASM生データ(UnresolvedPokemonData) に generation 文脈上の advance を付与した最小構造。

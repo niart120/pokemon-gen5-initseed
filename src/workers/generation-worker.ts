@@ -12,7 +12,10 @@ import {
 } from '@/types/generation';
 import { parseFromWasmRaw } from '@/lib/generation/raw-parser';
 // 既存 wasm ビルド (vite alias '@/wasm' 前提) ― 追加アダプタは作らず直接利用
-import { BWGenerationConfig, SeedEnumerator } from '@/wasm/wasm_pkg';
+// WASM 直接 import 制限: wasm-interface 経由で取得
+import { initWasm, getWasm, isWasmReady } from '@/lib/core/wasm-interface';
+let BWGenerationConfig: any; // 型は wasm-interface を介して解決 (動的ロード)
+let SeedEnumerator: any;
 
 // BW/BW2 version string -> wasm GameVersion enum (wasm側: B=0,W=1,B2=2,W2=3)
 function versionToWasm(v: GenerationParams['version']): number {
@@ -30,8 +33,8 @@ interface InternalState {
   progress: GenerationProgress;
   startTime: number | null;
   intervalId: number | null;
-  enumerator: SeedEnumerator | null;
-  config: BWGenerationConfig | null;
+  enumerator: any | null;
+  config: any | null;
   emaThroughput: number | null;
   // Task6: バッチ送信はまだ行わない。後続 Task7 で flush 予定。
   pendingResults: GenerationResult[];
@@ -81,30 +84,31 @@ post({ type: 'READY', version: '1' });
 
 ctx.onmessage = (ev: MessageEvent<GenerationWorkerRequest>) => {
   const msg = ev.data;
-  try {
-    switch (msg.type) {
-      case 'START_GENERATION':
-        handleStart(msg.params);
-        break;
-      case 'PAUSE':
-        handlePause();
-        break;
-      case 'RESUME':
-        handleResume();
-        break;
-      case 'STOP':
-        handleStop();
-        break;
-      default:
-        // no-op
-        break;
+  (async () => {
+    try {
+      switch (msg.type) {
+        case 'START_GENERATION':
+          await handleStart(msg.params);
+          break;
+        case 'PAUSE':
+          handlePause();
+          break;
+        case 'RESUME':
+          handleResume();
+          break;
+        case 'STOP':
+          handleStop();
+          break;
+        default:
+          break;
+      }
+    } catch (e: any) {
+      post({ type: 'ERROR', message: e?.message || String(e), category: 'RUNTIME', fatal: false });
     }
-  } catch (e: any) {
-    post({ type: 'ERROR', message: e?.message || String(e), category: 'RUNTIME', fatal: false });
-  }
+  })();
 };
 
-function handleStart(params: GenerationParams) {
+async function handleStart(params: GenerationParams) {
   if (state.progress.status === 'running') {
     // 二重起動は一旦無視 (後でSTOP推奨通知検討)
     return;
@@ -138,6 +142,12 @@ function handleStart(params: GenerationParams) {
   state.shinyFound = false;
   try {
     // Task6: WASM 初期化 & SeedEnumerator 準備 (後続機能は未実装)
+    if (!isWasmReady()) {
+      await initWasm();
+    }
+    const wasm = getWasm();
+    BWGenerationConfig = wasm.BWGenerationConfig;
+    SeedEnumerator = (wasm as any).SeedEnumerator || (wasm as any).PokemonGenerator; // Fallback if exposed differently
     state.config = new BWGenerationConfig(
       versionToWasm(params.version),
       params.encounterType,
@@ -283,8 +293,7 @@ function advanceEnumerationChunk() {
     let unresolved;
     try {
       unresolved = parseFromWasmRaw(raw);
-    } catch (e) {
-      // パース失敗は致命的扱い
+    } catch {
       complete('error');
       return;
     }

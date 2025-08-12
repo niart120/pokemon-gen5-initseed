@@ -53,8 +53,7 @@ describe('generation-worker skeleton', () => {
     const w = createWorker();
     await waitFor(w, m => m.type === 'READY');
     w.postMessage({ type: 'START_GENERATION', params: makeParams(5000) });
-    let firstProgress: any;
-    firstProgress = await waitFor(w, m => m.type === 'PROGRESS' && m.payload.processedAdvances > 0);
+  const firstProgress: any = await waitFor(w, m => m.type === 'PROGRESS' && m.payload.processedAdvances > 0);
     w.postMessage({ type: 'PAUSE' });
     await waitFor(w, m => m.type === 'PAUSED');
     const pausedValue = firstProgress.payload.processedAdvances;
