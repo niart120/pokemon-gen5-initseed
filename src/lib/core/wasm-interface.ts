@@ -75,7 +75,7 @@ export async function initWasm(): Promise<WasmModule> {
       // Node(vitest) 環境では fetch が file: URL をサポートしないため、
       // 可能ならバイト列を直接渡す。Web/Worker では URL を渡す。
       let initArg: WasmInitArg;
-      const isNode = typeof process !== 'undefined' && !!(process as any).versions?.node;
+      const isNode = typeof process !== 'undefined' && !!(process as NodeJS.Process).versions?.node;
       if (isNode) {
         const fs = await import('fs');
         const path = await import('path');

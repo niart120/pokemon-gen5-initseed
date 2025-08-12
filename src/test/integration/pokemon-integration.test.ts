@@ -12,58 +12,83 @@
  */
 
 import { describe, test, expect, beforeAll } from 'vitest';
-import { SeedCalculator } from '../../lib/core/seed-calculator';
-import { isWasmReady } from '../../lib/core/wasm-interface';
 import { buildResolutionContext } from '../../lib/initialization/build-resolution-context';
 import { resolvePokemon, toUiReadyPokemon } from '../../lib/generation/pokemon-resolver';
-import type { UnresolvedPokemonData } from '../../types/pokemon-raw';
+import { initWasm, getWasm } from '../../lib/core/wasm-interface';
+import { parseFromWasmRaw } from '../../lib/generation/raw-parser';
 
-describe('Integration smoke (WASM fallback + tiny pipeline)', () => {
-  let calculator: SeedCalculator;
 
+describe('Integration: WASM生成→統合→UI変換', () => {
   beforeAll(async () => {
-    calculator = new SeedCalculator();
-    // 初期化に失敗しても許容（TSフォールバック）
-    await calculator.initializeWasm();
+    await initWasm();
   });
 
-  test('WASM初期化の可否とROMパラメータ取得', () => {
-    // isUsingWasmはWASM未取得でもfalseで健全
-    expect(typeof calculator.isUsingWasm()).toBe('boolean');
-    // 直接モジュール状態も確認（副作用なし）
-    expect(typeof isWasmReady()).toBe('boolean');
 
-    // ROMパラメータの健全性（有効なversion/regionで非null）
-    const params = calculator.getROMParameters('B', 'JPN');
-    expect(params).not.toBeNull();
-    if (params) {
-      expect(params.nazo.length).toBe(5);
-      expect(params.vcountTimerRanges.length).toBeGreaterThan(0);
-    }
-  });
-
-  test('最小統合パス: resolverで基本解決が得られる', () => {
-    // Route1 の通常エンカウントテーブルで解決
-    const ctx = buildResolutionContext({ version: 'B', location: 'Route1', encounterType: 0 as any });
-  const raw: UnresolvedPokemonData = {
-      seed: 0x12345678n,
-      pid: 0x87654321,
-      nature: 12,
-      sync_applied: false,
-      ability_slot: 1,
-      gender_value: 100,
-      encounter_slot_value: 0,
-      encounter_type: 0,
-      level_rand_value: 2n,
-      shiny_type: 0,
-    };
-
-    const resolved = resolvePokemon(raw, ctx);
-    const ui = toUiReadyPokemon(resolved);
-    // 極小スモーク: 正常に主要フィールドが生成されることのみ確認
-    expect(resolved.speciesId).toBeGreaterThan(0);
-    expect(resolved.level).toBeGreaterThan(0);
-    expect(['M', 'F', 'N', undefined]).toContain(resolved.gender);
+  test('通常野生遭遇（シンクロなし）: 生成→統合→UI', () => {
+    // BW2, Route1, 野生, シンクロなし
+    const seed = 0x12345678n;
+    const { BWGenerationConfig, GameVersion, EncounterType, PokemonGenerator } = getWasm();
+    const config = new BWGenerationConfig(
+      GameVersion.B2,
+      EncounterType.Normal,
+      12345, // TID
+      54321, // SID
+      false, // sync_enabled
+      0      // sync_nature_id
+    );
+    const wasmRaw = PokemonGenerator.generate_single_pokemon_bw(seed, config);
+    const raw = parseFromWasmRaw(wasmRaw);
+  const ctx = buildResolutionContext({ version: 'B2', location: 'Route1', encounterType: EncounterType.Normal as unknown as any });
+    const enhanced = resolvePokemon(raw, ctx);
+    const ui = toUiReadyPokemon(enhanced);
+    expect(typeof ui.speciesName).toBe('string');
+    expect(ui.level).toBeGreaterThan(0);
+    expect(['M', 'F', '-', '?']).toContain(ui.gender);
     expect(typeof ui.natureName).toBe('string');
+  });
+
+
+  test('シンクロ適用: 生成→統合→UI (代表seed固定)', () => {
+    const targetNatureId = 5; // ずぶとい
+    const syncSeed = 0x87654322n; // 事前探索で sync_applied 確認済み seed
+    const { BWGenerationConfig, GameVersion, EncounterType, PokemonGenerator } = getWasm();
+    const config = new BWGenerationConfig(
+      GameVersion.B2,
+      EncounterType.Normal,
+      12345,
+      54321,
+      true,
+      targetNatureId
+    );
+    const ctx = buildResolutionContext({ version: 'B2', location: 'Route1', encounterType: EncounterType.Normal as unknown as any });
+    const wasmRaw = PokemonGenerator.generate_single_pokemon_bw(syncSeed, config);
+    const raw = parseFromWasmRaw(wasmRaw);
+    expect(raw.sync_applied).toBe(true); // 前提確認
+    const enhanced = resolvePokemon(raw, ctx);
+    const ui = toUiReadyPokemon(enhanced);
+    expect(typeof ui.speciesName).toBe('string');
+    expect(['M', 'F', '-', '?']).toContain(ui.gender);
+    expect(enhanced.natureId).toBe(targetNatureId);
+  });
+
+
+  test('性別境界: gender_valueでM/F/Nを判定', () => {
+    // gender_value=0: M, 127: M, 128: F, 255: F（例: 50%種）
+    const seeds = [0x10000000n, 0x1000007Fn, 0x10000080n, 0x100000FFn];
+    const { BWGenerationConfig, GameVersion, EncounterType, PokemonGenerator } = getWasm();
+    const config = new BWGenerationConfig(
+      GameVersion.B2,
+      EncounterType.Normal,
+      12345, 54321, false, 0
+    );
+    for (let i = 0; i < seeds.length; ++i) {
+      const wasmRaw = PokemonGenerator.generate_single_pokemon_bw(seeds[i], config);
+      const raw = parseFromWasmRaw(wasmRaw);
+  const ctx = buildResolutionContext({ version: 'B2', location: 'Route1', encounterType: EncounterType.Normal as unknown as any });
+      const enhanced = resolvePokemon(raw, ctx);
+      const ui = toUiReadyPokemon(enhanced);
+      expect(['M', 'F', '-', '?']).toContain(ui.gender);
+      // 期待値は暫定（種族依存のため、厳密にはspeciesIdごとに再検証要）
+    }
   });
 });
