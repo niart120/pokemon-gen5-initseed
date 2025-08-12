@@ -128,60 +128,51 @@ if (import.meta.env.DEV) {
   console.warn('Using demo target seeds:', DEMO_TARGET_SEEDS.map(s => '0x' + s.toString(16).padStart(8, '0')));
 }
 
-// --- BigInt <-> hex シリアライズ補助 ---
-const biToHex = (v: bigint) => '0x' + v.toString(16);
-const reviveHexBigInt = (v: any) => (typeof v === 'string' && /^0x[0-9a-fA-F]+$/.test(v) ? BigInt(v) : v);
-
-function serializeGenerationSlice(state: AppStore) {
-  // generation 関連 BigInt を hex 文字列へ。結果配列は揮発性のため persist しない。
-  const genKeys: (keyof GenerationSlice)[] = [
-    'params','draftParams','validationErrors','status','progress','results','lastCompletion','error','filters','metrics','internalFlags'
-  ];
-  const serialized: any = {};
-  for (const k of genKeys) {
-    (serialized as any)[k] = (state as any)[k];
-  }
-  if (serialized.params) {
-    serialized.params = {
-      ...serialized.params,
-      baseSeed: biToHex(serialized.params.baseSeed),
-      offset: biToHex(serialized.params.offset),
-    };
-  }
-  if (serialized.draftParams) {
-    const dp = { ...serialized.draftParams };
-    if (typeof dp.baseSeed === 'bigint') dp.baseSeed = biToHex(dp.baseSeed);
-    if (typeof dp.offset === 'bigint') dp.offset = biToHex(dp.offset);
-    serialized.draftParams = dp;
-  }
-  // 非永続フィールド調整
-  serialized.results = []; // 大量 & BigInt 含むため破棄
-  serialized.progress = null; // 再開時は再計測
-  return serialized;
+// 以前の BigInt 変換ロジックは撤去。persist 対象を必要最低限に制限。
+interface PersistedGenerationMinimal {
+  draftParams: AppStore['draftParams'];
+  params: AppStore['params'] | null;
+  validationErrors: string[];
+  status: AppStore['status'];
+  lastCompletion: AppStore['lastCompletion'];
+  error: string | null;
+  filters: AppStore['filters'];
+  metrics: AppStore['metrics'];
+  internalFlags: AppStore['internalFlags'];
+}
+function extractGenerationForPersist(state: AppStore): PersistedGenerationMinimal {
+  return {
+    draftParams: state.draftParams,
+    params: state.params,
+    validationErrors: state.validationErrors,
+    status: state.status,
+    lastCompletion: state.lastCompletion,
+    error: state.error,
+    filters: state.filters,
+    metrics: state.metrics,
+    internalFlags: state.internalFlags,
+  };
 }
 
-function reviveGenerationSlice(persisted: any): Partial<GenerationSlice> {
-  if (!persisted) return {};
-  const restored: any = { ...persisted };
-  if (restored.params) {
-    restored.params = {
-      ...restored.params,
-      baseSeed: reviveHexBigInt(restored.params.baseSeed),
-      offset: reviveHexBigInt(restored.params.offset),
-    };
-  }
-  if (restored.draftParams) {
-    const dp = { ...restored.draftParams };
-    if (typeof dp.baseSeed === 'string') dp.baseSeed = reviveHexBigInt(dp.baseSeed);
-    if (typeof dp.offset === 'string') dp.offset = reviveHexBigInt(dp.offset);
-    restored.draftParams = dp;
-  }
-  return restored;
+function reviveGenerationMinimal(obj: unknown): Partial<GenerationSlice> {
+  if (!obj || typeof obj !== 'object') return {};
+  const o = obj as Partial<PersistedGenerationMinimal>;
+  return {
+    draftParams: o.draftParams ?? undefined,
+    params: o.params ?? null,
+    validationErrors: o.validationErrors ?? [],
+    status: o.status ?? 'idle',
+    lastCompletion: o.lastCompletion ?? null,
+    error: o.error ?? null,
+    filters: o.filters ?? { shinyOnly: false, natureIds: [] },
+    metrics: o.metrics ?? {},
+  internalFlags: o.internalFlags ?? { receivedAnyBatch: false },
+  };
 }
 
 export const useAppStore = create<AppStore>()(
-  persist(
-    (set, get, _api) => ({
+  persist<AppStore>(
+    (set, get) => ({
       // Generation slice 注入
       ...createGenerationSlice(set, get),
       // 元々の AppStore フィールド
@@ -319,52 +310,42 @@ export const useAppStore = create<AppStore>()(
     {
       name: 'app-store',
       version: 3,
-      partialize: (state) => {
-        // Generation slice を hex 変換して含めつつ BigInt を除去
-        // 不要キーを除外した shallow copy を作成
-        const clone: any = { ...(state as any) };
-        delete clone.params;
-        delete clone.draftParams;
-        delete clone.validationErrors;
-        delete clone.status;
-        delete clone.progress;
-        delete clone.results;
-        delete clone.lastCompletion;
-        delete clone.error;
-        delete clone.filters;
-        delete clone.metrics;
-        delete clone.internalFlags;
-        return {
-          ...clone,
-          __generation: serializeGenerationSlice(state),
-        } as any;
+      // persist: generation の volatile (progress/results) を除外しつつ最小構造を保存
+      partialize: (state: AppStore) => {
+        const rest = { ...state } as Partial<AppStore>;
+        delete rest.progress;
+        delete rest.results;
+        return ({
+          ...(rest as unknown as AppStore),
+          __generation: extractGenerationForPersist(state),
+        }) as unknown as AppStore;
       },
-      merge: (persisted: any, current: any) => {
-        if (!persisted) return current;
-        const { __generation, ...rest } = persisted;
-        if (__generation) {
-          const revived = reviveGenerationSlice(__generation);
-          return {
-            ...current,
-            ...rest,
-            ...revived,
-          };
-        }
-        return { ...current, ...persisted };
+      merge: (persisted: unknown, current: AppStore) => {
+        if (!persisted || typeof persisted !== 'object') return current;
+        const persistedObjAll = { ...(persisted as Partial<AppStore> & { __generation?: unknown }) };
+        const genRaw = persistedObjAll.__generation;
+        delete (persistedObjAll as Record<string, unknown>).__generation;
+        const revived = genRaw ? reviveGenerationMinimal(genRaw) : {};
+        return ({
+          ...current,
+          ...persistedObjAll,
+          ...revived,
+          progress: current.progress,
+          results: current.results,
+        }) as AppStore;
       },
-      migrate: (persistedState: any, version: number) => {
-        if (!persistedState) return persistedState;
-        // v2 -> v3: wrap generation slice under __generation; nothing else needed
+      migrate: (persistedState: unknown, version: number) => {
+        if (!persistedState || typeof persistedState !== 'object') return persistedState as AppStore;
         if (version < 3) {
-          // Best-effort: detect generation keys and convert if present directly
-          if (persistedState.params || persistedState.draftParams) {
-            persistedState.__generation = serializeGenerationSlice(persistedState as AppStore);
+          const ps = persistedState as Partial<AppStore> & { __generation?: PersistedGenerationMinimal };
+          if (!ps.__generation && ps.params) {
+            ps.__generation = extractGenerationForPersist(ps as AppStore);
           }
         }
-        return persistedState;
+        return persistedState as AppStore;
       },
     },
-  ),
+   ),
 );
 
 // バインド（store インスタンス生成後）

@@ -11,11 +11,15 @@ if (typeof Worker === 'undefined') {
     return new Worker(new URL('@/workers/generation-worker.ts', import.meta.url), { type: 'module' });
   }
 
-  async function waitFor(worker: Worker, predicate: (m: any) => boolean, timeoutMs = 2000): Promise<any> {
-    return new Promise((resolve, reject) => {
+  type WorkerMsg = { type?: string; payload?: unknown };
+  async function waitFor<T extends WorkerMsg>(worker: Worker, predicate: (m: WorkerMsg) => m is T, timeoutMs?: number): Promise<T>;
+  async function waitFor(worker: Worker, predicate: (m: WorkerMsg) => boolean, timeoutMs?: number): Promise<WorkerMsg>;
+  async function waitFor(worker: Worker, predicate: (m: WorkerMsg) => boolean, timeoutMs = 2000): Promise<WorkerMsg> {
+    return new Promise<WorkerMsg>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
       worker.addEventListener('message', (ev) => {
-        if (predicate(ev.data)) { clearTimeout(timer); resolve(ev.data); }
+        const data = ev.data as WorkerMsg;
+        if (predicate(data)) { clearTimeout(timer); resolve(data); }
       });
     });
   }
@@ -34,7 +38,7 @@ if (typeof Worker === 'undefined') {
 
   // first-shiny テスト: 最初の個体を強制的に色違い化する TID/SID を構築
   // SV = (tid ^ sid ^ pid_hi ^ pid_lo) < 8 で色違い。tid=0 として sid = pid_hi ^ pid_lo なら SV=0。
-  function shinySidForPid(pid: number): number {
+  function _shinySidForPid(pid: number): number {
     const pidHi = (pid >>> 16) & 0xffff;
     const pidLo = pid & 0xffff;
     return pidHi ^ pidLo; // 0..65535 に収まる
@@ -47,7 +51,7 @@ if (typeof Worker === 'undefined') {
   describe('generation-worker early termination', () => {
     it('terminates on first shiny when stopAtFirstShiny=true', async () => {
   const baseSeed = 1234n;
-  const { pid, sid } = await firstPidAndShinySid(baseSeed);
+  const { pid: _firstPid, sid } = await firstPidAndShinySid(baseSeed);
       const params = {
         baseSeed,
         offset: 0n,
@@ -66,7 +70,7 @@ if (typeof Worker === 'undefined') {
       const w = createWorker();
       await waitFor(w, m => m.type === 'READY');
       w.postMessage({ type: 'START_GENERATION', params });
-      const complete: any = await waitFor(w, m => m.type === 'COMPLETE');
+  const complete = await waitFor(w, (m): m is { type: 'COMPLETE'; payload: { reason: string; shinyFound: boolean; processedAdvances: number } } => m.type === 'COMPLETE');
       expect(complete.payload.reason).toBe('first-shiny');
       expect(complete.payload.shinyFound).toBe(true);
       expect(complete.payload.processedAdvances).toBe(1); // 最初の1体で停止
@@ -93,7 +97,7 @@ if (typeof Worker === 'undefined') {
       const w = createWorker();
       await waitFor(w, m => m.type === 'READY');
       w.postMessage({ type: 'START_GENERATION', params });
-      const complete: any = await waitFor(w, m => m.type === 'COMPLETE');
+  const complete = await waitFor(w, (m): m is { type: 'COMPLETE'; payload: { reason: string; resultsCount: number; shinyFound: boolean } } => m.type === 'COMPLETE');
       expect(complete.payload.reason).toBe('max-results');
       expect(complete.payload.resultsCount).toBe(3);
       expect(complete.payload.shinyFound).toBe(false);

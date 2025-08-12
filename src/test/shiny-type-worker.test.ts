@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { SHINY_REFERENCE_CASES } from '@/test-utils/reference/shiny-cases';
-import { GenerationWorkerManager } from '@/lib/generation/generation-worker-manager';
 
 // For now we simulate by feeding totalAdvances small and allowing enumeration; we can't reproduce pid from seed path here.
 // Instead we assert that if a result with matching pid appears its shiny_type matches expected classification.

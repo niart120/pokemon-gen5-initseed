@@ -23,6 +23,64 @@ export interface GenerationParams {
   batchSize: number;       // 1バッチ生成数 (推奨 1000, ≤ 10000)
 }
 
+// 16進文字列保持用: store/UI ではこちらを使い、worker開始直前に GenerationParams へ変換
+export interface GenerationParamsHex {
+  baseSeedHex: string;     // 小文字/大文字混在許容。正規化時に toLowerCase()
+  offsetHex: string;
+  maxAdvances: number;
+  maxResults: number;
+  version: 'B' | 'W' | 'B2' | 'W2';
+  encounterType: number;
+  tid: number;
+  sid: number;
+  syncEnabled: boolean;
+  syncNatureId: number;
+  stopAtFirstShiny: boolean;
+  stopOnCap: boolean;
+  batchSize: number;
+}
+
+export function hexParamsToGenerationParams(h: GenerationParamsHex): GenerationParams {
+  return {
+    baseSeed: BigInt('0x' + normalizeHex(h.baseSeedHex)),
+    offset: BigInt('0x' + normalizeHex(h.offsetHex)),
+    maxAdvances: h.maxAdvances,
+    maxResults: h.maxResults,
+    version: h.version,
+    encounterType: h.encounterType,
+    tid: h.tid,
+    sid: h.sid,
+    syncEnabled: h.syncEnabled,
+    syncNatureId: h.syncNatureId,
+    stopAtFirstShiny: h.stopAtFirstShiny,
+    stopOnCap: h.stopOnCap,
+    batchSize: h.batchSize,
+  };
+}
+
+export function generationParamsToHex(p: GenerationParams): GenerationParamsHex {
+  return {
+    baseSeedHex: p.baseSeed.toString(16),
+    offsetHex: p.offset.toString(16),
+    maxAdvances: p.maxAdvances,
+    maxResults: p.maxResults,
+    version: p.version,
+    encounterType: p.encounterType,
+    tid: p.tid,
+    sid: p.sid,
+    syncEnabled: p.syncEnabled,
+    syncNatureId: p.syncNatureId,
+    stopAtFirstShiny: p.stopAtFirstShiny,
+    stopOnCap: p.stopOnCap,
+    batchSize: p.batchSize,
+  };
+}
+
+function normalizeHex(s: string): string {
+  const v = s.trim().replace(/^0x/i,'');
+  return v === '' ? '0' : v.toLowerCase();
+}
+
 // 正規化後 (境界補正/デフォルト適用済み) – そのままエイリアス
 export type NormalizedGenerationParams = GenerationParams;
 
@@ -107,10 +165,12 @@ export type GenerationWorkerResponse =
   | { type: 'ERROR'; message: string; category: GenerationErrorCategory; fatal: boolean };
 
 // --- Utility Type Guards ---
-export function isGenerationWorkerResponse(msg: any): msg is GenerationWorkerResponse {
-  return msg && typeof msg === 'object' && typeof msg.type === 'string' && (
-    ['READY','PROGRESS','RESULT_BATCH','PAUSED','RESUMED','STOPPED','COMPLETE','ERROR'] as const
-  ).includes(msg.type);
+export function isGenerationWorkerResponse(msg: unknown): msg is GenerationWorkerResponse {
+  if (!msg || typeof msg !== 'object') return false;
+  const m = msg as { type?: unknown };
+  if (typeof m.type !== 'string') return false;
+  const allowed: ReadonlySet<GenerationWorkerResponse['type']> = new Set(['READY','PROGRESS','RESULT_BATCH','PAUSED','RESUMED','STOPPED','COMPLETE','ERROR']);
+  return allowed.has(m.type as GenerationWorkerResponse['type']);
 }
 
 export function isResultBatch(msg: GenerationWorkerResponse): msg is Extract<GenerationWorkerResponse,{type:'RESULT_BATCH'}> {

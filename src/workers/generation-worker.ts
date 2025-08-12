@@ -1,5 +1,5 @@
 // Generation Worker (Phase3/4 skeleton)
-// 目的: プロトコル応答/状態遷移/ダミー進捗のみ。WASMと結果生成は後続 TODO。
+// 目的: プロトコル応答/状態遷移/進捗計測 + WASM 列挙
 
 import {
   type GenerationWorkerRequest,
@@ -11,11 +11,15 @@ import {
   FIXED_PROGRESS_INTERVAL_MS,
 } from '@/types/generation';
 import { parseFromWasmRaw } from '@/lib/generation/raw-parser';
-// 既存 wasm ビルド (vite alias '@/wasm' 前提) ― 追加アダプタは作らず直接利用
-// WASM 直接 import 制限: wasm-interface 経由で取得
 import { initWasm, getWasm, isWasmReady } from '@/lib/core/wasm-interface';
-let BWGenerationConfig: any; // 型は wasm-interface を介して解決 (動的ロード)
-let SeedEnumerator: any;
+
+// WASM コンストラクタ最小型 (必要最小限のみ表現)
+interface BWGenerationConfigCtor { new(version: number, encounterType: number, tid: number, sid: number, syncEnabled: boolean, syncNatureId: number): object; }
+interface SeedEnumeratorCtor { new(baseSeed: bigint, offset: bigint, count: number, config: object): SeedEnumeratorInstance; }
+interface SeedEnumeratorInstance { next_pokemon(): unknown; }
+
+let BWGenerationConfig: BWGenerationConfigCtor | undefined;
+let SeedEnumerator: SeedEnumeratorCtor | undefined;
 
 // BW/BW2 version string -> wasm GameVersion enum (wasm側: B=0,W=1,B2=2,W2=3)
 function versionToWasm(v: GenerationParams['version']): number {
@@ -33,41 +37,38 @@ interface InternalState {
   progress: GenerationProgress;
   startTime: number | null;
   intervalId: number | null;
-  enumerator: any | null;
-  config: any | null;
+  enumerator: SeedEnumeratorInstance | null;
+  config: object | null;
   emaThroughput: number | null;
-  // Task6: バッチ送信はまだ行わない。後続 Task7 で flush 予定。
   pendingResults: GenerationResult[];
-  stopped: boolean; // STOP 要求フラグ (完全処理は後続 Task10)
+  stopped: boolean;
   batchIndex: number;
   cumulativeResults: number;
   shinyFound: boolean;
 }
 
-// DedicatedWorkerGlobalScope 型は lib.dom.d.ts で提供されるが build 設定により認識しない場合があるため any fallback
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ctx: any = self as any;
+// self の型を拡張 (WebWorker lib 未設定環境でもコンパイル可能にする)
+const ctx = self as typeof self & { onclose?: () => void };
+const post = (message: GenerationWorkerResponse) => ctx.postMessage(message);
 
-function post(message: GenerationWorkerResponse) {
-  ctx.postMessage(message);
-}
+const DEFAULT_PROGRESS_INTERVAL = FIXED_PROGRESS_INTERVAL_MS;
+const DUMMY_STEP = 1000;
 
-const DEFAULT_PROGRESS_INTERVAL = FIXED_PROGRESS_INTERVAL_MS; // 仕様: 固定間隔
-const DUMMY_STEP = 1000; // 1 tick で進めるダミーadvance数 (テスト容易性優先)
+const blankProgress = (): GenerationProgress => ({
+  processedAdvances: 0,
+  totalAdvances: 0,
+  resultsCount: 0,
+  elapsedMs: 0,
+  throughput: 0,
+  throughputRaw: 0,
+  throughputEma: 0,
+  etaMs: 0,
+  status: 'idle',
+});
 
 const state: InternalState = {
   params: null,
-  progress: {
-    processedAdvances: 0,
-    totalAdvances: 0,
-    resultsCount: 0,
-    elapsedMs: 0,
-    throughput: 0,
-    throughputRaw: 0,
-    throughputEma: 0,
-    etaMs: 0,
-    status: 'idle',
-  },
+  progress: blankProgress(),
   startTime: null,
   intervalId: null,
   enumerator: null,
@@ -102,25 +103,21 @@ ctx.onmessage = (ev: MessageEvent<GenerationWorkerRequest>) => {
         default:
           break;
       }
-    } catch (e: any) {
-      post({ type: 'ERROR', message: e?.message || String(e), category: 'RUNTIME', fatal: false });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      post({ type: 'ERROR', message, category: 'RUNTIME', fatal: false });
     }
   })();
 };
 
 async function handleStart(params: GenerationParams) {
-  if (state.progress.status === 'running') {
-    // 二重起動は一旦無視 (後でSTOP推奨通知検討)
-    return;
-  }
+  if (state.progress.status === 'running') return;
   const errors = validateGenerationParams(params);
   if (errors.length) {
     post({ type: 'ERROR', message: errors.join(', '), category: 'VALIDATION', fatal: false });
     return;
   }
   cleanupInterval();
-
-  const progressInterval = DEFAULT_PROGRESS_INTERVAL;
   state.params = params;
   state.startTime = performance.now();
   state.progress = {
@@ -141,13 +138,11 @@ async function handleStart(params: GenerationParams) {
   state.cumulativeResults = 0;
   state.shinyFound = false;
   try {
-    // Task6: WASM 初期化 & SeedEnumerator 準備 (後続機能は未実装)
-    if (!isWasmReady()) {
-      await initWasm();
-    }
-    const wasm = getWasm();
+    if (!isWasmReady()) await initWasm();
+    const wasm = getWasm() as unknown as { BWGenerationConfig: BWGenerationConfigCtor; SeedEnumerator?: SeedEnumeratorCtor; PokemonGenerator?: SeedEnumeratorCtor };
     BWGenerationConfig = wasm.BWGenerationConfig;
-    SeedEnumerator = (wasm as any).SeedEnumerator || (wasm as any).PokemonGenerator; // Fallback if exposed differently
+    SeedEnumerator = wasm.SeedEnumerator || wasm.PokemonGenerator;
+    if (!SeedEnumerator) throw new Error('SeedEnumerator not exposed');
     state.config = new BWGenerationConfig(
       versionToWasm(params.version),
       params.encounterType,
@@ -156,7 +151,6 @@ async function handleStart(params: GenerationParams) {
       params.syncEnabled,
       params.syncNatureId,
     );
-    // count は maxAdvances - offset を一旦全量渡す (早期終了は Task8)
     const totalCount = Number(params.maxAdvances - Number(params.offset));
     state.enumerator = new SeedEnumerator(
       params.baseSeed,
@@ -164,49 +158,35 @@ async function handleStart(params: GenerationParams) {
       totalCount,
       state.config,
     );
-  } catch (e: any) {
-    post({ type: 'ERROR', message: e?.message || String(e), category: 'WASM_INIT', fatal: true });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    post({ type: 'ERROR', message, category: 'WASM_INIT', fatal: true });
     return;
   }
-  // 列挙ループを tick 内に統合せず、軽量 step を実行 (batch は次タスク)
-
-  state.intervalId = setInterval(tick, progressInterval) as unknown as number;
-  // 直後に初回進捗
+  state.intervalId = setInterval(tick, DEFAULT_PROGRESS_INTERVAL) as unknown as number;
   post({ type: 'PROGRESS', payload: { ...state.progress } });
 }
 
 function tick() {
   if (!state.params || state.progress.status !== 'running') return;
-  // STOP 要求されていたら後続タスクでの完全処理まで進捗のみ抑制
   if (state.stopped) return;
   advanceEnumerationChunk();
   const p = state.progress;
-  // processedAdvances は advanceEnumerationChunk 内で更新済
   const now = performance.now();
   p.elapsedMs = now - (state.startTime || now);
   if (p.elapsedMs > 0) {
     const raw = p.processedAdvances / (p.elapsedMs / 1000);
     p.throughputRaw = raw;
-    // EMA α=0.2
     const ALPHA = 0.2;
-    if (state.emaThroughput == null) {
-      state.emaThroughput = raw;
-    } else {
-      state.emaThroughput = ALPHA * raw + (1 - ALPHA) * state.emaThroughput;
-    }
+    state.emaThroughput = state.emaThroughput == null ? raw : (ALPHA * raw + (1 - ALPHA) * state.emaThroughput);
     p.throughputEma = state.emaThroughput;
-    // 後方互換 (旧 throughput フィールドは raw と同じ値を保持)
-    p.throughput = raw;
+    p.throughput = raw; // 互換
   }
   const remaining = p.totalAdvances - p.processedAdvances;
   const basis = p.throughputEma && p.throughputEma > 0 ? p.throughputEma : (p.throughputRaw || 0);
   p.etaMs = basis > 0 ? (remaining / basis) * 1000 : 0;
-
   post({ type: 'PROGRESS', payload: { ...p } });
-
-  if (p.processedAdvances >= p.totalAdvances) {
-    complete('max-advances');
-  }
+  if (p.processedAdvances >= p.totalAdvances) complete('max-advances');
 }
 
 function handlePause() {
@@ -224,8 +204,8 @@ function handleResume() {
 }
 
 function handleStop() {
-  if (state.progress.status === 'idle' || state.progress.status === 'stopped' || state.progress.status === 'completed') return;
-  state.stopped = true; // Task6: 即 STOPPED 送信せず (既存挙動保持) – 既存テスト維持のため従来通り送信
+  if (['idle', 'stopped', 'completed'].includes(state.progress.status)) return;
+  state.stopped = true;
   cleanupInterval();
   state.progress.status = 'stopped';
   post({
@@ -242,7 +222,6 @@ function handleStop() {
 
 function complete(reason: 'max-advances' | 'max-results' | 'first-shiny' | 'stopped' | 'error') {
   cleanupInterval();
-  // FINAL FLUSH (残り分送信)
   flushBatch(true);
   state.progress.status = 'completed';
   if (process.env.NODE_ENV !== 'production') {
@@ -260,7 +239,7 @@ function complete(reason: 'max-advances' | 'max-results' | 'first-shiny' | 'stop
       processedAdvances: state.progress.processedAdvances,
       resultsCount: state.progress.resultsCount,
       elapsedMs: state.progress.elapsedMs,
-  shinyFound: state.shinyFound,
+      shinyFound: state.shinyFound,
     },
   });
 }
@@ -272,7 +251,6 @@ function cleanupInterval() {
   }
 }
 
-// ===== Task6 Core Enumeration (no batching, no early termination) =====
 function advanceEnumerationChunk() {
   if (!state.enumerator || !state.params) return;
   const params = state.params;
@@ -284,12 +262,9 @@ function advanceEnumerationChunk() {
 
   let produced = 0;
   let earlyReason: 'first-shiny' | 'max-results' | null = null;
-
   for (let i = 0; i < steps; i++) {
     const raw = state.enumerator.next_pokemon();
-    if (!raw) break; // 枯渇 (自然終了)
-
-    // WASM Raw -> UnresolvedPokemonData
+    if (!raw) break;
     let unresolved;
     try {
       unresolved = parseFromWasmRaw(raw);
@@ -297,51 +272,28 @@ function advanceEnumerationChunk() {
       complete('error');
       return;
     }
-
-    const advanceVal = p.processedAdvances + i + 1; // 現仕様: 1-based インデックス
-    const result: GenerationResult = { ...unresolved, advance: advanceVal };
-
-    const isShiny = result.shiny_type !== 0;
+    const advanceVal = p.processedAdvances + i + 1;
+  const result: GenerationResult = { ...unresolved, advance: advanceVal };
+  const isShiny = (result.shiny_type ?? 0) !== 0;
     if (isShiny && !state.shinyFound) state.shinyFound = true;
-
-    // 結果保持ガード (容量抑制) - stopOnCap=false の場合は保存せず走査継続
     if (p.resultsCount < params.maxResults) {
       state.pendingResults.push(result);
       p.resultsCount += 1;
     }
-
     produced++;
-
-    // バッチ閾値
-    if (state.pendingResults.length >= params.batchSize) {
-      flushBatch(false);
-    }
-
-    // 早期終了判定 (優先順位: first-shiny > max-results)
+    if (state.pendingResults.length >= params.batchSize) flushBatch(false);
     if (!earlyReason) {
-      if (params.stopAtFirstShiny && isShiny) {
-        earlyReason = 'first-shiny';
-      } else if (params.stopOnCap && p.resultsCount >= params.maxResults) {
-        earlyReason = 'max-results';
-      }
+      if (params.stopAtFirstShiny && isShiny) earlyReason = 'first-shiny';
+      else if (params.stopOnCap && p.resultsCount >= params.maxResults) earlyReason = 'max-results';
     }
-
-    if (earlyReason) {
-      // 以降の列挙は打ち切り
-      break;
-    }
+    if (earlyReason) break;
   }
-
   p.processedAdvances += produced;
-
   if (earlyReason) {
     complete(earlyReason);
     return;
   }
-
-  if (p.processedAdvances >= p.totalAdvances) {
-    complete('max-advances');
-  }
+  if (p.processedAdvances >= p.totalAdvances) complete('max-advances');
 }
 
 function flushBatch(force: boolean) {
@@ -371,7 +323,6 @@ function flushBatch(force: boolean) {
   });
 }
 
-// 終了時クリーンアップ (念のため)
 ctx.onclose = () => cleanupInterval();
 
-export {}; // モジュール化
+export {};

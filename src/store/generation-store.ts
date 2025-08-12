@@ -1,6 +1,6 @@
 import { GenerationWorkerManager } from '@/lib/generation/generation-worker-manager';
-import type { GenerationParams, GenerationProgress, GenerationCompletion, GenerationResultBatch, GenerationResult } from '@/types/generation';
-import { validateGenerationParams } from '@/types/generation';
+import type { GenerationParams, GenerationProgress, GenerationCompletion, GenerationResultBatch, GenerationResult, GenerationParamsHex } from '@/types/generation';
+import { validateGenerationParams, hexParamsToGenerationParams, generationParamsToHex } from '@/types/generation';
 
 // 単一インスタンスマネージャ（UI からは slice 経由で操作）
 const manager = new GenerationWorkerManager();
@@ -14,7 +14,7 @@ export interface GenerationFilters {
 
 export interface GenerationSliceState {
   params: GenerationParams | null;
-  draftParams: Partial<GenerationParams>;
+  draftParams: Partial<GenerationParamsHex>;
   validationErrors: string[];
   status: GenerationStatus;
   progress: GenerationProgress | null;
@@ -27,7 +27,7 @@ export interface GenerationSliceState {
 }
 
 export interface GenerationSliceActions {
-  setDraftParams: (partial: Partial<GenerationParams>) => void;
+  setDraftParams: (partial: Partial<GenerationParamsHex>) => void;
   validateDraft: () => void;
   commitParams: () => boolean;
   startGeneration: () => Promise<boolean>;
@@ -47,11 +47,16 @@ export interface GenerationSliceActions {
 
 export type GenerationSlice = GenerationSliceState & GenerationSliceActions;
 
-export const createGenerationSlice = (set: any, get: any): GenerationSlice => ({
+// Zustand set/get 最小シグネチャ (型安全対象: GenerationSlice の部分更新)
+type PartialState<T> = Partial<T> | ((state: T) => Partial<T>);
+type SetFn = (partial: PartialState<GenerationSlice>, replace?: boolean) => void;
+type GetFn<T> = () => T;
+
+export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): GenerationSlice => ({
   params: null,
   draftParams: {
-    baseSeed: 1n,
-    offset: 0n,
+    baseSeedHex: '1',
+    offsetHex: '0',
     maxAdvances: 10000,
     maxResults: 1000,
     version: 'B',
@@ -75,19 +80,26 @@ export const createGenerationSlice = (set: any, get: any): GenerationSlice => ({
   internalFlags: { receivedAnyBatch: false },
 
   setDraftParams: (partial) => {
-    set((state: any) => ({ draftParams: { ...state.draftParams, ...partial } }));
+    set((state: GenerationSlice) => ({ draftParams: { ...state.draftParams, ...partial } }));
   },
   validateDraft: () => {
     const { draftParams } = get();
-    const errors = validateGenerationParams(draftParams as any);
+    // hex → bigint へ一時変換
+    const maybe: GenerationParams | null = canBuildFullHex(draftParams) ? hexParamsToGenerationParams(draftParams as GenerationParamsHex) : null;
+    const errors = maybe ? validateGenerationParams(maybe) : ['incomplete params'];
     set({ validationErrors: errors });
   },
   commitParams: () => {
     const { draftParams } = get();
-    const errors = validateGenerationParams(draftParams as any);
+    if (!canBuildFullHex(draftParams)) {
+      set({ validationErrors: ['incomplete params'] });
+      return false;
+    }
+    const full = hexParamsToGenerationParams(draftParams as GenerationParamsHex);
+    const errors = validateGenerationParams(full);
     set({ validationErrors: errors });
     if (errors.length) return false;
-    set({ params: draftParams });
+    set({ params: full });
     return true;
   },
   startGeneration: async () => {
@@ -104,8 +116,9 @@ export const createGenerationSlice = (set: any, get: any): GenerationSlice => ({
       await manager.start(params);
       set({ status: 'running' });
       return true;
-    } catch (e: any) {
-      set({ status: 'error', error: e?.message || 'start-failed' });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      set({ status: 'error', error: message || 'start-failed' });
       return false;
     }
   },
@@ -127,23 +140,34 @@ export const createGenerationSlice = (set: any, get: any): GenerationSlice => ({
     }
   },
   clearResults: () => set({ results: [] }),
-  applyFilters: (partial) => set((state: any) => ({ filters: { ...state.filters, ...partial } })),
+  applyFilters: (partial) => set((state: GenerationSlice) => ({ filters: { ...state.filters, ...partial } })),
   resetGenerationState: () => set({
-    status: 'idle', progress: null, results: [], lastCompletion: null, error: null, metrics: {}, internalFlags: { receivedAnyBatch: false }
+    status: 'idle',
+    progress: null,
+    results: [],
+    lastCompletion: null,
+    error: null,
+    metrics: {},
+    internalFlags: { receivedAnyBatch: false },
   }),
 
   _onWorkerProgress: (p) => {
     set({ progress: p, metrics: { ...get().metrics, lastUpdateTime: performance.now() } });
   },
   _onWorkerBatch: (b) => {
-    set((state: any) => {
-      if (state.results.length >= (state.params?.maxResults || Infinity)) return {};
+    set((state: GenerationSlice) => {
+      if (state.results.length >= (state.params?.maxResults || Infinity)) return state; // 変更なし
       const capacityLeft = (state.params?.maxResults || Infinity) - state.results.length;
       const slice = b.results.slice(0, capacityLeft);
-  let shinyAdd = 0;
-  for (let i = 0; i < slice.length; i++) if (slice[i].shiny_type !== 0) shinyAdd++;
-  const shinyCount = (state.metrics.shinyCount || 0) + shinyAdd;
-  return { results: state.results.concat(slice), internalFlags: { receivedAnyBatch: true }, metrics: { ...state.metrics, shinyCount } };
+      let shinyAdd = 0;
+      for (let i = 0; i < slice.length; i++) if (slice[i].shiny_type !== 0) shinyAdd++;
+      const shinyCount = (state.metrics.shinyCount || 0) + shinyAdd;
+      return {
+        ...state,
+        results: state.results.concat(slice),
+        internalFlags: { receivedAnyBatch: true },
+        metrics: { ...state.metrics, shinyCount },
+      };
     });
   },
   _onWorkerComplete: (c) => {
@@ -191,3 +215,12 @@ export const selectEtaFormatted = (s: GenerationSlice): string | null => {
 };
 
 export const selectShinyCount = (s: GenerationSlice): number => s.metrics.shinyCount || 0;
+
+function canBuildFullHex(d: Partial<GenerationParamsHex>): d is GenerationParamsHex {
+  const required: (keyof GenerationParamsHex)[] = ['baseSeedHex','offsetHex','maxAdvances','maxResults','version','encounterType','tid','sid','syncEnabled','syncNatureId','stopAtFirstShiny','stopOnCap','batchSize'];
+  return required.every(k => (d as Record<string, unknown>)[k] !== undefined);
+}
+
+export function getCurrentHexParams(state: GenerationSlice): GenerationParamsHex | null {
+  return state.params ? generationParamsToHex(state.params) : null;
+}
