@@ -2,6 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { GenerationWorkerManager } from '@/lib/generation/generation-worker-manager';
 import type { GenerationParams } from '@/types/generation';
 
+const NO_WORKER = typeof Worker === 'undefined';
+if (NO_WORKER) {
+  describe.skip('GenerationWorkerManager (no Worker env)', () => { it('skipped', () => expect(true).toBe(true)); });
+} else {
+
 function params(overrides: Partial<GenerationParams> = {}): GenerationParams {
   return {
     baseSeed: 1n,
@@ -60,3 +65,4 @@ describe('GenerationWorkerManager', () => {
     mgr.stop();
   });
 });
+}
