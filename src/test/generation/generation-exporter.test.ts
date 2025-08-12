@@ -33,6 +33,17 @@ describe('generation-exporter', () => {
     const lines = csv.split('\n');
     expect(lines[0].split(',')[0]).toBe('Advance');
     expect(lines.length).toBe(11); // header + 10 rows
+  const headers = lines[0].split(',');
+  expect(headers).toContain('NatureName');
+  expect(headers.indexOf('NatureName')).toBe(headers.indexOf('NatureId') + 1);
+  // 期待列数 (README仕様): 16列
+  expect(headers.length).toBe(16);
+  // 1行目データ整合: pidHex/seedHex が 0x + lower-case
+  const firstData = lines[1].split(',');
+  const seedHex = firstData[1];
+  const pidHex = firstData[3];
+  expect(seedHex).toMatch(/^0x[0-9a-f]{1,16}$/);
+  expect(pidHex).toMatch(/^0x[0-9a-f]{8}$/);
   });
 
   it('exports JSON with totalResults=10', () => {
@@ -46,6 +57,8 @@ describe('generation-exporter', () => {
     const txt = exportGenerationResults(samples, { format: 'txt' });
     expect(txt).toContain('Result #1');
     expect(txt).toContain('Total Results: 10');
+  // NatureName 行追加確認
+  expect(txt).toMatch(/NatureName:\s+\w+/);
   });
 
   it('handles empty array', () => {
@@ -55,5 +68,21 @@ describe('generation-exporter', () => {
     const obj = JSON.parse(json); expect(obj.totalResults).toBe(0);
     const txt = exportGenerationResults([], { format: 'txt' });
     expect(txt).toContain('Total Results: 0');
+  });
+
+  it('includes NatureName and shinyLabel in JSON', () => {
+    const json = exportGenerationResults(samples.slice(0,1), { format: 'json' });
+    const obj = JSON.parse(json);
+    expect(obj.results[0].natureName).toBeDefined();
+    expect(typeof obj.results[0].shinyLabel).toBe('string');
+  });
+
+  it('gracefully handles unknown shiny/nature ids', () => {
+    const anomaly: GenerationResult = { ...samples[0], nature: 999, shiny_type: 999 } as any;
+    const csv = exportGenerationResults([anomaly], { format: 'csv' });
+    // shinyLabel は exporter 内 shinyLabel() で Unknown になる
+    expect(csv).toMatch(/Unknown/);
+    const txt = exportGenerationResults([anomaly], { format: 'txt' });
+    expect(txt).toMatch(/Unknown/);
   });
 });

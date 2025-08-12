@@ -116,6 +116,7 @@ function exportTxt(results: GenerationResult[]): string {
     out.push(`  Seed: ${a.seedHex} (${a.seedDec})`);
     out.push(`  PID: ${a.pidHex} (${a.pidDec})`);
     out.push(`  NatureId: ${a.natureId}`);
+  out.push(`  NatureName: ${a.natureName}`);
     out.push(`  Shiny: ${a.shinyLabel} (${a.shinyType})`);
     out.push(`  AbilitySlot: ${a.abilitySlot}`);
     out.push(`  Encounter: type=${a.encounterType} slotVal=${a.encounterSlotValue}`);
