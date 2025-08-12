@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll } from 'vitest';
 import { initWasm } from '@/lib/core/wasm-interface';
-import { DomainEncounterType } from '@/types/domain';
+import { DomainEncounterType, DomainEncounterTypeNames } from '@/types/domain';
 import { ensureEncounterTypeAlignment, domainEncounterTypeToWasm, wasmEncounterTypeToDomain } from '@/lib/core/mapping/encounter-type';
 
 describe('EncounterType mapping alignment', () => {
@@ -13,9 +13,8 @@ describe('EncounterType mapping alignment', () => {
   });
 
   test('round-trip conversion preserves value', () => {
-    const domainKeys = Object.keys(DomainEncounterType).filter(k => isNaN(Number(k)));
-    for (const k of domainKeys) {
-      const v = (DomainEncounterType as any)[k] as number;
+    for (const name of DomainEncounterTypeNames) {
+      const v = (DomainEncounterType as Record<string, number>)[name] as DomainEncounterType;
       const wasmVal = domainEncounterTypeToWasm(v);
       const back = wasmEncounterTypeToDomain(wasmVal);
       expect(back).toBe(v);
