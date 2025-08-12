@@ -10,6 +10,10 @@ export type GenerationStatus = 'idle' | 'starting' | 'running' | 'paused' | 'sto
 export interface GenerationFilters {
   shinyOnly: boolean;
   natureIds: number[]; // 追加フィルタ用プレースホルダ
+  sortField?: 'advance' | 'pid' | 'nature' | 'shiny';
+  sortOrder?: 'asc' | 'desc';
+  advanceRange?: { min?: number; max?: number };
+  shinyTypes?: number[]; // 0/1/2 指定。空 or undefined は全許可
 }
 
 export interface GenerationSliceState {
@@ -37,6 +41,7 @@ export interface GenerationSliceActions {
   clearResults: () => void;
   applyFilters: (partial: Partial<GenerationFilters>) => void;
   resetGenerationState: () => void;
+  resetGenerationFilters: () => void;
   // 内部コールバック（manager から）
   _onWorkerProgress: (p: GenerationProgress) => void;
   _onWorkerBatch: (b: GenerationResultBatch) => void;
@@ -75,7 +80,7 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
   results: [],
   lastCompletion: null,
   error: null,
-  filters: { shinyOnly: false, natureIds: [] },
+  filters: { shinyOnly: false, natureIds: [], sortField: 'advance', sortOrder: 'asc', advanceRange: undefined, shinyTypes: undefined },
   metrics: {},
   internalFlags: { receivedAnyBatch: false },
 
@@ -141,6 +146,8 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
   },
   clearResults: () => set({ results: [] }),
   applyFilters: (partial) => set((state: GenerationSlice) => ({ filters: { ...state.filters, ...partial } })),
+  // 追加: リセット
+  resetGenerationFilters: () => set({ filters: { shinyOnly: false, natureIds: [], sortField: 'advance', sortOrder: 'asc', advanceRange: undefined, shinyTypes: undefined } }),
   resetGenerationState: () => set({
     status: 'idle',
     progress: null,
@@ -224,3 +231,51 @@ function canBuildFullHex(d: Partial<GenerationParamsHex>): d is GenerationParams
 export function getCurrentHexParams(state: GenerationSlice): GenerationParamsHex | null {
   return state.params ? generationParamsToHex(state.params) : null;
 }
+
+// 結果フィルタ+ソート用セレクタ（簡易版）
+// メモ化キャッシュ（単純参照比較）
+let _filteredSortedCache: {
+  resultsRef: GenerationResult[];
+  filtersRef: GenerationFilters;
+  output: GenerationResult[];
+} | null = null;
+
+export const selectFilteredSortedResults = (s: GenerationSlice) => {
+  const { results, filters } = s;
+  if (_filteredSortedCache && _filteredSortedCache.resultsRef === results && _filteredSortedCache.filtersRef === filters) {
+    return _filteredSortedCache.output;
+  }
+  let arr: GenerationResult[] = results;
+  if (filters.shinyOnly) arr = arr.filter(r => r.shiny_type !== 0);
+  if (filters.shinyTypes && filters.shinyTypes.length > 0) {
+    const set = new Set(filters.shinyTypes);
+    arr = arr.filter(r => set.has(r.shiny_type));
+  }
+  if (filters.natureIds && filters.natureIds.length > 0) {
+    const nset = new Set(filters.natureIds);
+    arr = arr.filter(r => nset.has(r.nature));
+  }
+  if (filters.advanceRange) {
+    const { min, max } = filters.advanceRange;
+    if (min != null) arr = arr.filter(r => r.advance >= min);
+    if (max != null) arr = arr.filter(r => r.advance <= max);
+  }
+  const field = filters.sortField || 'advance';
+  const order = filters.sortOrder === 'desc' ? -1 : 1;
+  const cmp = (a: GenerationResult, b: GenerationResult) => {
+    let av:number, bv:number;
+    switch(field) {
+      case 'pid': av = a.pid >>> 0; bv = b.pid >>> 0; break;
+      case 'nature': av = a.nature; bv = b.nature; break;
+      case 'shiny': av = a.shiny_type; bv = b.shiny_type; break;
+      case 'advance':
+      default: av = a.advance; bv = b.advance; break;
+    }
+    if (av < bv) return -1 * order;
+    if (av > bv) return 1 * order;
+    return 0;
+  };
+  const output = [...arr].sort(cmp);
+  _filteredSortedCache = { resultsRef: results, filtersRef: filters, output };
+  return output;
+};
