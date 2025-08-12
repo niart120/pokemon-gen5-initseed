@@ -13,21 +13,23 @@ export enum DomainGameVersion {
   W2 = 3,
 }
 
-export enum DomainEncounterType {
-  Normal = 0,
-  Surfing = 1,
-  Fishing = 2,
-  ShakingGrass = 3,
-  DustCloud = 4,
-  PokemonShadow = 5,
-  SurfingBubble = 6,
-  FishingBubble = 7,
-  StaticSymbol = 10,
-  StaticStarter = 11,
-  StaticFossil = 12,
-  StaticEvent = 13,
-  Roaming = 20,
-}
+// EncounterType: enum から const オブジェクトへ移行（逆引きはヘルパーで提供）
+export const DomainEncounterType = {
+  Normal: 0,
+  Surfing: 1,
+  Fishing: 2,
+  ShakingGrass: 3,
+  DustCloud: 4,
+  PokemonShadow: 5,
+  SurfingBubble: 6,
+  FishingBubble: 7,
+  StaticSymbol: 10,
+  StaticStarter: 11,
+  StaticFossil: 12,
+  StaticEvent: 13,
+  Roaming: 20,
+} as const;
+export type DomainEncounterType = typeof DomainEncounterType[keyof typeof DomainEncounterType];
 
 // EncounterType の名前ユニオン（データスキーマやJSONとの境界で使用）
 export const DomainEncounterTypeNames = [
@@ -46,6 +48,20 @@ export const DomainEncounterTypeNames = [
   'Roaming',
 ] as const;
 export type DomainEncounterTypeName = typeof DomainEncounterTypeNames[number];
+
+// 逆引き (数値 -> 名前) マップを事前構築
+const _DomainEncounterTypeReverse: Record<number, DomainEncounterTypeName> = (() => {
+  const r: Record<number, DomainEncounterTypeName> = {} as Record<number, DomainEncounterTypeName>;
+  for (const name of DomainEncounterTypeNames) {
+    const v = (DomainEncounterType as Record<string, number>)[name];
+    r[v] = name as DomainEncounterTypeName;
+  }
+  return r;
+})();
+
+export function getDomainEncounterTypeName(value: number): DomainEncounterTypeName | undefined {
+  return _DomainEncounterTypeReverse[value];
+}
 
 export enum DomainShinyType {
   Normal = 0,

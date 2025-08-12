@@ -1,7 +1,7 @@
 import type { EncounterLocationsJson, EncounterSlotJson } from './schema';
 import type { DomainEncounterType as EncounterType } from '@/types/domain';
 import type { ROMVersion } from '@/types/rom';
-import { DomainEncounterType } from '@/types/domain';
+import { DomainEncounterType, getDomainEncounterTypeName } from '@/types/domain';
 
 function normalizeLocationKey(location: string): string {
   return location.trim().replace(/[\u3000\s]+/g, '').replace(/[‐‑‒–—−\-_.]/g, '');
@@ -16,10 +16,11 @@ function applyLocationAlias(input: string): string {
   return s;
 }
 
-// Local resolver: numeric enum value -> canonical name
+// Local resolver: numeric value -> canonical encounter type name
 const methodName = (method: EncounterType): keyof typeof DomainEncounterType => {
-  // DomainEncounterType is a numeric enum; reverse mapping provides the name
-  return DomainEncounterType[method] as unknown as keyof typeof DomainEncounterType;
+  const name = getDomainEncounterTypeName(method);
+  if (!name) throw new Error(`Unknown encounter method value: ${method}`);
+  return name as keyof typeof DomainEncounterType;
 };
 
 export type EncounterRegistry = Record<string, { displayName: string; slots: EncounterSlotJson[] }>
