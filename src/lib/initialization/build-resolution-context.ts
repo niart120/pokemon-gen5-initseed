@@ -42,11 +42,11 @@ export function buildResolutionContext(opts: BuildContextOptions): ResolutionCon
   const hit = cache.get(key);
   if (hit) return hit;
 
-  const table: UiEncounterTable | null = getEncounterTable(
-    opts.version,
-    opts.location,
-    opts.encounterType as unknown as number // EncounterType is numeric under the hood
-  );
+    const table: UiEncounterTable | null = getEncounterTable(
+      opts.version,
+      opts.location,
+      Number(opts.encounterType) // numeric enum
+    );
 
   const ctx: ResolutionContext = {
     encounterTable: table ?? undefined,
