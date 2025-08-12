@@ -1,4 +1,5 @@
 import type { GenerationResult } from '@/types/generation';
+import { pidHex, seedHex, natureName, shinyLabel } from '@/lib/utils/format-display';
 
 export interface GenerationExportOptions {
   format: 'csv' | 'json' | 'txt';
@@ -11,6 +12,7 @@ interface AdaptedGenerationResult {
   pidHex: string;
   pidDec: number;
   natureId: number;
+  natureName: string;
   shinyType: number;
   shinyLabel: string;
   abilitySlot: number;
@@ -22,18 +24,9 @@ interface AdaptedGenerationResult {
   levelRandDec: string; // BigInt -> string
 }
 
-const SHINY_LABEL: Record<number,string> = {
-  0: 'None',
-  1: 'Square',
-  2: 'Star',
-};
-
-function toHexBigInt(v: bigint): string {
-  // 先頭0埋め幅は確定仕様未定のためそのまま。ただし空防止
-  return '0x' + v.toString(16);
-}
-
-function toHex32(v: number): string { return '0x' + v.toString(16).padStart(8,'0'); }
+// 既存toHex系は format-display へ統合。seedは16桁幅固定表示。
+function toHexBigInt(v: bigint): string { return '0x' + seedHex(v).toLowerCase(); }
+function toHex32(v: number): string { return '0x' + pidHex(v).toLowerCase(); }
 
 export function adaptGenerationResults(results: GenerationResult[]): AdaptedGenerationResult[] {
   return results.map(r => ({
@@ -43,8 +36,9 @@ export function adaptGenerationResults(results: GenerationResult[]): AdaptedGene
     pidHex: toHex32(r.pid >>> 0),
     pidDec: r.pid >>> 0,
     natureId: r.nature,
+    natureName: natureName(r.nature),
     shinyType: r.shiny_type,
-    shinyLabel: SHINY_LABEL[r.shiny_type] ?? String(r.shiny_type),
+    shinyLabel: shinyLabel(r.shiny_type),
     abilitySlot: r.ability_slot,
     encounterType: r.encounter_type,
     encounterSlotValue: r.encounter_slot_value,
@@ -69,7 +63,7 @@ export function exportGenerationResults(results: GenerationResult[], options: Ge
 }
 
 const CSV_HEADERS = [
-  'Advance','SeedHex','SeedDec','PIDHex','PIDDec','NatureId','ShinyType','ShinyLabel','AbilitySlot','EncounterType','EncounterSlotValue','SyncApplied','GenderValue','LevelRandHex','LevelRandDec'
+  'Advance','SeedHex','SeedDec','PIDHex','PIDDec','NatureId','NatureName','ShinyType','ShinyLabel','AbilitySlot','EncounterType','EncounterSlotValue','SyncApplied','GenderValue','LevelRandHex','LevelRandDec'
 ];
 
 function exportCsv(results: GenerationResult[]): string {
@@ -83,7 +77,8 @@ function exportCsv(results: GenerationResult[]): string {
       a.pidHex,
       a.pidDec,
       a.natureId,
-      a.shinyType,
+  a.natureName,
+  a.shinyType,
       a.shinyLabel,
       a.abilitySlot,
       a.encounterType,

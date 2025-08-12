@@ -289,3 +289,37 @@ npm run dev
 ## ライセンス
 
 MIT License - 詳細は [LICENSE](LICENSE) ファイルを参照
+
+## Generation Results Export 仕様
+
+Generation タブで取得した結果は CSV / JSON / TXT 形式でエクスポートできます。各形式の共通フィールドは以下です:
+
+| 列名 | 説明 |
+|------|------|
+| Advance | その結果が得られた RNG advance (1-based) |
+| SeedHex | 基底シード (16桁, 0x接頭辞, 小文字) |
+| SeedDec | 基底シード 10進 (BigInt 文字列) |
+| PIDHex | PID (8桁, 0x接頭辞, 小文字) |
+| PIDDec | PID 10進 |
+| NatureId | 性格 ID (0-24) |
+| NatureName | 性格名 (英語, DomainNatureNames) |
+| ShinyType | 色違い種別コード (0:Normal 1:Square 2:Star) |
+| ShinyLabel | ShinyType ラベル (No / Square / Star / Unknown) |
+| AbilitySlot | 特性スロット値 |
+| EncounterType | 遭遇タイプ (内部コード) |
+| EncounterSlotValue | スロット決定用数値 |
+| SyncApplied | シンクロ適用有無 |
+| GenderValue | 性別判定用値 (0-255) |
+| LevelRandHex | レベル用乱数 (0x...16桁) |
+| LevelRandDec | レベル用乱数 10進 |
+
+### 変更履歴
+- 2025-08: NatureName 列を追加し、人が読みやすい性格名を直接含めるよう改善。
+
+### 形式別補足
+- CSV: 1行目に上記ヘッダ。値はカンマ区切り / 文字列クォート無し (内部にカンマを含まないため)。
+- JSON: メタデータ (exportDate, format, totalResults) と results 配列。
+- TXT: 人間可読なブロック列挙。スクリプト処理用途には CSV/JSON を推奨。
+
+### 互換性
+以前バージョンのエクスポートとの互換性: 既存列の順序は維持し NatureName を NatureId の直後に挿入。旧ツールで列数固定パースをしている場合は更新が必要です。
