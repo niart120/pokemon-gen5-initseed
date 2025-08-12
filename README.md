@@ -18,6 +18,53 @@
 - **エクスポート**: CSV/JSON/テキスト形式での結果出力
 - **包括的テスト環境**: Playwright-MCP によるE2Eテスト自動化、開発・統合テストページによる品質保証
 
+## Generation 機能概要 (Phase3-4 MVP)
+
+初期Seedから連続する乱数列を列挙し、ポケモン生成コア属性 (PID, 性格, 特性スロット, 色違い種別, スロット値, 同期適用) を WebWorker + WASM でストリーミング取得します。Search (SHA-1 初期Seed探索) と独立したタブ/ストア領域を持ち、相互に干渉しません。
+
+### 主API / 主要構成
+- GenerationWorkerManager: WebWorker ライフサイクル管理 (開始/停止/進捗/結果バッチ)
+- generation-worker: WASM PokemonGenerator / SeedEnumerator 呼び出し
+- Store Slice: processedAdvances, resultsCount, throughputRaw, throughputEma, etaMs, shinyCount を保持
+- Exporter: CSV / JSON / TXT (BigInt は hex + decimal 併記 or 文字列化)
+
+### 主パラメータ (GenerationParams 抜粋)
+| Param | 説明 | 制約 |
+|-------|------|------|
+| baseSeed | 初期Seed bigint | 0 ≤ < 2^64 |
+| offset | 開始オフセット | 0..maxAdvances |
+| maxAdvances | 消費上限 | 1..1,000,000 |
+| maxResults | 収集上限 | 1..100,000 且つ ≤ maxAdvances |
+| tid / sid | 表/裏ID | 0..65535 |
+| syncEnabled + syncNatureId | シンクロ設定 | natureId 0..24 |
+| stopAtFirstShiny | 最初の色違いで停止 | boolean |
+| stopOnCap | maxResults 到達停止 | default true |
+| batchSize | バッチ生成数 | 1..10,000 |
+| progressIntervalMs | 進捗間隔 | default 250ms |
+
+### 完了理由 (reason)
+- max-advances: 上限消費到達
+- max-results: 収集上限 + stopOnCap
+- first-shiny: 最初の色違い検出 + stopAtFirstShiny
+- stopped: ユーザー停止
+- error: 例外 / 検証失敗
+
+### 進捗/性能指標
+- throughputRaw = processedAdvances / 実行秒
+- throughputEma = EMA(α=0.2) 平滑化
+- etaMs = (remainingAdvances / basis) * 1000 (basis=Ema>0?Ema:Raw)
+
+### Search との違い
+| 項目 | Search | Generation |
+|------|--------|------------|
+| 目的 | 初期Seed探索(SHA-1) | Seed から遭遇結果列挙 |
+| 計算単位 | メッセージ -> ハッシュ | RNG advance -> Pokemon Raw |
+| 早期終了 | 条件Seed発見 | max / shiny / results / stop |
+| 出力 | 初期Seed候補 | Pokemon Raw 属性列 |
+| 性能指標 | Hash/s (SIMD) | Advances/s (EMA) |
+
+詳細仕様: docs/GENERATION_PHASE3_4_PLAN.md, spec/pokemon-generation-feature-spec.md を参照。
+
 ## 技術スタック
 
 - **フロントエンド**: React 18 + TypeScript + Vite

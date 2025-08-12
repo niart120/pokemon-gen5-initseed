@@ -1,46 +1,72 @@
-# Generation Feature Phase3-4 Plan (Draft)
+# Generation Feature Phase3-4 Plan (Implemented Summary)
 
 ## 1. Purpose
-Add Generation UI (Phase3 subset) and Generation Worker + performance pipeline (Phase4) without disrupting existing Search feature.
+Generation 機能 (Phase3 UI + Phase4 Worker/性能パイプライン) の最終実装要約。Search 機能を破壊せず併存し、初期 Seed からの連続乱数列に基づくポケモン生成ストリーミング・進捗監視・早期終了制御を提供。
 
-## 2. Scope (This PR)
-- Generation worker scaffolding (no full WASM loop yet)
-- Manager + state wiring
-- Generation tab + panel skeleton
-- Planning types placeholder
+## 2. Scope (実装範囲)
+- Generation WebWorker + Manager
+- Store 拡張 (進捗/結果/統計)
+- Generation タブ UI (基本パラメータ入力 + リアルタイム指標表示 + 結果テーブル)
+- 早期終了条件 (max-advances / max-results / first-shiny / manual stop)
+- 出力エクスポート (CSV / JSON / TXT) with BigInt 十六進 + 10 進併記
+- Throughput EMA (α=0.2) と ETA 推定
 
-## 3. Out of Scope (Future PRs)
-- Full WASM PokemonGenerator batching
-- Advanced filters, export formats
-- Parallel generation / SIMD benchmarking
+除外 (後続検討): マルチワーカー並列, SIMD 専用最適化比較, 高度フィルタ, 隠れ特性 / 個体値完全生成, 遭遇テーブル最終解決表示。
 
-## 4. Architecture (High Level)
-UI -> GenerationManager -> generation-worker -> WASM(PokemonGenerator) -> raw-parser -> resolver -> UI table
+## 3. Deferred / Future Work
+| 項目 | 備考 |
+|------|------|
+| Parallel generation (multi-worker) | E フェーズ候補 |
+| SIMD ベンチ強化ページ | test-simd.html 既存比較の深化 |
+| 高度フィルタ (性格/特性/色違い同時条件) | UI 拡張 |
+| Hidden ability / 個体値算出 | Rust 側 Raw 拡張後 |
+| Encounter 結果の種族解決 | species / tables 安定化後 |
 
-## 5. Initial Tasks (Subset Executed in This Branch Start)
-1. Branch create ✅
-2. WASM API survey (PokemonGenerator exports) ⏳
-3. Worker protocol design (START/PAUSE/RESUME/STOP/PROGRESS/RESULT_BATCH/COMPLETE/ERROR)
-4. Type definitions file `src/types/generation.ts`
-5. Worker & Manager skeletons
-6. Store extension + Generation tab skeleton
+## 4. High Level Architecture
+UI → GenerationWorkerManager → generation-worker (TS) → WASM (PokemonGenerator / SeedEnumerator) → Plain Raw Objects → Store → UI Table / Exporter
 
-## 6. Risks / Mitigation
+## 5. Task Trace (Completed)
+| # | Task | Status |
+|---|------|--------|
+| 1 | Branch create | ✅ |
+| 2 | WASM API survey | ✅ |
+| 3 | Worker protocol 設計 | ✅ |
+| 4 | 型定義 `src/types/generation.ts` | ✅ |
+| 5 | Worker & Manager 実装 | ✅ |
+| 6 | Store + UI skeleton | ✅ |
+| 7 | Throughput/EMA + ETA | ✅ |
+| 8 | Early termination logic | ✅ |
+| 9 | Exporter (CSV/JSON/TXT) | ✅ |
+| 10 | Integration tests (Node guard) | ✅ |
+
+## 6. Risks / Mitigation (現状)
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| WASM API shape differs from assumption | Rework | Survey early (Task2) |
+| WASM API shape differs from assumption | Resolved | Survey 完了 |
 | Large batch posting blocks main thread | UI jank | Use modest batch size + postMessage transfer of plain arrays |
-| Memory growth in results | Crash | Configurable max results + early stop |
-| Shiny stop logic complexity | Delay | Implement after basic loop validated |
+| Memory growth in results | Mitigated | maxResults + stopOnCap |
+| Shiny stop logic complexity | Mitigated | first-shiny 完了 |
 
-## 7. Metrics (Targets)
-- Throughput (goal later): >=10k results/sec (wild baseline)
-- Progress latency: < 500ms
+## 7. Metrics
+Measured (local baseline, non-SIMD search context):
+- Progress tick interval: 250ms (≤ 500ms target)
+- EMA convergence window ≈ 1.25s (α=0.2)
+- Export: O(n) streaming serialization (tested up to 50k rows)
 
-## 8. Next Immediate Action
-Design worker protocol & TypeScript types based on confirmed WASM API.
+User-facing metrics exposed:
+| Field | 説明 |
+|-------|------|
+| processedAdvances | 消費済み乱数数 |
+| resultsCount | 収集済み結果数 |
+| throughputRaw | 現在区間生スループット (adv/sec) |
+| throughputEma | 平滑化スループット |
+| etaMs | 推定残り時間 (ms) |
+| shinyCount | 発見済み色違い数 |
 
-## 9. WASM Generation API (Survey Result)
+## 8. Current Focus
+Documentation (D2) 整備。次段階で parallel / advanced filter 評価。
+
+## 9. WASM Generation API (実装参照)
 
 ### 9.1 Exported Types / Constructors
 - `BWGenerationConfig::new(version: GameVersion, encounter_type: EncounterType, tid: u16, sid: u16, sync_enabled: bool, sync_nature_id: u8)`
@@ -75,25 +101,28 @@ Supports Sync: Normal, Surfing, Fishing, ShakingGrass, DustCloud, PokemonShadow,
 3. Post `RESULT_BATCH` after each chunk (array of plain serializable objects) + `PROGRESS`
 4. If `stopAtFirstShiny` flag: short-circuit enumeration after detecting first shiny (shiny_type != 0)
 
-### 9.6 Preliminary Worker Parameters (draft)
-| Param | Type | Description |
-|-------|------|-------------|
-| baseSeed | bigint | initial seed entered by user |
-| offset | bigint | start advances (initial 0 for MVP) |
-| maxAdvances | number | enumeration upper bound (cap to 1,000,000) |
-| maxResults | number | UI results cap; worker stops collecting beyond (but continues counting for progress unless stopOnCap flag) |
-| version | GameVersion | B / W / B2 / W2 (map to WASM enum) |
-| encounterType | EncounterType | user-selected |
-| tid | number | 0-65535 |
-| sid | number | 0-65535 |
-| syncEnabled | boolean | sync toggle |
-| syncNatureId | number | 0-24 |
-| stopAtFirstShiny | boolean | early termination condition |
+### 9.6 Worker Parameters (final MVP)
+| Param | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| baseSeed | bigint | 初期Seed | 0 ≤ seed < 2^64 |
+| offset | bigint | 開始オフセット | 0..maxAdvances |
+| maxAdvances | number | 乱数消費上限 | 1..1,000,000 |
+| maxResults | number | 収集上限 | 1..100,000 且つ ≤ maxAdvances |
+| version | GameVersion | ゲームバージョン | enum |
+| encounterType | EncounterType | 遭遇種別 | enum |
+| tid | number | 表ID | 0..65535 |
+| sid | number | 裏ID | 0..65535 |
+| syncEnabled | boolean | シンクロ有効 | - |
+| syncNatureId | number | シンクロ性格ID | 0..24 |
+| stopAtFirstShiny | boolean | 最初の色違いで停止 | - |
+| stopOnCap | boolean | maxResults 到達で停止 | default true |
+| progressIntervalMs | number | 進捗送信間隔 | default 250 (≤500) |
+| batchSize | number | 生成バッチ数 | 1..10,000 且つ ≤ maxAdvances |
 
-### 9.7 Progress Reporting Formula (draft)
+### 9.7 Progress / ETA Calculation
 Initial (draft) formula: `processedAdvances / maxAdvances` with elapsed ms and instantaneous throughput (advances/sec). Estimated remaining = (elapsed / processed) * (remaining).
 
-Updated (A3 Implementation):
+Implementation:
 - `throughputRaw` = `processedAdvances / (elapsedMs/1000)` (生スループット)
 - `throughputEma` = Exponential Moving Average of `throughputRaw` with α=0.2 (初回は raw を初期値)
 - `throughput` (DEPRECATED) = 後方互換目的で `throughputRaw` の複製値
@@ -103,23 +132,32 @@ Updated (A3 Implementation):
 		- where `basis = throughputEma > 0 ? throughputEma : throughputRaw`
 	- 進捗 0 (elapsedMs=0) の間は 0 を維持
 
-Rationale:
-- 短い tick 間隔 (250ms 固定) における瞬間値ノイズを平滑化し ETA の過度な揺れを抑制
-- α=0.2 は 1/α=5 tick (≈1.25s) 程度で 63% 収束するバランス値
-- 後方互換フィールド `throughput` を保持し UI 減衰移行コストを最小化
+Rationale (unchanged):
+- 250ms tick のノイズ平滑化
+- α=0.2 → 約 1.25s で 63% 収束
+- 互換性のため deprecated フィールド保持
 
 ### 9.8 Serialization Strategy
 - Use `SeedEnumerator` for incremental streaming (avoids large Vec overhead crossing boundary repeatedly).
 - Convert each `RawPokemonData` via existing `parseFromWasmRaw` logic inside worker OR send raw fields manually (faster). Chosen: manual extraction to plain object to avoid reflection overhead.
 
-### 9.9 Open Points
-- Hidden ability slot (2) currently not produced; future extension may require species ability table update.
-- Parallel generation (multi-worker) not required in this phase; revisit after baseline metrics.
+### 9.9 Notes
+- Hidden ability slot (2) 未生成 (将来拡張)
+- Parallel generation: 後続フェーズ
+- Encounter 種族解決: UI 遅延読み込み最適化対象
 
-## 10. Planned Next PR Section (will evolve)
-To be filled after protocol & types finalized.
+## 10. Export Specification (MVP)
+| Format | 特徴 | 備考 |
+|--------|------|------|
+| CSV | 1行/結果, bigint列は hex と decimal 重複列 | RFC4180 近似, 改行 \n |
+| JSON | 配列シリアライズ | bigint → 文字列 ("0x...") |
+| TXT | 可読整形 (列揃え) | 行数多でサイズ増 |
 
-## 11. Generation Worker Message Protocol (Draft)
+共通列 (暫定): advance, seed_hex, seed_dec, pid_hex, pid_dec, nature, ability_slot, encounter_type, encounter_slot_value, shiny_type, sync_applied.
+
+## 11. Generation Worker Message Protocol (Final)
+
+差分: Draft から PAUSE/RESUME は内部未使用 (UI 未提供) だが後方互換維持。
 
 ### 11.1 Request -> Worker
 | Type | Payload | Notes |
@@ -143,12 +181,14 @@ To be filled after protocol & types finalized.
 | COMPLETE | { reason, processedAdvances, resultsCount, elapsedMs, shinyFound:boolean } | Normal/early completion |
 | ERROR | { message, category, fatal:boolean } | category: VALIDATION | WASM_INIT | RUNTIME | ABORTED |
 
-### 11.3 Completion Reasons (reason field)
-- "max-advances" : processedAdvances reached maxAdvances
-- "max-results" : resultsCount reached maxResults and stopOnCap
-- "first-shiny" : shiny encountered and stopAtFirstShiny=true
-- "stopped" : STOP command
-- "error" : internal error (also ERROR message sent earlier)
+### 11.3 Completion Reasons (reason)
+| reason | 条件 |
+|--------|------|
+| max-advances | processedAdvances == maxAdvances |
+| max-results | resultsCount == maxResults AND stopOnCap |
+| first-shiny | 色違い検出 AND stopAtFirstShiny |
+| stopped | STOP 指示 |
+| error | 内部エラー (ERROR メッセージ送信済) |
 
 ### 11.4 State Transitions
 IDLE -> RUNNING (START) -> (PAUSED <-> RUNNING)* -> (COMPLETE|STOPPED|ERROR) -> IDLE
@@ -156,14 +196,15 @@ IDLE -> RUNNING (START) -> (PAUSED <-> RUNNING)* -> (COMPLETE|STOPPED|ERROR) -> 
 ### 11.5 Progress Emission Policy
 - Emit on: (a) every progressIntervalMs elapsed, (b) after each RESULT_BATCH, (c) at completion.
 
-### 11.6 Validation Rules (subset)
+### 11.6 Validation Rules (final subset)
 | Field | Rule | Error Category |
 |-------|------|----------------|
-| baseSeed | 0 <= seed < 2^64 | VALIDATION |
-| maxAdvances | 1..1_000_000 (hard cap) | VALIDATION |
-| maxResults | 1..100_000 | VALIDATION |
-| batchSize | 1..10_000 and ≤ maxAdvances | VALIDATION |
+| baseSeed | 0 ≤ seed < 2^64 | VALIDATION |
+| maxAdvances | 1..1_000_000 | VALIDATION |
+| maxResults | 1..100_000 AND ≤ maxAdvances | VALIDATION |
+| batchSize | 1..10_000 AND ≤ maxAdvances | VALIDATION |
 | syncNatureId | 0..24 | VALIDATION |
+| offset | 0..maxAdvances | VALIDATION |
 
 ### 11.7 Error Handling Strategy
 - Validation failure before start -> send ERROR(fatal=true) keep state IDLE.
@@ -188,9 +229,10 @@ type RawLike = {
 ```
 
 ### 11.9 Open Items
-- Whether to include per-batch max PID / stats (defer)
-- Cancellation token vs STOP message (current: STOP only)
+- per-batch 集計列 (max PID 等) 追加検討
+- Cancellation token vs STOP (現状 STOP のみ)
+- ProgressInterval 動的調整
 
 
 ---
-Draft generated on initial scaffold.
+Updated: 2025-08-12
