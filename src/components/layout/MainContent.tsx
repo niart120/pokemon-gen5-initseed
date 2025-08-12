@@ -41,13 +41,13 @@ export function MainContent() {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
-            <Gear size={16} />
-            Option
-          </TabsTrigger>
           <TabsTrigger value="generation" className="flex items-center gap-2">
             <Sparkle size={16} />
             Generation
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <Gear size={16} />
+            Option
           </TabsTrigger>
           <TabsTrigger value="help" className="flex items-center gap-2">
             <Info size={16} />
