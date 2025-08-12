@@ -104,5 +104,78 @@ Supports Sync: Normal, Surfing, Fishing, ShakingGrass, DustCloud, PokemonShadow,
 ## 10. Planned Next PR Section (will evolve)
 To be filled after protocol & types finalized.
 
+## 11. Generation Worker Message Protocol (Draft)
+
+### 11.1 Request -> Worker
+| Type | Payload | Notes |
+|------|---------|-------|
+| START_GENERATION | { params, requestId? } | params = validated GenerationParams |
+| PAUSE | { requestId? } | Idempotent |
+| RESUME | { requestId? } | No-op if not paused |
+| STOP | { requestId?, reason?: string } | Triggers graceful completion (STOPPED) |
+
+`GenerationParams` (summary): baseSeed(bigint), offset(bigint), maxAdvances(number), maxResults(number), version(GameVersion), encounterType(EncounterType), tid(number), sid(number), syncEnabled(boolean), syncNatureId(number), stopAtFirstShiny(boolean), stopOnCap(boolean=true), progressIntervalMs(number=500), batchSize(number=1000 default, soft ≤ 10000).
+
+### 11.2 Worker -> Main Responses
+| Type | Payload Fields | Description |
+|------|----------------|-------------|
+| READY | { version:"1" } | Worker initialized |
+| PROGRESS | { processedAdvances, totalAdvances, resultsCount, elapsedMs, throughput, etaMs } | throughput=processedAdvances/(elapsedMs/1000) |
+| RESULT_BATCH | { batchIndex, results:[RawLike], batchSize, cumulativeResults } | RawLike: minimal raw fields (see 9.2) |
+| PAUSED | { message? } | Acknowledge pause |
+| RESUMED | { } | Acknowledge resume |
+| STOPPED | { reason, processedAdvances, resultsCount, elapsedMs } | User-issued stop |
+| COMPLETE | { reason, processedAdvances, resultsCount, elapsedMs, shinyFound:boolean } | Normal/early completion |
+| ERROR | { message, category, fatal:boolean } | category: VALIDATION | WASM_INIT | RUNTIME | ABORTED |
+
+### 11.3 Completion Reasons (reason field)
+- "max-advances" : processedAdvances reached maxAdvances
+- "max-results" : resultsCount reached maxResults and stopOnCap
+- "first-shiny" : shiny encountered and stopAtFirstShiny=true
+- "stopped" : STOP command
+- "error" : internal error (also ERROR message sent earlier)
+
+### 11.4 State Transitions
+IDLE -> RUNNING (START) -> (PAUSED <-> RUNNING)* -> (COMPLETE|STOPPED|ERROR) -> IDLE
+
+### 11.5 Progress Emission Policy
+- Emit on: (a) every progressIntervalMs elapsed, (b) after each RESULT_BATCH, (c) at completion.
+
+### 11.6 Validation Rules (subset)
+| Field | Rule | Error Category |
+|-------|------|----------------|
+| baseSeed | 0 <= seed < 2^64 | VALIDATION |
+| maxAdvances | 1..1_000_000 (hard cap) | VALIDATION |
+| maxResults | 1..100_000 | VALIDATION |
+| batchSize | 1..10_000 and ≤ maxAdvances | VALIDATION |
+| syncNatureId | 0..24 | VALIDATION |
+
+### 11.7 Error Handling Strategy
+- Validation failure before start -> send ERROR(fatal=true) keep state IDLE.
+- Runtime error during loop -> send ERROR(fatal=true) then STOPPED/COMPLETE skipped.
+- STOP during PAUSED -> immediate STOPPED (no RESUMED).
+
+### 11.8 Serialization Shape (RawLike)
+```ts
+type RawLike = {
+	seed: bigint;
+	pid: number;
+	nature: number;
+	ability_slot: number;
+	gender_value: number;
+	encounter_slot_value: number;
+	encounter_type: number;
+	level_rand_value: bigint;
+	shiny_type: number;
+	sync_applied: boolean;
+	advance: number; // computed index = offset + localIndex
+};
+```
+
+### 11.9 Open Items
+- Whether to include per-batch max PID / stats (defer)
+- Cancellation token vs STOP message (current: STOP only)
+
+
 ---
 Draft generated on initial scaffold.
