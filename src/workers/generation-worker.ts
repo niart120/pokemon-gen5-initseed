@@ -10,6 +10,7 @@ import {
   validateGenerationParams,
   FIXED_PROGRESS_INTERVAL_MS,
 } from '@/types/generation';
+import { parseFromWasmRaw } from '@/lib/generation/raw-parser';
 // 既存 wasm ビルド (vite alias '@/wasm' 前提) ― 追加アダプタは作らず直接利用
 import { BWGenerationConfig, SeedEnumerator } from '@/wasm/wasm_pkg';
 
@@ -36,6 +37,7 @@ interface InternalState {
   stopped: boolean; // STOP 要求フラグ (完全処理は後続 Task10)
   batchIndex: number;
   cumulativeResults: number;
+  shinyFound: boolean;
 }
 
 // DedicatedWorkerGlobalScope 型は lib.dom.d.ts で提供されるが build 設定により認識しない場合があるため any fallback
@@ -68,6 +70,7 @@ const state: InternalState = {
   stopped: false,
   batchIndex: 0,
   cumulativeResults: 0,
+  shinyFound: false,
 };
 
 post({ type: 'READY', version: '1' });
@@ -125,6 +128,7 @@ function handleStart(params: GenerationParams) {
   state.pendingResults = [];
   state.batchIndex = 0;
   state.cumulativeResults = 0;
+  state.shinyFound = false;
   try {
     // Task6: WASM 初期化 & SeedEnumerator 準備 (後続機能は未実装)
     state.config = new BWGenerationConfig(
@@ -212,6 +216,14 @@ function complete(reason: 'max-advances' | 'max-results' | 'first-shiny' | 'stop
   // FINAL FLUSH (残り分送信)
   flushBatch(true);
   state.progress.status = 'completed';
+  if (process.env.NODE_ENV !== 'production') {
+    if (state.cumulativeResults !== state.progress.resultsCount) {
+      console.error('[generation-worker] final results mismatch', {
+        cumulativeResults: state.cumulativeResults,
+        resultsCount: state.progress.resultsCount,
+      });
+    }
+  }
   post({
     type: 'COMPLETE',
     payload: {
@@ -219,7 +231,7 @@ function complete(reason: 'max-advances' | 'max-results' | 'first-shiny' | 'stop
       processedAdvances: state.progress.processedAdvances,
       resultsCount: state.progress.resultsCount,
       elapsedMs: state.progress.elapsedMs,
-      shinyFound: false, // TODO: shiny 検出時更新
+  shinyFound: state.shinyFound,
     },
   });
 }
@@ -234,36 +246,71 @@ function cleanupInterval() {
 // ===== Task6 Core Enumeration (no batching, no early termination) =====
 function advanceEnumerationChunk() {
   if (!state.enumerator || !state.params) return;
+  const params = state.params;
   const p = state.progress;
-  // 暫定: 1 tick で固定数 (DUMMY_STEP 相当) 進めるが実際の残数と比較
   let steps = DUMMY_STEP;
   const remainingNeeded = p.totalAdvances - p.processedAdvances;
   if (remainingNeeded <= 0) return;
   if (steps > remainingNeeded) steps = remainingNeeded;
+
   let produced = 0;
+  let earlyReason: 'first-shiny' | 'max-results' | null = null;
+
   for (let i = 0; i < steps; i++) {
     const raw = state.enumerator.next_pokemon();
-    if (!raw) break; // 枯渇
-    // GenerationResult へ最小限マッピング (後続で拡張)
-    const result: GenerationResult = {
-      advance: p.processedAdvances + i + 1, // 1-based 進捗 or offset加味? 現状は連番
-      seed: raw.get_seed, // RawPokemonData#get_seed
-      pid: raw.get_pid,
-      nature: raw.get_nature,
-      abilitySlot: raw.get_ability_slot,
-      encounterType: raw.get_encounter_type,
-      // 未決定フィールドは placeholder (types 側で optional or 将来追加想定)
-      isShiny: false,
-    } as unknown as GenerationResult; // 型不足部分は後続タスクで補完
-    state.pendingResults.push(result);
+    if (!raw) break; // 枯渇 (自然終了)
+
+    // WASM Raw -> UnresolvedPokemonData
+    let unresolved;
+    try {
+      unresolved = parseFromWasmRaw(raw);
+    } catch (e) {
+      // パース失敗は致命的扱い
+      complete('error');
+      return;
+    }
+
+    const advanceVal = p.processedAdvances + i + 1; // 現仕様: 1-based インデックス
+    const result: GenerationResult = { ...unresolved, advance: advanceVal };
+
+    const isShiny = result.shiny_type !== 0;
+    if (isShiny && !state.shinyFound) state.shinyFound = true;
+
+    // 結果保持ガード (容量抑制) - stopOnCap=false の場合は保存せず走査継続
+    if (p.resultsCount < params.maxResults) {
+      state.pendingResults.push(result);
+      p.resultsCount += 1;
+    }
+
     produced++;
-    // batchSize 到達ごとに即時送信（後で最適化検討）
-    if (state.pendingResults.length >= state.params.batchSize) {
+
+    // バッチ閾値
+    if (state.pendingResults.length >= params.batchSize) {
       flushBatch(false);
     }
+
+    // 早期終了判定 (優先順位: first-shiny > max-results)
+    if (!earlyReason) {
+      if (params.stopAtFirstShiny && isShiny) {
+        earlyReason = 'first-shiny';
+      } else if (params.stopOnCap && p.resultsCount >= params.maxResults) {
+        earlyReason = 'max-results';
+      }
+    }
+
+    if (earlyReason) {
+      // 以降の列挙は打ち切り
+      break;
+    }
   }
+
   p.processedAdvances += produced;
-  p.resultsCount += produced; // Task6: 1 advance 1 result としてカウント (後で条件付に変える可能性)
+
+  if (earlyReason) {
+    complete(earlyReason);
+    return;
+  }
+
   if (p.processedAdvances >= p.totalAdvances) {
     complete('max-advances');
   }
@@ -276,6 +323,15 @@ function flushBatch(force: boolean) {
   const batch = state.pendingResults.splice(0, state.pendingResults.length);
   state.batchIndex += 1;
   state.cumulativeResults += batch.length;
+  if (process.env.NODE_ENV !== 'production') {
+    if (state.cumulativeResults > state.progress.resultsCount) {
+      console.error('[generation-worker] cumulativeResults exceeded resultsCount', {
+        cumulativeResults: state.cumulativeResults,
+        resultsCount: state.progress.resultsCount,
+        batchLength: batch.length,
+      });
+    }
+  }
   post({
     type: 'RESULT_BATCH',
     payload: {

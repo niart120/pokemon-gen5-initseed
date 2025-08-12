@@ -133,6 +133,7 @@ export function validateGenerationParams(p: GenerationParams): string[] {
   if (p.baseSeed < 0n) errors.push('baseSeed must be non-negative');
   if (p.offset < 0n) errors.push('offset must be non-negative');
   if (p.offset >= BigInt(p.maxAdvances)) errors.push('offset must be < maxAdvances');
+  // A方針: batchSize は maxAdvances を超過不可 (テスト仕様維持)
   if (p.batchSize > p.maxAdvances) errors.push('batchSize must be <= maxAdvances');
   const allowedEncounter = new Set([0,1,2,3,4,5,6,7,10,11,12,13,20]);
   if (!allowedEncounter.has(p.encounterType)) errors.push('encounterType invalid');

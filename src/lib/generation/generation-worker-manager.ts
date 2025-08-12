@@ -137,12 +137,20 @@ export class GenerationWorkerManager {
       case 'STOPPED':
         this.running = false;
         this.paused = false;
+        // 停止時点の最終ステータス反映（PROGRESS は送られないため補正）
+        if (this.lastProgress) {
+          this.lastProgress = { ...this.lastProgress, status: 'stopped' } as any;
+        }
         this.callbacks.stopped.forEach(cb => cb(msg.payload));
         this.terminate(); // 完全終了
         break;
       case 'COMPLETE':
         this.running = false;
         this.paused = false;
+        // 完了時点で最終 progress.status を completed に更新（最終 PROGRESS が来ないケース対策）
+        if (this.lastProgress) {
+          this.lastProgress = { ...this.lastProgress, status: 'completed' } as any;
+        }
         this.callbacks.complete.forEach(cb => cb(msg.payload));
         this.terminate(); // 再利用せず破棄 (メモリリーク防止)
         break;
