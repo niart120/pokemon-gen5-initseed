@@ -2,7 +2,7 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { MagnifyingGlass, Info, Gear, Sparkle } from '@phosphor-icons/react';
-import { GenerationPanel } from '../generation/GenerationPanel';
+import { GenerationPanel } from './GenerationPanel';
 import { useAppStore } from '@/store/app-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { SearchPanel } from './SearchPanel';
