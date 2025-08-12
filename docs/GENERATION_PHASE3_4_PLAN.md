@@ -38,7 +38,71 @@ UI -> GenerationManager -> generation-worker -> WASM(PokemonGenerator) -> raw-pa
 - Progress latency: < 500ms
 
 ## 8. Next Immediate Action
-Complete WASM API survey and update this document with concrete param/return contract.
+Design worker protocol & TypeScript types based on confirmed WASM API.
+
+## 9. WASM Generation API (Survey Result)
+
+### 9.1 Exported Types / Constructors
+- `BWGenerationConfig::new(version: GameVersion, encounter_type: EncounterType, tid: u16, sid: u16, sync_enabled: bool, sync_nature_id: u8)`
+- `PokemonGenerator::generate_pokemon_batch_bw(base_seed: u64, offset: u64, count: u32, &config) -> Vec<RawPokemonData>`
+- `SeedEnumerator::new(base_seed: u64, offset: u64, count: u32, &config)` + `next_pokemon()` (incremental alternative)
+
+### 9.2 RawPokemonData Fields (getter names)
+| Field | Getter | TS target type | Notes |
+|-------|--------|----------------|-------|
+| seed | get_seed | bigint | 64-bit initial seed used for that Pokemon |
+| pid | get_pid | number | 32-bit PID |
+| nature | get_nature | number (0-24) | Nature index |
+| ability_slot | get_ability_slot | number (0/1/2) | Hidden ability not yet produced (0/1 currently) |
+| gender_value | get_gender_value | number (0-255) | Compared with species ratio threshold |
+| encounter_slot_value | get_encounter_slot_value | number | Index into encounter table slots |
+| encounter_type | get_encounter_type | number | Mapping documented in rust (0,1,2,3,4,5,6,7,10,11,12,13,20) |
+| level_rand_value | get_level_rand_value | bigint | For level computation (surf/fish etc.) |
+| shiny_type | get_shiny_type | number (0/1/2) | 0:Not,1:Square,2:Star |
+| sync_applied | get_sync_applied | boolean | Whether sync nature actually applied |
+
+### 9.3 Batch Generation Constraints
+- Hard cap: `MAX_BATCH_COUNT = 1_000_000` inside Rust (requests above are truncated)
+- Performance path: Use `generate_pokemon_batch_bw` for contiguous enumeration (one allocation) vs `SeedEnumerator` for streaming smaller memory footprint.
+- Offset semantics: Start seed = base_seed advanced by `offset` steps (affine jump). Each subsequent result uses one RNG advance (`PersonalityRNG::next_seed`).
+
+### 9.4 Encounter Sync Applicability
+Supports Sync: Normal, Surfing, Fishing, ShakingGrass, DustCloud, PokemonShadow, SurfingBubble, FishingBubble, StaticSymbol. (Others ignore but still may consume RNG for wild categories as per code.)
+
+### 9.5 Proposed Worker Usage Pattern
+1. Build `BWGenerationConfig` in worker from params
+2. For large count (≥ 50k) prefer chunked loop using SeedEnumerator to reduce peak memory (e.g. chunk size 10k)
+3. Post `RESULT_BATCH` after each chunk (array of plain serializable objects) + `PROGRESS`
+4. If `stopAtFirstShiny` flag: short-circuit enumeration after detecting first shiny (shiny_type != 0)
+
+### 9.6 Preliminary Worker Parameters (draft)
+| Param | Type | Description |
+|-------|------|-------------|
+| baseSeed | bigint | initial seed entered by user |
+| offset | bigint | start advances (initial 0 for MVP) |
+| maxAdvances | number | enumeration upper bound (cap to 1,000,000) |
+| maxResults | number | UI results cap; worker stops collecting beyond (but continues counting for progress unless stopOnCap flag) |
+| version | GameVersion | B / W / B2 / W2 (map to WASM enum) |
+| encounterType | EncounterType | user-selected |
+| tid | number | 0-65535 |
+| sid | number | 0-65535 |
+| syncEnabled | boolean | sync toggle |
+| syncNatureId | number | 0-24 |
+| stopAtFirstShiny | boolean | early termination condition |
+
+### 9.7 Progress Reporting Formula (draft)
+`processedAdvances / maxAdvances` with elapsed ms and instantaneous throughput (advances/sec). Estimated remaining = (elapsed / processed) * (remaining).
+
+### 9.8 Serialization Strategy
+- Use `SeedEnumerator` for incremental streaming (avoids large Vec overhead crossing boundary repeatedly).
+- Convert each `RawPokemonData` via existing `parseFromWasmRaw` logic inside worker OR send raw fields manually (faster). Chosen: manual extraction to plain object to avoid reflection overhead.
+
+### 9.9 Open Points
+- Hidden ability slot (2) currently not produced; future extension may require species ability table update.
+- Parallel generation (multi-worker) not required in this phase; revisit after baseline metrics.
+
+## 10. Planned Next PR Section (will evolve)
+To be filled after protocol & types finalized.
 
 ---
 Draft generated on initial scaffold.
