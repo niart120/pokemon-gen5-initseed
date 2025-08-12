@@ -91,7 +91,22 @@ Supports Sync: Normal, Surfing, Fishing, ShakingGrass, DustCloud, PokemonShadow,
 | stopAtFirstShiny | boolean | early termination condition |
 
 ### 9.7 Progress Reporting Formula (draft)
-`processedAdvances / maxAdvances` with elapsed ms and instantaneous throughput (advances/sec). Estimated remaining = (elapsed / processed) * (remaining).
+Initial (draft) formula: `processedAdvances / maxAdvances` with elapsed ms and instantaneous throughput (advances/sec). Estimated remaining = (elapsed / processed) * (remaining).
+
+Updated (A3 Implementation):
+- `throughputRaw` = `processedAdvances / (elapsedMs/1000)` (生スループット)
+- `throughputEma` = Exponential Moving Average of `throughputRaw` with α=0.2 (初回は raw を初期値)
+- `throughput` (DEPRECATED) = 後方互換目的で `throughputRaw` の複製値
+- `etaMs` 計算基礎 = `throughputEma` が正値ならそれを使用。0 または未定義の場合は `throughputRaw` をフォールバック。
+	- `remaining = totalAdvances - processedAdvances`
+	- `etaMs = remaining / basis * 1000`
+		- where `basis = throughputEma > 0 ? throughputEma : throughputRaw`
+	- 進捗 0 (elapsedMs=0) の間は 0 を維持
+
+Rationale:
+- 短い tick 間隔 (250ms 固定) における瞬間値ノイズを平滑化し ETA の過度な揺れを抑制
+- α=0.2 は 1/α=5 tick (≈1.25s) 程度で 63% 収束するバランス値
+- 後方互換フィールド `throughput` を保持し UI 減衰移行コストを最小化
 
 ### 9.8 Serialization Strategy
 - Use `SeedEnumerator` for incremental streaming (avoids large Vec overhead crossing boundary repeatedly).
@@ -120,7 +135,7 @@ To be filled after protocol & types finalized.
 | Type | Payload Fields | Description |
 |------|----------------|-------------|
 | READY | { version:"1" } | Worker initialized |
-| PROGRESS | { processedAdvances, totalAdvances, resultsCount, elapsedMs, throughput, etaMs } | throughput=processedAdvances/(elapsedMs/1000) |
+| PROGRESS | { processedAdvances, totalAdvances, resultsCount, elapsedMs, throughput (deprecated), throughputRaw?, throughputEma?, etaMs, status } | A3: throughputRaw 生値, throughputEma=EMA(α=0.2), deprecated throughput=throughputRaw |
 | RESULT_BATCH | { batchIndex, results:[RawLike], batchSize, cumulativeResults } | RawLike: minimal raw fields (see 9.2) |
 | PAUSED | { message? } | Acknowledge pause |
 | RESUMED | { } | Acknowledge resume |

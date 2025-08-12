@@ -38,7 +38,13 @@ export interface GenerationProgress {
   totalAdvances: number;
   resultsCount: number;
   elapsedMs: number;
-  throughput: number; // advances/sec
+  /** 生スループット (直近計算) */
+  throughput: number; // DEPRECATED: 後方互換 (raw と同値保持)。将来的除去予定。
+  /** 新: 生スループット */
+  throughputRaw?: number;
+  /** 新: EMA 平滑スループット */
+  throughputEma?: number;
+  /** 推定残り時間 (ms) */
   etaMs: number;
   status: 'idle' | 'running' | 'paused' | 'stopped' | 'completed' | 'error';
 }

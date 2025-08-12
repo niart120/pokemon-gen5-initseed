@@ -32,6 +32,7 @@ interface InternalState {
   intervalId: number | null;
   enumerator: SeedEnumerator | null;
   config: BWGenerationConfig | null;
+  emaThroughput: number | null;
   // Task6: バッチ送信はまだ行わない。後続 Task7 で flush 予定。
   pendingResults: GenerationResult[];
   stopped: boolean; // STOP 要求フラグ (完全処理は後続 Task10)
@@ -59,6 +60,8 @@ const state: InternalState = {
     resultsCount: 0,
     elapsedMs: 0,
     throughput: 0,
+    throughputRaw: 0,
+    throughputEma: 0,
     etaMs: 0,
     status: 'idle',
   },
@@ -66,6 +69,7 @@ const state: InternalState = {
   intervalId: null,
   enumerator: null,
   config: null,
+  emaThroughput: null,
   pendingResults: [],
   stopped: false,
   batchIndex: 0,
@@ -121,9 +125,12 @@ function handleStart(params: GenerationParams) {
     resultsCount: 0,
     elapsedMs: 0,
     throughput: 0,
+    throughputRaw: 0,
+    throughputEma: 0,
     etaMs: 0,
     status: 'running',
   };
+  state.emaThroughput = null;
   state.stopped = false;
   state.pendingResults = [];
   state.batchIndex = 0;
@@ -168,10 +175,22 @@ function tick() {
   const now = performance.now();
   p.elapsedMs = now - (state.startTime || now);
   if (p.elapsedMs > 0) {
-    p.throughput = p.processedAdvances / (p.elapsedMs / 1000);
+    const raw = p.processedAdvances / (p.elapsedMs / 1000);
+    p.throughputRaw = raw;
+    // EMA α=0.2
+    const ALPHA = 0.2;
+    if (state.emaThroughput == null) {
+      state.emaThroughput = raw;
+    } else {
+      state.emaThroughput = ALPHA * raw + (1 - ALPHA) * state.emaThroughput;
+    }
+    p.throughputEma = state.emaThroughput;
+    // 後方互換 (旧 throughput フィールドは raw と同じ値を保持)
+    p.throughput = raw;
   }
   const remaining = p.totalAdvances - p.processedAdvances;
-  p.etaMs = p.throughput > 0 ? (remaining / p.throughput) * 1000 : 0;
+  const basis = p.throughputEma && p.throughputEma > 0 ? p.throughputEma : (p.throughputRaw || 0);
+  p.etaMs = basis > 0 ? (remaining / basis) * 1000 : 0;
 
   post({ type: 'PROGRESS', payload: { ...p } });
 
