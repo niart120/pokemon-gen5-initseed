@@ -6,15 +6,36 @@ import {
   type GenerationWorkerResponse,
   type GenerationParams,
   type GenerationProgress,
+  type GenerationResult,
   validateGenerationParams,
   FIXED_PROGRESS_INTERVAL_MS,
 } from '@/types/generation';
+// 既存 wasm ビルド (vite alias '@/wasm' 前提) ― 追加アダプタは作らず直接利用
+import { BWGenerationConfig, SeedEnumerator } from '@/wasm/wasm_pkg';
+
+// BW/BW2 version string -> wasm GameVersion enum (wasm側: B=0,W=1,B2=2,W2=3)
+function versionToWasm(v: GenerationParams['version']): number {
+  switch (v) {
+    case 'B': return 0;
+    case 'W': return 1;
+    case 'B2': return 2;
+    case 'W2': return 3;
+    default: return 0;
+  }
+}
 
 interface InternalState {
   params: GenerationParams | null;
   progress: GenerationProgress;
   startTime: number | null;
   intervalId: number | null;
+  enumerator: SeedEnumerator | null;
+  config: BWGenerationConfig | null;
+  // Task6: バッチ送信はまだ行わない。後続 Task7 で flush 予定。
+  pendingResults: GenerationResult[];
+  stopped: boolean; // STOP 要求フラグ (完全処理は後続 Task10)
+  batchIndex: number;
+  cumulativeResults: number;
 }
 
 // DedicatedWorkerGlobalScope 型は lib.dom.d.ts で提供されるが build 設定により認識しない場合があるため any fallback
@@ -41,6 +62,12 @@ const state: InternalState = {
   },
   startTime: null,
   intervalId: null,
+  enumerator: null,
+  config: null,
+  pendingResults: [],
+  stopped: false,
+  batchIndex: 0,
+  cumulativeResults: 0,
 };
 
 post({ type: 'READY', version: '1' });
@@ -94,10 +121,33 @@ function handleStart(params: GenerationParams) {
     etaMs: 0,
     status: 'running',
   };
-
-  // TODO: WASM 初期化 & SeedEnumerator 準備
-  // TODO: バッチ生成 & RESULT_BATCH 送信
-  // TODO: stopAtFirstShiny, stopOnCap 実装
+  state.stopped = false;
+  state.pendingResults = [];
+  state.batchIndex = 0;
+  state.cumulativeResults = 0;
+  try {
+    // Task6: WASM 初期化 & SeedEnumerator 準備 (後続機能は未実装)
+    state.config = new BWGenerationConfig(
+      versionToWasm(params.version),
+      params.encounterType,
+      params.tid,
+      params.sid,
+      params.syncEnabled,
+      params.syncNatureId,
+    );
+    // count は maxAdvances - offset を一旦全量渡す (早期終了は Task8)
+    const totalCount = Number(params.maxAdvances - Number(params.offset));
+    state.enumerator = new SeedEnumerator(
+      params.baseSeed,
+      BigInt(params.offset),
+      totalCount,
+      state.config,
+    );
+  } catch (e: any) {
+    post({ type: 'ERROR', message: e?.message || String(e), category: 'WASM_INIT', fatal: true });
+    return;
+  }
+  // 列挙ループを tick 内に統合せず、軽量 step を実行 (batch は次タスク)
 
   state.intervalId = setInterval(tick, progressInterval) as unknown as number;
   // 直後に初回進捗
@@ -106,8 +156,11 @@ function handleStart(params: GenerationParams) {
 
 function tick() {
   if (!state.params || state.progress.status !== 'running') return;
+  // STOP 要求されていたら後続タスクでの完全処理まで進捗のみ抑制
+  if (state.stopped) return;
+  advanceEnumerationChunk();
   const p = state.progress;
-  p.processedAdvances = Math.min(p.totalAdvances, p.processedAdvances + DUMMY_STEP);
+  // processedAdvances は advanceEnumerationChunk 内で更新済
   const now = performance.now();
   p.elapsedMs = now - (state.startTime || now);
   if (p.elapsedMs > 0) {
@@ -139,6 +192,7 @@ function handleResume() {
 
 function handleStop() {
   if (state.progress.status === 'idle' || state.progress.status === 'stopped' || state.progress.status === 'completed') return;
+  state.stopped = true; // Task6: 即 STOPPED 送信せず (既存挙動保持) – 既存テスト維持のため従来通り送信
   cleanupInterval();
   state.progress.status = 'stopped';
   post({
@@ -155,6 +209,8 @@ function handleStop() {
 
 function complete(reason: 'max-advances' | 'max-results' | 'first-shiny' | 'stopped' | 'error') {
   cleanupInterval();
+  // FINAL FLUSH (残り分送信)
+  flushBatch(true);
   state.progress.status = 'completed';
   post({
     type: 'COMPLETE',
@@ -173,6 +229,62 @@ function cleanupInterval() {
     clearInterval(state.intervalId);
     state.intervalId = null;
   }
+}
+
+// ===== Task6 Core Enumeration (no batching, no early termination) =====
+function advanceEnumerationChunk() {
+  if (!state.enumerator || !state.params) return;
+  const p = state.progress;
+  // 暫定: 1 tick で固定数 (DUMMY_STEP 相当) 進めるが実際の残数と比較
+  let steps = DUMMY_STEP;
+  const remainingNeeded = p.totalAdvances - p.processedAdvances;
+  if (remainingNeeded <= 0) return;
+  if (steps > remainingNeeded) steps = remainingNeeded;
+  let produced = 0;
+  for (let i = 0; i < steps; i++) {
+    const raw = state.enumerator.next_pokemon();
+    if (!raw) break; // 枯渇
+    // GenerationResult へ最小限マッピング (後続で拡張)
+    const result: GenerationResult = {
+      advance: p.processedAdvances + i + 1, // 1-based 進捗 or offset加味? 現状は連番
+      seed: raw.get_seed, // RawPokemonData#get_seed
+      pid: raw.get_pid,
+      nature: raw.get_nature,
+      abilitySlot: raw.get_ability_slot,
+      encounterType: raw.get_encounter_type,
+      // 未決定フィールドは placeholder (types 側で optional or 将来追加想定)
+      isShiny: false,
+    } as unknown as GenerationResult; // 型不足部分は後続タスクで補完
+    state.pendingResults.push(result);
+    produced++;
+    // batchSize 到達ごとに即時送信（後で最適化検討）
+    if (state.pendingResults.length >= state.params.batchSize) {
+      flushBatch(false);
+    }
+  }
+  p.processedAdvances += produced;
+  p.resultsCount += produced; // Task6: 1 advance 1 result としてカウント (後で条件付に変える可能性)
+  if (p.processedAdvances >= p.totalAdvances) {
+    complete('max-advances');
+  }
+}
+
+function flushBatch(force: boolean) {
+  if (!state.params) return;
+  if (state.pendingResults.length === 0) return;
+  if (!force && state.pendingResults.length < state.params.batchSize) return;
+  const batch = state.pendingResults.splice(0, state.pendingResults.length);
+  state.batchIndex += 1;
+  state.cumulativeResults += batch.length;
+  post({
+    type: 'RESULT_BATCH',
+    payload: {
+      batchIndex: state.batchIndex,
+      batchSize: batch.length,
+      results: batch,
+      cumulativeResults: state.cumulativeResults,
+    },
+  });
 }
 
 // 終了時クリーンアップ (念のため)
