@@ -59,12 +59,12 @@ export const GenerationParamsCard: React.FC = () => {
             {/* TID */}
             <div className="flex flex-col gap-1">
               <Label className="text-xs" htmlFor="tid">TID</Label>
-              <Input id="tid" type="number" inputMode="numeric" className="h-8 text-sm" disabled={disabled} value={draftParams.tid ?? 0} onChange={e=> update({ tid: Number(e.target.value) })} />
+              <Input id="tid" type="number" inputMode="numeric" className="h-9" disabled={disabled} value={draftParams.tid ?? 0} onChange={e=> update({ tid: Number(e.target.value) })} />
             </div>
             {/* SID */}
             <div className="flex flex-col gap-1">
               <Label className="text-xs" htmlFor="sid">SID</Label>
-              <Input id="sid" type="number" inputMode="numeric" className="h-8 text-sm" disabled={disabled} value={draftParams.sid ?? 0} onChange={e=> update({ sid: Number(e.target.value) })} />
+              <Input id="sid" type="number" inputMode="numeric" className="h-9" disabled={disabled} value={draftParams.sid ?? 0} onChange={e=> update({ sid: Number(e.target.value) })} />
             </div>
             {/* Shiny Charm */}
             <div className="flex items-center gap-2 pt-5">
@@ -86,24 +86,24 @@ export const GenerationParamsCard: React.FC = () => {
             {/* Base Seed */}
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" htmlFor="base-seed">Base Seed (hex)</Label>
-              <Input id="base-seed" className="font-mono h-8 text-sm" disabled={disabled} value={hexDraft.baseSeedHex ?? '0'}
-                onChange={e=> { const v=e.target.value; if (isHexLike(v)) update({ baseSeedHex: v.replace(/^0x/i,'') }); }} placeholder="1a2b3c" />
+              <Input id="base-seed" className="font-mono h-9 min-w-40" disabled={disabled} value={hexDraft.baseSeedHex ?? '0'}
+                onChange={e=> { const v=e.target.value; if (isHexLike(v)) update({ baseSeedHex: v.replace(/^0x/i,'') }); }} placeholder="1a2b3c4d5e6f7890" />
             </div>
             {/* Min Advance (offset) */}
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" htmlFor="offset-hex">Min Advance (hex)</Label>
-              <Input id="offset-hex" className="font-mono h-8 text-sm" disabled={disabled} value={hexDraft.offsetHex ?? '0'}
+              <Input id="offset-hex" className="font-mono h-9 min-w-32" disabled={disabled} value={hexDraft.offsetHex ?? '0'}
                 onChange={e=> { const v=e.target.value; if (isHexLike(v)) update({ offsetHex: v.replace(/^0x/i,'') }); }} placeholder="0" />
             </div>
             {/* Max Advances */}
             <div className="flex flex-col gap-1">
               <Label className="text-xs" htmlFor="max-adv">Max Advances</Label>
-              <Input id="max-adv" type="number" inputMode="numeric" className="h-8 text-sm" disabled={disabled} value={draftParams.maxAdvances ?? 0} onChange={e=> update({ maxAdvances: Number(e.target.value) })} />
+              <Input id="max-adv" type="number" inputMode="numeric" className="h-9" disabled={disabled} value={draftParams.maxAdvances ?? 0} onChange={e=> update({ maxAdvances: Number(e.target.value) })} />
             </div>
             {/* Max Results */}
             <div className="flex flex-col gap-1">
               <Label className="text-xs" htmlFor="max-results">Max Results</Label>
-              <Input id="max-results" type="number" inputMode="numeric" className="h-8 text-sm" disabled={disabled} value={draftParams.maxResults ?? 0} onChange={e=> update({ maxResults: Number(e.target.value) })} />
+              <Input id="max-results" type="number" inputMode="numeric" className="h-9" disabled={disabled} value={draftParams.maxResults ?? 0} onChange={e=> update({ maxResults: Number(e.target.value) })} />
             </div>
           </div>
         </section>
@@ -116,7 +116,7 @@ export const GenerationParamsCard: React.FC = () => {
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" id="lbl-encounter-type" htmlFor="encounter-type">Type</Label>
               <Select value={encounterValue.toString()} onValueChange={v=> update({ encounterType: Number(v) })} disabled={disabled}>
-                <SelectTrigger id="encounter-type" size="sm" aria-labelledby="lbl-encounter-type encounter-type">
+                <SelectTrigger id="encounter-type" aria-labelledby="lbl-encounter-type encounter-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
@@ -131,7 +131,7 @@ export const GenerationParamsCard: React.FC = () => {
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" id="lbl-ability-mode" htmlFor="ability-mode">Ability</Label>
               <Select value={abilityMode} onValueChange={v=> onAbilityChange(v as NonNullable<GenerationParamsHex['abilityMode']>)} disabled={disabled}>
-                <SelectTrigger id="ability-mode" size="sm" aria-labelledby="lbl-ability-mode ability-mode">
+                <SelectTrigger id="ability-mode" aria-labelledby="lbl-ability-mode ability-mode">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
