@@ -48,7 +48,7 @@ export const GenerationParamsCard: React.FC = () => {
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" id="lbl-version-select" htmlFor="version-select">Version</Label>
               <Select value={draftParams.version ?? 'B'} onValueChange={v=> update({ version: v as GenerationParamsHex['version'] })} disabled={disabled}>
-                <SelectTrigger id="version-select" size="sm" aria-labelledby="lbl-version-select version-select">
+                <SelectTrigger id="version-select" aria-labelledby="lbl-version-select version-select">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -146,7 +146,7 @@ export const GenerationParamsCard: React.FC = () => {
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" id="lbl-sync-nature" htmlFor="sync-nature">Sync Nature</Label>
               <Select value={(draftParams.syncNatureId ?? 0).toString()} onValueChange={v=> update({ syncNatureId: Number(v) })} disabled={disabled || !syncActive}>
-                <SelectTrigger id="sync-nature" size="sm" aria-labelledby="lbl-sync-nature sync-nature">
+                <SelectTrigger id="sync-nature" aria-labelledby="lbl-sync-nature sync-nature">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
