@@ -72,7 +72,10 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     syncNatureId: 0,
     stopAtFirstShiny: false,
     stopOnCap: true,
-    batchSize: 1000,
+  batchSize: 1000, // 固定 (UI 非表示)
+  abilityMode: 'none',
+  shinyCharm: false,
+  memoryLink: false,
   },
   validationErrors: [],
   status: 'idle',

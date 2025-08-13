@@ -38,6 +38,15 @@ export interface GenerationParamsHex {
   stopAtFirstShiny: boolean;
   stopOnCap: boolean;
   batchSize: number;
+  /**
+   * UI 拡張: Ability 選択モード (Phase2 で syncEnabled との統合制御に使用)
+   * 現行 WASM パラメータへは未伝播。syncEnabled との整合は UI 側で維持。
+   */
+  abilityMode?: 'none' | 'sync' | 'compound';
+  /** 所持している場合 true (後続: 色違い確率計算に利用予定) */
+  shinyCharm?: boolean;
+  /** BW2 Memory Link 状態 (後続: オフセット/ゲームモード分岐に利用予定) */
+  memoryLink?: boolean;
 }
 
 export function hexParamsToGenerationParams(h: GenerationParamsHex): GenerationParams {
