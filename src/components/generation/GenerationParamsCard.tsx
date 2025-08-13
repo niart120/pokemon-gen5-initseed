@@ -43,7 +43,7 @@ export const GenerationParamsCard: React.FC = () => {
   {/* Basics */}
   <section aria-labelledby="gen-basics" className="space-y-2" role="group">
           <h4 id="gen-basics" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Basics</h4>
-          <div className="grid gap-3 grid-cols-2 md:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
             {/* Version */}
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" id="lbl-version-select" htmlFor="version-select">Version</Label>
@@ -66,13 +66,16 @@ export const GenerationParamsCard: React.FC = () => {
               <Label className="text-xs" htmlFor="sid">SID</Label>
               <Input id="sid" type="number" inputMode="numeric" className="h-9" disabled={disabled} value={draftParams.sid ?? 0} onChange={e=> update({ sid: Number(e.target.value) })} />
             </div>
+          </div>
+          {/* Checkboxes - separate row to prevent overlap */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 pt-2">
             {/* Shiny Charm */}
-            <div className="flex items-center gap-2 pt-5">
+            <div className="flex items-center gap-2">
               <Checkbox id="shiny-charm" aria-labelledby="lbl-shiny-charm" checked={draftParams.shinyCharm ?? false} disabled={disabled || (draftParams.version === 'B' || draftParams.version === 'W')} onCheckedChange={v=> update({ shinyCharm: Boolean(v) })} />
               <Label id="lbl-shiny-charm" htmlFor="shiny-charm" className="text-xs">Shiny Charm</Label>
             </div>
             {/* Memory Link */}
-            <div className="flex items-center gap-2 pt-5">
+            <div className="flex items-center gap-2">
               <Checkbox id="memory-link" aria-labelledby="lbl-memory-link" checked={draftParams.memoryLink ?? false} disabled={disabled || (draftParams.version === 'B' || draftParams.version === 'W')} onCheckedChange={v=> update({ memoryLink: Boolean(v) })} />
               <Label id="lbl-memory-link" htmlFor="memory-link" className="text-xs">Memory Link</Label>
             </div>
@@ -82,7 +85,7 @@ export const GenerationParamsCard: React.FC = () => {
   {/* Target (Range) */}
   <section aria-labelledby="gen-target" className="space-y-2" role="group">
           <h4 id="gen-target" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Target</h4>
-          <div className="grid gap-3 grid-cols-2 md:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {/* Base Seed */}
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" htmlFor="base-seed">Base Seed (hex)</Label>
@@ -111,7 +114,7 @@ export const GenerationParamsCard: React.FC = () => {
   {/* Encounter & Ability */}
   <section aria-labelledby="gen-encounter" className="space-y-2" role="group">
           <h4 id="gen-encounter" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Encounter</h4>
-          <div className="grid gap-3 grid-cols-2 md:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {/* Encounter Type */}
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" id="lbl-encounter-type" htmlFor="encounter-type">Type</Label>

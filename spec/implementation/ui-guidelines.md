@@ -79,32 +79,7 @@
 
 コンテナ: `space-y-4` でグループ間余白。各グループ内部は `grid grid-cols-2 md:grid-cols-3 gap-2` などレスポンシブ。全体を `flex-1 min-h-0 overflow-y-auto` で縦スクロール。
 
-## 9. 状態遷移 (Control Buttons)
-| 状態 | 表示ボタン | 備考 |
-|------|------------|------|
-| idle | Start (primary) | 他ボタン非表示 |
-| starting | (disabled) Start + Stop? (任意) | 短時間なら Stop 省略可 |
-| running | Pause (secondary), Stop (destructive) | Resume 非表示 |
-| paused | Resume (primary), Stop (destructive) | Pause 非表示 |
-| stopping/completed/error | Start (enabled=completed/error) / disabled=stopping | 停止中は UIロック |
 
-## 10. アクセシビリティ
-| 項目 | ルール |
-|------|--------|
-| ボタン文言 | アイコンのみ禁止。必須なら `aria-label` 付与 |
-| 進捗 | `role="progressbar"` + `aria-valuenow/max` + live region要約 |
-| エラー | `role="alert"` / `aria-live="polite"` | 多量同時メッセージの連続発火抑制 |
-| ラベル関連 | 原則 `Label htmlFor` 使用。sr-only ラベルは最小限 |
-| フォーカス | デフォルトフォーカスリング保持 (outline除去禁止) |
-
-## 11. 実装チェックリスト
-- [ ] GenerationControlCard: shadcn Button 採用 / Variant 遷移実装 / 色クラス撤廃
-- [ ] GenerationProgressCard: `<Progress />` へ統一 / タイトル text-base / 進捗% 表示調整
-- [ ] GenerationParamsCard: グループ化 + shadcn Input/Select/Checkbox 化 + スクロール領域
-- [ ] GenerationResultsControlCard: Export/Clear/Reset ボタン variant 再割当
-- [ ] GenerationResultsTableCard: タイトルサイズ統一, Card padding 調整
-- [ ] 共通 Card ヘッダ・タイトルユーティリティ抽出
-- [ ] タイポ/スペース/variant ESLint or small test (snapshot) で検証
 
 ## 12. コード共通化指針
 | 項目 | 実装案 |
@@ -113,37 +88,3 @@
 | ボタン集合 | 状態遷移ロジックは専用フック `useGenerationControlButtons()` |
 | 進捗計算 | 既存 store selector 再利用 / 百分率 util `calcPercent(done,total)` |
 | フォームグループ | 汎用 `FormGroup` (title, children) コンポーネント (装飾最小) |
-
-## 13. 移行ステップ (Phase)
-1. Control/Progress の variant とタイポ修正 (低リスク)  
-2. ParamsCard グルーピング + shadcn 置換  
-3. ResultsControlCard ボタン置換  
-4. 共通ユーティリティ抽出 (重複削減)  
-5. Snapshot/アクセシビリティ確認 + ドキュメント更新  
-6. デッドコード/不要クラス除去  
-
-## 14. 非対象 (今回除外)
-- 新しいテーマカラー追加
-- ダークモード配色再設計
-- モバイル専用再レイアウト大幅変更
-
-## 15. 成功判定
-| 指標 | 条件 |
-|------|------|
-| Variant一貫性 | generation 内直接色指定 (bg-*) が 0 件 |
-| Card paddings | 全カード header pb-0 / content pt-0 適用 (例外: テーブル専用余白) |
-| タイトルサイズ | generation/search 全タイトル `text-base` |
-| ボタン遷移 | 状態毎の不要ボタン非表示 (同時 max 2) |
-| フォーム統一 | generation inputs が shadcn コンポーネントで 100% 置換 |
-| 進捗統一 | 両者 `<Progress />` 使用 |
-
----
-更新手順: ガイドライン更新時は Pull Request 説明に差分要約を記載し、対象コンポーネントを列挙する。
-
-## 16. ベースラインスクリーンショット
-before 改善エビデンス (取得日: 2025-08-13)
-- .playwright-mcp/generation-initial.png (初期表示 / Idle)
-- .playwright-mcp/generation-mid-edit.png (入力途中: 値編集・Sync Enabled 有効)
-- .playwright-mcp/generation-error.png (不正 Base Seed 入力状態)
-
-改善後は同名ファイルで差分比較 (Git LFS 不要: 小サイズPNG想定)。
