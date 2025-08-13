@@ -57,14 +57,14 @@ export const GenerationParamsCard: React.FC = () => {
               </Select>
             </div>
             {/* TID */}
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 min-w-24">
               <Label className="text-xs" htmlFor="tid">TID</Label>
-              <Input id="tid" type="number" inputMode="numeric" className="h-9" disabled={disabled} value={draftParams.tid ?? 0} onChange={e=> update({ tid: Number(e.target.value) })} />
+              <Input id="tid" type="number" inputMode="numeric" className="h-9 min-w-24" disabled={disabled} value={draftParams.tid ?? 0} onChange={e=> update({ tid: Number(e.target.value) })} />
             </div>
             {/* SID */}
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 min-w-24">
               <Label className="text-xs" htmlFor="sid">SID</Label>
-              <Input id="sid" type="number" inputMode="numeric" className="h-9" disabled={disabled} value={draftParams.sid ?? 0} onChange={e=> update({ sid: Number(e.target.value) })} />
+              <Input id="sid" type="number" inputMode="numeric" className="h-9 min-w-24" disabled={disabled} value={draftParams.sid ?? 0} onChange={e=> update({ sid: Number(e.target.value) })} />
             </div>
           </div>
           {/* Checkboxes - separate row to prevent overlap */}
@@ -85,7 +85,7 @@ export const GenerationParamsCard: React.FC = () => {
   {/* Target (Range) */}
   <section aria-labelledby="gen-target" className="space-y-2" role="group">
           <h4 id="gen-target" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Target</h4>
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {/* Base Seed */}
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" htmlFor="base-seed">Base Seed (hex)</Label>
@@ -94,19 +94,15 @@ export const GenerationParamsCard: React.FC = () => {
             </div>
             {/* Min Advance (offset) */}
             <div className="flex flex-col gap-1 min-w-0">
-              <Label className="text-xs" htmlFor="offset-hex">Min Advance (hex)</Label>
-              <Input id="offset-hex" className="font-mono h-9 min-w-32" disabled={disabled} value={hexDraft.offsetHex ?? '0'}
-                onChange={e=> { const v=e.target.value; if (isHexLike(v)) update({ offsetHex: v.replace(/^0x/i,'') }); }} placeholder="0" />
+              <Label className="text-xs" htmlFor="min-advance">Min Advance</Label>
+              <Input id="min-advance" type="number" inputMode="numeric" className="h-9 min-w-32" disabled={disabled} 
+                value={parseInt(hexDraft.offsetHex ?? '0', 16)}
+                onChange={e=> update({ offsetHex: Number(e.target.value).toString(16) })} placeholder="0" />
             </div>
             {/* Max Advances */}
             <div className="flex flex-col gap-1">
               <Label className="text-xs" htmlFor="max-adv">Max Advances</Label>
               <Input id="max-adv" type="number" inputMode="numeric" className="h-9" disabled={disabled} value={draftParams.maxAdvances ?? 0} onChange={e=> update({ maxAdvances: Number(e.target.value) })} />
-            </div>
-            {/* Max Results */}
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs" htmlFor="max-results">Max Results</Label>
-              <Input id="max-results" type="number" inputMode="numeric" className="h-9" disabled={disabled} value={draftParams.maxResults ?? 0} onChange={e=> update({ maxResults: Number(e.target.value) })} />
             </div>
           </div>
         </section>

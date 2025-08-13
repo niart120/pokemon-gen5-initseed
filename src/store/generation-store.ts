@@ -63,7 +63,7 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     baseSeedHex: '1',
     offsetHex: '0',
     maxAdvances: 10000,
-    maxResults: 1000,
+    maxResults: 10000,
     version: 'B',
     encounterType: 0,
     tid: 1,
