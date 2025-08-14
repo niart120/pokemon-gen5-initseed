@@ -15,7 +15,7 @@ export function MainContent() {
 
   // レスポンシブに応じたoverflow設定とレイアウト
   const overflowClasses = isStack 
-    ? "overflow-y-auto overflow-x-hidden" // 縦スタック時：垂直スクロール有り、水平スクロール無し
+    ? "overflow-y-auto overflow-x-visible" // 縦スタック時：垂直スクロール有り、水平スクロール無し
     : "overflow-x-auto overflow-y-auto"; // 横並び時：両方向スクロール有り（必要に応じて）
 
   const layoutClasses = isStack
@@ -23,7 +23,7 @@ export function MainContent() {
     : "flex flex-col"; // デスクトップも一旦flex-colのまま（SearchPanelが内部で横並びを制御）
 
   return (
-    <main className={`px-2 sm:px-3 lg:px-4 xl:px-6 2xl:px-8 py-1 max-w-none flex-1 ${layoutClasses} ${overflowClasses}`}>
+    <main className={`px-2 sm:px-3 lg:px-4 xl:px-6 2xl:px-8 py-1 max-w-none flex-1 min-h-0 ${layoutClasses} ${overflowClasses}`}>
       <div className="max-w-screen-2xl mx-auto w-full flex-1 flex flex-col min-w-0 min-h-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-2 flex flex-col flex-1 min-h-0">
           <TabsList className="grid grid-cols-4 w-full max-w-6xl mx-auto flex-shrink-0 h-9">
@@ -59,12 +59,12 @@ export function MainContent() {
           <SearchPanel />
         </TabsContent>
 
-        <TabsContent value="history" className="flex-1 min-h-0">
-          <OptionPanel />
-        </TabsContent>
-
         <TabsContent value="generation" className="flex-1 min-h-0">
           <GenerationPanel />
+        </TabsContent>
+
+        <TabsContent value="history" className="flex-1 min-h-0">
+          <OptionPanel />
         </TabsContent>
 
         <TabsContent value="help" className="flex-1 min-h-0">

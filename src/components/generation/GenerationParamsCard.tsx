@@ -10,6 +10,7 @@ import { useAppStore } from '@/store/app-store';
 import type { GenerationParamsHex } from '@/types/generation';
 import { Gear } from '@phosphor-icons/react';
 import { DomainEncounterTypeNames, DomainEncounterType } from '@/types/domain';
+import { useResponsiveLayout } from '@/hooks/use-mobile';
 
 // Simple hex normalization guard
 function isHexLike(v: string) { return /^(0x)?[0-9a-fA-F]*$/.test(v.trim()); }
@@ -35,15 +36,15 @@ export const GenerationParamsCard: React.FC = () => {
   };
   const syncActive = abilityMode === 'sync' && (hexDraft.syncEnabled ?? false);
   const encounterValue = hexDraft.encounterType ?? 0;
-
+  const { isStack } = useResponsiveLayout();
   return (
-    <Card className="py-2 flex flex-col gap-2 h-full" aria-labelledby="gen-params-title" role="form">
+    <Card className={`py-2 flex flex-col ${isStack ? '' : 'h-full min-h-64'}`} aria-labelledby="gen-params-title" role="form">
       <StandardCardHeader icon={<Gear size={20} className="opacity-80" />} title={<span id="gen-params-title">Generation Parameters</span>} />
-      <StandardCardContent>
-  {/* Basics */}
-  <section aria-labelledby="gen-basics" className="space-y-2" role="group">
+  <StandardCardContent noScroll={isStack}>
+      {/* Basics */}
+      <section aria-labelledby="gen-basics" className="space-y-2" role="group">
           <h4 id="gen-basics" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Basics</h4>
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3">
             {/* Version */}
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" id="lbl-version-select" htmlFor="version-select">Version</Label>
@@ -95,7 +96,7 @@ export const GenerationParamsCard: React.FC = () => {
             {/* Min Advance (offset) */}
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" htmlFor="min-advance">Min Advance</Label>
-              <Input id="min-advance" type="number" inputMode="numeric" className="h-9 min-w-32" disabled={disabled} 
+              <Input id="min-advance" type="number" inputMode="numeric" className="h-9" disabled={disabled} 
                 value={parseInt(hexDraft.offsetHex ?? '0', 16)}
                 onChange={e=> update({ offsetHex: Number(e.target.value).toString(16) })} placeholder="0" />
             </div>

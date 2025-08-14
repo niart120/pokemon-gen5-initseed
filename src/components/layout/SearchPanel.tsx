@@ -9,6 +9,7 @@ import { SearchControlCard, SearchProgressCard } from '../search/control';
 import { ResultsControlCard, ResultsCard, ResultDetailsDialog, type SortField } from '../search/results';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { getResponsiveSizes } from '@/lib/utils/responsive-sizes';
+import { LEFT_COLUMN_WIDTH_CLAMP } from './constants';
 import type { InitialSeedResult, SearchResult } from '../../types/search';
 
 export function SearchPanel() {
@@ -150,7 +151,10 @@ export function SearchPanel() {
   return (
     <div className={`flex ${sizes.gap} max-w-full h-full min-h-0 min-w-fit overflow-hidden`}>
       {/* 左カラム: 設定エリア */}
-      <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
+      <div
+        className={`flex-1 flex flex-col ${sizes.gap} min-w-0 overflow-y-auto`}
+        style={{ minHeight: 0, width: LEFT_COLUMN_WIDTH_CLAMP, flex: `0 0 ${LEFT_COLUMN_WIDTH_CLAMP}` }}
+      >
         <div className="flex-none">
           <ROMConfigurationCard />
         </div>

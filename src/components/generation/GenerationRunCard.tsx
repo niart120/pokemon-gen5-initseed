@@ -6,6 +6,7 @@ import { Play, Pause, Square, ChartBar } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/store/app-store';
 import { selectThroughputEma, selectEtaFormatted, selectShinyCount } from '@/store/generation-store';
+import { useResponsiveLayout } from '@/hooks/use-mobile';
 
 // Control + Progress 統合カード (Phase1 experimental)
 export const GenerationRunCard: React.FC = () => {
@@ -37,18 +38,19 @@ export const GenerationRunCard: React.FC = () => {
     }
   }, [validateDraft, validationErrors, startGeneration]);
 
+  const { isStack } = useResponsiveLayout();
   const isStarting = status === 'starting';
   const isRunning = status === 'running';
   const isPaused = status === 'paused';
   const canStart = status === 'idle' || status === 'completed' || status === 'error';
 
   return (
-    <Card className="py-2 flex flex-col gap-2" role="region" aria-labelledby="gen-run-title">
+    <Card className={`py-2 flex flex-col ${isStack ? '' : 'h-full min-h-64'}`} role="region" aria-labelledby="gen-run-title">
       <StandardCardHeader
         icon={<ChartBar size={20} className="opacity-80" />}
         title={<span id="gen-run-title">Generation Run</span>}
       />
-      <StandardCardContent className="gap-3">
+  <StandardCardContent className="gap-3" noScroll={isStack}>
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
           <div className="text-destructive text-xs space-y-0.5" role="alert" aria-live="polite">

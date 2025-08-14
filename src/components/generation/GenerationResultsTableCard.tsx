@@ -5,14 +5,21 @@ import { Table } from '@phosphor-icons/react';
 import { useAppStore } from '@/store/app-store';
 import { selectFilteredSortedResults } from '@/store/generation-store';
 import { pidHex, natureName, shinyLabel } from '@/lib/utils/format-display';
+import { useResponsiveLayout } from '@/hooks/use-mobile';
 
-export const GenerationResultsTableCard: React.FC = () => {
+interface GenerationResultsTableCardProps { parentManagesScroll?: boolean; }
+export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProps> = ({ parentManagesScroll }) => {
   const results = useAppStore(selectFilteredSortedResults);
   const total = useAppStore(s => s.results.length);
+  const { isStack } = useResponsiveLayout();
+  // スクロール方針
+  // - モバイル(isStack): カード内でスクロール(overflow-y-auto)にして、ドキュメント高さの膨張を防ぐ
+  // - デスクトップ: 呼び出し元の指定を尊重（既定はfalseでカード内スクロール）
+  const effectiveParentManages = isStack ? false : !!parentManagesScroll;
   return (
-    <Card className="py-2 flex flex-col flex-1 min-h-0" aria-labelledby="gen-results-table-title" role="region">
+    <Card className={`py-2 flex flex-col ${isStack ? '' : 'h-full min-h-64'}`} aria-labelledby="gen-results-table-title" role="region">
       <StandardCardHeader icon={<Table size={20} className="opacity-80" />} title={<span id="gen-results-table-title">Results ({results.length}) / Total {total}</span>} />
-      <StandardCardContent className="p-0 overflow-auto">
+      <StandardCardContent className="p-0" noScroll={effectiveParentManages}>
         <table className="min-w-full text-xs" aria-describedby="gen-results-table-desc">
           <caption id="gen-results-table-desc" className="sr-only">Filtered generation results list.</caption>
           <thead className="sticky top-0 bg-muted text-[11px]">

@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { FunnelSimple, DownloadSimple, Trash, ArrowsDownUp } from '@phosphor-icons/react';
+import { useResponsiveLayout } from '@/hooks/use-mobile';
 
 export const GenerationResultsControlCard: React.FC = () => {
   const { filters, applyFilters, resetGenerationFilters, results, clearResults } = useAppStore();
@@ -42,11 +43,11 @@ export const GenerationResultsControlCard: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
-
+  const { isStack } = useResponsiveLayout();
   return (
-    <Card className="py-2 flex flex-col gap-2" aria-labelledby="gen-results-control-title" role="region">
+    <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full min-h-64'}`} aria-labelledby="gen-results-control-title" role="region">
       <StandardCardHeader icon={<FunnelSimple size={20} className="opacity-80" />} title={<span id="gen-results-control-title">Results Control</span>} />
-      <StandardCardContent>
+  <StandardCardContent noScroll={isStack}>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Export and utility buttons">
           <Button size="sm" variant="outline" disabled={!results.length} onClick={()=>onExport('csv')}><DownloadSimple size={14}/>CSV</Button>
           <Button size="sm" variant="outline" disabled={!results.length} onClick={()=>onExport('json')}><DownloadSimple size={14}/>JSON</Button>
@@ -54,8 +55,8 @@ export const GenerationResultsControlCard: React.FC = () => {
           <Button size="sm" variant="destructive" disabled={!results.length} onClick={clearResults}><Trash size={14}/>Clear</Button>
           <Button size="sm" variant="ghost" onClick={resetGenerationFilters}>Reset</Button>
         </div>
-  <Separator />
-  <form onSubmit={e=> e.preventDefault()} className="flex flex-col gap-4 text-xs" aria-describedby="results-filter-hint">
+        <Separator />
+        <form onSubmit={e=> e.preventDefault()} className="flex flex-col gap-4 text-xs" aria-describedby="results-filter-hint">
           {/* Primary filters & sorting */}
           <fieldset className="space-y-3" aria-labelledby="gf-primary-label" role="group">
             <div id="gf-primary-label" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">Primary</div>

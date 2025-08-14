@@ -4,6 +4,9 @@ import { GenerationParamsCard } from '@/components/generation/GenerationParamsCa
 import { GenerationRunCard } from '@/components/generation/GenerationRunCard';
 import { GenerationResultsControlCard } from '@/components/generation/GenerationResultsControlCard';
 import { GenerationResultsTableCard } from '@/components/generation/GenerationResultsTableCard';
+import { useResponsiveLayout } from '@/hooks/use-mobile';
+import { LEFT_COLUMN_WIDTH_CLAMP } from './constants';
+import { getResponsiveSizes } from '@/lib/utils/responsive-sizes';
 
 /**
  * GenerationPanel (Phase1 / Layout Refactor)
@@ -12,24 +15,48 @@ import { GenerationResultsTableCard } from '@/components/generation/GenerationRe
  * - 右カラム上部に sticky header を置く前提だが、Phase1では土台のみ。
  */
 export const GenerationPanel: React.FC = () => {
+  const { isStack, uiScale } = useResponsiveLayout();
+
+  // スケールに応じたレスポンシブサイズ
+  const sizes = getResponsiveSizes(uiScale);
+
+  // モバイル/スタックレイアウト
+  if (isStack) {
+    // SearchPanelモバイル挙動へ合わせる: ページ全体スクロールに委ね、
+    // 個別overflow-autoコンテナを廃止し縦スタック構造に統一。
+    return (
+      <div className={`${sizes.gap} flex flex-col min-h-0`}>
+        {/* 自然高さのカードは flex-none */}
+        <div className="flex-none">
+          <GenerationRunCard />
+        </div>
+        <div className="flex-none">
+          <GenerationParamsCard />
+        </div>
+        {/* 結果テーブルは領域に収める（mainにスクロールを閉じ込める） */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <GenerationResultsTableCard />
+        </div>
+      </div>
+    );
+  }
+
+  // デスクトップ: 2カラム (左: 制御+パラメータ 固定幅clamp / 右: 結果エリア)
   return (
-    <div
-      className={[
-        // 2カラムグリッド: 1200+:340px/1fr, ~md は1カラム
-        'h-full min-h-0 w-full',
-        'grid gap-3',
-      // 1024px~: 左カラム 480px に拡張 (視認性向上)。1280px~で 600px に微調整可。
-      'lg:grid-cols-[480px_minmax(0,1fr)] xl:grid-cols-[600px_minmax(0,1fr)]',
-        'auto-rows-min',
-      ].join(' ')}
-    >
+    <div className="flex gap-3 h-full min-h-0 w-full overflow-hidden">
       {/* Left Column */}
-      <div className="flex flex-col gap-3 min-h-0">
+      <div
+        className="flex flex-col gap-3 min-h-0"
+        style={{
+          width: LEFT_COLUMN_WIDTH_CLAMP,
+          flex: `0 0 ${LEFT_COLUMN_WIDTH_CLAMP}`
+        }}
+      >
         <GenerationRunCard />
         <GenerationParamsCard />
       </div>
       {/* Right Column */}
-        <div className="flex flex-col gap-3 min-h-0 overflow-hidden">
+      <div className="flex flex-col gap-3 min-h-0 overflow-hidden flex-1">
         {/* sticky header 土台 (Phase2でsticky化/mini progress統合) */}
         <div
           className={[
@@ -42,7 +69,7 @@ export const GenerationPanel: React.FC = () => {
         >
           <GenerationResultsControlCard />
         </div>
-        <div className="flex-1 min-h-0 overflow-auto" data-testid="gen-results-scroll">
+        <div className="flex-1 min-h-0">
           <GenerationResultsTableCard />
         </div>
       </div>

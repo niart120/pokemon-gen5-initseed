@@ -6,6 +6,7 @@ import { StandardCardHeader, StandardCardContent, MetricsGrid } from '@/componen
 import { ChartBar } from '@phosphor-icons/react';
 import { useAppStore } from '@/store/app-store';
 import { selectThroughputEma, selectEtaFormatted, selectShinyCount } from '@/store/generation-store';
+import { useResponsiveLayout } from '@/hooks/use-mobile';
 
 // 状態表示用テキストマッピング
 const statusLabel: Record<string, string> = {
@@ -31,15 +32,15 @@ export const GenerationProgressCard: React.FC = () => {
   const done = progress?.processedAdvances ?? 0;
   const pct = total > 0 ? (done / total) * 100 : 0;
   const statusText = statusLabel[status] || status;
-
+  const { isStack } = useResponsiveLayout();
   return (
-    <Card className="py-2 flex flex-col gap-2" aria-labelledby="gen-progress-title" role="region">
+    <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full min-h-64'}`} aria-labelledby="gen-progress-title" role="region">
       <StandardCardHeader icon={<ChartBar size={20} className="opacity-80" />} title={<span id="gen-progress-title">Generation Progress</span>} />
       <StandardCardContent>
         <div>
           <Badge variant="outline" className="text-xs" aria-label="Current status">{statusText}</Badge>
         </div>
-  <Progress value={pct} className="h-2" aria-label="Overall progress" />
+      <Progress value={pct} className="h-2" aria-label="Overall progress" />
         <MetricsGrid
           items={[
             { label: 'Advances', value: `${done}/${total}` },

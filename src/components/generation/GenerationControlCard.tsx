@@ -4,6 +4,7 @@ import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-he
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Square } from '@phosphor-icons/react';
 import { useAppStore } from '@/store/app-store';
+import { useResponsiveLayout } from '@/hooks/use-mobile';
 
 export const GenerationControlCard: React.FC = () => {
   const {
@@ -29,12 +30,13 @@ export const GenerationControlCard: React.FC = () => {
   const isPaused = status === 'paused';
   // 再開可能状態: 初期(idle) または 完了(completed) / error 終了後
   const canStart = status === 'idle' || status === 'completed' || status === 'error';
+  const { isStack } = useResponsiveLayout();
 
   return (
-    <Card className="py-2 flex flex-col gap-2" aria-labelledby="gen-control-title">
+    <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full min-h-64'}`} aria-labelledby="gen-control-title">
       <StandardCardHeader icon={<Play size={20} className="opacity-80" />} title={<span id="gen-control-title">Generation Control</span>} />
       <StandardCardContent>
-  {validationErrors.length > 0 && (
+        {validationErrors.length > 0 && (
           <div
             className="text-destructive text-xs space-y-0.5"
             role="alert"
@@ -46,7 +48,7 @@ export const GenerationControlCard: React.FC = () => {
             ))}
           </div>
         )}
-  <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Generation execution controls">
+        <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Generation execution controls">
           {canStart && (
             <Button
               size="sm"

@@ -177,6 +177,12 @@
   ---break---
 */
 @layer base {
+  /* Constrain scrolling to the app's main container */
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }

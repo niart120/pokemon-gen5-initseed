@@ -22,9 +22,13 @@ export function StandardCardHeader({ icon, title, className }: StandardCardHeade
 interface StandardCardContentProps {
   children: ReactNode;
   className?: string;
+  /** 親がスクロール管理する場合 true で内部overflowを解除 */
+  noScroll?: boolean;
 }
-export function StandardCardContent({ children, className }: StandardCardContentProps) {
-  return <CardContent className={cn('space-y-2 flex-1 min-h-0 flex flex-col overflow-y-auto', className)}>{children}</CardContent>;
+export function StandardCardContent({ children, className, noScroll }: StandardCardContentProps) {
+  const base = 'space-y-2 flex-1 min-h-0 flex flex-col';
+  const scroll = noScroll ? 'overflow-visible' : 'overflow-y-auto';
+  return <CardContent className={cn(base, scroll, className)}>{children}</CardContent>;
 }
 
 // 単純なメトリクスグリッド: ラベル + 値 (mono)
