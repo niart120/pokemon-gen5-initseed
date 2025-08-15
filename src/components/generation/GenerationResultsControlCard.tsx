@@ -47,7 +47,7 @@ export const GenerationResultsControlCard: React.FC = () => {
   return (
     <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full min-h-64'}`} aria-labelledby="gen-results-control-title" role="region">
       <StandardCardHeader icon={<FunnelSimple size={20} className="opacity-80" />} title={<span id="gen-results-control-title">Results Control</span>} />
-  <StandardCardContent noScroll={isStack}>
+      <StandardCardContent noScroll={isStack}>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Export and utility buttons">
           <Button size="sm" variant="outline" disabled={!results.length} onClick={()=>onExport('csv')}><DownloadSimple size={14}/>CSV</Button>
           <Button size="sm" variant="outline" disabled={!results.length} onClick={()=>onExport('json')}><DownloadSimple size={14}/>JSON</Button>

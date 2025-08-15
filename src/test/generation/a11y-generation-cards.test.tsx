@@ -2,8 +2,6 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import { GenerationControlCard } from '@/components/generation/GenerationControlCard';
-import { GenerationProgressCard } from '@/components/generation/GenerationProgressCard';
 import { GenerationParamsCard } from '@/components/generation/GenerationParamsCard';
 import { GenerationResultsControlCard } from '@/components/generation/GenerationResultsControlCard';
 import { GenerationResultsTableCard } from '@/components/generation/GenerationResultsTableCard';
@@ -50,8 +48,6 @@ describe('Generation cards accessibility', () => {
   it('has no axe violations (core cards)', async () => {
     const { container } = render(
       <div>
-        <GenerationControlCard />
-        <GenerationProgressCard />
         <GenerationParamsCard />
         <GenerationResultsControlCard />
         <GenerationResultsTableCard />

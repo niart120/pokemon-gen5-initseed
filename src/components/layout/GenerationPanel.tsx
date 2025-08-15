@@ -28,10 +28,13 @@ export const GenerationPanel: React.FC = () => {
       <div className={`${sizes.gap} flex flex-col min-h-0`}>
         {/* 自然高さのカードは flex-none */}
         <div className="flex-none">
+          <GenerationParamsCard />
+        </div>
+        <div className="flex-none">
           <GenerationRunCard />
         </div>
         <div className="flex-none">
-          <GenerationParamsCard />
+          <GenerationResultsControlCard />
         </div>
         {/* 結果テーブルは領域に収める（mainにスクロールを閉じ込める） */}
         <div className="flex-1 min-h-0 overflow-hidden">
@@ -57,7 +60,6 @@ export const GenerationPanel: React.FC = () => {
       </div>
       {/* Right Column */}
       <div className="flex flex-col gap-3 min-h-0 overflow-hidden flex-1">
-        {/* sticky header 土台 (Phase2でsticky化/mini progress統合) */}
         <div
           className={[
             'flex flex-col gap-2',
