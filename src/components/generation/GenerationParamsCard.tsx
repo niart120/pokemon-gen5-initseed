@@ -153,18 +153,20 @@ export const GenerationParamsCard: React.FC = () => {
                 </Select>
               </div>
             )}
-            {/* Encounter Species */}
-            <div className="flex flex-col gap-1 min-w-0">
-              <Label className="text-xs" id="lbl-encounter-species" htmlFor="encounter-species">Species</Label>
-              <Select value={encounterSpeciesId?.toString() ?? ''} onValueChange={v=> setEncounterSpeciesId(Number(v))} disabled={disabled || (isLocationBased ? !encounterField || speciesOptions.length===0 : true)}>
-                <SelectTrigger id="encounter-species" aria-labelledby="lbl-encounter-species encounter-species">
-                  <SelectValue placeholder={isLocationBased ? (encounterField ? (speciesOptions.length? 'Select...' : 'No species') : 'Select Field') : 'WIP'} />
-                </SelectTrigger>
-                <SelectContent className="max-h-72">
-                  {speciesOptions.map(sp=> <SelectItem key={sp.speciesId} value={sp.speciesId.toString()}>{sp.speciesId}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Encounter Species (static encounters only) */}
+            {!isLocationBased && (
+              <div className="flex flex-col gap-1 min-w-0">
+                <Label className="text-xs" id="lbl-encounter-species" htmlFor="encounter-species">Species</Label>
+                <Select value={encounterSpeciesId?.toString() ?? ''} onValueChange={v=> setEncounterSpeciesId(Number(v))} disabled={disabled}>
+                  <SelectTrigger id="encounter-species" aria-labelledby="lbl-encounter-species encounter-species">
+                    <SelectValue placeholder="WIP" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {speciesOptions.map(sp=> <SelectItem key={sp.speciesId} value={sp.speciesId.toString()}>{sp.speciesId}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {/* Ability Mode */}
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" id="lbl-ability-mode" htmlFor="ability-mode">Ability</Label>
