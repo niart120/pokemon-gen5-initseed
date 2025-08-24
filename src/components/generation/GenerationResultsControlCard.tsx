@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
 import { useAppStore } from '@/store/app-store';
@@ -30,45 +30,18 @@ const ALL_SPECIES_OPTIONS: SpeciesOptionEntry[] = (() => {
 
 export const GenerationResultsControlCard: React.FC = () => {
   const { filters, applyFilters, resetGenerationFilters, results, clearResults } = useAppStore();
-  // Species selection UI state (store holds speciesIds directly; here we show names / search)
-  const [speciesQuery, setSpeciesQuery] = useState('');
-  const selectedSpeciesIds = filters.speciesIds || [];
-  // Cached last query (very small manual cache: 直前クエリ一致時に同じ参照返却)
-  const lastQueryRef = useRef<string>('');
-  const lastResultRef = useRef<Array<{ id:number; name:string }>>([]);
-  const speciesOptions = useMemo(() => {
-    const qRaw = speciesQuery.trim();
-    const q = qRaw.toLowerCase();
-    if (q === lastQueryRef.current) return lastResultRef.current;
-    let out: Array<{ id:number; name:string }>;
-    if (!q) {
-      out = ALL_SPECIES_OPTIONS.slice(0, 30).map(o => ({ id: o.id, name: o.labelJa }));
-    } else {
-      // 数値完全一致 (ID) を優先的に含める
-      const maybeId = Number(q);
-      const list: Array<{ id:number; name:string }> = [];
-      if (Number.isInteger(maybeId) && maybeId >=1 && maybeId <=649) {
-        const match = ALL_SPECIES_OPTIONS[maybeId - 1];
-        if (match) list.push({ id: match.id, name: match.labelJa });
-      }
-      for (const o of ALL_SPECIES_OPTIONS) {
-        if (list.length >= 30) break;
-        if (maybeId === o.id) continue; // 既に追加済
-        if (o.normJa.includes(q) || o.normEn.includes(q)) list.push({ id: o.id, name: o.labelJa });
-      }
-      out = list;
-    }
-    lastQueryRef.current = q;
-    lastResultRef.current = out;
-    return out;
-  }, [speciesQuery]);
+  // Species filter UI: reuse ParamCard style listbox (Radix Select) for adding one at a time
+  // filters.speciesIds が未定義のとき毎回新しい [] を生成すると useMemo 依存が常に変化するため安定化
+  const selectedSpeciesIds = useMemo(() => filters.speciesIds ?? [], [filters.speciesIds]);
   const addSpecies = (id:number) => {
     if (selectedSpeciesIds.includes(id)) return;
     applyFilters({ speciesIds: [...selectedSpeciesIds, id] });
   };
   const removeSpecies = (id:number) => {
-    applyFilters({ speciesIds: selectedSpeciesIds.filter(sid => sid !== id) || undefined, abilityIndices: undefined, genders: undefined });
+    const next = selectedSpeciesIds.filter(s=>s!==id);
+    applyFilters({ speciesIds: next.length? next: undefined, abilityIndices: undefined, genders: undefined });
   };
+  const speciesSelectItems = useMemo(()=> ALL_SPECIES_OPTIONS.map(o=>({ value:o.id.toString(), label:o.labelJa })), []);
   // Abilities derived from selected species (union of indices that exist)
   const availableAbilityIndices: (0|1|2)[] = useMemo(() => {
     if (!selectedSpeciesIds.length) return [];
@@ -197,27 +170,32 @@ export const GenerationResultsControlCard: React.FC = () => {
           <fieldset className="space-y-3" aria-labelledby="gf-species-label" role="group">
             <div id="gf-species-label" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">Pokemon Filters</div>
             <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1" aria-label="Species multi select">
-                <div className="flex gap-2 items-center">
-                  <Input placeholder="Species search (名前/ID)" value={speciesQuery} onChange={e=>setSpeciesQuery(e.target.value)} className="h-8" />
-                  <Button type="button" size="sm" variant="secondary" onClick={()=>setSpeciesQuery('')}>Clear</Button>
+              <div className="flex flex-col gap-2" aria-label="Species filter selector">
+                <div className="flex items-center gap-2">
+                  <Label id="lbl-filter-species" className="text-[11px]" htmlFor="filter-species">Species</Label>
+                  <Select value="" onValueChange={v=> { const id = Number(v); if (id>0) addSpecies(id); }}>
+                    <SelectTrigger id="filter-species" className="h-8 w-44" aria-labelledby="lbl-filter-species filter-species">
+                      <SelectValue placeholder="Add species" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {speciesSelectItems.map(item => (
+                        <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedSpeciesIds.length>0 && (
+                    <Button type="button" size="sm" variant="secondary" onClick={()=> applyFilters({ speciesIds: undefined, abilityIndices: undefined, genders: undefined })}>Clear</Button>
+                  )}
                 </div>
-                <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto border rounded p-1 bg-muted/30" aria-label="Selected species">
+                <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto border rounded p-1 bg-muted/30" aria-label="Selected species list">
+                  {selectedSpeciesIds.length === 0 && <span className="text-[10px] text-muted-foreground">none</span>}
                   {selectedSpeciesIds.map(id => {
                     const s = getGeneratedSpeciesById(id);
                     return (
                       <button key={id} type="button" onClick={()=>removeSpecies(id)} className="text-[10px] px-1 py-[2px] rounded bg-secondary hover:bg-secondary/70" aria-label={`Remove ${s?.names.ja || id}`}>{s?.names.ja || id} ×</button>
                     );
                   })}
-                  {!selectedSpeciesIds.length && <span className="text-[10px] text-muted-foreground">none</span>}
                 </div>
-                {speciesQuery && speciesOptions.length>0 && (
-                  <div className="border rounded p-1 flex flex-wrap gap-1 bg-background shadow-sm" aria-label="Species search results">
-                    {speciesOptions.map(opt => (
-                      <button key={opt.id} type="button" onClick={()=>addSpecies(opt.id)} className="text-[10px] px-1 py-[2px] rounded border hover:bg-accent" aria-label={`Add ${opt.name}`}>{opt.name}</button>
-                    ))}
-                  </div>
-                )}
               </div>
               {/* Ability & Gender shown only when species selected */}
               {selectedSpeciesIds.length>0 && (
