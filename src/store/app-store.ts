@@ -131,7 +131,7 @@ if (import.meta.env.DEV) {
 // 以前の BigInt 変換ロジックは撤去。persist 対象を必要最低限に制限。
 interface PersistedGenerationMinimal {
   draftParams: AppStore['draftParams'];
-  params: AppStore['params'] | null;
+  // NOTE: params には bigint を含むため永続化しない（JSON.stringify 失敗回避）
   validationErrors: string[];
   status: AppStore['status'];
   lastCompletion: AppStore['lastCompletion'];
@@ -143,7 +143,6 @@ interface PersistedGenerationMinimal {
 function extractGenerationForPersist(state: AppStore): PersistedGenerationMinimal {
   return {
     draftParams: state.draftParams,
-    params: state.params,
     validationErrors: state.validationErrors,
     status: state.status,
     lastCompletion: state.lastCompletion,
@@ -159,7 +158,8 @@ function reviveGenerationMinimal(obj: unknown): Partial<GenerationSlice> {
   const o = obj as Partial<PersistedGenerationMinimal>;
   return {
     draftParams: o.draftParams ?? undefined,
-    params: o.params ?? null,
+    // params は非永続化（draft から再生成する設計）
+    params: null,
     validationErrors: o.validationErrors ?? [],
     status: o.status ?? 'idle',
     lastCompletion: o.lastCompletion ?? null,
@@ -310,6 +310,46 @@ export const useAppStore = create<AppStore>()(
     {
       name: 'app-store',
       version: 1,
+      // BigInt を含む値が万一混入しても JSON.stringify で落ちないように、
+      // シリアライズ/デシリアライズをカスタマイズ（型は起動時に復元）。
+      storage: (() => {
+        const storage = {
+          getItem: (name: string) => {
+            const raw = localStorage.getItem(name);
+            if (raw == null) return null;
+            try {
+              const parsed = JSON.parse(raw, (_k, v) => {
+                if (typeof v === 'string' && /^__bigint__:.+/.test(v)) {
+                  // 復元は必要箇所（types 側）で行うため、ここでは文字列のまま返す
+                  // 例: "__bigint__:0x1234" -> そのまま文字列
+                  return v;
+                }
+                return v;
+              });
+              return parsed as unknown as string;
+            } catch {
+              return raw as unknown as string;
+            }
+          },
+          setItem: (name: string, value: unknown) => {
+            const json = JSON.stringify(value, (_k, v) => {
+              if (typeof v === 'bigint') {
+                // 文字列タグ化して stringify 可能に（復元は型側の変換で対応）
+                return `__bigint__:${'0x' + v.toString(16)}`;
+              }
+              return v;
+            });
+            localStorage.setItem(name, json);
+          },
+          removeItem: (name: string) => localStorage.removeItem(name),
+        } as const;
+        // 型が合うように adapter を返す
+        return {
+          getItem: async (name: string) => storage.getItem(name),
+          setItem: async (name: string, value: unknown) => storage.setItem(name, value),
+          removeItem: async (name: string) => storage.removeItem(name),
+        } as unknown as Parameters<typeof persist<AppStore>>[1]['storage'];
+      })(),
       partialize: (state: AppStore) => ({
         searchConditions: state.searchConditions,
         targetSeeds: state.targetSeeds,

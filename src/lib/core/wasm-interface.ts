@@ -7,6 +7,7 @@
 import type {
   BWGenerationConfig as WasmBWGenerationConfig,
   PokemonGenerator as WasmPokemonGenerator,
+  SeedEnumerator as WasmSeedEnumerator,
   EncounterType as WasmEncounterType,
   GameVersion as WasmGameVersion,
 } from '../../wasm/wasm_pkg';
@@ -46,6 +47,7 @@ export interface WasmModule {
   // 追加: ポケモン生成API
   BWGenerationConfig: typeof WasmBWGenerationConfig;
   PokemonGenerator: typeof WasmPokemonGenerator;
+  SeedEnumerator: typeof WasmSeedEnumerator;
 
   // 追加: 列挙（数値）
   EncounterType: typeof WasmEncounterType;
@@ -93,6 +95,7 @@ export async function initWasm(): Promise<WasmModule> {
         IntegratedSeedSearcher: module.IntegratedSeedSearcher,
         BWGenerationConfig: module.BWGenerationConfig,
         PokemonGenerator: module.PokemonGenerator,
+  SeedEnumerator: module.SeedEnumerator,
         EncounterType: module.EncounterType,
         GameVersion: module.GameVersion,
       } as unknown as WasmModule;

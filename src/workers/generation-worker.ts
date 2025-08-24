@@ -139,10 +139,10 @@ async function handleStart(params: GenerationParams) {
   state.shinyFound = false;
   try {
     if (!isWasmReady()) await initWasm();
-    const wasm = getWasm() as unknown as { BWGenerationConfig: BWGenerationConfigCtor; SeedEnumerator?: SeedEnumeratorCtor; PokemonGenerator?: SeedEnumeratorCtor };
-    BWGenerationConfig = wasm.BWGenerationConfig;
-    SeedEnumerator = wasm.SeedEnumerator || wasm.PokemonGenerator;
-    if (!SeedEnumerator) throw new Error('SeedEnumerator not exposed');
+  const wasm = getWasm() as unknown as { BWGenerationConfig: BWGenerationConfigCtor; SeedEnumerator?: SeedEnumeratorCtor };
+  BWGenerationConfig = wasm.BWGenerationConfig;
+  SeedEnumerator = wasm.SeedEnumerator;
+  if (!SeedEnumerator) throw new Error('SeedEnumerator not exposed');
     state.config = new BWGenerationConfig(
       versionToWasm(params.version),
       params.encounterType,
