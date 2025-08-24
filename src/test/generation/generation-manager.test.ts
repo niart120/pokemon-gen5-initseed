@@ -21,7 +21,7 @@ function params(overrides: Partial<GenerationParams> = {}): GenerationParams {
     syncNatureId: 0,
     stopAtFirstShiny: false,
     stopOnCap: true,
-    batchSize: 1000,
+  batchSize: 5000,
     ...overrides,
   };
 }

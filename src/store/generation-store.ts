@@ -62,8 +62,9 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
   draftParams: {
     baseSeedHex: '1',
     offsetHex: '0',
-    maxAdvances: 10000,
-    maxResults: 10000,
+  // Defaults adjusted (Phase3/4 tuning): expand search window & batch throughput
+  maxAdvances: 50000,
+  maxResults: 15000,
     version: 'B',
     encounterType: 0,
     tid: 1,
@@ -72,7 +73,7 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     syncNatureId: 0,
     stopAtFirstShiny: false,
     stopOnCap: true,
-  batchSize: 1000, // 固定 (UI 非表示)
+  batchSize: 5000, // 固定 (UI 非表示, tuned from 1000 -> 5000 for reduced worker->UI message overhead)
   abilityMode: 'none',
   shinyCharm: false,
   memoryLink: false,
