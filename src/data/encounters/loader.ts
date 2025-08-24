@@ -54,3 +54,19 @@ export function getEncounterFromRegistry(version: ROMVersion, location: string, 
   const hit = registry![key]?.[loc];
   return hit ?? null;
 }
+
+/**
+ * List normalized location entries for a given version & method.
+ * Order: JSON 定義読み込み順 (registry 格納順) を維持。
+ */
+export function listRegistryLocations(version: ROMVersion, method: EncounterType): { key: string; displayName: string }[] {
+  ensureEncounterRegistryLoaded();
+  const key = `${version}_${methodName(method)}`;
+  const bucket = registry![key];
+  if (!bucket) return [];
+  const out: { key: string; displayName: string }[] = [];
+  for (const [locKey, payload] of Object.entries(bucket)) {
+    out.push({ key: locKey, displayName: payload.displayName });
+  }
+  return out;
+}

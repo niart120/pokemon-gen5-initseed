@@ -36,8 +36,8 @@ describe('generation-exporter', () => {
   const headers = lines[0].split(',');
   expect(headers).toContain('NatureName');
   expect(headers.indexOf('NatureName')).toBe(headers.indexOf('NatureId') + 1);
-  // 期待列数 (README仕様): 16列
-  expect(headers.length).toBe(16);
+  // 列数: v2拡張で speciesName/abilityName/genderResolved/level 追加済 (例: 20列)
+  expect(headers.length).toBe(20);
   // 1行目データ整合: pidHex/seedHex が 0x + lower-case
   const firstData = lines[1].split(',');
   const seedHex = firstData[1];

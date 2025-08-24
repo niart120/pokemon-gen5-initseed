@@ -42,6 +42,7 @@ vi.mock('@/store/generation-store', () => ({
   selectEtaFormatted: () => null,
   selectShinyCount: () => 0,
   selectFilteredSortedResults: () => [],
+  selectUiReadyResults: () => [],
 }));
 
 describe('Generation cards accessibility', () => {

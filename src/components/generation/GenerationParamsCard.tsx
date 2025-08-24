@@ -10,6 +10,7 @@ import { useAppStore } from '@/store/app-store';
 import type { GenerationParamsHex } from '@/types/generation';
 import { Gear } from '@phosphor-icons/react';
 import { DomainEncounterTypeNames, DomainEncounterType } from '@/types/domain';
+import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 
 // Simple hex normalization guard
@@ -23,7 +24,7 @@ const ABILITY_OPTIONS: { value: GenerationParamsHex['abilityMode']; label: strin
 ];
 
 export const GenerationParamsCard: React.FC = () => {
-  const { draftParams, setDraftParams, status } = useAppStore();
+  const { draftParams, setDraftParams, status, encounterField, encounterSpeciesId, setEncounterField, setEncounterSpeciesId } = useAppStore();
   const disabled = status === 'running' || status === 'paused' || status === 'starting';
   const hexDraft: Partial<GenerationParamsHex> = draftParams;
 
@@ -36,6 +37,17 @@ export const GenerationParamsCard: React.FC = () => {
   };
   const syncActive = abilityMode === 'sync' && (hexDraft.syncEnabled ?? false);
   const encounterValue = hexDraft.encounterType ?? 0;
+  const version = draftParams.version ?? 'B';
+  const isLocationBased = isLocationBasedEncounter(encounterValue as any);
+  const locationOptions = React.useMemo(()=> isLocationBased ? listEncounterLocations(version, encounterValue as any) : [], [version, encounterValue, isLocationBased]);
+  const speciesOptions = React.useMemo(()=> {
+    if (isLocationBased) {
+      if (!encounterField) return [];
+      return listEncounterSpeciesOptions(version, encounterValue as any, encounterField);
+    }
+    // static placeholder (未実装)
+    return [];
+  }, [version, encounterValue, isLocationBased, encounterField]);
   const { isStack } = useResponsiveLayout();
   return (
     <Card className={`py-2 flex flex-col ${isStack ? '' : 'h-full min-h-64'}`} aria-labelledby="gen-params-title" role="form">
@@ -124,6 +136,32 @@ export const GenerationParamsCard: React.FC = () => {
                     const val = (DomainEncounterType as Record<string, number>)[name];
                     return <SelectItem key={name} value={val.toString()}>{name}</SelectItem>;
                   })}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Encounter Field (location) */}
+            {isLocationBased && (
+              <div className="flex flex-col gap-1 min-w-0">
+                <Label className="text-xs" id="lbl-encounter-field" htmlFor="encounter-field">Field</Label>
+                <Select value={encounterField ?? ''} onValueChange={v=> setEncounterField(v)} disabled={disabled || locationOptions.length===0}>
+                  <SelectTrigger id="encounter-field" aria-labelledby="lbl-encounter-field encounter-field">
+                    <SelectValue placeholder={locationOptions.length? 'Select...' : 'N/A'} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {locationOptions.map(loc=> <SelectItem key={loc.key} value={loc.key}>{loc.displayName}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {/* Encounter Species */}
+            <div className="flex flex-col gap-1 min-w-0">
+              <Label className="text-xs" id="lbl-encounter-species" htmlFor="encounter-species">Species</Label>
+              <Select value={encounterSpeciesId?.toString() ?? ''} onValueChange={v=> setEncounterSpeciesId(Number(v))} disabled={disabled || (isLocationBased ? !encounterField || speciesOptions.length===0 : true)}>
+                <SelectTrigger id="encounter-species" aria-labelledby="lbl-encounter-species encounter-species">
+                  <SelectValue placeholder={isLocationBased ? (encounterField ? (speciesOptions.length? 'Select...' : 'No species') : 'Select Field') : 'WIP'} />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {speciesOptions.map(sp=> <SelectItem key={sp.speciesId} value={sp.speciesId.toString()}>{sp.speciesId}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
