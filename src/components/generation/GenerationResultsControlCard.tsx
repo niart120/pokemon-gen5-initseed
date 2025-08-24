@@ -29,7 +29,12 @@ const ALL_SPECIES_OPTIONS: SpeciesOptionEntry[] = (() => {
 })();
 
 export const GenerationResultsControlCard: React.FC = () => {
-  const { filters, applyFilters, resetGenerationFilters, results, clearResults } = useAppStore();
+  // NOTE(perf): 以前は useAppStore() 全体取得で encounterField 変更時など不要再レンダーが発生していたため細粒度購読へ分割
+  const filters = useAppStore(s => s.filters);
+  const applyFilters = useAppStore(s => s.applyFilters);
+  const resetGenerationFilters = useAppStore(s => s.resetGenerationFilters);
+  const results = useAppStore(s => s.results); // export 用に実体参照
+  const clearResults = useAppStore(s => s.clearResults);
   // Species filter UI: reuse ParamCard style listbox (Radix Select) for adding one at a time
   // filters.speciesIds が未定義のとき毎回新しい [] を生成すると useMemo 依存が常に変化するため安定化
   const selectedSpeciesIds = useMemo(() => filters.speciesIds ?? [], [filters.speciesIds]);

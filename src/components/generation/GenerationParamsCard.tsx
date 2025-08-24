@@ -24,7 +24,14 @@ const ABILITY_OPTIONS: { value: GenerationParamsHex['abilityMode']; label: strin
 ];
 
 export const GenerationParamsCard: React.FC = () => {
-  const { draftParams, setDraftParams, status, encounterField, encounterSpeciesId, setEncounterField, setEncounterSpeciesId } = useAppStore();
+  // NOTE(perf): 必要項目のみ個別購読し encounterField 変更時の全体再レンダーを抑制
+  const draftParams = useAppStore(s=>s.draftParams);
+  const status = useAppStore(s=>s.status);
+  const encounterField = useAppStore(s=>s.encounterField);
+  const encounterSpeciesId = useAppStore(s=>s.encounterSpeciesId);
+  const setDraftParams = useAppStore(s=>s.setDraftParams);
+  const setEncounterField = useAppStore(s=>s.setEncounterField);
+  const setEncounterSpeciesId = useAppStore(s=>s.setEncounterSpeciesId);
   const disabled = status === 'running' || status === 'paused' || status === 'starting';
   const hexDraft: Partial<GenerationParamsHex> = draftParams;
 
