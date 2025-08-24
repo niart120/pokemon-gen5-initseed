@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
 import { useAppStore } from '@/store/app-store';
@@ -10,10 +10,99 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { FunnelSimple, DownloadSimple, Trash, ArrowsDownUp } from '@phosphor-icons/react';
+import { getGeneratedSpeciesById } from '@/data/species/generated';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
+
+// === Precomputed species options (Gen5: 1..649) ===
+// 1回だけ構築し再利用。検索で使う正規化済み文字列を保持。
+interface SpeciesOptionEntry { id: number; labelJa: string; labelEn: string; normJa: string; normEn: string; }
+const ALL_SPECIES_OPTIONS: SpeciesOptionEntry[] = (() => {
+  const arr: SpeciesOptionEntry[] = [];
+  for (let id = 1; id <= 649; id++) {
+    const s = getGeneratedSpeciesById(id);
+    if (!s) continue;
+    const ja = s.names.ja;
+    const en = s.names.en;
+    arr.push({ id, labelJa: ja, labelEn: en, normJa: ja.toLowerCase(), normEn: en.toLowerCase() });
+  }
+  return arr;
+})();
 
 export const GenerationResultsControlCard: React.FC = () => {
   const { filters, applyFilters, resetGenerationFilters, results, clearResults } = useAppStore();
+  // Species selection UI state (store holds speciesIds directly; here we show names / search)
+  const [speciesQuery, setSpeciesQuery] = useState('');
+  const selectedSpeciesIds = filters.speciesIds || [];
+  // Cached last query (very small manual cache: 直前クエリ一致時に同じ参照返却)
+  const lastQueryRef = useRef<string>('');
+  const lastResultRef = useRef<Array<{ id:number; name:string }>>([]);
+  const speciesOptions = useMemo(() => {
+    const qRaw = speciesQuery.trim();
+    const q = qRaw.toLowerCase();
+    if (q === lastQueryRef.current) return lastResultRef.current;
+    let out: Array<{ id:number; name:string }>;
+    if (!q) {
+      out = ALL_SPECIES_OPTIONS.slice(0, 30).map(o => ({ id: o.id, name: o.labelJa }));
+    } else {
+      // 数値完全一致 (ID) を優先的に含める
+      const maybeId = Number(q);
+      const list: Array<{ id:number; name:string }> = [];
+      if (Number.isInteger(maybeId) && maybeId >=1 && maybeId <=649) {
+        const match = ALL_SPECIES_OPTIONS[maybeId - 1];
+        if (match) list.push({ id: match.id, name: match.labelJa });
+      }
+      for (const o of ALL_SPECIES_OPTIONS) {
+        if (list.length >= 30) break;
+        if (maybeId === o.id) continue; // 既に追加済
+        if (o.normJa.includes(q) || o.normEn.includes(q)) list.push({ id: o.id, name: o.labelJa });
+      }
+      out = list;
+    }
+    lastQueryRef.current = q;
+    lastResultRef.current = out;
+    return out;
+  }, [speciesQuery]);
+  const addSpecies = (id:number) => {
+    if (selectedSpeciesIds.includes(id)) return;
+    applyFilters({ speciesIds: [...selectedSpeciesIds, id] });
+  };
+  const removeSpecies = (id:number) => {
+    applyFilters({ speciesIds: selectedSpeciesIds.filter(sid => sid !== id) || undefined, abilityIndices: undefined, genders: undefined });
+  };
+  // Abilities derived from selected species (union of indices that exist)
+  const availableAbilityIndices: (0|1|2)[] = useMemo(() => {
+    if (!selectedSpeciesIds.length) return [];
+    const set = new Set<number>();
+    for (const id of selectedSpeciesIds) {
+      const s = getGeneratedSpeciesById(id);
+      if (!s) continue;
+      if (s.abilities.ability1) set.add(0);
+      if (s.abilities.ability2) set.add(1);
+      if (s.abilities.hidden) set.add(2);
+    }
+    return Array.from(set).sort() as (0|1|2)[];
+  }, [selectedSpeciesIds]);
+  const toggleAbilityIndex = (idx:0|1|2) => {
+    const current = filters.abilityIndices || [];
+    const exists = current.includes(idx);
+    const next = exists ? current.filter(i=>i!==idx) : [...current, idx];
+    applyFilters({ abilityIndices: next.length? next : undefined });
+  };
+  const genderOptions: ('M'|'F'|'N')[] = ['M','F','N'];
+  const toggleGender = (g:'M'|'F'|'N') => {
+    const current = filters.genders || [];
+    const exists = current.includes(g);
+    const next = exists ? current.filter(x=>x!==g) : [...current, g];
+    applyFilters({ genders: next.length? next : undefined });
+  };
+  // Level range (independent)
+  const [lvlMin, setLvlMin] = useState(filters.levelRange?.min ?? '');
+  const [lvlMax, setLvlMax] = useState(filters.levelRange?.max ?? '');
+  const applyLevelRange = () => {
+    const min = lvlMin === '' ? undefined : Number(lvlMin);
+    const max = lvlMax === '' ? undefined : Number(lvlMax);
+    applyFilters({ levelRange: (min==null && max==null)? undefined : { min, max } });
+  };
   const [natureInput, setNatureInput] = useState( filters.natureIds.join(',') );
   const [advMin, setAdvMin] = useState(filters.advanceRange?.min ?? '');
   const [advMax, setAdvMax] = useState(filters.advanceRange?.max ?? '');
@@ -76,6 +165,9 @@ export const GenerationResultsControlCard: React.FC = () => {
                     <SelectItem value="pid">PID</SelectItem>
                     <SelectItem value="nature">Nature</SelectItem>
                     <SelectItem value="shiny">Shiny</SelectItem>
+                    <SelectItem value="species">Species*</SelectItem>
+                    <SelectItem value="ability">Ability*</SelectItem>
+                    <SelectItem value="level">Level*</SelectItem>
                   </SelectContent>
                 </Select>
                 <ArrowsDownUp size={14} className="opacity-50" aria-hidden="true" />
@@ -97,6 +189,64 @@ export const GenerationResultsControlCard: React.FC = () => {
                 <Input id="adv-max" value={advMax} onChange={e=>setAdvMax(e.target.value)} placeholder="max" className="h-8 w-20" inputMode="numeric" aria-describedby="adv-range-hint" />
                 <Button type="button" size="sm" variant="secondary" onClick={onApplyAdvRange}>Set</Button>
                 <span id="adv-range-hint" className="sr-only">Set minimum and/or maximum advance indices</span>
+              </div>
+            </div>
+          </fieldset>
+          <Separator />
+          {/* Species / Ability / Gender / Level filters */}
+          <fieldset className="space-y-3" aria-labelledby="gf-species-label" role="group">
+            <div id="gf-species-label" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">Pokemon Filters</div>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1" aria-label="Species multi select">
+                <div className="flex gap-2 items-center">
+                  <Input placeholder="Species search (名前/ID)" value={speciesQuery} onChange={e=>setSpeciesQuery(e.target.value)} className="h-8" />
+                  <Button type="button" size="sm" variant="secondary" onClick={()=>setSpeciesQuery('')}>Clear</Button>
+                </div>
+                <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto border rounded p-1 bg-muted/30" aria-label="Selected species">
+                  {selectedSpeciesIds.map(id => {
+                    const s = getGeneratedSpeciesById(id);
+                    return (
+                      <button key={id} type="button" onClick={()=>removeSpecies(id)} className="text-[10px] px-1 py-[2px] rounded bg-secondary hover:bg-secondary/70" aria-label={`Remove ${s?.names.ja || id}`}>{s?.names.ja || id} ×</button>
+                    );
+                  })}
+                  {!selectedSpeciesIds.length && <span className="text-[10px] text-muted-foreground">none</span>}
+                </div>
+                {speciesQuery && speciesOptions.length>0 && (
+                  <div className="border rounded p-1 flex flex-wrap gap-1 bg-background shadow-sm" aria-label="Species search results">
+                    {speciesOptions.map(opt => (
+                      <button key={opt.id} type="button" onClick={()=>addSpecies(opt.id)} className="text-[10px] px-1 py-[2px] rounded border hover:bg-accent" aria-label={`Add ${opt.name}`}>{opt.name}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Ability & Gender shown only when species selected */}
+              {selectedSpeciesIds.length>0 && (
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-2" aria-label="Ability indices filter">
+                    {availableAbilityIndices.map(idx => (
+                      <label key={idx} className="flex items-center gap-1 text-[11px] cursor-pointer">
+                        <Checkbox checked={Boolean(filters.abilityIndices?.includes(idx))} onCheckedChange={()=>toggleAbilityIndex(idx)} />
+                        <span>{idx===0?'通常1': idx===1?'通常2':'隠れ'}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2" aria-label="Gender filter">
+                    {genderOptions.map(g => (
+                      <label key={g} className="flex items-center gap-1 text-[11px] cursor-pointer">
+                        <Checkbox checked={Boolean(filters.genders?.includes(g))} onCheckedChange={()=>toggleGender(g)} />
+                        <span>{g==='N'? '性別不明':'性別'+g}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Level range always visible */}
+              <div className="flex items-center gap-1" aria-label="Level range filter">
+                <Label htmlFor="lvl-min" className="sr-only">Level minimum</Label>
+                <Input id="lvl-min" value={lvlMin} onChange={e=>setLvlMin(e.target.value)} placeholder="Lv min" className="h-8 w-20" inputMode="numeric" />
+                <Label htmlFor="lvl-max" className="sr-only">Level maximum</Label>
+                <Input id="lvl-max" value={lvlMax} onChange={e=>setLvlMax(e.target.value)} placeholder="Lv max" className="h-8 w-20" inputMode="numeric" />
+                <Button type="button" size="sm" variant="secondary" onClick={applyLevelRange}>Set</Button>
               </div>
             </div>
           </fieldset>
