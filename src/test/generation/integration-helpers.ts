@@ -33,6 +33,9 @@ export function baseParams(overrides: Partial<GenerationParams>): GenerationPara
     stopAtFirstShiny: false,
     stopOnCap: true,
     batchSize: 500,
+    newGame: true,
+    noSave: false,
+    memoryLink: false,
     ...overrides,
   };
 }

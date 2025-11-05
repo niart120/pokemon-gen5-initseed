@@ -97,6 +97,8 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
   abilityMode: 'none',
   shinyCharm: false,
   memoryLink: false,
+  newGame: true,
+  noSave: false,
   },
   // 動的Encounter UI用追加状態（WASMパラメータ未連動のため GenerationParamsHex 外）
   encounterField: undefined,
@@ -269,7 +271,7 @@ export const selectEtaFormatted = (s: GenerationSlice): string | null => {
 export const selectShinyCount = (s: GenerationSlice): number => s.metrics.shinyCount || 0;
 
 function canBuildFullHex(d: Partial<GenerationParamsHex>): d is GenerationParamsHex {
-  const required: (keyof GenerationParamsHex)[] = ['baseSeedHex','offsetHex','maxAdvances','maxResults','version','encounterType','tid','sid','syncEnabled','syncNatureId','stopAtFirstShiny','stopOnCap','batchSize'];
+  const required: (keyof GenerationParamsHex)[] = ['baseSeedHex','offsetHex','maxAdvances','maxResults','version','encounterType','tid','sid','syncEnabled','syncNatureId','stopAtFirstShiny','stopOnCap','batchSize','memoryLink','newGame','noSave'];
   return required.every(k => (d as Record<string, unknown>)[k] !== undefined);
 }
 

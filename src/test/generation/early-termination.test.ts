@@ -66,6 +66,9 @@ if (typeof Worker === 'undefined') {
         stopAtFirstShiny: true,
         stopOnCap: true, // 併用可
         batchSize: 25,
+        newGame: true,
+        noSave: false,
+        memoryLink: false,
       };
       const w = createWorker();
       await waitFor(w, m => m.type === 'READY');
@@ -93,6 +96,9 @@ if (typeof Worker === 'undefined') {
         stopAtFirstShiny: false,
         stopOnCap: true,
         batchSize: 10,
+        newGame: true,
+        noSave: false,
+        memoryLink: false,
       };
       const w = createWorker();
       await waitFor(w, m => m.type === 'READY');

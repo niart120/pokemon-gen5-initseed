@@ -22,6 +22,9 @@ function params(overrides: Partial<GenerationParams> = {}): GenerationParams {
     stopAtFirstShiny: false,
     stopOnCap: true,
   batchSize: 5000,
+  newGame: true,
+  noSave: false,
+  memoryLink: false,
     ...overrides,
   };
 }

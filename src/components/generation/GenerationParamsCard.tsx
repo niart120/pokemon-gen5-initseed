@@ -39,7 +39,20 @@ export const GenerationParamsCard: React.FC = () => {
   const disabled = status === 'running' || status === 'paused' || status === 'starting';
   const hexDraft: Partial<GenerationParamsHex> = draftParams;
 
-  const update = (partial: Partial<GenerationParamsHex>) => setDraftParams(partial);
+  const update = (partial: Partial<GenerationParamsHex>) => {
+    const next: Partial<GenerationParamsHex> = { ...partial };
+    const targetVersion = partial.version ?? draftParams.version ?? 'B';
+    if (partial.version !== undefined && (targetVersion === 'B' || targetVersion === 'W')) {
+      next.memoryLink = false;
+    }
+    if (partial.newGame !== undefined && !partial.newGame) {
+      next.noSave = false;
+    }
+    if (partial.noSave) {
+      next.memoryLink = false;
+    }
+    setDraftParams(next);
+  };
 
   const abilityMode = hexDraft.abilityMode ?? 'none';
   const onAbilityChange = (mode: NonNullable<GenerationParamsHex['abilityMode']>) => {
@@ -60,6 +73,18 @@ export const GenerationParamsCard: React.FC = () => {
     return [];
   }, [version, encounterValue, isLocationBased, encounterField]);
   const { isStack } = useResponsiveLayout();
+  const newGame = hexDraft.newGame ?? true;
+  const noSave = hexDraft.noSave ?? false;
+  const memoryLink = hexDraft.memoryLink ?? false;
+  const versionIsBw = version === 'B' || version === 'W';
+  const memoryLinkDisabled = disabled || versionIsBw || noSave;
+  const noSaveDisabled = disabled || !newGame;
+
+  React.useEffect(() => {
+    if (memoryLink && memoryLinkDisabled) {
+      setDraftParams({ memoryLink: false });
+    }
+  }, [memoryLink, memoryLinkDisabled, setDraftParams]);
 
   // フィールド選択に応じて遭遇テーブルと補助データをストアへ供給
   React.useEffect(() => {
@@ -133,16 +158,26 @@ export const GenerationParamsCard: React.FC = () => {
             </div>
           </div>
           {/* Checkboxes - separate row to prevent overlap */}
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 pt-2">
-            {/* Shiny Charm */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 pt-2">
+            {/* New Game */}
             <div className="flex items-center gap-2">
-              <Checkbox id="shiny-charm" aria-labelledby="lbl-shiny-charm" checked={draftParams.shinyCharm ?? false} disabled={disabled || (draftParams.version === 'B' || draftParams.version === 'W')} onCheckedChange={v=> update({ shinyCharm: Boolean(v) })} />
-              <Label id="lbl-shiny-charm" htmlFor="shiny-charm" className="text-xs">Shiny Charm</Label>
+              <Checkbox id="new-game" aria-labelledby="lbl-new-game" checked={newGame} disabled={disabled} onCheckedChange={v=> update({ newGame: Boolean(v) })} />
+              <Label id="lbl-new-game" htmlFor="new-game" className="text-xs">New Game</Label>
+            </div>
+            {/* No Save */}
+            <div className="flex items-center gap-2">
+              <Checkbox id="no-save" aria-labelledby="lbl-no-save" checked={noSave} disabled={noSaveDisabled} onCheckedChange={v=> update({ noSave: Boolean(v) })} />
+              <Label id="lbl-no-save" htmlFor="no-save" className="text-xs">No Save</Label>
             </div>
             {/* Memory Link */}
             <div className="flex items-center gap-2">
-              <Checkbox id="memory-link" aria-labelledby="lbl-memory-link" checked={draftParams.memoryLink ?? false} disabled={disabled || (draftParams.version === 'B' || draftParams.version === 'W')} onCheckedChange={v=> update({ memoryLink: Boolean(v) })} />
+              <Checkbox id="memory-link" aria-labelledby="lbl-memory-link" checked={memoryLink} disabled={memoryLinkDisabled} onCheckedChange={v=> update({ memoryLink: Boolean(v) })} />
               <Label id="lbl-memory-link" htmlFor="memory-link" className="text-xs">Memory Link</Label>
+            </div>
+            {/* Shiny Charm */}
+            <div className="flex items-center gap-2">
+              <Checkbox id="shiny-charm" aria-labelledby="lbl-shiny-charm" checked={draftParams.shinyCharm ?? false} disabled={disabled || versionIsBw} onCheckedChange={v=> update({ shinyCharm: Boolean(v) })} />
+              <Label id="lbl-shiny-charm" htmlFor="shiny-charm" className="text-xs">Shiny Charm</Label>
             </div>
           </div>
         </section>

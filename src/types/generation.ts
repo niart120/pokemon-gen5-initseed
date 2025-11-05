@@ -5,6 +5,7 @@
  */
 
 import type { UnresolvedPokemonData } from './pokemon-raw';
+import { DomainGameMode } from '@/types/domain';
 
 // --- Params ---
 export interface GenerationParams {
@@ -21,6 +22,9 @@ export interface GenerationParams {
   stopAtFirstShiny: boolean;
   stopOnCap: boolean;      // maxResults 到達で終了するか（デフォルト true）
   batchSize: number;       // 1バッチ生成数 (推奨 1000, ≤ 10000)
+  newGame: boolean;
+  noSave: boolean;
+  memoryLink: boolean;
 }
 
 // 16進文字列保持用: store/UI ではこちらを使い、worker開始直前に GenerationParams へ変換
@@ -45,8 +49,12 @@ export interface GenerationParamsHex {
   abilityMode?: 'none' | 'sync' | 'compound';
   /** 所持している場合 true (後続: 色違い確率計算に利用予定) */
   shinyCharm?: boolean;
-  /** BW2 Memory Link 状態 (後続: オフセット/ゲームモード分岐に利用予定) */
-  memoryLink?: boolean;
+  /** BW2 Memory Link 状態 */
+  memoryLink: boolean;
+  /** True when starting a new game flow */
+  newGame: boolean;
+  /** True when new game without an existing save */
+  noSave: boolean;
 }
 
 export function hexParamsToGenerationParams(h: GenerationParamsHex): GenerationParams {
@@ -64,6 +72,9 @@ export function hexParamsToGenerationParams(h: GenerationParamsHex): GenerationP
     stopAtFirstShiny: h.stopAtFirstShiny,
     stopOnCap: h.stopOnCap,
     batchSize: h.batchSize,
+    newGame: h.newGame,
+    noSave: h.noSave,
+    memoryLink: h.memoryLink,
   };
 }
 
@@ -82,6 +93,9 @@ export function generationParamsToHex(p: GenerationParams): GenerationParamsHex 
     stopAtFirstShiny: p.stopAtFirstShiny,
     stopOnCap: p.stopOnCap,
     batchSize: p.batchSize,
+    memoryLink: p.memoryLink,
+    newGame: p.newGame,
+    noSave: p.noSave,
   };
 }
 
@@ -212,5 +226,47 @@ export function validateGenerationParams(p: GenerationParams): string[] {
   const allowedEncounter = new Set([0,1,2,3,4,5,6,7,10,11,12,13,20]);
   if (!allowedEncounter.has(p.encounterType)) errors.push('encounterType invalid');
   if (p.maxResults > p.maxAdvances) errors.push('maxResults should be <= maxAdvances');
+  if (!p.newGame && p.noSave) errors.push('noSave requires new game mode');
+  if ((p.version === 'B' || p.version === 'W') && p.memoryLink) errors.push('memoryLink is only available in BW2');
+  if (p.noSave && p.memoryLink) errors.push('memoryLink cannot be combined with noSave');
+  try {
+    deriveDomainGameMode(p);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    errors.push(message || 'invalid game mode');
+  }
   return errors;
+}
+
+export function deriveDomainGameMode(input: Pick<GenerationParams, 'version' | 'newGame' | 'noSave' | 'memoryLink'>): DomainGameMode {
+  const { version, newGame, noSave, memoryLink } = input;
+  const isBw1 = version === 'B' || version === 'W';
+  if (isBw1) {
+    if (memoryLink) {
+      throw new Error('BW versions do not support memory link');
+    }
+    if (!newGame && noSave) {
+      throw new Error('Continue mode requires an existing save');
+    }
+    if (newGame) {
+      return noSave ? DomainGameMode.BwNewGameNoSave : DomainGameMode.BwNewGameWithSave;
+    }
+    return DomainGameMode.BwContinue;
+  }
+
+  if (!newGame) {
+    if (noSave) {
+      throw new Error('Continue mode requires an existing save');
+    }
+    return memoryLink ? DomainGameMode.Bw2ContinueWithMemoryLink : DomainGameMode.Bw2ContinueNoMemoryLink;
+  }
+
+  if (noSave) {
+    if (memoryLink) {
+      throw new Error('Memory link requires a save file');
+    }
+    return DomainGameMode.Bw2NewGameNoSave;
+  }
+
+  return memoryLink ? DomainGameMode.Bw2NewGameWithMemoryLinkSave : DomainGameMode.Bw2NewGameNoMemoryLinkSave;
 }

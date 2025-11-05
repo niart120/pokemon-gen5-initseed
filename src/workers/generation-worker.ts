@@ -9,9 +9,11 @@ import {
   type GenerationResult,
   validateGenerationParams,
   FIXED_PROGRESS_INTERVAL_MS,
+  deriveDomainGameMode,
 } from '@/types/generation';
 import { parseFromWasmRaw } from '@/lib/generation/raw-parser';
 import { initWasm, getWasm, isWasmReady } from '@/lib/core/wasm-interface';
+import { domainGameModeToWasm } from '@/lib/core/mapping/game-mode';
 
 // WASM コンストラクタ最小型 (必要最小限のみ表現)
 interface BWGenerationConfigCtor { new(version: number, encounterType: number, tid: number, sid: number, syncEnabled: boolean, syncNatureId: number): object; }
@@ -45,6 +47,7 @@ interface InternalState {
   batchIndex: number;
   cumulativeResults: number;
   shinyFound: boolean;
+  baseAdvance: number;
 }
 
 // self の型を拡張 (WebWorker lib 未設定環境でもコンパイル可能にする)
@@ -79,6 +82,7 @@ const state: InternalState = {
   batchIndex: 0,
   cumulativeResults: 0,
   shinyFound: false,
+  baseAdvance: 0,
 };
 
 post({ type: 'READY', version: '1' });
@@ -120,9 +124,15 @@ async function handleStart(params: GenerationParams) {
   cleanupInterval();
   state.params = params;
   state.startTime = performance.now();
+  const baseAdvance = Number(params.offset);
+  const totalAdvances = params.maxAdvances - baseAdvance;
+  if (totalAdvances <= 0) {
+    post({ type: 'ERROR', message: 'maxAdvances must be greater than offset', category: 'VALIDATION', fatal: false });
+    return;
+  }
   state.progress = {
     processedAdvances: 0,
-    totalAdvances: params.maxAdvances,
+    totalAdvances,
     resultsCount: 0,
     elapsedMs: 0,
     throughput: 0,
@@ -139,7 +149,11 @@ async function handleStart(params: GenerationParams) {
   state.shinyFound = false;
   try {
     if (!isWasmReady()) await initWasm();
-  const wasm = getWasm() as unknown as { BWGenerationConfig: BWGenerationConfigCtor; SeedEnumerator?: SeedEnumeratorCtor };
+  const wasm = getWasm() as unknown as {
+    BWGenerationConfig: BWGenerationConfigCtor;
+    SeedEnumerator?: SeedEnumeratorCtor;
+    calculate_game_offset(initial_seed: bigint, mode: number): number;
+  };
   BWGenerationConfig = wasm.BWGenerationConfig;
   SeedEnumerator = wasm.SeedEnumerator;
   if (!SeedEnumerator) throw new Error('SeedEnumerator not exposed');
@@ -151,11 +165,15 @@ async function handleStart(params: GenerationParams) {
       params.syncEnabled,
       params.syncNatureId,
     );
-    const totalCount = Number(params.maxAdvances - Number(params.offset));
+    const domainMode = deriveDomainGameMode(params);
+    const wasmMode = domainGameModeToWasm(domainMode);
+    const gameOffset = BigInt(wasm.calculate_game_offset(params.baseSeed, wasmMode));
+    const effectiveOffset = gameOffset + params.offset;
+    state.baseAdvance = baseAdvance;
     state.enumerator = new SeedEnumerator(
       params.baseSeed,
-      BigInt(params.offset),
-      totalCount,
+      effectiveOffset,
+      totalAdvances,
       state.config,
     );
   } catch (e) {
@@ -272,7 +290,7 @@ function advanceEnumerationChunk() {
       complete('error');
       return;
     }
-    const advanceVal = p.processedAdvances + i + 1;
+  const advanceVal = state.baseAdvance + p.processedAdvances + i;
   const result: GenerationResult = { ...unresolved, advance: advanceVal };
   const isShiny = (result.shiny_type ?? 0) !== 0;
     if (isShiny && !state.shinyFound) state.shinyFound = true;

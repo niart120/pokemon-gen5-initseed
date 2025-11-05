@@ -10,6 +10,7 @@ import type {
   SeedEnumerator as WasmSeedEnumerator,
   EncounterType as WasmEncounterType,
   GameVersion as WasmGameVersion,
+  GameMode as WasmGameMode,
 } from '../../wasm/wasm_pkg';
 // Local type alias for internal interface references
 type WasmSearchResult = import('../../wasm/wasm_pkg').SearchResult;
@@ -52,6 +53,9 @@ export interface WasmModule {
   // 追加: 列挙（数値）
   EncounterType: typeof WasmEncounterType;
   GameVersion: typeof WasmGameVersion;
+  GameMode: typeof WasmGameMode;
+
+  calculate_game_offset(initial_seed: bigint, mode: number): number;
 }
 
 let wasmModule: WasmModule | null = null;
@@ -95,9 +99,11 @@ export async function initWasm(): Promise<WasmModule> {
         IntegratedSeedSearcher: module.IntegratedSeedSearcher,
         BWGenerationConfig: module.BWGenerationConfig,
         PokemonGenerator: module.PokemonGenerator,
-  SeedEnumerator: module.SeedEnumerator,
+        SeedEnumerator: module.SeedEnumerator,
         EncounterType: module.EncounterType,
         GameVersion: module.GameVersion,
+        GameMode: module.GameMode,
+        calculate_game_offset: module.calculate_game_offset,
       } as unknown as WasmModule;
       
       return wasmModule;

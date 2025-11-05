@@ -16,6 +16,9 @@ function baseParams(overrides: Partial<GenerationParams> = {}): GenerationParams
     stopAtFirstShiny: false,
     stopOnCap: true,
   batchSize: 5000,
+    newGame: true,
+    noSave: false,
+    memoryLink: false,
     ...overrides,
   };
 }
@@ -57,5 +60,13 @@ describe('validateGenerationParams', () => {
   it('rejects maxResults > maxAdvances', () => {
     const errs = validateGenerationParams(baseParams({ maxResults: 6000 }));
     expect(errs.some(e => e.includes('maxResults should be <= maxAdvances'))).toBe(true);
+  });
+  it('rejects memoryLink for BW versions', () => {
+    const errs = validateGenerationParams(baseParams({ version: 'B', memoryLink: true }));
+    expect(errs.some(e => e.includes('BW versions do not support memory link'))).toBe(true);
+  });
+  it('rejects continue mode without save', () => {
+    const errs = validateGenerationParams(baseParams({ newGame: false, noSave: true }));
+    expect(errs.some(e => e.includes('Continue mode requires an existing save'))).toBe(true);
   });
 });
