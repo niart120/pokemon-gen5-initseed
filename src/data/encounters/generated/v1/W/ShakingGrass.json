@@ -4,7 +4,7 @@
   "source": {
     "name": "Pokebook",
     "url": "https://pokebook.jp/data/sp5/enc_w",
-    "retrievedAt": "2025-08-10"
+    "retrievedAt": "2025-11-06"
   },
   "locations": {
     "夢の跡地": {
@@ -108,8 +108,8 @@
         }
       ]
     },
-    "ヤグルマの森": {
-      "displayName": "ヤグルマの森",
+    "ヤグルマの森 外部": {
+      "displayName": "ヤグルマの森 外部",
       "slots": [
         {
           "speciesId": 531,
@@ -206,7 +206,12 @@
             "min": 15,
             "max": 15
           }
-        },
+        }
+      ]
+    },
+    "ヤグルマの森 内部": {
+      "displayName": "ヤグルマの森 内部",
+      "slots": [
         {
           "speciesId": 531,
           "rate": 20,
@@ -406,105 +411,9 @@
         }
       ]
     },
-    "リュウラセンの塔(春)": {
-      "displayName": "リュウラセンの塔(春)",
+    "リュウラセンの塔(春) 外部(南)": {
+      "displayName": "リュウラセンの塔(春) 外部(南)",
       "slots": [
-        {
-          "speciesId": 531,
-          "rate": 20,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 20,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 587,
-          "rate": 10,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 32,
-            "max": 32
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 5,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 5,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 4,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 521,
-          "rate": 4,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 1,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 521,
-          "rate": 1,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
         {
           "speciesId": 531,
           "rate": 20,
@@ -603,105 +512,9 @@
         }
       ]
     },
-    "リュウラセンの塔(夏)": {
-      "displayName": "リュウラセンの塔(夏)",
+    "リュウラセンの塔(夏) 外部(南)": {
+      "displayName": "リュウラセンの塔(夏) 外部(南)",
       "slots": [
-        {
-          "speciesId": 531,
-          "rate": 20,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 20,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 587,
-          "rate": 10,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 32,
-            "max": 32
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 5,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 5,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 4,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 521,
-          "rate": 4,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 1,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 521,
-          "rate": 1,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
         {
           "speciesId": 531,
           "rate": 20,
@@ -800,105 +613,9 @@
         }
       ]
     },
-    "リュウラセンの塔(秋)": {
-      "displayName": "リュウラセンの塔(秋)",
+    "リュウラセンの塔(秋) 外部(南)": {
+      "displayName": "リュウラセンの塔(秋) 外部(南)",
       "slots": [
-        {
-          "speciesId": 531,
-          "rate": 20,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 20,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 587,
-          "rate": 10,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 32,
-            "max": 32
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 5,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 5,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 4,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 521,
-          "rate": 4,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 1,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 521,
-          "rate": 1,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
         {
           "speciesId": 531,
           "rate": 20,
@@ -997,105 +714,9 @@
         }
       ]
     },
-    "リュウラセンの塔(冬)": {
-      "displayName": "リュウラセンの塔(冬)",
+    "リュウラセンの塔(冬) 外部(南)": {
+      "displayName": "リュウラセンの塔(冬) 外部(南)",
       "slots": [
-        {
-          "speciesId": 531,
-          "rate": 20,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 20,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 587,
-          "rate": 10,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 32,
-            "max": 32
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 5,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 5,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 4,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 4,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 1,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 1,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
         {
           "speciesId": 531,
           "rate": 20,
@@ -1194,8 +815,8 @@
         }
       ]
     },
-    "ジャイアントホール": {
-      "displayName": "ジャイアントホール",
+    "ジャイアントホール 外部": {
+      "displayName": "ジャイアントホール 外部",
       "slots": [
         {
           "speciesId": 531,
@@ -1292,7 +913,12 @@
             "min": 50,
             "max": 50
           }
-        },
+        }
+      ]
+    },
+    "ジャイアントホール B1F": {
+      "displayName": "ジャイアントホール B1F",
+      "slots": [
         {
           "speciesId": 531,
           "rate": 20,
@@ -3108,105 +2734,9 @@
         }
       ]
     },
-    "10番道路": {
-      "displayName": "10番道路",
+    "10番道路 外部": {
+      "displayName": "10番道路 外部",
       "slots": [
-        {
-          "speciesId": 531,
-          "rate": 20,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 20,
-          "levelRange": {
-            "min": 33,
-            "max": 33
-          }
-        },
-        {
-          "speciesId": 587,
-          "rate": 10,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 531,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 508,
-          "rate": 4,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 539,
-          "rate": 4,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 508,
-          "rate": 1,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 539,
-          "rate": 1,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
         {
           "speciesId": 531,
           "rate": 20,

@@ -117,6 +117,16 @@ const SLOT_RATE_PRESETS = {
   FishingBubble: [60, 30, 5, 4, 1],
 };
 
+const WATER_SINGLE_ROW_LOCATIONS = new Map([
+  ['チャンピオンロード', {}],
+  ['ジャイアントホール', {}],
+  ['地下水脈の穴', {}],
+  ['ヒウン下水道', {}],
+  ['サンギ牧場', {}],
+  ['ヤーコンロード', {}],
+  ['4番道路', {}],
+]);
+
 const DUPLICATE_SUFFIX_RULES_BW = Object.freeze({
   'ヤグルマの森': ['外部', '内部'],
   'リゾートデザート': ['外部', '内部'],
@@ -132,7 +142,7 @@ const DUPLICATE_SUFFIX_RULES_BW = Object.freeze({
   'リュウラセンの塔(冬)': ['外部(南)', '外部(北東)'],
   'リュウラセンの塔': ['1F', '2F'],
   'チャンピオンロード': ['外部', '内部1F(中央・右)', '内部1F(右),2F,3F', '内部4F(中央)', '内部4F(左・右),5F-7F'],
-  'ジャイアントホール': ['外部', 'B1F', '最奥部', '地底森林'],
+  'ジャイアントホール': ['外部', 'B1F', '地底森林', '最奥部'],
   '地下水脈の穴': null,
   'フキヨセの洞穴': null,
   'タワーオブヘブン': ['2F', '3F', '4F', '5F'],
@@ -155,7 +165,7 @@ const DUPLICATE_SUFFIX_RULES_B2W2 = Object.freeze({
   'リュウラセンの塔(冬)': ['外部(南)', '外部(北東)'],
   'リュウラセンの塔': ['1F', '2F'],
   'チャンピオンロード': ['内部1F', '内部2F(前部)', '内部2F(後部)', '内部3F', '内部4F', '樹林', '外壁(下層)', '外壁(上層)'],
-  'ジャイアントホール': ['外部', 'B1F', '最奥部', '地底森林'],
+  'ジャイアントホール': ['外部', 'B1F', '地底森林', '最奥部'],
   'ヒウン下水道': null,
   'タチワキコンビナート': ['北部', '南部'],
   'リバースマウンテン': ['外部', '内部', '小部屋'],
@@ -424,9 +434,10 @@ function extractDisplayNameFromRow($, tr) {
 
 function parseWaterEncounterPage(html, { version, method, url, aliasJa }) {
   const $ = loadHtml(html);
-  const locations = {};
+  const rawLocations = new Map();
   const tables = findSectionTables($, method);
-  if (!tables.length) return { version, method, source: { name: 'Pokebook', url, retrievedAt: todayISO() }, locations };
+  if (!tables.length)
+    return { version, method, source: { name: 'Pokebook', url, retrievedAt: todayISO() }, locations: {} };
 
   for (const tbl of tables) {
     const rows = $(tbl).find('tbody tr, tr').toArray();
@@ -442,10 +453,31 @@ function parseWaterEncounterPage(html, { version, method, url, aliasJa }) {
         if (targetMethod !== method) continue;
         const slots = parseWaterRowSlots($, group[gi], method, aliasJa);
         if (!slots.length) continue;
-        if (!locations[displayName]) locations[displayName] = { displayName, slots: [] };
-        locations[displayName].slots.push(...slots);
+        if (!rawLocations.has(displayName)) rawLocations.set(displayName, []);
+        rawLocations.get(displayName).push(slots);
       }
       i += Math.max(0, group.length - 1); // グループ分スキップ
+    }
+  }
+
+  const locations = {};
+  for (const [displayName, rows] of rawLocations) {
+    const seen = new Set();
+    const mergedSlots = [];
+    const options = WATER_SINGLE_ROW_LOCATIONS.get(displayName);
+    const limitToOne = options && options.keepAll !== true;
+    const enforceUnique = !options || options.keepAll !== true;
+    for (const rowSlots of rows) {
+      const signature = makeRowSignature(rowSlots);
+      if (enforceUnique) {
+        if (signature && seen.has(signature)) continue;
+        if (signature) seen.add(signature);
+      }
+      mergedSlots.push(...rowSlots);
+      if (limitToOne) break;
+    }
+    if (mergedSlots.length) {
+      locations[displayName] = { displayName, slots: mergedSlots };
     }
   }
 
@@ -482,7 +514,9 @@ function parseEncounterPage(html, { version, method, url, aliasJa }) {
       });
   }
 
-  const suffixRules = method === 'Normal' ? DUPLICATE_SUFFIX_RULES[version] : undefined;
+  const suffixRules = ['Normal', 'ShakingGrass', 'DustCloud'].includes(method)
+    ? DUPLICATE_SUFFIX_RULES[version]
+    : undefined;
   const grouped = new Map();
   for (const row of parsedRows) {
     const key = row.baseName;

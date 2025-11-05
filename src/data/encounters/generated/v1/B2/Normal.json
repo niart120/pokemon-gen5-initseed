@@ -4,7 +4,7 @@
   "source": {
     "name": "Pokebook",
     "url": "https://pokebook.jp/data/sp5/enc_b2",
-    "retrievedAt": "2025-11-05"
+    "retrievedAt": "2025-11-06"
   },
   "locations": {
     "ヒウンシティ": {
@@ -3643,8 +3643,8 @@
         }
       ]
     },
-    "ジャイアントホール 最奥部": {
-      "displayName": "ジャイアントホール 最奥部",
+    "ジャイアントホール 地底森林": {
+      "displayName": "ジャイアントホール 地底森林",
       "slots": [
         {
           "speciesId": 221,

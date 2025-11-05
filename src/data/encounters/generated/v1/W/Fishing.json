@@ -4,7 +4,7 @@
   "source": {
     "name": "Pokebook",
     "url": "https://pokebook.jp/data/sp5/enc_w",
-    "retrievedAt": "2025-08-10"
+    "retrievedAt": "2025-11-06"
   },
   "locations": {
     "サンヨウシティ": {
@@ -544,92 +544,12 @@
             "min": 35,
             "max": 55
           }
-        },
-        {
-          "speciesId": 60,
-          "rate": 60,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 30,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
-        {
-          "speciesId": 61,
-          "rate": 5,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
-        {
-          "speciesId": 60,
-          "rate": 4,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
-        {
-          "speciesId": 60,
-          "rate": 1,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
         }
       ]
     },
     "ジャイアントホール": {
       "displayName": "ジャイアントホール",
       "slots": [
-        {
-          "speciesId": 60,
-          "rate": 60,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 30,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
-        {
-          "speciesId": 61,
-          "rate": 5,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
-        {
-          "speciesId": 60,
-          "rate": 4,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
-        {
-          "speciesId": 60,
-          "rate": 1,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
         {
           "speciesId": 60,
           "rate": 60,
@@ -1035,46 +955,6 @@
     "地下水脈の穴": {
       "displayName": "地下水脈の穴",
       "slots": [
-        {
-          "speciesId": 60,
-          "rate": 60,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 30,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
-        {
-          "speciesId": 61,
-          "rate": 5,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
-        {
-          "speciesId": 60,
-          "rate": 4,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
-        {
-          "speciesId": 60,
-          "rate": 1,
-          "levelRange": {
-            "min": 35,
-            "max": 55
-          }
-        },
         {
           "speciesId": 60,
           "rate": 60,
