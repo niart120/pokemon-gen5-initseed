@@ -1,9 +1,9 @@
+use crate::encounter_calculator::{EncounterCalculator, EncounterType, GameVersion};
+use crate::personality_rng::PersonalityRNG;
+use crate::pid_shiny_checker::{PIDCalculator, ShinyChecker, ShinyType};
 /// PokemonGenerator - BW/BW2統合ポケモン生成エンジン
 /// 全ての計算エンジンを統合し、完全なポケモンデータを生成
 use wasm_bindgen::prelude::*;
-use crate::personality_rng::PersonalityRNG;
-use crate::encounter_calculator::{EncounterCalculator, GameVersion, EncounterType};
-use crate::pid_shiny_checker::{PIDCalculator, ShinyChecker, ShinyType};
 
 /// 生ポケモンデータ構造体
 #[wasm_bindgen]
@@ -35,34 +35,54 @@ pub struct RawPokemonData {
 impl RawPokemonData {
     /// getter methods for JavaScript access
     #[wasm_bindgen(getter)]
-    pub fn get_seed(&self) -> u64 { self.seed }
-    
-    #[wasm_bindgen(getter)]
-    pub fn get_pid(&self) -> u32 { self.pid }
-    
-    #[wasm_bindgen(getter)]
-    pub fn get_nature(&self) -> u8 { self.nature }
-    
-    #[wasm_bindgen(getter)]
-    pub fn get_ability_slot(&self) -> u8 { self.ability_slot }
-    
-    #[wasm_bindgen(getter)]
-    pub fn get_gender_value(&self) -> u8 { self.gender_value }
-    
-    #[wasm_bindgen(getter)]
-    pub fn get_encounter_slot_value(&self) -> u8 { self.encounter_slot_value }
-    
-    #[wasm_bindgen(getter)]
-    pub fn get_level_rand_value(&self) -> u64 { self.level_rand_value as u64 }
+    pub fn get_seed(&self) -> u64 {
+        self.seed
+    }
 
     #[wasm_bindgen(getter)]
-    pub fn get_shiny_type(&self) -> u8 { self.shiny_type }
-    
+    pub fn get_pid(&self) -> u32 {
+        self.pid
+    }
+
     #[wasm_bindgen(getter)]
-    pub fn get_sync_applied(&self) -> bool { self.sync_applied }
-    
+    pub fn get_nature(&self) -> u8 {
+        self.nature
+    }
+
     #[wasm_bindgen(getter)]
-    pub fn get_encounter_type(&self) -> u8 { self.encounter_type }
+    pub fn get_ability_slot(&self) -> u8 {
+        self.ability_slot
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_gender_value(&self) -> u8 {
+        self.gender_value
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_encounter_slot_value(&self) -> u8 {
+        self.encounter_slot_value
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_level_rand_value(&self) -> u64 {
+        self.level_rand_value as u64
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_shiny_type(&self) -> u8 {
+        self.shiny_type
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_sync_applied(&self) -> bool {
+        self.sync_applied
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_encounter_type(&self) -> u8 {
+        self.encounter_type
+    }
 }
 
 /// BW/BW2準拠設定構造体
@@ -107,22 +127,34 @@ impl BWGenerationConfig {
 
     /// getter methods
     #[wasm_bindgen(getter)]
-    pub fn get_version(&self) -> GameVersion { self.version }
-    
+    pub fn get_version(&self) -> GameVersion {
+        self.version
+    }
+
     #[wasm_bindgen(getter)]
-    pub fn get_encounter_type(&self) -> EncounterType { self.encounter_type }
-    
+    pub fn get_encounter_type(&self) -> EncounterType {
+        self.encounter_type
+    }
+
     #[wasm_bindgen(getter)]
-    pub fn get_tid(&self) -> u16 { self.tid }
-    
+    pub fn get_tid(&self) -> u16 {
+        self.tid
+    }
+
     #[wasm_bindgen(getter)]
-    pub fn get_sid(&self) -> u16 { self.sid }
-    
+    pub fn get_sid(&self) -> u16 {
+        self.sid
+    }
+
     #[wasm_bindgen(getter)]
-    pub fn get_sync_enabled(&self) -> bool { self.sync_enabled }
-    
+    pub fn get_sync_enabled(&self) -> bool {
+        self.sync_enabled
+    }
+
     #[wasm_bindgen(getter)]
-    pub fn get_sync_nature_id(&self) -> u8 { self.sync_nature_id }
+    pub fn get_sync_nature_id(&self) -> u8 {
+        self.sync_nature_id
+    }
 }
 
 /// ポケモン生成エンジン
@@ -138,285 +170,268 @@ impl PokemonGenerator {
     }
 
     /// BW/BW2準拠 単体ポケモン生成（統括関数）
-    /// 
+    ///
     /// # Arguments
     /// * `seed` - 初期シード値
     /// * `config` - BW準拠設定
-    /// 
+    ///
     /// # Returns
     /// 生成されたポケモンデータ
-    pub fn generate_single_pokemon_bw(
-        seed: u64, 
-        config: &BWGenerationConfig
-    ) -> RawPokemonData {
+    pub fn generate_single_pokemon_bw(seed: u64, config: &BWGenerationConfig) -> RawPokemonData {
         match config.encounter_type {
             // 固定シンボル
-            EncounterType::StaticSymbol => {
-                Self::generate_static_symbol(seed, config)
-            },
-            
+            EncounterType::StaticSymbol => Self::generate_static_symbol(seed, config),
+
             // 徘徊
-            EncounterType::Roaming => {
-                Self::generate_roaming(seed, config)
-            },
-            
+            EncounterType::Roaming => Self::generate_roaming(seed, config),
+
             // イベント系（御三家・化石）
-            EncounterType::StaticStarter | EncounterType::StaticFossil | EncounterType::StaticEvent => {
-                Self::generate_event_pokemon(seed, config)
-            },
-            
+            EncounterType::StaticStarter
+            | EncounterType::StaticFossil
+            | EncounterType::StaticEvent => Self::generate_event_pokemon(seed, config),
+
             // 野生系（草むら・洞窟）
-            EncounterType::Normal | EncounterType::ShakingGrass | 
-            EncounterType::DustCloud | EncounterType::PokemonShadow => {
-                Self::generate_wild_pokemon(seed, config)
-            },
-            
+            EncounterType::Normal
+            | EncounterType::ShakingGrass
+            | EncounterType::DustCloud
+            | EncounterType::PokemonShadow => Self::generate_wild_pokemon(seed, config),
+
             // なみのり系
             EncounterType::Surfing | EncounterType::SurfingBubble => {
                 Self::generate_surfing_pokemon(seed, config)
-            },
-            
+            }
+
             // 釣り系
             EncounterType::Fishing | EncounterType::FishingBubble => {
                 Self::generate_fishing_pokemon(seed, config)
-            },
+            }
         }
+    }
+
+    /// オフセット適用後の生成開始シードを計算
+    #[wasm_bindgen]
+    pub fn calculate_generation_seed(initial_seed: u64, offset: u64) -> u64 {
+        if offset == 0 {
+            return initial_seed;
+        }
+        let (mul, add) = Self::lcg_affine_for_steps(offset);
+        Self::lcg_apply(initial_seed, mul, add)
     }
 
     /// 固定シンボル生成
     fn generate_static_symbol(seed: u64, config: &BWGenerationConfig) -> RawPokemonData {
         let mut rng = PersonalityRNG::new(seed);
-        
+
         // シンクロ判定
-        let sync_success = Self::perform_sync_check(
-            &mut rng, 
-            config.encounter_type, 
-            config.sync_enabled
-        );
-        
+        let sync_success =
+            Self::perform_sync_check(&mut rng, config.encounter_type, config.sync_enabled);
+
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = PIDCalculator::generate_static_pid(
-            pid_base, 
-            config.tid, 
-            config.sid
-        );
-        
+        let pid = PIDCalculator::generate_static_pid(pid_base, config.tid, config.sid);
+
         // 性格生成・シンクロ適用
         let (sync_applied, nature_id) = Self::generate_nature_with_sync(
             &mut rng,
             sync_success,
             config.encounter_type,
             config.sync_enabled,
-            config.sync_nature_id
+            config.sync_nature_id,
         );
-        
+
         // 持ち物判定（固定シンボルは持ち物判定あり）
         let _item_check = rng.next();
-        
+
         Self::build_pokemon_data(
-            seed, pid, nature_id, sync_applied, 
+            seed,
+            pid,
+            nature_id,
+            sync_applied,
             0, // 固定シンボルは遭遇スロット0
             0, // レベル乱数なし
-            config
+            config,
         )
     }
 
     /// 徘徊生成
     fn generate_roaming(seed: u64, config: &BWGenerationConfig) -> RawPokemonData {
         let mut rng = PersonalityRNG::new(seed);
-        
+
         // 徘徊はシンクロ無効
-        
+
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = PIDCalculator::generate_roaming_pid(
-            pid_base, 
-            config.tid, 
-            config.sid
-        );
-        
+        let pid = PIDCalculator::generate_roaming_pid(pid_base, config.tid, config.sid);
+
         // 性格生成（徘徊はシンクロ無効なので通常性格のみ）
         let nature_id = Self::nature_roll(&mut rng);
-        
+
         Self::build_pokemon_data(
             seed, pid, nature_id, false, // sync_applied = false
-            0, // 徘徊は遭遇スロット0
-            0, // レベル乱数なし
-            config
+            0,     // 徘徊は遭遇スロット0
+            0,     // レベル乱数なし
+            config,
         )
     }
 
     /// イベント系ポケモン生成（御三家・化石）
     fn generate_event_pokemon(seed: u64, config: &BWGenerationConfig) -> RawPokemonData {
         let mut rng = PersonalityRNG::new(seed);
-        
+
         // イベント系はシンクロ無効
-        
+
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000、ただしID補正なし）
         let pid_base = rng.next();
         let pid = PIDCalculator::generate_event_pid(pid_base);
-        
+
         // 性格生成（イベント系はシンクロ無効なので通常性格のみ）
         let nature_id = Self::nature_roll(&mut rng);
-        
+
         Self::build_pokemon_data(
             seed, pid, nature_id, false, // sync_applied = false
-            0, // イベント系は遭遇スロット0
-            0, // レベル乱数なし
-            config
+            0,     // イベント系は遭遇スロット0
+            0,     // レベル乱数なし
+            config,
         )
     }
 
     /// 野生ポケモン生成（草むら・洞窟）
     fn generate_wild_pokemon(seed: u64, config: &BWGenerationConfig) -> RawPokemonData {
         let mut rng = PersonalityRNG::new(seed);
-        
+
         // シンクロ判定
-        let sync_success = Self::perform_sync_check(
-            &mut rng, 
-            config.encounter_type, 
-            config.sync_enabled
-        );
-        
+        let sync_success =
+            Self::perform_sync_check(&mut rng, config.encounter_type, config.sync_enabled);
+
         // 遭遇スロット決定
         let encounter_slot_value = EncounterCalculator::calculate_encounter_slot(
             config.version,
             config.encounter_type,
-            rng.next()
+            rng.next(),
         );
 
         // レベル決定(野生は空消費)
         rng.next();
-        
+
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = PIDCalculator::generate_wild_pid(
-            pid_base, 
-            config.tid, 
-            config.sid
-        );
-        
+        let pid = PIDCalculator::generate_wild_pid(pid_base, config.tid, config.sid);
+
         // 性格生成・シンクロ適用
         let (sync_applied, nature_id) = Self::generate_nature_with_sync(
             &mut rng,
             sync_success,
             config.encounter_type,
             config.sync_enabled,
-            config.sync_nature_id
+            config.sync_nature_id,
         );
-        
+
         // 持ち物判定（土煙のみ）
         if config.encounter_type == EncounterType::DustCloud {
             let _item_check = rng.next();
         }
-        
+
         Self::build_pokemon_data(
-            seed, pid, nature_id, sync_applied, 
+            seed,
+            pid,
+            nature_id,
+            sync_applied,
             encounter_slot_value,
             0, // 野生は固定レベル（乱数値は未使用）
-            config
+            config,
         )
     }
 
     /// なみのりポケモン生成
     fn generate_surfing_pokemon(seed: u64, config: &BWGenerationConfig) -> RawPokemonData {
         let mut rng = PersonalityRNG::new(seed);
-        
+
         // シンクロ判定
-        let sync_success = Self::perform_sync_check(
-            &mut rng, 
-            config.encounter_type, 
-            config.sync_enabled
-        );
-        
+        let sync_success =
+            Self::perform_sync_check(&mut rng, config.encounter_type, config.sync_enabled);
+
         // 遭遇スロット決定
         let encounter_slot_value = EncounterCalculator::calculate_encounter_slot(
             config.version,
             config.encounter_type,
-            rng.next()
+            rng.next(),
         );
-        
+
         // レベル決定
         let level_rand_value = rng.next();
-        
+
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = PIDCalculator::generate_wild_pid(
-            pid_base, 
-            config.tid, 
-            config.sid
-        );
-        
+        let pid = PIDCalculator::generate_wild_pid(pid_base, config.tid, config.sid);
+
         // 性格生成・シンクロ適用
         let (sync_applied, nature_id) = Self::generate_nature_with_sync(
             &mut rng,
             sync_success,
             config.encounter_type,
             config.sync_enabled,
-            config.sync_nature_id
+            config.sync_nature_id,
         );
-        
+
         // 持ち物判定（なみのりは持ち物判定あり）
         let _item_check = rng.next();
-        
+
         Self::build_pokemon_data(
-            seed, pid, nature_id, sync_applied, 
+            seed,
+            pid,
+            nature_id,
+            sync_applied,
             encounter_slot_value,
             level_rand_value,
-            config
+            config,
         )
     }
 
     /// 釣りポケモン生成
     fn generate_fishing_pokemon(seed: u64, config: &BWGenerationConfig) -> RawPokemonData {
         let mut rng = PersonalityRNG::new(seed);
-        
+
         // シンクロ判定
-        let sync_success = Self::perform_sync_check(
-            &mut rng, 
-            config.encounter_type, 
-            config.sync_enabled
-        );
-        
+        let sync_success =
+            Self::perform_sync_check(&mut rng, config.encounter_type, config.sync_enabled);
+
         // 釣り成功判定
         let _fishing_success = rng.next();
-        
+
         // 遭遇スロット決定
         let encounter_slot_value = EncounterCalculator::calculate_encounter_slot(
             config.version,
             config.encounter_type,
-            rng.next()
+            rng.next(),
         );
-        
+
         // レベル決定
         let level_rand_value = rng.next();
-        
+
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = PIDCalculator::generate_wild_pid(
-            pid_base, 
-            config.tid, 
-            config.sid
-        );
-        
+        let pid = PIDCalculator::generate_wild_pid(pid_base, config.tid, config.sid);
+
         // 性格生成・シンクロ適用
         let (sync_applied, nature_id) = Self::generate_nature_with_sync(
             &mut rng,
             sync_success,
             config.encounter_type,
             config.sync_enabled,
-            config.sync_nature_id
+            config.sync_nature_id,
         );
-        
+
         // 持ち物判定（釣りは持ち物判定あり）
         let _item_check = rng.next();
-        
+
         Self::build_pokemon_data(
-            seed, pid, nature_id, sync_applied, 
+            seed,
+            pid,
+            nature_id,
+            sync_applied,
             encounter_slot_value,
             level_rand_value,
-            config
+            config,
         )
     }
 
@@ -432,10 +447,10 @@ impl PokemonGenerator {
     ) -> RawPokemonData {
         let ability_slot = ((pid >> 16) & 1) as u8;
         let gender_value = (pid & 0xFF) as u8;
-        
+
         let shiny_type_enum = ShinyChecker::check_shiny_type(config.tid, config.sid, pid);
         let shiny_type = Self::shiny_type_to_u8(shiny_type_enum);
-        
+
         RawPokemonData {
             seed,
             pid,
@@ -452,7 +467,9 @@ impl PokemonGenerator {
 
     /// 内部: LCG a,b 定数
     #[inline]
-    fn lcg_constants() -> (u64, u64) { (0x5D588B656C078965, 0x269EC3) }
+    fn lcg_constants() -> (u64, u64) {
+        (0x5D588B656C078965, 0x269EC3)
+    }
 
     /// 内部: LCG を steps 回前進させるアフィン変換 (mul, add) を返す
     /// seed' = mul * seed + add (mod 2^64)
@@ -480,13 +497,13 @@ impl PokemonGenerator {
     }
 
     /// BW/BW2準拠 バッチ生成（offsetのみ）
-    /// 
+    ///
     /// # Arguments
     /// * `base_seed` - 列挙の基準シード（初期シード）
     /// * `offset` - 最初の生成までの前進数（ゲーム内不定消費を含めた開始位置）
     /// * `count` - 生成数（0なら空）
     /// * `config` - BW準拠設定
-    /// 
+    ///
     /// # Returns
     /// 生成されたポケモンデータの配列
     pub fn generate_pokemon_batch_bw(
@@ -495,9 +512,15 @@ impl PokemonGenerator {
         count: u32,
         config: &BWGenerationConfig,
     ) -> Vec<RawPokemonData> {
-        if count == 0 { return Vec::new(); }
+        if count == 0 {
+            return Vec::new();
+        }
         const MAX_BATCH_COUNT: u32 = 1_000_000; // 安全上限
-        let capped = if count > MAX_BATCH_COUNT { MAX_BATCH_COUNT } else { count } as usize;
+        let capped = if count > MAX_BATCH_COUNT {
+            MAX_BATCH_COUNT
+        } else {
+            count
+        } as usize;
         let mut results = Vec::with_capacity(capped);
 
         // 初期シード: base_seed を offset だけ前進
@@ -515,20 +538,26 @@ impl PokemonGenerator {
 
     /// 内部使用：シンクロ対応エンカウント判定
     fn supports_sync(encounter_type: EncounterType) -> bool {
-        matches!(encounter_type, 
-            EncounterType::Normal | EncounterType::Surfing | EncounterType::Fishing |
-            EncounterType::ShakingGrass | EncounterType::DustCloud | 
-            EncounterType::PokemonShadow | EncounterType::SurfingBubble | 
-            EncounterType::FishingBubble | EncounterType::StaticSymbol
+        matches!(
+            encounter_type,
+            EncounterType::Normal
+                | EncounterType::Surfing
+                | EncounterType::Fishing
+                | EncounterType::ShakingGrass
+                | EncounterType::DustCloud
+                | EncounterType::PokemonShadow
+                | EncounterType::SurfingBubble
+                | EncounterType::FishingBubble
+                | EncounterType::StaticSymbol
         )
     }
 
     /// 内部使用：シンクロ判定処理
     /// PersonalityRNGから移管：ゲーム固有ロジックをPokemonGeneratorに集約
-    /// 
+    ///
     /// # Arguments
     /// * `rng` - 乱数生成器
-    /// 
+    ///
     /// # Returns
     /// シンクロ判定結果（true: シンクロ成功, false: シンクロ失敗）
     fn sync_check(rng: &mut PersonalityRNG) -> bool {
@@ -538,10 +567,10 @@ impl PokemonGenerator {
 
     /// 内部使用：性格決定処理
     /// PersonalityRNGから移管：ゲーム固有ロジックをPokemonGeneratorに集約
-    /// 
+    ///
     /// # Arguments
     /// * `rng` - 乱数生成器
-    /// 
+    ///
     /// # Returns
     /// 性格ID（0-24）
     fn nature_roll(rng: &mut PersonalityRNG) -> u8 {
@@ -550,12 +579,12 @@ impl PokemonGenerator {
     }
 
     /// 内部使用：シンクロ判定のみ実行
-    /// 
+    ///
     /// # Arguments
     /// * `rng` - 乱数生成器
     /// * `encounter_type` - 遭遇タイプ
     /// * `sync_enabled` - シンクロ有効フラグ
-    /// 
+    ///
     /// # Returns
     /// シンクロ成功フラグ（シンクロ無効エンカウントでは常にfalse）
     fn perform_sync_check(
@@ -577,14 +606,14 @@ impl PokemonGenerator {
     }
 
     /// 内部使用：PIDベース性格生成とシンクロ適用
-    /// 
+    ///
     /// # Arguments
     /// * `rng` - 乱数生成器
     /// * `sync_success` - シンクロ判定結果
     /// * `encounter_type` - 遭遇タイプ
     /// * `sync_enabled` - シンクロ有効フラグ
     /// * `sync_nature_id` - シンクロ性格ID
-    /// 
+    ///
     /// # Returns
     /// (シンクロ適用フラグ, 最終性格ID)
     fn generate_nature_with_sync(
@@ -596,10 +625,10 @@ impl PokemonGenerator {
     ) -> (bool, u8) {
         // シンクロ適用条件：シンクロ対応エンカウント && シンクロ有効 && シンクロ成功
         let sync_applied = Self::supports_sync(encounter_type) && sync_enabled && sync_success;
-        
+
         // 乱数消費は常に発生（シンクロ成功時も失敗時も）
         let rng_nature = Self::nature_roll(rng);
-        
+
         let final_nature = if sync_applied {
             // シンクロ成功時は乱数結果を無視してシンクロ性格を適用
             sync_nature_id
@@ -607,7 +636,7 @@ impl PokemonGenerator {
             // シンクロ失敗時またはシンクロ無効時は乱数結果を使用
             rng_nature
         };
-        
+
         (sync_applied, final_nature)
     }
 
@@ -660,12 +689,18 @@ impl SeedEnumerator {
     ) -> SeedEnumerator {
         let (m_off, a_off) = PokemonGenerator::lcg_affine_for_steps(offset);
         let current_seed = PokemonGenerator::lcg_apply(base_seed, m_off, a_off);
-        SeedEnumerator { current_seed, remaining: count, config: config.clone() }
+        SeedEnumerator {
+            current_seed,
+            remaining: count,
+            config: config.clone(),
+        }
     }
 
     /// 次のポケモンを生成（残数0なら undefined を返す）
     pub fn next_pokemon(&mut self) -> Option<RawPokemonData> {
-        if self.remaining == 0 { return None; }
+        if self.remaining == 0 {
+            return None;
+        }
         let result = PokemonGenerator::generate_single_pokemon_bw(self.current_seed, &self.config);
         self.remaining -= 1;
         self.current_seed = PersonalityRNG::next_seed(self.current_seed);
@@ -674,7 +709,9 @@ impl SeedEnumerator {
 
     /// 残数を取得
     #[wasm_bindgen(getter)]
-    pub fn remaining(&self) -> u32 { self.remaining }
+    pub fn remaining(&self) -> u32 {
+        self.remaining
+    }
 }
 
 #[cfg(test)]
@@ -696,7 +733,7 @@ mod tests {
     fn test_bw_single_pokemon_generation() {
         let config = create_bw_test_config();
         let pokemon = PokemonGenerator::generate_single_pokemon_bw(0x123456789ABCDEF0, &config);
-        
+
         assert_ne!(pokemon.pid, 0);
         assert!(pokemon.nature < 25);
         assert!(pokemon.ability_slot <= 1);
@@ -705,18 +742,19 @@ mod tests {
         assert!(!pokemon.sync_applied); // シンクロ無効設定
     }
 
-    #[test] 
+    #[test]
     fn test_bw_encounter_type_pid_generation() {
         let mut config = create_bw_test_config();
-        
+
         // 野生エンカウント
         config.encounter_type = EncounterType::Normal;
         let wild = PokemonGenerator::generate_single_pokemon_bw(0x123456789ABCDEF0, &config);
-        
+
         // 固定シンボル
         config.encounter_type = EncounterType::StaticSymbol;
-        let static_pokemon = PokemonGenerator::generate_single_pokemon_bw(0x123456789ABCDEF0, &config);
-        
+        let static_pokemon =
+            PokemonGenerator::generate_single_pokemon_bw(0x123456789ABCDEF0, &config);
+
         // 同じシードでも異なるPID生成方式で結果が変わることを確認
         assert_ne!(wild.pid, static_pokemon.pid);
         assert_eq!(wild.encounter_type, 0);
@@ -727,18 +765,13 @@ mod tests {
     fn test_bw_batch_generation_new_api() {
         let config = create_bw_test_config();
         let base = 0x123456789ABCDEF0u64;
-        let list = PokemonGenerator::generate_pokemon_batch_bw(
-            base,
-            0,
-            5,
-            &config,
-        );
-        
+        let list = PokemonGenerator::generate_pokemon_batch_bw(base, 0, 5, &config);
+
         assert_eq!(list.len(), 5);
-        
+
         // 各ポケモンが異なるシードから生成されていることを確認
         for i in 1..list.len() {
-            assert_ne!(list[i-1].seed, list[i].seed);
+            assert_ne!(list[i - 1].seed, list[i].seed);
         }
     }
 
@@ -755,16 +788,30 @@ mod tests {
         let mut expected = Vec::with_capacity(count as usize);
         let mut seed_i = PersonalityRNG::jump_seed(base, offset);
         for _ in 0..count {
-            expected.push(PokemonGenerator::generate_single_pokemon_bw(seed_i, &config));
+            expected.push(PokemonGenerator::generate_single_pokemon_bw(
+                seed_i, &config,
+            ));
             seed_i = PersonalityRNG::next_seed(seed_i);
         }
 
         assert_eq!(batch.len(), expected.len());
-        for (a,b) in batch.iter().zip(expected.iter()) {
+        for (a, b) in batch.iter().zip(expected.iter()) {
             assert_eq!(a.pid, b.pid);
             assert_eq!(a.nature, b.nature);
             assert_eq!(a.seed, b.seed);
         }
+    }
+
+    #[test]
+    fn test_calculate_generation_seed_matches_jump() {
+        let base = 0x0F0E0D0C0B0A0908u64;
+        let offset = 12345u64;
+        let expected = PersonalityRNG::jump_seed(base, offset);
+        let actual = PokemonGenerator::calculate_generation_seed(base, offset);
+        assert_eq!(actual, expected);
+
+        let zero_offset = PokemonGenerator::calculate_generation_seed(base, 0);
+        assert_eq!(zero_offset, base);
     }
 
     #[test]
@@ -785,10 +832,12 @@ mod tests {
 
         let mut it = SeedEnumerator::new(base, offset, count, &config);
         let mut collected = Vec::new();
-        while let Some(p) = it.next_pokemon() { collected.push(p); }
+        while let Some(p) = it.next_pokemon() {
+            collected.push(p);
+        }
 
         assert_eq!(batch.len(), collected.len());
-        for (a,b) in batch.iter().zip(collected.iter()) {
+        for (a, b) in batch.iter().zip(collected.iter()) {
             assert_eq!(a.pid, b.pid);
             assert_eq!(a.nature, b.nature);
             assert_eq!(a.seed, b.seed);

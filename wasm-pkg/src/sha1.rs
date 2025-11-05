@@ -3,7 +3,7 @@
 
 /// ポケモンBW/BW2のSHA-1実装
 /// 16個の32bit値を受け取り、h0～h4の5つのハッシュ値を返す
-/// 
+///
 /// このカスタム実装の特徴：
 /// - ポケモン特有の16ワードメッセージに最適化
 /// - TypeScript版と完全に同じ結果を保証
@@ -19,15 +19,15 @@ pub fn calculate_pokemon_sha1(message: &[u32; 16]) -> (u32, u32, u32, u32, u32) 
 
     // 80ワードのメッセージスケジュール配列
     let mut w = [0u32; 80];
-    
+
     // 最初の16ワードをコピー
     w[..16].copy_from_slice(message);
-    
+
     // 残りの64ワードを計算
     for i in 16..80 {
-        w[i] = left_rotate(w[i-3] ^ w[i-8] ^ w[i-14] ^ w[i-16], 1);
+        w[i] = left_rotate(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
     }
-    
+
     // メイン処理ループ
     let mut a = H0;
     let mut b = H1;
@@ -43,20 +43,20 @@ pub fn calculate_pokemon_sha1(message: &[u32; 16]) -> (u32, u32, u32, u32, u32) 
             60..=79 => (parity(b, c, d), 0xCA62C1D6),
             _ => unreachable!(),
         };
-        
+
         let temp = left_rotate(a, 5)
             .wrapping_add(f)
             .wrapping_add(e)
             .wrapping_add(k)
             .wrapping_add(w_val);
-        
+
         e = d;
         d = c;
         c = left_rotate(b, 30);
         b = a;
         a = temp;
     }
-    
+
     // 最終ハッシュ値計算（TypeScript版と同じく5つの値を返す）
     let final_h0 = H0.wrapping_add(a);
     let final_h1 = H1.wrapping_add(b);
@@ -73,16 +73,16 @@ pub fn calculate_pokemon_seed_from_hash(h0: u32, h1: u32) -> u32 {
     // TypeScript版と同じバイトスワップとLCG計算
     let h0_le = swap_bytes_32(h0) as u64;
     let h1_le = swap_bytes_32(h1) as u64;
-    
+
     // 64bit値を構築
     let lcg_seed = (h1_le << 32) | h0_le;
-    
+
     // 64bit LCG演算
     let multiplier = 0x5D588B656C078965u64;
     let add_value = 0x269EC3u64;
-    
+
     let seed = lcg_seed.wrapping_mul(multiplier).wrapping_add(add_value);
-    
+
     // 上位32bitを取得
     ((seed >> 32) & 0xFFFFFFFF) as u32
 }
@@ -114,8 +114,8 @@ pub fn left_rotate(value: u32, amount: u32) -> u32 {
 /// バイトスワップ関数（32bit）
 /// TypeScript版と同じバイトスワップ処理を実行
 pub fn swap_bytes_32(value: u32) -> u32 {
-    ((value & 0xFF) << 24) | 
-    (((value >> 8) & 0xFF) << 16) | 
-    (((value >> 16) & 0xFF) << 8) | 
-    ((value >> 24) & 0xFF)
+    ((value & 0xFF) << 24)
+        | (((value >> 8) & 0xFF) << 16)
+        | (((value >> 16) & 0xFF) << 8)
+        | ((value >> 24) & 0xFF)
 }
