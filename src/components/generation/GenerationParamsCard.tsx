@@ -11,6 +11,7 @@ import type { GenerationParamsHex } from '@/types/generation';
 import { Gear } from '@phosphor-icons/react';
 import { DomainEncounterTypeNames, DomainEncounterType } from '@/types/domain';
 import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
+import { buildResolutionContext, enrichForSpecies } from '@/lib/initialization/build-resolution-context';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 
 // Simple hex normalization guard
@@ -32,6 +33,9 @@ export const GenerationParamsCard: React.FC = () => {
   const setDraftParams = useAppStore(s=>s.setDraftParams);
   const setEncounterField = useAppStore(s=>s.setEncounterField);
   const setEncounterSpeciesId = useAppStore(s=>s.setEncounterSpeciesId);
+  const setEncounterTable = useAppStore(s=>s.setEncounterTable);
+  const setGenderRatios = useAppStore(s=>s.setGenderRatios);
+  const setAbilityCatalog = useAppStore(s=>s.setAbilityCatalog);
   const disabled = status === 'running' || status === 'paused' || status === 'starting';
   const hexDraft: Partial<GenerationParamsHex> = draftParams;
 
@@ -56,6 +60,47 @@ export const GenerationParamsCard: React.FC = () => {
     return [];
   }, [version, encounterValue, isLocationBased, encounterField]);
   const { isStack } = useResponsiveLayout();
+
+  // フィールド選択に応じて遭遇テーブルと補助データをストアへ供給
+  React.useEffect(() => {
+    const state = useAppStore.getState();
+    if (!isLocationBased || !encounterField) {
+      if (state.encounterTable) setEncounterTable(undefined);
+      if (state.genderRatios) setGenderRatios(undefined);
+      if (state.abilityCatalog) setAbilityCatalog(undefined);
+      return;
+    }
+
+    const context = buildResolutionContext({
+      version,
+      location: encounterField,
+      encounterType: encounterValue as DomainEncounterType,
+    });
+
+    const table = context.encounterTable;
+    if (!table) {
+      if (state.encounterTable) setEncounterTable(undefined);
+      if (state.genderRatios) setGenderRatios(undefined);
+      if (state.abilityCatalog) setAbilityCatalog(undefined);
+      return;
+    }
+
+    for (const slot of table.slots) {
+      enrichForSpecies(context, slot.speciesId);
+    }
+
+    if (state.encounterTable !== table) {
+      setEncounterTable(table);
+    }
+
+    if (state.genderRatios !== context.genderRatios) {
+      setGenderRatios(context.genderRatios);
+    }
+
+    if (state.abilityCatalog !== context.abilityCatalog) {
+      setAbilityCatalog(context.abilityCatalog);
+    }
+  }, [version, encounterValue, encounterField, isLocationBased, setEncounterTable, setGenderRatios, setAbilityCatalog]);
   return (
     <Card className={`py-2 flex flex-col ${isStack ? '' : 'h-full min-h-64'}`} aria-labelledby="gen-params-title" role="form">
       <StandardCardHeader icon={<Gear size={20} className="opacity-80" />} title={<span id="gen-params-title">Generation Parameters</span>} />
