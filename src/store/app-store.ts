@@ -156,18 +156,29 @@ function extractGenerationForPersist(state: AppStore): PersistedGenerationMinima
 function reviveGenerationMinimal(obj: unknown): Partial<GenerationSlice> {
   if (!obj || typeof obj !== 'object') return {};
   const o = obj as Partial<PersistedGenerationMinimal>;
+  const normalizedStatus = normalizeRestoredStatus(o.status);
   return {
     draftParams: o.draftParams ?? undefined,
     // params は非永続化（draft から再生成する設計）
     params: null,
     validationErrors: o.validationErrors ?? [],
-    status: o.status ?? 'idle',
+    status: normalizedStatus,
     lastCompletion: o.lastCompletion ?? null,
     error: o.error ?? null,
     filters: o.filters ?? { shinyOnly: false, natureIds: [] },
-    metrics: o.metrics ?? {},
-  internalFlags: o.internalFlags ?? { receivedAnyBatch: false },
+    metrics: normalizedStatus === 'idle' ? {} : (o.metrics ?? {}),
+    internalFlags: normalizedStatus === 'idle'
+      ? { receivedAnyBatch: false }
+      : (o.internalFlags ?? { receivedAnyBatch: false }),
   };
+}
+
+function normalizeRestoredStatus(status: AppStore['status'] | undefined): AppStore['status'] {
+  if (!status) return 'idle';
+  if (status === 'running' || status === 'starting' || status === 'paused' || status === 'stopping') {
+    return 'idle';
+  }
+  return status;
 }
 
 export const useAppStore = create<AppStore>()(
