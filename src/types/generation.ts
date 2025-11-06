@@ -14,7 +14,7 @@ export interface GenerationParams {
   maxAdvances: number;     // 列挙上限 (≤ 1_000_000)
   maxResults: number;      // UI保持上限 (≤ 100_000)
   version: 'B' | 'W' | 'B2' | 'W2';
-  encounterType: number;   // WASM EncounterType u8 マッピング値 (0,1,2,3,4,5,6,7,10,11,12,13,20)
+  encounterType: number;   // DomainEncounterType 値（StaticLegendary=14 は WASM 送信時に StaticSymbol=10 へ正規化）
   tid: number;             // 0-65535
   sid: number;             // 0-65535
   syncEnabled: boolean;
@@ -208,7 +208,11 @@ export function isProgress(msg: GenerationWorkerResponse): msg is Extract<Genera
 // rawLikeToUnresolved は重複となるため削除 (必要なら GenerationResult をそのまま利用)
 
 // --- Validation ---
-export function validateGenerationParams(p: GenerationParams): string[] {
+export interface GenerationValidationExtras {
+  staticEncounterId?: string | null;
+}
+
+export function validateGenerationParams(p: GenerationParams, extras?: GenerationValidationExtras): string[] {
   const errors: string[] = [];
   // 基本範囲
   if (p.maxAdvances < 1 || p.maxAdvances > 1_000_000) errors.push('maxAdvances out of range');
@@ -220,8 +224,12 @@ export function validateGenerationParams(p: GenerationParams): string[] {
   if (p.baseSeed < 0n) errors.push('baseSeed must be non-negative');
   if (p.offset < 0n) errors.push('offset must be non-negative');
   if (p.offset >= BigInt(p.maxAdvances)) errors.push('offset must be < maxAdvances');
-  const allowedEncounter = new Set([0,1,2,3,4,5,6,7,10,11,12,13,20]);
+  const allowedEncounter = new Set([0,1,2,3,4,5,6,7,10,11,12,13,14,20]);
   if (!allowedEncounter.has(p.encounterType)) errors.push('encounterType invalid');
+  const staticEncounterId = extras?.staticEncounterId ?? null;
+  if (requiresStaticSelection(p.encounterType) && !staticEncounterId) {
+    errors.push('static encounter selection required');
+  }
   if (!p.newGame && p.noSave) errors.push('noSave requires new game mode');
   if ((p.version === 'B' || p.version === 'W') && p.memoryLink) errors.push('memoryLink is only available in BW2');
   if (p.noSave && p.memoryLink) errors.push('memoryLink cannot be combined with noSave');
@@ -232,6 +240,11 @@ export function validateGenerationParams(p: GenerationParams): string[] {
     errors.push(message || 'invalid game mode');
   }
   return errors;
+}
+
+function requiresStaticSelection(encounterType: number): boolean {
+  const staticTypes = new Set([10, 14, 11, 12, 13]); // StaticSymbol, StaticLegendary, Starter, Fossil, Event
+  return staticTypes.has(encounterType);
 }
 
 export function deriveDomainGameMode(input: Pick<GenerationParams, 'version' | 'newGame' | 'noSave' | 'memoryLink'>): DomainGameMode {

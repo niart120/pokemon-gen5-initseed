@@ -12,3 +12,20 @@ export interface EncounterLocationsJson {
   source: { name: string; url: string; retrievedAt: string };
   locations: Record<string, { displayName: string; slots: EncounterSlotJson[] }>;
 }
+
+export interface EncounterSpeciesEntryJson {
+  id: string;
+  displayName: string;
+  speciesId: number;
+  level: number;
+  gender?: 'male' | 'female';
+  isHiddenAbility?: boolean;
+  isShinyLocked?: boolean;
+}
+
+export interface EncounterSpeciesJson {
+  version: 'B' | 'W' | 'B2' | 'W2';
+  method: DomainEncounterTypeName;
+  source: { name: string; url: string; retrievedAt: string };
+  entries: EncounterSpeciesEntryJson[];
+}

@@ -34,6 +34,7 @@ describe('encounter helpers (dynamic UI)', () => {
     expect(species.length).toBeGreaterThan(0);
     // aggregated fields
     const s0 = species[0];
+    expect(s0.kind).toBe('location');
     expect(s0).toHaveProperty('speciesId');
     expect(s0).toHaveProperty('firstSlotIndex');
     expect(s0).toHaveProperty('appearances');
@@ -50,12 +51,16 @@ describe('encounter helpers (dynamic UI)', () => {
     expect(s1).toBe(s2);
   });
 
-  it('static encounter method (StaticStarter) should not be location based and return empty lists', () => {
-    const staticStarter = DomainEncounterType.StaticStarter;
-    expect(isLocationBasedEncounter(staticStarter)).toBe(false);
-    const locs = listEncounterLocations(version, staticStarter);
+  it('static encounter method (StaticLegendary) should return catalog entries', () => {
+    const staticLegendary = DomainEncounterType.StaticLegendary;
+    expect(isLocationBasedEncounter(staticLegendary)).toBe(false);
+    const locs = listEncounterLocations(version, staticLegendary);
     expect(locs).toEqual([]);
-    const species = listEncounterSpeciesOptions(version, staticStarter, undefined);
-    expect(species).toEqual([]); // placeholder WIP
+    const species = listEncounterSpeciesOptions(version, staticLegendary, undefined);
+    expect(species.length).toBeGreaterThan(0);
+    const entry = species[0];
+    expect(entry.kind).toBe('static');
+    expect(entry).toHaveProperty('displayName');
+    expect(entry).toHaveProperty('level');
   });
 });

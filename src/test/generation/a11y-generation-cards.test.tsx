@@ -35,6 +35,7 @@ const baseState = {
   }),
   encounterField: undefined as string | undefined,
   encounterSpeciesId: undefined as number | undefined,
+  staticEncounterId: null as string | null,
   encounterTable: undefined as unknown,
   genderRatios: undefined as unknown,
   abilityCatalog: undefined as unknown,
@@ -43,6 +44,9 @@ const baseState = {
   }),
   setEncounterSpeciesId: vi.fn((value: number | undefined) => {
     baseState.encounterSpeciesId = value;
+  }),
+  setStaticEncounterId: vi.fn((value: string | null | undefined) => {
+    baseState.staticEncounterId = value ?? null;
   }),
   setEncounterTable: vi.fn((value: unknown) => {
     baseState.encounterTable = value;

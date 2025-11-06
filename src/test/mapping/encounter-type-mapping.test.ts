@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll } from 'vitest';
 import { initWasm } from '@/lib/core/wasm-interface';
 import { DomainEncounterType, DomainEncounterTypeNames } from '@/types/domain';
-import { ensureEncounterTypeAlignment, domainEncounterTypeToWasm, wasmEncounterTypeToDomain } from '@/lib/core/mapping/encounter-type';
+import { ensureEncounterTypeAlignment, domainEncounterTypeToWasm, wasmEncounterTypeToDomain, isExactDomainEncounterType } from '@/lib/core/mapping/encounter-type';
 
 describe('EncounterType mapping alignment', () => {
   beforeAll(async () => {
@@ -17,7 +17,12 @@ describe('EncounterType mapping alignment', () => {
       const v = (DomainEncounterType as Record<string, number>)[name] as DomainEncounterType;
       const wasmVal = domainEncounterTypeToWasm(v);
       const back = wasmEncounterTypeToDomain(wasmVal);
-      expect(back).toBe(v);
+      if (isExactDomainEncounterType(v)) {
+        expect(back).toBe(v);
+      } else {
+        expect(back).not.toBe(v);
+        expect(back).toBe(DomainEncounterType.StaticSymbol);
+      }
     }
   });
 

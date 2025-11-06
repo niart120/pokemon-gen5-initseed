@@ -14,6 +14,8 @@ import {
 import { parseFromWasmRaw } from '@/lib/generation/raw-parser';
 import { initWasm, getWasm, isWasmReady } from '@/lib/core/wasm-interface';
 import { domainGameModeToWasm } from '@/lib/core/mapping/game-mode';
+import { domainEncounterTypeToWasm } from '@/lib/core/mapping/encounter-type';
+import type { DomainEncounterType } from '@/types/domain';
 
 // WASM コンストラクタ最小型 (必要最小限のみ表現)
 interface BWGenerationConfigCtor { new(version: number, encounterType: number, tid: number, sid: number, syncEnabled: boolean, syncNatureId: number): object; }
@@ -157,9 +159,10 @@ async function handleStart(params: GenerationParams) {
   BWGenerationConfig = wasm.BWGenerationConfig;
   SeedEnumerator = wasm.SeedEnumerator;
   if (!SeedEnumerator) throw new Error('SeedEnumerator not exposed');
+  const wasmEncounterType = domainEncounterTypeToWasm(params.encounterType as DomainEncounterType);
     state.config = new BWGenerationConfig(
       versionToWasm(params.version),
-      params.encounterType,
+      wasmEncounterType,
       params.tid,
       params.sid,
       params.syncEnabled,

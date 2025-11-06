@@ -1,0 +1,38 @@
+{
+  "version": "W2",
+  "method": "StaticSymbol",
+  "source": {
+    "name": "Serebii.net / atwiki(BW2攻略情報)",
+    "url": "https://serebii.net/black2white2/legendary.shtml",
+    "retrievedAt": "2025-11-07"
+  },
+  "entries": [
+    {
+      "id": "route4-braviary",
+      "displayName": "ウォーグル",
+      "speciesId": 628,
+      "level": 25,
+      "isHiddenAbility": true
+    },
+    {
+      "id": "undellabay-jellicent-f",
+      "displayName": "ブルンゲル",
+      "speciesId": 593,
+      "level": 40,
+      "gender": "female",
+      "isHiddenAbility": true
+    },
+    {
+      "id": "reliccastle-volcarona",
+      "displayName": "ウルガモス",
+      "speciesId": 637,
+      "level": 35
+    },
+    {
+      "id": "nature-preserve-haxorus",
+      "displayName": "オノノクス",
+      "speciesId": 612,
+      "level": 60
+    }
+  ]
+}

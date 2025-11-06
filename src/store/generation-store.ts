@@ -39,12 +39,14 @@ export interface GenerationSliceState {
   // 動的Encounter UI 追加状態
   encounterField?: string; // 正規化 location key
   encounterSpeciesId?: number; // 単一選択 speciesId
+  staticEncounterId?: string | null; // 選択した静的遭遇エントリID
 }
 
 export interface GenerationSliceActions {
   setDraftParams: (partial: Partial<GenerationParamsHex>) => void;
   setEncounterField: (field: string | undefined) => void;
   setEncounterSpeciesId: (speciesId: number | undefined) => void;
+  setStaticEncounterId: (staticId: string | null | undefined) => void;
   validateDraft: () => void;
   commitParams: () => boolean;
   startGeneration: () => Promise<boolean>;
@@ -106,6 +108,7 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
   // 動的Encounter UI用追加状態（WASMパラメータ未連動のため GenerationParamsHex 外）
   encounterField: undefined,
   encounterSpeciesId: undefined,
+  staticEncounterId: null,
   validationErrors: [],
   status: 'idle',
   progress: null,
@@ -122,30 +125,39 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
   setDraftParams: (partial) => {
     set((state: GenerationSlice) => {
       const nextDraft = { ...state.draftParams, ...partial };
-      // encounterType 変更検出で動的フィールドリセット
       if (partial.encounterType !== undefined && partial.encounterType !== state.draftParams.encounterType) {
-        return { draftParams: nextDraft, encounterField: undefined, encounterSpeciesId: undefined } as Partial<GenerationSlice>;
+        return {
+          draftParams: nextDraft,
+          encounterField: undefined,
+          encounterSpeciesId: undefined,
+          staticEncounterId: null,
+        } as Partial<GenerationSlice>;
       }
       return { draftParams: nextDraft } as Partial<GenerationSlice>;
     });
   },
-  setEncounterField: (field) => set({ encounterField: field, encounterSpeciesId: undefined }),
+  setEncounterField: (field) => set(() => ({
+    encounterField: field,
+    encounterSpeciesId: undefined,
+    staticEncounterId: null,
+  })),
   setEncounterSpeciesId: (speciesId) => set({ encounterSpeciesId: speciesId }),
+  setStaticEncounterId: (staticId) => set({ staticEncounterId: staticId ?? null }),
   validateDraft: () => {
-    const { draftParams } = get();
+    const { draftParams, staticEncounterId } = get();
     // hex → bigint へ一時変換
     const maybe: GenerationParams | null = canBuildFullHex(draftParams) ? hexParamsToGenerationParams(draftParams as GenerationParamsHex) : null;
-    const errors = maybe ? validateGenerationParams(maybe) : ['incomplete params'];
+    const errors = maybe ? validateGenerationParams(maybe, { staticEncounterId }) : ['incomplete params'];
     set({ validationErrors: errors });
   },
   commitParams: () => {
-    const { draftParams } = get();
+    const { draftParams, staticEncounterId } = get();
     if (!canBuildFullHex(draftParams)) {
       set({ validationErrors: ['incomplete params'] });
       return false;
     }
     const full = hexParamsToGenerationParams(draftParams as GenerationParamsHex);
-    const errors = validateGenerationParams(full);
+    const errors = validateGenerationParams(full, { staticEncounterId });
     set({ validationErrors: errors });
     if (errors.length) return false;
     set({ params: full });
@@ -203,6 +215,9 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     encounterTable: undefined,
     genderRatios: undefined,
     abilityCatalog: undefined,
+    encounterField: undefined,
+    encounterSpeciesId: undefined,
+    staticEncounterId: null,
   }),
   setEncounterTable: (table) => set({ encounterTable: table }),
   setGenderRatios: (ratios) => set({ genderRatios: ratios }),

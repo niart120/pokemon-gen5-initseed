@@ -1,4 +1,4 @@
-import type { EncounterLocationsJson, EncounterSlotJson } from './schema';
+import type { EncounterLocationsJson, EncounterSlotJson, EncounterSpeciesEntryJson, EncounterSpeciesJson } from './schema';
 import type { DomainEncounterType as EncounterType } from '@/types/domain';
 import type { ROMVersion } from '@/types/rom';
 import { DomainEncounterType, getDomainEncounterTypeName } from '@/types/domain';
@@ -23,9 +23,11 @@ const methodName = (method: EncounterType): keyof typeof DomainEncounterType => 
   return name as keyof typeof DomainEncounterType;
 };
 
-export type EncounterRegistry = Record<string, { displayName: string; slots: EncounterSlotJson[] }>
+export type EncounterRegistry = Record<string, { displayName: string; slots: EncounterSlotJson[] }>;
+export type StaticEncounterRegistry = Record<string, EncounterSpeciesEntryJson[]>;
 
 let registry: Record<string, EncounterRegistry> | null = null; // key: `${version}_${method}`
+let staticRegistry: StaticEncounterRegistry | null = null; // key: `${version}_${method}`
 
 // 同期初期化（ビルド時取り込み済みJSONのみ）
 (function initRegistry() {
@@ -42,8 +44,24 @@ let registry: Record<string, EncounterRegistry> | null = null; // key: `${versio
   registry = acc;
 })();
 
+// Static encounters are pre-bundled species catalogs (no location grouping)
+(function initStaticRegistry() {
+  const modules = import.meta.glob('./static/v1/**/**/*.json', { eager: true }) as Record<string, { default: EncounterSpeciesJson } | EncounterSpeciesJson>;
+  const acc: StaticEncounterRegistry = {};
+  for (const [, mod] of Object.entries(modules)) {
+    const data: EncounterSpeciesJson = (('default' in (mod as object)) ? (mod as { default: EncounterSpeciesJson }).default : (mod as EncounterSpeciesJson));
+    const key = `${data.version}_${data.method}`;
+    acc[key] = data.entries.slice();
+  }
+  staticRegistry = acc;
+})();
+
 export function ensureEncounterRegistryLoaded(): void {
   if (!registry) throw new Error('Encounter registry not initialized.');
+}
+
+function ensureStaticRegistryLoaded(): void {
+  if (!staticRegistry) throw new Error('Static encounter registry not initialized.');
 }
 
 export function getEncounterFromRegistry(version: ROMVersion, location: string, method: EncounterType) {
@@ -53,6 +71,14 @@ export function getEncounterFromRegistry(version: ROMVersion, location: string, 
   const loc = normalizeLocationKey(applyLocationAlias(location));
   const hit = registry![key]?.[loc];
   return hit ?? null;
+}
+
+export function listStaticEncounterEntries(version: ROMVersion, method: EncounterType): EncounterSpeciesEntryJson[] {
+  ensureStaticRegistryLoaded();
+  const key = `${version}_${methodName(method)}`;
+  const bucket = staticRegistry![key];
+  if (!bucket) return [];
+  return bucket.slice();
 }
 
 /**

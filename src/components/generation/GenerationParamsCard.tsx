@@ -9,7 +9,15 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { useAppStore } from '@/store/app-store';
 import type { GenerationParamsHex } from '@/types/generation';
 import { Gear } from '@phosphor-icons/react';
-import { DomainEncounterTypeNames, DomainEncounterType, getDomainEncounterTypeName } from '@/types/domain';
+import {
+  DomainEncounterType,
+  getDomainEncounterTypeName,
+  DomainEncounterCategoryOptions,
+  getDomainEncounterTypeCategory,
+  listDomainEncounterTypeNamesByCategory,
+  getDomainEncounterTypeDisplayName,
+  type DomainEncounterTypeCategoryKey,
+} from '@/types/domain';
 import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
 import { buildResolutionContext, enrichForSpecies } from '@/lib/initialization/build-resolution-context';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
@@ -28,15 +36,21 @@ const ABILITY_OPTIONS: { value: GenerationParamsHex['abilityMode']; label: strin
   { value: 'compound', label: 'Compound (WIP)', disabled: true },
 ];
 
+const DEFAULT_ENCOUNTER_CATEGORY: DomainEncounterTypeCategoryKey = (
+  DomainEncounterCategoryOptions.find(option => !option.disabled)?.key ?? 'wild'
+) as DomainEncounterTypeCategoryKey;
+
 export const GenerationParamsCard: React.FC = () => {
   // NOTE(perf): 必要項目のみ個別購読し encounterField 変更時の全体再レンダーを抑制
   const draftParams = useAppStore(s=>s.draftParams);
   const status = useAppStore(s=>s.status);
   const encounterField = useAppStore(s=>s.encounterField);
   const encounterSpeciesId = useAppStore(s=>s.encounterSpeciesId);
+  const staticEncounterId = useAppStore(s=>s.staticEncounterId);
   const setDraftParams = useAppStore(s=>s.setDraftParams);
   const setEncounterField = useAppStore(s=>s.setEncounterField);
   const setEncounterSpeciesId = useAppStore(s=>s.setEncounterSpeciesId);
+  const setStaticEncounterId = useAppStore(s=>s.setStaticEncounterId);
   const setEncounterTable = useAppStore(s=>s.setEncounterTable);
   const setGenderRatios = useAppStore(s=>s.setGenderRatios);
   const setAbilityCatalog = useAppStore(s=>s.setAbilityCatalog);
@@ -66,6 +80,10 @@ export const GenerationParamsCard: React.FC = () => {
   const syncActive = abilityMode === 'sync' && (hexDraft.syncEnabled ?? false);
   const encounterValue = hexDraft.encounterType ?? 0;
   const encounterType = React.useMemo(() => toDomainEncounterType(encounterValue), [encounterValue]);
+  const encounterCategory = React.useMemo<DomainEncounterTypeCategoryKey>(() => {
+    if (encounterType == null) return DEFAULT_ENCOUNTER_CATEGORY;
+    return getDomainEncounterTypeCategory(encounterType);
+  }, [encounterType]);
   const version = draftParams.version ?? 'B';
   const isLocationBased = encounterType != null && isLocationBasedEncounter(encounterType);
   const locationOptions = React.useMemo(() => {
@@ -73,13 +91,34 @@ export const GenerationParamsCard: React.FC = () => {
     return listEncounterLocations(version, encounterType);
   }, [version, encounterType, isLocationBased]);
   const speciesOptions = React.useMemo(()=> {
-    if (isLocationBased && encounterType != null) {
+    if (encounterType == null) return [];
+    if (isLocationBased) {
       if (!encounterField) return [];
       return listEncounterSpeciesOptions(version, encounterType, encounterField);
     }
-    // static placeholder (未実装)
-    return [];
+    return listEncounterSpeciesOptions(version, encounterType);
   }, [version, encounterType, isLocationBased, encounterField]);
+  const staticOptions = React.useMemo(() => speciesOptions.filter(opt => opt.kind === 'static'), [speciesOptions]);
+  const encounterTypeOptions = React.useMemo(() => {
+    const names = listDomainEncounterTypeNamesByCategory(encounterCategory);
+    return names.map(name => ({
+      name,
+      value: (DomainEncounterType as Record<string, number>)[name],
+      label: getDomainEncounterTypeDisplayName(name),
+    }));
+  }, [encounterCategory]);
+  const onEncounterCategoryChange = (categoryKey: DomainEncounterTypeCategoryKey) => {
+    const names = listDomainEncounterTypeNamesByCategory(categoryKey);
+    if (!names.length) return;
+    const nextValue = (DomainEncounterType as Record<string, number>)[names[0]];
+    if (encounterType != null && nextValue === encounterType) return;
+    update({ encounterType: nextValue });
+  };
+  const noTypeOptions = encounterTypeOptions.length === 0;
+  const typeSelectDisabled = disabled || noTypeOptions;
+  const typeSelectPlaceholder = noTypeOptions ? 'Unavailable' : undefined;
+  const locationSelectPlaceholder = locationOptions.length ? 'Select...' : 'N/A';
+  const staticSelectPlaceholder = staticOptions.length ? 'Select species' : 'Data unavailable';
   const { isStack } = useResponsiveLayout();
   const newGame = hexDraft.newGame ?? false;
   const noSave = hexDraft.noSave ?? false;
@@ -103,33 +142,101 @@ export const GenerationParamsCard: React.FC = () => {
     }
   }, [isLocationBased, locationOptions, encounterField, setEncounterField]);
 
+  React.useEffect(() => {
+    if (isLocationBased) {
+      if (staticEncounterId) setStaticEncounterId(null);
+      if (encounterSpeciesId !== undefined) setEncounterSpeciesId(undefined);
+      return;
+    }
+    const staticOptions = speciesOptions.filter(opt => opt.kind === 'static');
+    if (staticOptions.length === 0) {
+      if (staticEncounterId) setStaticEncounterId(null);
+      if (encounterSpeciesId !== undefined) setEncounterSpeciesId(undefined);
+      return;
+    }
+    const selected = staticOptions.find(opt => opt.id === staticEncounterId)
+      ?? staticOptions.find(opt => opt.speciesId === encounterSpeciesId)
+      ?? staticOptions[0];
+    if (selected.id !== staticEncounterId) {
+      setStaticEncounterId(selected.id);
+    }
+    if (encounterSpeciesId !== selected.speciesId) {
+      setEncounterSpeciesId(selected.speciesId);
+    }
+  }, [isLocationBased, speciesOptions, encounterSpeciesId, staticEncounterId, setEncounterSpeciesId, setStaticEncounterId]);
+
   // フィールド選択に応じて遭遇テーブルと補助データをストアへ供給
   React.useEffect(() => {
     const state = useAppStore.getState();
-    if (!isLocationBased || !encounterField || encounterType == null) {
+    const resetContext = () => {
       if (state.encounterTable) setEncounterTable(undefined);
       if (state.genderRatios) setGenderRatios(undefined);
       if (state.abilityCatalog) setAbilityCatalog(undefined);
+    };
+
+    if (encounterType == null) {
+      resetContext();
+      return;
+    }
+
+    if (isLocationBased) {
+      if (!encounterField) {
+        resetContext();
+        return;
+      }
+
+      const context = buildResolutionContext({
+        version,
+        location: encounterField,
+        encounterType,
+      });
+
+      const table = context.encounterTable;
+      if (!table) {
+        resetContext();
+        return;
+      }
+
+      for (const slot of table.slots) {
+        enrichForSpecies(context, slot.speciesId);
+      }
+
+      if (state.encounterTable !== table) {
+        setEncounterTable(table);
+      }
+
+      if (state.genderRatios !== context.genderRatios) {
+        setGenderRatios(context.genderRatios);
+      }
+
+      if (state.abilityCatalog !== context.abilityCatalog) {
+        setAbilityCatalog(context.abilityCatalog);
+      }
+      return;
+    }
+
+    // Static encounter branch
+    const staticOption = staticOptions.find(opt => opt.id === staticEncounterId)
+      ?? staticOptions.find(opt => opt.speciesId === encounterSpeciesId)
+      ?? staticOptions[0];
+    if (!staticOption) {
+      resetContext();
       return;
     }
 
     const context = buildResolutionContext({
       version,
-      location: encounterField,
       encounterType,
+      staticEncounter: { id: staticOption.id, speciesId: staticOption.speciesId, level: staticOption.level },
     });
 
     const table = context.encounterTable;
     if (!table) {
-      if (state.encounterTable) setEncounterTable(undefined);
-      if (state.genderRatios) setGenderRatios(undefined);
-      if (state.abilityCatalog) setAbilityCatalog(undefined);
+      resetContext();
       return;
     }
 
-    for (const slot of table.slots) {
-      enrichForSpecies(context, slot.speciesId);
-    }
+    enrichForSpecies(context, staticOption.speciesId);
 
     if (state.encounterTable !== table) {
       setEncounterTable(table);
@@ -142,7 +249,7 @@ export const GenerationParamsCard: React.FC = () => {
     if (state.abilityCatalog !== context.abilityCatalog) {
       setAbilityCatalog(context.abilityCatalog);
     }
-  }, [version, encounterType, encounterField, isLocationBased, setEncounterTable, setGenderRatios, setAbilityCatalog]);
+  }, [version, encounterType, encounterField, encounterSpeciesId, staticEncounterId, isLocationBased, speciesOptions, staticOptions, setEncounterTable, setGenderRatios, setAbilityCatalog]);
   return (
     <Card className={`py-2 flex flex-col ${isStack ? '' : 'h-full min-h-64'}`} aria-labelledby="gen-params-title" role="form">
       <StandardCardHeader icon={<Gear size={20} className="opacity-80" />} title={<span id="gen-params-title">Generation Parameters</span>} />
@@ -227,55 +334,90 @@ export const GenerationParamsCard: React.FC = () => {
   {/* Encounter & Ability */}
   <section aria-labelledby="gen-encounter" className="space-y-2" role="group">
           <h4 id="gen-encounter" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Encounter</h4>
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Encounter Type */}
-            <div className="flex flex-col gap-1 min-w-0">
-              <Label className="text-xs" id="lbl-encounter-type" htmlFor="encounter-type">Type</Label>
-              <Select value={encounterValue.toString()} onValueChange={v=> update({ encounterType: Number(v) })} disabled={disabled}>
-                <SelectTrigger id="encounter-type" aria-labelledby="lbl-encounter-type encounter-type">
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)]">
+            {/* Encounter Category */}
+            <div className="flex flex-col gap-1 min-w-0 w-full">
+              <Label className="text-xs" id="lbl-encounter-category" htmlFor="encounter-category">Category</Label>
+              <Select value={encounterCategory} onValueChange={v=> onEncounterCategoryChange(v as DomainEncounterTypeCategoryKey)} disabled={disabled}>
+                <SelectTrigger id="encounter-category" aria-labelledby="lbl-encounter-category encounter-category" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {DomainEncounterTypeNames.map(name => {
-                    const val = (DomainEncounterType as Record<string, number>)[name];
-                    return <SelectItem key={name} value={val.toString()}>{name}</SelectItem>;
-                  })}
+                  {DomainEncounterCategoryOptions.map(option => (
+                    <SelectItem key={option.key} value={option.key} disabled={option.disabled}>{option.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Encounter Type */}
+            <div className="flex flex-col gap-1 min-w-0 w-full">
+              <Label className="text-xs" id="lbl-encounter-type" htmlFor="encounter-type">Type</Label>
+              <Select value={encounterValue.toString()} onValueChange={v=> update({ encounterType: Number(v) })} disabled={typeSelectDisabled}>
+                <SelectTrigger id="encounter-type" aria-labelledby="lbl-encounter-type encounter-type" className="w-full">
+                  <SelectValue placeholder={typeSelectPlaceholder} />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {noTypeOptions ? (
+                    <SelectItem value="__no-type" disabled>No types available</SelectItem>
+                  ) : encounterTypeOptions.map(opt => (
+                    <SelectItem key={opt.name} value={opt.value.toString()}>{opt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             {/* Encounter Field (location) */}
             {isLocationBased && (
-              <div className="flex flex-col gap-1 min-w-0">
+              <div className="flex flex-col gap-1 min-w-0 w-full">
                 <Label className="text-xs" id="lbl-encounter-field" htmlFor="encounter-field">Field</Label>
-                <Select value={encounterField ?? ''} onValueChange={v=> setEncounterField(v)} disabled={disabled || locationOptions.length===0}>
-                  <SelectTrigger id="encounter-field" aria-labelledby="lbl-encounter-field encounter-field">
-                    <SelectValue placeholder={locationOptions.length? 'Select...' : 'N/A'} />
+                <Select value={encounterField ?? ''} onValueChange={v=> setEncounterField(v)} disabled={disabled || locationOptions.length === 0}>
+                  <SelectTrigger id="encounter-field" aria-labelledby="lbl-encounter-field encounter-field" className="w-full whitespace-normal text-left">
+                    <SelectValue placeholder={locationSelectPlaceholder} className="!line-clamp-2" />
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
-                    {locationOptions.map(loc=> <SelectItem key={loc.key} value={loc.key}>{loc.displayName}</SelectItem>)}
+                    {locationOptions.map(loc => (
+                      <SelectItem key={loc.key} value={loc.key} className="whitespace-normal break-words text-left">{loc.displayName}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
             {/* Encounter Species (static encounters only) */}
             {!isLocationBased && (
-              <div className="flex flex-col gap-1 min-w-0">
+              <div className="flex flex-col gap-1 min-w-0 w-full">
                 <Label className="text-xs" id="lbl-encounter-species" htmlFor="encounter-species">Species</Label>
-                <Select value={encounterSpeciesId?.toString() ?? ''} onValueChange={v=> setEncounterSpeciesId(Number(v))} disabled={disabled}>
-                  <SelectTrigger id="encounter-species" aria-labelledby="lbl-encounter-species encounter-species">
-                    <SelectValue placeholder="WIP" />
+                <Select
+                  value={staticEncounterId ?? ''}
+                  onValueChange={id => {
+                    setStaticEncounterId(id);
+                    const selected = staticOptions.find(opt => opt.id === id);
+                    if (selected) {
+                      setEncounterSpeciesId(selected.speciesId);
+                    } else {
+                      setEncounterSpeciesId(undefined);
+                    }
+                  }}
+                  disabled={disabled}
+                >
+                  <SelectTrigger id="encounter-species" aria-labelledby="lbl-encounter-species encounter-species" className="w-full whitespace-normal text-left">
+                    <SelectValue placeholder={staticSelectPlaceholder} className="!line-clamp-2" />
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
-                    {speciesOptions.map(sp=> <SelectItem key={sp.speciesId} value={sp.speciesId.toString()}>{sp.speciesId}</SelectItem>)}
+                    {staticOptions.length === 0 ? (
+                      <SelectItem value="__coming-soon" disabled>Data not yet available</SelectItem>
+                    ) : staticOptions.map(sp => (
+                      <SelectItem key={sp.id} value={sp.id} className="text-left">
+                        {`${sp.displayName} (Lv.${sp.level})`}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
             {/* Ability Mode */}
-            <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex flex-col gap-1 min-w-0 w-full">
               <Label className="text-xs" id="lbl-ability-mode" htmlFor="ability-mode">Ability</Label>
               <Select value={abilityMode} onValueChange={v=> onAbilityChange(v as NonNullable<GenerationParamsHex['abilityMode']>)} disabled={disabled}>
-                <SelectTrigger id="ability-mode" aria-labelledby="lbl-ability-mode ability-mode">
+                <SelectTrigger id="ability-mode" aria-labelledby="lbl-ability-mode ability-mode" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
@@ -284,10 +426,10 @@ export const GenerationParamsCard: React.FC = () => {
               </Select>
             </div>
             {/* Sync Nature */}
-            <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex flex-col gap-1 min-w-0 w-full">
               <Label className="text-xs" id="lbl-sync-nature" htmlFor="sync-nature">Sync Nature</Label>
               <Select value={(draftParams.syncNatureId ?? 0).toString()} onValueChange={v=> update({ syncNatureId: Number(v) })} disabled={disabled || !syncActive}>
-                <SelectTrigger id="sync-nature" aria-labelledby="lbl-sync-nature sync-nature">
+                <SelectTrigger id="sync-nature" aria-labelledby="lbl-sync-nature sync-nature" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-64">

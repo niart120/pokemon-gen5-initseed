@@ -1,0 +1,31 @@
+{
+  "version": "W",
+  "method": "StaticSymbol",
+  "source": {
+    "name": "Serebii.net / atwiki(BW攻略情報)",
+    "url": "https://serebii.net/blackwhite/legends.shtml",
+    "retrievedAt": "2025-11-07"
+  },
+  "entries": [
+    {
+      "id": "dreamyard-musharna",
+      "displayName": "ムシャーナ",
+      "speciesId": 518,
+      "level": 50,
+      "isHiddenAbility": true
+    },
+    {
+      "id": "desertresort-darmanitan-statue",
+      "displayName": "ヒヒダルマ",
+      "speciesId": 555,
+      "level": 35,
+      "isHiddenAbility": true
+    },
+    {
+      "id": "reliccastle-volcarona",
+      "displayName": "ウルガモス",
+      "speciesId": 637,
+      "level": 70
+    }
+  ]
+}

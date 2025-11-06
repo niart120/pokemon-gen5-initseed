@@ -27,6 +27,7 @@ export const DomainEncounterType = {
   StaticStarter: 11,
   StaticFossil: 12,
   StaticEvent: 13,
+  StaticLegendary: 14,
   Roaming: 20,
 } as const;
 export type DomainEncounterType = typeof DomainEncounterType[keyof typeof DomainEncounterType];
@@ -42,12 +43,30 @@ export const DomainEncounterTypeNames = [
   'SurfingBubble',
   'FishingBubble',
   'StaticSymbol',
+  'StaticLegendary',
   'StaticStarter',
   'StaticFossil',
   'StaticEvent',
   'Roaming',
 ] as const;
 export type DomainEncounterTypeName = typeof DomainEncounterTypeNames[number];
+
+export const DomainEncounterTypeDisplayNames = {
+  Normal: 'Grass/Cave',
+  Surfing: 'Surfing',
+  Fishing: 'Fishing',
+  ShakingGrass: 'Shaking Grass',
+  DustCloud: 'Dust Cloud',
+  PokemonShadow: 'Pokemon Shadow',
+  SurfingBubble: 'Surfing (Ripples)',
+  FishingBubble: 'Fishing (Ripples)',
+  StaticSymbol: 'Stationary',
+  StaticLegendary: 'Legendary',
+  StaticStarter: 'Starter',
+  StaticFossil: 'Fossil',
+  StaticEvent: 'Event',
+  Roaming: 'Roaming',
+} as const satisfies Record<DomainEncounterTypeName, string>;
 
 // 逆引き (数値 -> 名前) マップを事前構築
 const _DomainEncounterTypeReverse: Record<number, DomainEncounterTypeName> = (() => {
@@ -61,6 +80,85 @@ const _DomainEncounterTypeReverse: Record<number, DomainEncounterTypeName> = (()
 
 export function getDomainEncounterTypeName(value: number): DomainEncounterTypeName | undefined {
   return _DomainEncounterTypeReverse[value];
+}
+
+const DomainEncounterTypeCategoryKeys = ['wild', 'static', 'gift'] as const;
+export type DomainEncounterTypeCategoryKey = typeof DomainEncounterTypeCategoryKeys[number];
+
+export interface DomainEncounterCategoryOption {
+  key: DomainEncounterTypeCategoryKey;
+  label: string;
+  disabled?: boolean;
+  typeNames: readonly DomainEncounterTypeName[];
+}
+
+const WILD_ENCOUNTER_TYPE_NAMES = [
+  'Normal',
+  'Surfing',
+  'Fishing',
+  'ShakingGrass',
+  'DustCloud',
+  'PokemonShadow',
+  'SurfingBubble',
+  'FishingBubble',
+] as const satisfies readonly DomainEncounterTypeName[];
+
+const STATIC_ENCOUNTER_TYPE_NAMES = [
+  'StaticSymbol',
+  'StaticLegendary',
+  'StaticStarter',
+  'StaticFossil',
+  'StaticEvent',
+  'Roaming',
+] as const satisfies readonly DomainEncounterTypeName[];
+
+export const DomainEncounterCategoryOptions: readonly DomainEncounterCategoryOption[] = [
+  { key: 'wild', label: 'Wild', typeNames: WILD_ENCOUNTER_TYPE_NAMES },
+  { key: 'static', label: 'Static', typeNames: STATIC_ENCOUNTER_TYPE_NAMES },
+  { key: 'gift', label: 'Gift (WIP)', typeNames: [], disabled: true },
+] as const;
+
+const DEFAULT_ENCOUNTER_CATEGORY: DomainEncounterTypeCategoryKey = 'wild';
+
+const _EncounterCategoryOptionByKey: Record<DomainEncounterTypeCategoryKey, DomainEncounterCategoryOption> = (() => {
+  const map: Partial<Record<DomainEncounterTypeCategoryKey, DomainEncounterCategoryOption>> = {};
+  for (const option of DomainEncounterCategoryOptions) {
+    map[option.key] = option;
+  }
+  return map as Record<DomainEncounterTypeCategoryKey, DomainEncounterCategoryOption>;
+})();
+
+const _EncounterCategoryByName: Record<DomainEncounterTypeName, DomainEncounterTypeCategoryKey> = (() => {
+  const map: Partial<Record<DomainEncounterTypeName, DomainEncounterTypeCategoryKey>> = {};
+  for (const option of DomainEncounterCategoryOptions) {
+    for (const name of option.typeNames) {
+      map[name] = option.key;
+    }
+  }
+  return map as Record<DomainEncounterTypeName, DomainEncounterTypeCategoryKey>;
+})();
+
+export function getDomainEncounterTypeCategoryByName(name: DomainEncounterTypeName): DomainEncounterTypeCategoryKey {
+  return _EncounterCategoryByName[name] ?? DEFAULT_ENCOUNTER_CATEGORY;
+}
+
+export function getDomainEncounterTypeCategory(value: DomainEncounterType): DomainEncounterTypeCategoryKey {
+  const name = getDomainEncounterTypeName(value);
+  if (!name) return DEFAULT_ENCOUNTER_CATEGORY;
+  return getDomainEncounterTypeCategoryByName(name);
+}
+
+export function listDomainEncounterTypeNamesByCategory(category: DomainEncounterTypeCategoryKey): DomainEncounterTypeName[] {
+  const option = _EncounterCategoryOptionByKey[category];
+  if (!option) return [];
+  return [...option.typeNames];
+}
+
+export function getDomainEncounterTypeDisplayName(value: DomainEncounterType | DomainEncounterTypeName | undefined): string {
+  if (value === undefined) return '';
+  const name = typeof value === 'string' ? value : getDomainEncounterTypeName(value);
+  if (!name) return '';
+  return DomainEncounterTypeDisplayNames[name] ?? name;
 }
 
 export enum DomainShinyType {

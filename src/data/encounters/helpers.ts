@@ -1,21 +1,33 @@
 import type { ROMVersion } from '@/types/rom';
 import type { DomainEncounterType } from '@/types/domain';
-import { DomainEncounterType as EncounterTypeEnum } from '@/types/domain';
-import { listRegistryLocations, getEncounterFromRegistry } from './loader';
+import { DomainEncounterType as EncounterTypeEnum, DomainEncounterTypeNames } from '@/types/domain';
+import { listRegistryLocations, getEncounterFromRegistry, listStaticEncounterEntries } from './loader';
 
 export interface EncounterLocationOption {
   key: string; // normalized key
   displayName: string; // original display name
 }
 
-export interface EncounterSpeciesOption {
-  speciesId: number;
-  firstSlotIndex: number;
-  appearances: number;
-  totalRate: number;
-  minLevel: number;
-  maxLevel: number;
-}
+export type EncounterSpeciesOption =
+  | {
+      kind: 'location';
+      speciesId: number;
+      firstSlotIndex: number;
+      appearances: number;
+      totalRate: number;
+      minLevel: number;
+      maxLevel: number;
+    }
+  | {
+      kind: 'static';
+      id: string;
+      displayName: string;
+      speciesId: number;
+      level: number;
+      gender?: 'male' | 'female';
+      isHiddenAbility?: boolean;
+      isShinyLocked?: boolean;
+    };
 
 // Location based encounter types
 const LOCATION_BASED: ReadonlySet<DomainEncounterType> = new Set<DomainEncounterType>([
@@ -62,11 +74,12 @@ export function listEncounterSpeciesOptions(version: ROMVersion, method: DomainE
     if (!locationKey) return [];
   const table = getEncounterFromRegistry(version, locationKey, method);
     if (table) {
-      const map = new Map<number, EncounterSpeciesOption>();
+      const map = new Map<number, Extract<EncounterSpeciesOption, { kind: 'location' }>>();
       table.slots.forEach((slot, idx) => {
         const ex = map.get(slot.speciesId);
         if (!ex) {
           map.set(slot.speciesId, {
+            kind: 'location',
             speciesId: slot.speciesId,
             firstSlotIndex: idx,
             appearances: 1,
@@ -84,9 +97,17 @@ export function listEncounterSpeciesOptions(version: ROMVersion, method: DomainE
       rows = Array.from(map.values()).sort((a,b)=> b.totalRate - a.totalRate || a.speciesId - b.speciesId);
     }
   } else {
-    // Static encounter placeholder (WIP)
-    // TODO(static encounters): load static species catalog
-    rows = [];
+    const entries = listStaticEncounterEntries(version, method);
+    rows = entries.map(entry => ({
+      kind: 'static',
+      id: entry.id,
+      displayName: entry.displayName,
+      speciesId: entry.speciesId,
+      level: entry.level,
+      gender: entry.gender,
+      isHiddenAbility: entry.isHiddenAbility,
+      isShinyLocked: entry.isShinyLocked,
+    }));
   }
   cacheSpecies.set(k, rows);
   return rows;
