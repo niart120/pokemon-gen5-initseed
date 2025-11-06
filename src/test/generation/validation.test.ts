@@ -32,10 +32,6 @@ describe('validateGenerationParams', () => {
     const errs = validateGenerationParams(baseParams({ maxAdvances: 2_000_000 }));
     expect(errs.some(e => e.includes('maxAdvances'))).toBe(true);
   });
-  it('rejects out of range batchSize', () => {
-    const errs = validateGenerationParams(baseParams({ batchSize: 20_000 }));
-    expect(errs.some(e => e.includes('batchSize'))).toBe(true);
-  });
   it('rejects tid/sid out of range', () => {
     const errs = validateGenerationParams(baseParams({ tid: 70000, sid: -1 } as any));
     expect(errs.filter(e => e.includes('tid') || e.includes('sid')).length).toBeGreaterThan(0);
@@ -49,17 +45,21 @@ describe('validateGenerationParams', () => {
     const errs = validateGenerationParams(baseParams({ offset: 5000n }));
     expect(errs.some(e => e.includes('offset must be < maxAdvances'))).toBe(true);
   });
-  it('rejects batchSize > maxAdvances', () => {
+  it('allows large batchSize values', () => {
+    const errs = validateGenerationParams(baseParams({ batchSize: 20_000 }));
+    expect(errs).not.toContainEqual(expect.stringContaining('batchSize'));
+  });
+  it('allows batchSize larger than maxAdvances', () => {
     const errs = validateGenerationParams(baseParams({ batchSize: 6000 }));
-    expect(errs.some(e => e.includes('batchSize must be <= maxAdvances'))).toBe(true);
+    expect(errs).not.toContainEqual(expect.stringContaining('batchSize'));
   });
   it('rejects invalid encounterType', () => {
     const errs = validateGenerationParams(baseParams({ encounterType: 99 }));
     expect(errs.some(e => e.includes('encounterType invalid'))).toBe(true);
   });
-  it('rejects maxResults > maxAdvances', () => {
+  it('allows maxResults larger than maxAdvances', () => {
     const errs = validateGenerationParams(baseParams({ maxResults: 6000 }));
-    expect(errs.some(e => e.includes('maxResults should be <= maxAdvances'))).toBe(true);
+    expect(errs).not.toContainEqual(expect.stringContaining('maxResults'));
   });
   it('rejects memoryLink for BW versions', () => {
     const errs = validateGenerationParams(baseParams({ version: 'B', memoryLink: true }));

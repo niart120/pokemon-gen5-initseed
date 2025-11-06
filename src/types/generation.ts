@@ -21,7 +21,7 @@ export interface GenerationParams {
   syncNatureId: number;    // 0-24
   stopAtFirstShiny: boolean;
   stopOnCap: boolean;      // maxResults 到達で終了するか（デフォルト true）
-  batchSize: number;       // 1バッチ生成数 (推奨 1000, ≤ 10000)
+  batchSize: number;       // 1バッチ生成数 (UI チューニング向け推奨値のみに留める)
   newGame: boolean;
   noSave: boolean;
   memoryLink: boolean;
@@ -213,7 +213,6 @@ export function validateGenerationParams(p: GenerationParams): string[] {
   // 基本範囲
   if (p.maxAdvances < 1 || p.maxAdvances > 1_000_000) errors.push('maxAdvances out of range');
   if (p.maxResults < 1 || p.maxResults > 100_000) errors.push('maxResults out of range');
-  if (p.batchSize < 1 || p.batchSize > 10_000) errors.push('batchSize out of range');
   if (p.syncNatureId < 0 || p.syncNatureId > 24) errors.push('syncNatureId out of range');
   if (p.tid < 0 || p.tid > 65535) errors.push('tid out of range');
   if (p.sid < 0 || p.sid > 65535) errors.push('sid out of range');
@@ -221,11 +220,8 @@ export function validateGenerationParams(p: GenerationParams): string[] {
   if (p.baseSeed < 0n) errors.push('baseSeed must be non-negative');
   if (p.offset < 0n) errors.push('offset must be non-negative');
   if (p.offset >= BigInt(p.maxAdvances)) errors.push('offset must be < maxAdvances');
-  // A方針: batchSize は maxAdvances を超過不可 (テスト仕様維持)
-  if (p.batchSize > p.maxAdvances) errors.push('batchSize must be <= maxAdvances');
   const allowedEncounter = new Set([0,1,2,3,4,5,6,7,10,11,12,13,20]);
   if (!allowedEncounter.has(p.encounterType)) errors.push('encounterType invalid');
-  if (p.maxResults > p.maxAdvances) errors.push('maxResults should be <= maxAdvances');
   if (!p.newGame && p.noSave) errors.push('noSave requires new game mode');
   if ((p.version === 'B' || p.version === 'W') && p.memoryLink) errors.push('memoryLink is only available in BW2');
   if (p.noSave && p.memoryLink) errors.push('memoryLink cannot be combined with noSave');
