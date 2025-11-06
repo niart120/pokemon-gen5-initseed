@@ -63,10 +63,14 @@ export const GenerationParamsCard: React.FC = () => {
     if (partial.version !== undefined && (targetVersion === 'B' || targetVersion === 'W')) {
       next.memoryLink = false;
     }
-    if (partial.newGame !== undefined && !partial.newGame) {
-      next.noSave = false;
+    if (partial.newGame !== undefined) {
+      if (!partial.newGame) {
+        next.withSave = true;
+      } else if (draftParams.withSave === undefined && partial.withSave === undefined) {
+        next.withSave = true;
+      }
     }
-    if (partial.noSave) {
+    if (partial.withSave !== undefined && !partial.withSave) {
       next.memoryLink = false;
     }
     setDraftParams(next);
@@ -121,11 +125,11 @@ export const GenerationParamsCard: React.FC = () => {
   const staticSelectPlaceholder = staticOptions.length ? 'Select species' : 'Data unavailable';
   const { isStack } = useResponsiveLayout();
   const newGame = hexDraft.newGame ?? false;
-  const noSave = hexDraft.noSave ?? false;
-  const withSaveChecked = newGame ? !noSave : false;
+  const withSave = hexDraft.withSave ?? true;
+  const withSaveChecked = newGame ? withSave : false;
   const memoryLink = hexDraft.memoryLink ?? false;
   const versionIsBw = version === 'B' || version === 'W';
-  const memoryLinkDisabled = disabled || versionIsBw || noSave;
+  const memoryLinkDisabled = disabled || versionIsBw || !withSave;
   const withSaveDisabled = disabled || !newGame;
 
   React.useEffect(() => {
@@ -290,7 +294,7 @@ export const GenerationParamsCard: React.FC = () => {
             </div>
             {/* With Save */}
             <div className="flex items-center gap-2">
-              <Checkbox id="with-save" aria-labelledby="lbl-with-save" checked={withSaveChecked} disabled={withSaveDisabled} onCheckedChange={v=> update({ noSave: newGame ? !(v === true) : false })} />
+              <Checkbox id="with-save" aria-labelledby="lbl-with-save" checked={withSaveChecked} disabled={withSaveDisabled} onCheckedChange={v=> update({ withSave: newGame ? v === true : true })} />
               <Label id="lbl-with-save" htmlFor="with-save" className="text-xs">With Save</Label>
             </div>
             {/* Memory Link */}

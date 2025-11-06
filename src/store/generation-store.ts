@@ -1,8 +1,10 @@
 import { GenerationWorkerManager } from '@/lib/generation/generation-worker-manager';
 import type { GenerationParams, GenerationProgress, GenerationCompletion, GenerationResultBatch, GenerationResult, GenerationParamsHex } from '@/types/generation';
-import { validateGenerationParams, hexParamsToGenerationParams, generationParamsToHex } from '@/types/generation';
+import { validateGenerationParams, hexParamsToGenerationParams, generationParamsToHex, requiresStaticSelection } from '@/types/generation';
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
+import { listEncounterSpeciesOptions } from '@/data/encounters/helpers';
+import type { DomainEncounterType } from '@/types/domain';
 
 export type GenerationStatus = 'idle' | 'starting' | 'running' | 'paused' | 'stopping' | 'completed' | 'error';
 
@@ -71,10 +73,23 @@ export interface GenerationSliceActions {
 
 export type GenerationSlice = GenerationSliceState & GenerationSliceActions;
 
+function resolveShinyLock(base: GenerationParams, staticEncounterId: string | null | undefined): GenerationParams {
+  if (!staticEncounterId || !requiresStaticSelection(base.encounterType)) {
+    return { ...base, isShinyLocked: false };
+  }
+  const encounterType = base.encounterType as DomainEncounterType;
+  const candidates = listEncounterSpeciesOptions(base.version, encounterType);
+  const match = candidates.find(opt => opt.kind === 'static' && opt.id === staticEncounterId);
+  if (match && match.kind === 'static') {
+    return { ...base, isShinyLocked: Boolean(match.isShinyLocked) };
+  }
+  return { ...base, isShinyLocked: false };
+}
+
 export const DEFAULT_GENERATION_DRAFT_PARAMS: GenerationParamsHex = {
   baseSeedHex: '1',
   offsetHex: '0',
-  maxAdvances: 50000,
+  maxAdvances: 50,
   maxResults: 15000,
   version: 'B',
   encounterType: 0,
@@ -84,12 +99,13 @@ export const DEFAULT_GENERATION_DRAFT_PARAMS: GenerationParamsHex = {
   syncNatureId: 0,
   stopAtFirstShiny: false,
   stopOnCap: true,
-  batchSize: 5000,
+  batchSize: 10000,
   abilityMode: 'none',
   shinyCharm: false,
+  isShinyLocked: false,
   memoryLink: false,
   newGame: false,
-  noSave: false,
+  withSave: true,
 };
 
 // 単一インスタンスマネージャ（UI からは slice 経由で操作）
@@ -126,8 +142,9 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     set((state: GenerationSlice) => {
       const nextDraft = { ...state.draftParams, ...partial };
       if (partial.encounterType !== undefined && partial.encounterType !== state.draftParams.encounterType) {
+        const resetDraft = { ...nextDraft, isShinyLocked: false };
         return {
-          draftParams: nextDraft,
+          draftParams: resetDraft,
           encounterField: undefined,
           encounterSpeciesId: undefined,
           staticEncounterId: null,
@@ -136,13 +153,31 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
       return { draftParams: nextDraft } as Partial<GenerationSlice>;
     });
   },
-  setEncounterField: (field) => set(() => ({
+  setEncounterField: (field) => set((state: GenerationSlice) => ({
     encounterField: field,
     encounterSpeciesId: undefined,
     staticEncounterId: null,
+    draftParams: { ...state.draftParams, isShinyLocked: false },
   })),
   setEncounterSpeciesId: (speciesId) => set({ encounterSpeciesId: speciesId }),
-  setStaticEncounterId: (staticId) => set({ staticEncounterId: staticId ?? null }),
+  setStaticEncounterId: (staticId) => set((state: GenerationSlice) => {
+    const nextId = staticId ?? null;
+    const nextDraft = { ...state.draftParams };
+    if (!nextId) {
+      nextDraft.isShinyLocked = false;
+    } else {
+      const version = state.draftParams.version;
+      const encounterType = state.draftParams.encounterType;
+      if (typeof version === 'string' && encounterType !== undefined && requiresStaticSelection(encounterType)) {
+        const options = listEncounterSpeciesOptions(version, encounterType as DomainEncounterType);
+        const match = options.find(opt => opt.kind === 'static' && opt.id === nextId);
+        nextDraft.isShinyLocked = Boolean(match && match.kind === 'static' && match.isShinyLocked);
+      } else {
+        nextDraft.isShinyLocked = false;
+      }
+    }
+    return { staticEncounterId: nextId, draftParams: nextDraft } as Partial<GenerationSlice>;
+  }),
   validateDraft: () => {
     const { draftParams, staticEncounterId } = get();
     // hex → bigint へ一時変換
@@ -157,10 +192,11 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
       return false;
     }
     const full = hexParamsToGenerationParams(draftParams as GenerationParamsHex);
-    const errors = validateGenerationParams(full, { staticEncounterId });
+    const paramsWithLock = resolveShinyLock(full, staticEncounterId);
+    const errors = validateGenerationParams(paramsWithLock, { staticEncounterId });
     set({ validationErrors: errors });
     if (errors.length) return false;
-    set({ params: full });
+    set({ params: paramsWithLock });
     return true;
   },
   startGeneration: async () => {
@@ -289,7 +325,7 @@ export const selectEtaFormatted = (s: GenerationSlice): string | null => {
 export const selectShinyCount = (s: GenerationSlice): number => s.metrics.shinyCount || 0;
 
 function canBuildFullHex(d: Partial<GenerationParamsHex>): d is GenerationParamsHex {
-  const required: (keyof GenerationParamsHex)[] = ['baseSeedHex','offsetHex','maxAdvances','maxResults','version','encounterType','tid','sid','syncEnabled','syncNatureId','stopAtFirstShiny','stopOnCap','batchSize','memoryLink','newGame','noSave'];
+  const required: (keyof GenerationParamsHex)[] = ['baseSeedHex','offsetHex','maxAdvances','maxResults','version','encounterType','tid','sid','syncEnabled','syncNatureId','shinyCharm','isShinyLocked','stopAtFirstShiny','stopOnCap','batchSize','memoryLink','newGame','withSave'];
   return required.every(k => (d as Record<string, unknown>)[k] !== undefined);
 }
 

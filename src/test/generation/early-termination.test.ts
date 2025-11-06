@@ -28,9 +28,9 @@ if (typeof Worker === 'undefined') {
   async function firstPidAndShinySid(baseSeed: bigint): Promise<{ pid: number; sid: number }> {
     await initWasm();
     const { BWGenerationConfig, GameVersion, PokemonGenerator } = getWasm();
-    const cfg = new BWGenerationConfig(GameVersion.B, 0, 0, 0, false, 0);
+    const cfg = new BWGenerationConfig(GameVersion.B, 0, 0, 0, false, 0, false, false);
     const raw = PokemonGenerator.generate_single_pokemon_bw(baseSeed, cfg);
-  const pid = raw.get_pid; // wasm getter property
+    const pid = raw.get_pid; // wasm getter property
     const pidHi = (pid >>> 16) & 0xffff; const pidLo = pid & 0xffff;
     const sid = pidHi ^ pidLo; // tid=0 と組で SV=0 → shiny
     return { pid, sid };
@@ -50,8 +50,8 @@ if (typeof Worker === 'undefined') {
 
   describe('generation-worker early termination', () => {
     it('terminates on first shiny when stopAtFirstShiny=true', async () => {
-  const baseSeed = 1234n;
-  const { pid: _firstPid, sid } = await firstPidAndShinySid(baseSeed);
+      const baseSeed = 1234n;
+      const { pid: _firstPid, sid } = await firstPidAndShinySid(baseSeed);
       const params = {
         baseSeed,
         offset: 0n,
@@ -63,17 +63,19 @@ if (typeof Worker === 'undefined') {
         sid,
         syncEnabled: false,
         syncNatureId: 0,
+        shinyCharm: false,
+        isShinyLocked: false,
         stopAtFirstShiny: true,
         stopOnCap: true, // 併用可
         batchSize: 25,
         newGame: true,
-        noSave: false,
+        withSave: true,
         memoryLink: false,
       };
       const w = createWorker();
       await waitFor(w, m => m.type === 'READY');
       w.postMessage({ type: 'START_GENERATION', params });
-  const complete = await waitFor(w, (m): m is { type: 'COMPLETE'; payload: { reason: string; shinyFound: boolean; processedAdvances: number } } => m.type === 'COMPLETE');
+      const complete = await waitFor(w, (m): m is { type: 'COMPLETE'; payload: { reason: string; shinyFound: boolean; processedAdvances: number } } => m.type === 'COMPLETE');
       expect(complete.payload.reason).toBe('first-shiny');
       expect(complete.payload.shinyFound).toBe(true);
       expect(complete.payload.processedAdvances).toBe(1); // 最初の1体で停止
@@ -81,7 +83,7 @@ if (typeof Worker === 'undefined') {
     });
 
     it('terminates on max-results cap when stopOnCap=true', async () => {
-  const baseSeed = fixedSeed();
+      const baseSeed = fixedSeed();
       const params = {
         baseSeed,
         offset: 0n,
@@ -93,17 +95,19 @@ if (typeof Worker === 'undefined') {
         sid: 0,
         syncEnabled: false,
         syncNatureId: 0,
+        shinyCharm: false,
+        isShinyLocked: false,
         stopAtFirstShiny: false,
         stopOnCap: true,
         batchSize: 10,
         newGame: true,
-        noSave: false,
+        withSave: true,
         memoryLink: false,
       };
       const w = createWorker();
       await waitFor(w, m => m.type === 'READY');
       w.postMessage({ type: 'START_GENERATION', params });
-  const complete = await waitFor(w, (m): m is { type: 'COMPLETE'; payload: { reason: string; resultsCount: number; shinyFound: boolean } } => m.type === 'COMPLETE');
+      const complete = await waitFor(w, (m): m is { type: 'COMPLETE'; payload: { reason: string; resultsCount: number; shinyFound: boolean } } => m.type === 'COMPLETE');
       expect(complete.payload.reason).toBe('max-results');
       expect(complete.payload.resultsCount).toBe(3);
       expect(complete.payload.shinyFound).toBe(false);

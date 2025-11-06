@@ -19,11 +19,13 @@ export interface GenerationParams {
   sid: number;             // 0-65535
   syncEnabled: boolean;
   syncNatureId: number;    // 0-24
+  shinyCharm: boolean;     // 光るお守り所持
+  isShinyLocked: boolean;  // 選択遭遇が色違いロック対象か
   stopAtFirstShiny: boolean;
   stopOnCap: boolean;      // maxResults 到達で終了するか（デフォルト true）
   batchSize: number;       // 1バッチ生成数 (UI チューニング向け推奨値のみに留める)
   newGame: boolean;
-  noSave: boolean;
+  withSave: boolean;       // newGame 時に既存セーブを利用するか
   memoryLink: boolean;
 }
 
@@ -39,6 +41,10 @@ export interface GenerationParamsHex {
   sid: number;
   syncEnabled: boolean;
   syncNatureId: number;
+  /** 所持している場合 true (後続: 色違い確率計算に利用予定) */
+  shinyCharm: boolean;
+  /** 選択遭遇が色違いロック対象か */
+  isShinyLocked: boolean;
   stopAtFirstShiny: boolean;
   stopOnCap: boolean;
   batchSize: number;
@@ -47,14 +53,12 @@ export interface GenerationParamsHex {
    * 現行 WASM パラメータへは未伝播。syncEnabled との整合は UI 側で維持。
    */
   abilityMode?: 'none' | 'sync' | 'compound';
-  /** 所持している場合 true (後続: 色違い確率計算に利用予定) */
-  shinyCharm?: boolean;
   /** BW2 Memory Link 状態 */
   memoryLink: boolean;
   /** True when starting a new game flow */
   newGame: boolean;
-  /** True when new game without an existing save */
-  noSave: boolean;
+  /** True when starting with an existing save */
+  withSave: boolean;
 }
 
 export function hexParamsToGenerationParams(h: GenerationParamsHex): GenerationParams {
@@ -69,11 +73,13 @@ export function hexParamsToGenerationParams(h: GenerationParamsHex): GenerationP
     sid: h.sid,
     syncEnabled: h.syncEnabled,
     syncNatureId: h.syncNatureId,
+  shinyCharm: Boolean(h.shinyCharm) && (h.version === 'B2' || h.version === 'W2'),
+  isShinyLocked: Boolean(h.isShinyLocked),
     stopAtFirstShiny: h.stopAtFirstShiny,
     stopOnCap: h.stopOnCap,
     batchSize: h.batchSize,
     newGame: h.newGame,
-    noSave: h.noSave,
+    withSave: h.withSave,
     memoryLink: h.memoryLink,
   };
 }
@@ -90,12 +96,14 @@ export function generationParamsToHex(p: GenerationParams): GenerationParamsHex 
     sid: p.sid,
     syncEnabled: p.syncEnabled,
     syncNatureId: p.syncNatureId,
+    shinyCharm: p.shinyCharm,
+    isShinyLocked: p.isShinyLocked,
     stopAtFirstShiny: p.stopAtFirstShiny,
     stopOnCap: p.stopOnCap,
     batchSize: p.batchSize,
     memoryLink: p.memoryLink,
     newGame: p.newGame,
-    noSave: p.noSave,
+    withSave: p.withSave,
   };
 }
 
@@ -230,9 +238,9 @@ export function validateGenerationParams(p: GenerationParams, extras?: Generatio
   if (requiresStaticSelection(p.encounterType) && !staticEncounterId) {
     errors.push('static encounter selection required');
   }
-  if (!p.newGame && p.noSave) errors.push('noSave requires new game mode');
+  if (!p.newGame && !p.withSave) errors.push('withSave must be true when continuing a game');
   if ((p.version === 'B' || p.version === 'W') && p.memoryLink) errors.push('memoryLink is only available in BW2');
-  if (p.noSave && p.memoryLink) errors.push('memoryLink cannot be combined with noSave');
+  if (!p.withSave && p.memoryLink) errors.push('memoryLink requires a save file');
   try {
     deriveDomainGameMode(p);
   } catch (err) {
@@ -242,35 +250,35 @@ export function validateGenerationParams(p: GenerationParams, extras?: Generatio
   return errors;
 }
 
-function requiresStaticSelection(encounterType: number): boolean {
+export function requiresStaticSelection(encounterType: number): boolean {
   const staticTypes = new Set([10, 14, 11, 12, 13]); // StaticSymbol, StaticLegendary, Starter, Fossil, Event
   return staticTypes.has(encounterType);
 }
 
-export function deriveDomainGameMode(input: Pick<GenerationParams, 'version' | 'newGame' | 'noSave' | 'memoryLink'>): DomainGameMode {
-  const { version, newGame, noSave, memoryLink } = input;
+export function deriveDomainGameMode(input: Pick<GenerationParams, 'version' | 'newGame' | 'withSave' | 'memoryLink'>): DomainGameMode {
+  const { version, newGame, withSave, memoryLink } = input;
   const isBw1 = version === 'B' || version === 'W';
   if (isBw1) {
     if (memoryLink) {
       throw new Error('BW versions do not support memory link');
     }
-    if (!newGame && noSave) {
+    if (!newGame && !withSave) {
       throw new Error('Continue mode requires an existing save');
     }
     if (newGame) {
-      return noSave ? DomainGameMode.BwNewGameNoSave : DomainGameMode.BwNewGameWithSave;
+      return withSave ? DomainGameMode.BwNewGameWithSave : DomainGameMode.BwNewGameNoSave;
     }
     return DomainGameMode.BwContinue;
   }
 
   if (!newGame) {
-    if (noSave) {
+    if (!withSave) {
       throw new Error('Continue mode requires an existing save');
     }
     return memoryLink ? DomainGameMode.Bw2ContinueWithMemoryLink : DomainGameMode.Bw2ContinueNoMemoryLink;
   }
 
-  if (noSave) {
+  if (!withSave) {
     if (memoryLink) {
       throw new Error('Memory link requires a save file');
     }

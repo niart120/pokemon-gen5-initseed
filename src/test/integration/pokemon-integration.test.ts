@@ -36,7 +36,9 @@ describe('Integration: WASM生成→統合→UI変換', () => {
       12345, // TID
       54321, // SID
       false, // sync_enabled
-      0      // sync_nature_id
+      0,     // sync_nature_id
+      false,
+      false,
     );
     const wasmRaw = PokemonGenerator.generate_single_pokemon_bw(seed, config);
     const raw = parseFromWasmRaw(wasmRaw);
@@ -60,7 +62,9 @@ describe('Integration: WASM生成→統合→UI変換', () => {
       12345,
       54321,
       true,
-      targetNatureId
+      targetNatureId,
+      false,
+      false,
     );
   const ctx = buildResolutionContext({ version: 'B2', location: 'Route1', encounterType: DomainEncounterType.Normal });
     const wasmRaw = PokemonGenerator.generate_single_pokemon_bw(syncSeed, config);
@@ -81,7 +85,12 @@ describe('Integration: WASM生成→統合→UI変換', () => {
     const config = new BWGenerationConfig(
       GameVersion.B2,
   domainEncounterTypeToWasm(DomainEncounterType.Normal),
-      12345, 54321, false, 0
+      12345,
+      54321,
+      false,
+      0,
+      false,
+      false,
     );
     for (let i = 0; i < seeds.length; ++i) {
       const wasmRaw = PokemonGenerator.generate_single_pokemon_bw(seeds[i], config);

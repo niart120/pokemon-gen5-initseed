@@ -96,9 +96,11 @@ function params(overrides: Partial<GenerationParams> = {}): GenerationParams {
     syncNatureId: 0,
     stopAtFirstShiny: false,
     stopOnCap: true,
-  batchSize: 5000,
+    shinyCharm: false,
+    isShinyLocked: false,
+    batchSize: 5000,
     newGame: true,
-    noSave: false,
+    withSave: true,
     memoryLink: false,
     ...overrides,
   };

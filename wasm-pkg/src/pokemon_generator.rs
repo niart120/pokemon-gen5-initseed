@@ -101,6 +101,10 @@ pub struct BWGenerationConfig {
     sync_enabled: bool,
     /// シンクロ性格ID（0-24）
     sync_nature_id: u8,
+    /// 色違いロック対象か
+    is_shiny_locked: bool,
+    /// 光るお守りを所持しているか
+    has_shiny_charm: bool,
 }
 
 #[wasm_bindgen]
@@ -114,6 +118,8 @@ impl BWGenerationConfig {
         sid: u16,
         sync_enabled: bool,
         sync_nature_id: u8,
+        is_shiny_locked: bool,
+        has_shiny_charm: bool,
     ) -> BWGenerationConfig {
         BWGenerationConfig {
             version,
@@ -122,6 +128,8 @@ impl BWGenerationConfig {
             sid,
             sync_enabled,
             sync_nature_id,
+            is_shiny_locked,
+            has_shiny_charm,
         }
     }
 
@@ -154,6 +162,16 @@ impl BWGenerationConfig {
     #[wasm_bindgen(getter)]
     pub fn get_sync_nature_id(&self) -> u8 {
         self.sync_nature_id
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_is_shiny_locked(&self) -> bool {
+        self.is_shiny_locked
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_has_shiny_charm(&self) -> bool {
+        self.has_shiny_charm
     }
 }
 
@@ -228,7 +246,12 @@ impl PokemonGenerator {
 
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = PIDCalculator::generate_static_pid(pid_base, config.tid, config.sid);
+        let pid = Self::finalize_pid_with_shiny_rules(
+            &mut rng,
+            config,
+            pid_base,
+            |base| PIDCalculator::generate_static_pid(base, config.tid, config.sid),
+        );
 
         // 性格生成・シンクロ適用
         let (sync_applied, nature_id) = Self::generate_nature_with_sync(
@@ -261,7 +284,12 @@ impl PokemonGenerator {
 
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = PIDCalculator::generate_roaming_pid(pid_base, config.tid, config.sid);
+        let pid = Self::finalize_pid_with_shiny_rules(
+            &mut rng,
+            config,
+            pid_base,
+            |base| PIDCalculator::generate_roaming_pid(base, config.tid, config.sid),
+        );
 
         // 性格生成（徘徊はシンクロ無効なので通常性格のみ）
         let nature_id = Self::nature_roll(&mut rng);
@@ -282,7 +310,12 @@ impl PokemonGenerator {
 
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000、ただしID補正なし）
         let pid_base = rng.next();
-        let pid = PIDCalculator::generate_event_pid(pid_base);
+        let pid = Self::finalize_pid_with_shiny_rules(
+            &mut rng,
+            config,
+            pid_base,
+            |base| PIDCalculator::generate_event_pid(base),
+        );
 
         // 性格生成（イベント系はシンクロ無効なので通常性格のみ）
         let nature_id = Self::nature_roll(&mut rng);
@@ -315,7 +348,12 @@ impl PokemonGenerator {
 
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = PIDCalculator::generate_wild_pid(pid_base, config.tid, config.sid);
+        let pid = Self::finalize_pid_with_shiny_rules(
+            &mut rng,
+            config,
+            pid_base,
+            |base| PIDCalculator::generate_wild_pid(base, config.tid, config.sid),
+        );
 
         // 性格生成・シンクロ適用
         let (sync_applied, nature_id) = Self::generate_nature_with_sync(
@@ -362,7 +400,12 @@ impl PokemonGenerator {
 
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = PIDCalculator::generate_wild_pid(pid_base, config.tid, config.sid);
+        let pid = Self::finalize_pid_with_shiny_rules(
+            &mut rng,
+            config,
+            pid_base,
+            |base| PIDCalculator::generate_wild_pid(base, config.tid, config.sid),
+        );
 
         // 性格生成・シンクロ適用
         let (sync_applied, nature_id) = Self::generate_nature_with_sync(
@@ -410,7 +453,12 @@ impl PokemonGenerator {
 
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = PIDCalculator::generate_wild_pid(pid_base, config.tid, config.sid);
+        let pid = Self::finalize_pid_with_shiny_rules(
+            &mut rng,
+            config,
+            pid_base,
+            |base| PIDCalculator::generate_wild_pid(base, config.tid, config.sid),
+        );
 
         // 性格生成・シンクロ適用
         let (sync_applied, nature_id) = Self::generate_nature_with_sync(
@@ -436,6 +484,42 @@ impl PokemonGenerator {
     }
 
     /// ポケモンデータ構築ヘルパー
+    fn finalize_pid_with_shiny_rules<F>(
+        rng: &mut PersonalityRNG,
+        config: &BWGenerationConfig,
+        initial_base: u32,
+        mut generator: F,
+    ) -> u32
+    where
+        F: FnMut(u32) -> u32,
+    {
+        let mut pid = generator(initial_base);
+
+        if config.is_shiny_locked {
+            if ShinyChecker::is_shiny(config.tid, config.sid, pid) {
+                pid ^= 0x10000000;
+            }
+            return pid;
+        }
+
+        if config.has_shiny_charm {
+            if ShinyChecker::is_shiny(config.tid, config.sid, pid) {
+                return pid;
+            }
+
+            for _ in 0..2 {
+                let reroll_base = rng.next();
+                let reroll_pid = generator(reroll_base);
+                if ShinyChecker::is_shiny(config.tid, config.sid, reroll_pid) {
+                    return reroll_pid;
+                }
+                pid = reroll_pid;
+            }
+        }
+
+        pid
+    }
+
     fn build_pokemon_data(
         seed: u64,
         pid: u32,
@@ -717,6 +801,8 @@ impl SeedEnumerator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cell::RefCell;
+    use std::collections::VecDeque;
 
     fn create_bw_test_config() -> BWGenerationConfig {
         BWGenerationConfig::new(
@@ -726,7 +812,94 @@ mod tests {
             54321,
             false, // シンクロなし
             0,
+            false,
+            false,
         )
+    }
+
+    #[test]
+    fn finalize_pid_applies_shiny_lock() {
+        let mut rng = PersonalityRNG::new(0xABCDEF01);
+        let mut config = create_bw_test_config();
+        config.tid = 0;
+        config.sid = 0;
+        config.is_shiny_locked = true;
+        config.has_shiny_charm = false;
+
+        let sequence = RefCell::new(VecDeque::from(vec![0x00010000]));
+        let pid = PokemonGenerator::finalize_pid_with_shiny_rules(
+            &mut rng,
+            &config,
+            0,
+            |base| {
+                let mut seq = sequence.borrow_mut();
+                seq.pop_front().unwrap_or(base)
+            },
+        );
+
+        assert_eq!(pid, 0x00010000 ^ 0x10000000);
+        assert!(!ShinyChecker::is_shiny(config.tid, config.sid, pid));
+        assert!(sequence.borrow().is_empty());
+    }
+
+    #[test]
+    fn finalize_pid_rerolls_until_shiny_with_charm() {
+        let mut rng = PersonalityRNG::new(0x12345678);
+        let mut config = create_bw_test_config();
+        config.tid = 0;
+        config.sid = 0;
+        config.is_shiny_locked = false;
+        config.has_shiny_charm = true;
+
+        let sequence = RefCell::new(VecDeque::from(vec![
+            0x00080000, // not shiny
+            0x00100000, // not shiny
+            0x00010000, // shiny
+        ]));
+
+        let pid = PokemonGenerator::finalize_pid_with_shiny_rules(
+            &mut rng,
+            &config,
+            0,
+            |base| {
+                let mut seq = sequence.borrow_mut();
+                seq.pop_front().unwrap_or(base)
+            },
+        );
+
+        assert_eq!(pid, 0x00010000);
+        assert!(ShinyChecker::is_shiny(config.tid, config.sid, pid));
+        assert!(sequence.borrow().is_empty());
+    }
+
+    #[test]
+    fn finalize_pid_returns_last_when_charm_misses() {
+        let mut rng = PersonalityRNG::new(0x0F0F0F0F);
+        let mut config = create_bw_test_config();
+        config.tid = 0;
+        config.sid = 0;
+        config.is_shiny_locked = false;
+        config.has_shiny_charm = true;
+
+        let sequence = RefCell::new(VecDeque::from(vec![
+            0x00080000,
+            0x00100000,
+            0x00180000,
+        ]));
+
+        let pid = PokemonGenerator::finalize_pid_with_shiny_rules(
+            &mut rng,
+            &config,
+            0,
+            |base| {
+                let mut seq = sequence.borrow_mut();
+                seq.pop_front().unwrap_or(base)
+            },
+        );
+
+        assert_eq!(pid, 0x00180000);
+        assert!(!ShinyChecker::is_shiny(config.tid, config.sid, pid));
+        assert!(sequence.borrow().is_empty());
     }
 
     #[test]

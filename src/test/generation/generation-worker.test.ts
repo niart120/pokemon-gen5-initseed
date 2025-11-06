@@ -22,7 +22,12 @@ function makeParams(maxAdvances = 3000) {
     syncNatureId: 0,
     stopAtFirstShiny: false,
     stopOnCap: true,
-  batchSize: 5000,
+    shinyCharm: false,
+    isShinyLocked: false,
+    batchSize: 5000,
+    newGame: true,
+    withSave: true,
+    memoryLink: false,
   };
 }
 

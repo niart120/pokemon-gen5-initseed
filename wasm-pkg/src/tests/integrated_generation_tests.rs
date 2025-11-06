@@ -58,6 +58,8 @@ fn test_integrated_generation_pattern1_bw2_continue_no_memory_link() {
         sid,
         false, // シンクロ無効
         0,     // シンクロ性格（未使用）
+        false,
+        false,
     );
 
     // Step 5: ポケモン生成実行
@@ -181,6 +183,8 @@ fn test_integrated_generation_pattern2_bw_continue_surfing() {
         sid,
         false, // シンクロ無効
         0,     // シンクロ性格（未使用）
+        false,
+        false,
     );
 
     // Step 5: ポケモン生成実行
@@ -302,6 +306,8 @@ fn test_integrated_generation_pattern3_bw2_continue_with_memory_link_static() {
         sid,
         false, // シンクロ無効
         0,     // シンクロ性格（未使用）
+        false,
+        false,
     );
 
     // Step 5: ポケモン生成実行
@@ -410,6 +416,8 @@ fn test_integrated_generation_pattern4_bw2_continue_no_memory_link_static_starte
         sid,
         false, // シンクロ無効
         0,     // シンクロ性格（未使用）
+        false,
+        false,
     );
 
     // Step 5: ポケモン生成実行
@@ -493,6 +501,8 @@ fn test_integrated_generation_multiple_patterns() {
             12345,
             false,
             0,
+            false,
+            false,
         );
 
         let pokemon = PokemonGenerator::generate_single_pokemon_bw(generation_seed, &config);
@@ -526,7 +536,16 @@ fn test_integrated_generation_edge_cases() {
     let offset = calculate_game_offset(zero_seed, GameMode::BwContinue);
     let generation_seed = PersonalityRNG::jump_seed(zero_seed, offset as u64);
 
-    let config = BWGenerationConfig::new(GameVersion::B, EncounterType::Normal, 0, 0, false, 0);
+    let config = BWGenerationConfig::new(
+        GameVersion::B,
+        EncounterType::Normal,
+        0,
+        0,
+        false,
+        0,
+        false,
+        false,
+    );
 
     let pokemon = PokemonGenerator::generate_single_pokemon_bw(generation_seed, &config);
 
@@ -565,6 +584,8 @@ fn test_integrated_generation_shiny_verification() {
         54321, // 特定のSID
         false,
         0,
+        false,
+        false,
     );
 
     // 複数のシードで色違い判定が正常に動作することを確認

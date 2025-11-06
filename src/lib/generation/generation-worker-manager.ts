@@ -9,6 +9,7 @@ import {
   type GenerationResultBatch,
   type GenerationCompletion,
   type GenerationErrorCategory,
+  type GenerationValidationExtras,
   validateGenerationParams,
   isGenerationWorkerResponse,
 } from '@/types/generation';
@@ -38,7 +39,7 @@ export class GenerationWorkerManager {
   constructor(private readonly workerScript: string = new URL('@/workers/generation-worker.ts', import.meta.url).href) {}
 
   // --- Public API ---
-  start(params: GenerationParams): Promise<void> {
+  start(params: GenerationParams, extras?: GenerationValidationExtras): Promise<void> {
     if (this.running) {
       throw new Error('generation already running');
     }
@@ -46,7 +47,7 @@ export class GenerationWorkerManager {
       // 再利用しない方針 -> 真新しい worker を生成し直す
       this.terminated = false;
     }
-    const validation = validateGenerationParams(params);
+    const validation = validateGenerationParams(params, extras);
     if (validation.length) {
       return Promise.reject(new Error(validation.join(', ')));
     }
@@ -56,7 +57,7 @@ export class GenerationWorkerManager {
     const rid = this.generateRequestId();
     this.currentRequestId = rid;
 
-    const req: GenerationWorkerRequest = { type: 'START_GENERATION', params, requestId: rid };
+  const req: GenerationWorkerRequest = { type: 'START_GENERATION', params, staticEncounterId: extras?.staticEncounterId, requestId: rid };
     this.worker!.postMessage(req);
     return Promise.resolve();
   }

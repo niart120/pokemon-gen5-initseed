@@ -13,11 +13,13 @@ function baseParams(overrides: Partial<GenerationParams> = {}): GenerationParams
     sid: 54321,
     syncEnabled: false,
     syncNatureId: 0,
+    shinyCharm: false,
+    isShinyLocked: false,
     stopAtFirstShiny: false,
     stopOnCap: true,
-  batchSize: 5000,
+    batchSize: 5000,
     newGame: true,
-    noSave: false,
+    withSave: true,
     memoryLink: false,
     ...overrides,
   };
@@ -66,8 +68,8 @@ describe('validateGenerationParams', () => {
     expect(errs.some(e => e.includes('BW versions do not support memory link'))).toBe(true);
   });
   it('rejects continue mode without save', () => {
-    const errs = validateGenerationParams(baseParams({ newGame: false, noSave: true }));
-    expect(errs.some(e => e.includes('Continue mode requires an existing save'))).toBe(true);
+    const errs = validateGenerationParams(baseParams({ newGame: false, withSave: false }));
+    expect(errs.some(e => e.includes('withSave must be true'))).toBe(true);
   });
   it('requires staticEncounterId for static encounter types', () => {
     const errs = validateGenerationParams(baseParams({ encounterType: 10 }), { staticEncounterId: null });

@@ -21,7 +21,9 @@ describe('calculateGenerationStartSeed', () => {
       0,
       0,
       false,
-      0
+      0,
+      false,
+      false,
     );
     const enumerator = new SeedEnumerator(baseSeed, offset, 1, config);
     const first = enumerator.next_pokemon();

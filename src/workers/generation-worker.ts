@@ -18,7 +18,18 @@ import { domainEncounterTypeToWasm } from '@/lib/core/mapping/encounter-type';
 import type { DomainEncounterType } from '@/types/domain';
 
 // WASM コンストラクタ最小型 (必要最小限のみ表現)
-interface BWGenerationConfigCtor { new(version: number, encounterType: number, tid: number, sid: number, syncEnabled: boolean, syncNatureId: number): object; }
+interface BWGenerationConfigCtor {
+  new(
+    version: number,
+    encounterType: number,
+    tid: number,
+    sid: number,
+    syncEnabled: boolean,
+    syncNatureId: number,
+    isShinyLocked: boolean,
+    shinyCharm: boolean,
+  ): object;
+}
 interface SeedEnumeratorCtor { new(baseSeed: bigint, offset: bigint, count: number, config: object): SeedEnumeratorInstance; }
 interface SeedEnumeratorInstance { next_pokemon(): unknown; }
 
@@ -95,7 +106,7 @@ ctx.onmessage = (ev: MessageEvent<GenerationWorkerRequest>) => {
     try {
       switch (msg.type) {
         case 'START_GENERATION':
-          await handleStart(msg.params);
+          await handleStart(msg.params, msg.staticEncounterId);
           break;
         case 'PAUSE':
           handlePause();
@@ -116,9 +127,9 @@ ctx.onmessage = (ev: MessageEvent<GenerationWorkerRequest>) => {
   })();
 };
 
-async function handleStart(params: GenerationParams) {
+async function handleStart(params: GenerationParams, staticEncounterId?: string | null) {
   if (state.progress.status === 'running') return;
-  const errors = validateGenerationParams(params);
+  const errors = validateGenerationParams(params, { staticEncounterId });
   if (errors.length) {
     post({ type: 'ERROR', message: errors.join(', '), category: 'VALIDATION', fatal: false });
     return;
@@ -167,6 +178,8 @@ async function handleStart(params: GenerationParams) {
       params.sid,
       params.syncEnabled,
       params.syncNatureId,
+      params.isShinyLocked,
+      params.shinyCharm,
     );
     const domainMode = deriveDomainGameMode(params);
     const wasmMode = domainGameModeToWasm(domainMode);
