@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
 import { Table } from '@phosphor-icons/react';
 import { useAppStore } from '@/store/app-store';
-import { selectFilteredSortedResults, selectUiReadyResults } from '@/store/generation-store';
+import { selectFilteredSortedResults, selectUiReadyResults, type GenerationSlice } from '@/store/generation-store';
 import { pidHex, natureName, shinyLabel } from '@/lib/utils/format-display';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 
@@ -13,7 +13,11 @@ export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProp
   const rawResults = useAppStore(selectFilteredSortedResults);
   const total = useAppStore(s => s.results.length);
   // UI表示用解決結果 (locale: 今は固定 'ja')
-  const uiResults = useAppStore(s => selectUiReadyResults({ ...s, results: rawResults } as any, 'ja'));
+  const uiResults = useAppStore((state) => {
+    const generationState: GenerationSlice = state;
+    const overrideState: GenerationSlice = { ...generationState, results: rawResults };
+    return selectUiReadyResults(overrideState, 'ja');
+  });
   const { isStack } = useResponsiveLayout();
   // スクロール方針
   // - モバイル(isStack): カード内でスクロール(overflow-y-auto)にして、ドキュメント高さの膨張を防ぐ

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { listEncounterLocations, listEncounterSpeciesOptions, isLocationBasedEncounter } from '@/data/encounters/helpers';
 import { DomainEncounterType } from '@/types/domain';
 

@@ -9,13 +9,17 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { useAppStore } from '@/store/app-store';
 import type { GenerationParamsHex } from '@/types/generation';
 import { Gear } from '@phosphor-icons/react';
-import { DomainEncounterTypeNames, DomainEncounterType } from '@/types/domain';
+import { DomainEncounterTypeNames, DomainEncounterType, getDomainEncounterTypeName } from '@/types/domain';
 import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
 import { buildResolutionContext, enrichForSpecies } from '@/lib/initialization/build-resolution-context';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 
 // Simple hex normalization guard
 function isHexLike(v: string) { return /^(0x)?[0-9a-fA-F]*$/.test(v.trim()); }
+
+function toDomainEncounterType(value: number): DomainEncounterType | null {
+  return getDomainEncounterTypeName(value) ? (value as DomainEncounterType) : null;
+}
 
 // Ability モード選択肢 (Compound は WIP のため disabled)
 const ABILITY_OPTIONS: { value: GenerationParamsHex['abilityMode']; label: string; disabled?: boolean }[] = [
@@ -61,17 +65,21 @@ export const GenerationParamsCard: React.FC = () => {
   };
   const syncActive = abilityMode === 'sync' && (hexDraft.syncEnabled ?? false);
   const encounterValue = hexDraft.encounterType ?? 0;
+  const encounterType = React.useMemo(() => toDomainEncounterType(encounterValue), [encounterValue]);
   const version = draftParams.version ?? 'B';
-  const isLocationBased = isLocationBasedEncounter(encounterValue as any);
-  const locationOptions = React.useMemo(()=> isLocationBased ? listEncounterLocations(version, encounterValue as any) : [], [version, encounterValue, isLocationBased]);
+  const isLocationBased = encounterType != null && isLocationBasedEncounter(encounterType);
+  const locationOptions = React.useMemo(() => {
+    if (!encounterType || !isLocationBased) return [];
+    return listEncounterLocations(version, encounterType);
+  }, [version, encounterType, isLocationBased]);
   const speciesOptions = React.useMemo(()=> {
-    if (isLocationBased) {
+    if (isLocationBased && encounterType) {
       if (!encounterField) return [];
-      return listEncounterSpeciesOptions(version, encounterValue as any, encounterField);
+      return listEncounterSpeciesOptions(version, encounterType, encounterField);
     }
     // static placeholder (未実装)
     return [];
-  }, [version, encounterValue, isLocationBased, encounterField]);
+  }, [version, encounterType, isLocationBased, encounterField]);
   const { isStack } = useResponsiveLayout();
   const newGame = hexDraft.newGame ?? true;
   const noSave = hexDraft.noSave ?? false;
@@ -89,7 +97,7 @@ export const GenerationParamsCard: React.FC = () => {
   // フィールド選択に応じて遭遇テーブルと補助データをストアへ供給
   React.useEffect(() => {
     const state = useAppStore.getState();
-    if (!isLocationBased || !encounterField) {
+    if (!isLocationBased || !encounterField || !encounterType) {
       if (state.encounterTable) setEncounterTable(undefined);
       if (state.genderRatios) setGenderRatios(undefined);
       if (state.abilityCatalog) setAbilityCatalog(undefined);
@@ -99,7 +107,7 @@ export const GenerationParamsCard: React.FC = () => {
     const context = buildResolutionContext({
       version,
       location: encounterField,
-      encounterType: encounterValue as DomainEncounterType,
+      encounterType,
     });
 
     const table = context.encounterTable;
@@ -125,7 +133,7 @@ export const GenerationParamsCard: React.FC = () => {
     if (state.abilityCatalog !== context.abilityCatalog) {
       setAbilityCatalog(context.abilityCatalog);
     }
-  }, [version, encounterValue, encounterField, isLocationBased, setEncounterTable, setGenderRatios, setAbilityCatalog]);
+  }, [version, encounterType, encounterField, isLocationBased, setEncounterTable, setGenderRatios, setAbilityCatalog]);
   return (
     <Card className={`py-2 flex flex-col ${isStack ? '' : 'h-full min-h-64'}`} aria-labelledby="gen-params-title" role="form">
       <StandardCardHeader icon={<Gear size={20} className="opacity-80" />} title={<span id="gen-params-title">Generation Parameters</span>} />

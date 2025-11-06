@@ -369,7 +369,7 @@ export const selectFilteredSortedResults = (s: GenerationSlice) => {
 };
 
 // ===== Resolution / UI adapters =====
-import { resolveBatch, toUiReadyPokemon, type ResolvedPokemonData, type UiReadyPokemonData } from '@/lib/generation/pokemon-resolver';
+import { resolveBatch, toUiReadyPokemon, type ResolutionContext, type ResolvedPokemonData, type UiReadyPokemonData } from '@/lib/generation/pokemon-resolver';
 
 let _resolvedCache: {
   resultsRef: GenerationResult[];
@@ -389,8 +389,8 @@ export const selectResolvedResults = (s: GenerationSlice): ResolvedPokemonData[]
     _resolvedCache = { resultsRef: results, encounterTableRef: encounterTable, genderRatiosRef: genderRatios, abilityCatalogRef: abilityCatalog, output: [] };
     return _resolvedCache.output;
   }
-  const ctx = { encounterTable, genderRatios, abilityCatalog };
-  const resolved = resolveBatch(results as any, ctx);
+  const ctx: ResolutionContext = { encounterTable, genderRatios, abilityCatalog };
+  const resolved = resolveBatch(results, ctx);
   _resolvedCache = { resultsRef: results, encounterTableRef: encounterTable, genderRatiosRef: genderRatios, abilityCatalogRef: abilityCatalog, output: resolved };
   return resolved;
 };

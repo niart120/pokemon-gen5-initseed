@@ -1,6 +1,6 @@
 import type { GenerationResult } from '@/types/generation';
 import { pidHex, seedHex, natureName, shinyLabel } from '@/lib/utils/format-display';
-import { resolveBatch, toUiReadyPokemon } from '@/lib/generation/pokemon-resolver';
+import { resolveBatch, toUiReadyPokemon, type ResolutionContext } from '@/lib/generation/pokemon-resolver';
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
 
@@ -46,7 +46,8 @@ export function adaptGenerationResults(results: GenerationResult[], opts?: {
   let resolvedUi: ReturnType<typeof toUiReadyPokemon>[] | null = null;
   if (encounterTable || genderRatios || abilityCatalog) {
     try {
-      const resolved = resolveBatch(results as any, { encounterTable, genderRatios, abilityCatalog });
+      const context: ResolutionContext = { encounterTable, genderRatios, abilityCatalog };
+      const resolved = resolveBatch(results, context);
       resolvedUi = resolved.map(r => toUiReadyPokemon(r, { locale }));
     } catch { /* fail soft; keep legacy fields */ }
   }

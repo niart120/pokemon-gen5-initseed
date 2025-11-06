@@ -18,7 +18,7 @@ export interface EncounterSpeciesOption {
 }
 
 // Location based encounter types
-const LOCATION_BASED: Set<number> = new Set([
+const LOCATION_BASED: ReadonlySet<DomainEncounterType> = new Set<DomainEncounterType>([
   EncounterTypeEnum.Normal,
   EncounterTypeEnum.Surfing,
   EncounterTypeEnum.Fishing,
@@ -30,7 +30,7 @@ const LOCATION_BASED: Set<number> = new Set([
 ]);
 
 export function isLocationBasedEncounter(method: DomainEncounterType): boolean {
-  return LOCATION_BASED.has(method as number);
+  return LOCATION_BASED.has(method);
 }
 
 const cacheLocations = new Map<string, EncounterLocationOption[]>();
@@ -60,7 +60,7 @@ export function listEncounterSpeciesOptions(version: ROMVersion, method: DomainE
   let rows: EncounterSpeciesOption[] = [];
   if (isLocationBasedEncounter(method)) {
     if (!locationKey) return [];
-    const table = getEncounterFromRegistry(version, locationKey, method as any);
+  const table = getEncounterFromRegistry(version, locationKey, method);
     if (table) {
       const map = new Map<number, EncounterSpeciesOption>();
       table.slots.forEach((slot, idx) => {
