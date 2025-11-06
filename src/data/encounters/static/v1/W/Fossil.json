@@ -1,0 +1,65 @@
+{
+  "version": "W",
+  "method": "StaticFossil",
+  "source": {
+    "name": "Serebii.net / atwiki(BW攻略情報)",
+    "url": "https://serebii.net/blackwhite/fossils.shtml",
+    "retrievedAt": "2025-11-07"
+  },
+  "entries": [
+    {
+      "id": "fossil-omanyte",
+      "displayName": "オムナイト",
+      "speciesId": 138,
+      "level": 25
+    },
+    {
+      "id": "fossil-kabuto",
+      "displayName": "カブト",
+      "speciesId": 140,
+      "level": 25
+    },
+    {
+      "id": "fossil-aerodactyl",
+      "displayName": "プテラ",
+      "speciesId": 142,
+      "level": 25
+    },
+    {
+      "id": "fossil-lileep",
+      "displayName": "リリーラ",
+      "speciesId": 345,
+      "level": 25
+    },
+    {
+      "id": "fossil-anorith",
+      "displayName": "アノプス",
+      "speciesId": 347,
+      "level": 25
+    },
+    {
+      "id": "fossil-cranidos",
+      "displayName": "ズガイドス",
+      "speciesId": 408,
+      "level": 25
+    },
+    {
+      "id": "fossil-shieldon",
+      "displayName": "タテトプス",
+      "speciesId": 410,
+      "level": 25
+    },
+    {
+      "id": "fossil-tirtouga",
+      "displayName": "プロトーガ",
+      "speciesId": 564,
+      "level": 25
+    },
+    {
+      "id": "fossil-archen",
+      "displayName": "アーケン",
+      "speciesId": 566,
+      "level": 25
+    }
+  ]
+}

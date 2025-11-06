@@ -1,0 +1,29 @@
+{
+  "version": "B",
+  "method": "StaticStarter",
+  "source": {
+    "name": "Serebii.net / atwiki(BW攻略情報)",
+    "url": "https://serebii.net/blackwhite/starter.shtml",
+    "retrievedAt": "2025-11-07"
+  },
+  "entries": [
+    {
+      "id": "starter-tepig",
+      "displayName": "ポカブ",
+      "speciesId": 498,
+      "level": 5
+    },
+    {
+      "id": "starter-oshawott",
+      "displayName": "ミジュマル",
+      "speciesId": 501,
+      "level": 5
+    },
+    {
+      "id": "starter-snivy",
+      "displayName": "ツタージャ",
+      "speciesId": 495,
+      "level": 5
+    }
+  ]
+}
