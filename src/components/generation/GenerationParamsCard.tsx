@@ -69,11 +69,11 @@ export const GenerationParamsCard: React.FC = () => {
   const version = draftParams.version ?? 'B';
   const isLocationBased = encounterType != null && isLocationBasedEncounter(encounterType);
   const locationOptions = React.useMemo(() => {
-    if (!encounterType || !isLocationBased) return [];
+    if (encounterType == null || !isLocationBased) return [];
     return listEncounterLocations(version, encounterType);
   }, [version, encounterType, isLocationBased]);
   const speciesOptions = React.useMemo(()=> {
-    if (isLocationBased && encounterType) {
+    if (isLocationBased && encounterType != null) {
       if (!encounterField) return [];
       return listEncounterSpeciesOptions(version, encounterType, encounterField);
     }
@@ -81,12 +81,13 @@ export const GenerationParamsCard: React.FC = () => {
     return [];
   }, [version, encounterType, isLocationBased, encounterField]);
   const { isStack } = useResponsiveLayout();
-  const newGame = hexDraft.newGame ?? true;
+  const newGame = hexDraft.newGame ?? false;
   const noSave = hexDraft.noSave ?? false;
+  const withSaveChecked = newGame ? !noSave : false;
   const memoryLink = hexDraft.memoryLink ?? false;
   const versionIsBw = version === 'B' || version === 'W';
   const memoryLinkDisabled = disabled || versionIsBw || noSave;
-  const noSaveDisabled = disabled || !newGame;
+  const withSaveDisabled = disabled || !newGame;
 
   React.useEffect(() => {
     if (memoryLink && memoryLinkDisabled) {
@@ -94,10 +95,18 @@ export const GenerationParamsCard: React.FC = () => {
     }
   }, [memoryLink, memoryLinkDisabled, setDraftParams]);
 
+  React.useEffect(() => {
+    if (!isLocationBased || locationOptions.length === 0) return;
+    const hasSelection = encounterField && locationOptions.some(opt => opt.key === encounterField);
+    if (!hasSelection) {
+      setEncounterField(locationOptions[0]?.key);
+    }
+  }, [isLocationBased, locationOptions, encounterField, setEncounterField]);
+
   // フィールド選択に応じて遭遇テーブルと補助データをストアへ供給
   React.useEffect(() => {
     const state = useAppStore.getState();
-    if (!isLocationBased || !encounterField || !encounterType) {
+    if (!isLocationBased || !encounterField || encounterType == null) {
       if (state.encounterTable) setEncounterTable(undefined);
       if (state.genderRatios) setGenderRatios(undefined);
       if (state.abilityCatalog) setAbilityCatalog(undefined);
@@ -172,10 +181,10 @@ export const GenerationParamsCard: React.FC = () => {
               <Checkbox id="new-game" aria-labelledby="lbl-new-game" checked={newGame} disabled={disabled} onCheckedChange={v=> update({ newGame: Boolean(v) })} />
               <Label id="lbl-new-game" htmlFor="new-game" className="text-xs">New Game</Label>
             </div>
-            {/* No Save */}
+            {/* With Save */}
             <div className="flex items-center gap-2">
-              <Checkbox id="no-save" aria-labelledby="lbl-no-save" checked={noSave} disabled={noSaveDisabled} onCheckedChange={v=> update({ noSave: Boolean(v) })} />
-              <Label id="lbl-no-save" htmlFor="no-save" className="text-xs">No Save</Label>
+              <Checkbox id="with-save" aria-labelledby="lbl-with-save" checked={withSaveChecked} disabled={withSaveDisabled} onCheckedChange={v=> update({ noSave: newGame ? !(v === true) : false })} />
+              <Label id="lbl-with-save" htmlFor="with-save" className="text-xs">With Save</Label>
             </div>
             {/* Memory Link */}
             <div className="flex items-center gap-2">

@@ -24,7 +24,7 @@ const baseState = {
   status: 'idle' as const,
   lastCompletion: null as any,
   progress: { processedAdvances: 0, totalAdvances: 0 },
-  draftParams: { maxAdvances: 0, newGame: true } as any,
+  draftParams: { maxAdvances: 0, newGame: false, noSave: false } as any,
   results: [] as any[],
   filters: { natureIds: [], shinyOnly: false, sortField: 'advance', sortOrder: 'asc' } as any,
   applyFilters: vi.fn(),

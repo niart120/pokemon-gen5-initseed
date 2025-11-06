@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { SearchConditions, InitialSeedResult, TargetSeedList, SearchProgress, SearchPreset } from '../types/search';
+import type { GenerationParamsHex } from '@/types/generation';
 import type { ROMVersion, ROMRegion, Hardware } from '../types/rom';
 import type { ParallelSearchSettings, AggregatedProgress } from '../types/parallel';
 import { DEMO_TARGET_SEEDS } from '../data/default-seeds';
 
 import type { GenerationSlice } from './generation-store';
-import { createGenerationSlice, bindGenerationManager } from './generation-store';
+import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS } from './generation-store';
 
 interface AppStore extends GenerationSlice {
   // Search conditions
@@ -153,12 +154,25 @@ function extractGenerationForPersist(state: AppStore): PersistedGenerationMinima
   };
 }
 
+function mergeDraftParams(restored: Partial<GenerationSlice['draftParams']> | undefined): GenerationSlice['draftParams'] {
+  const source = (restored ?? {}) as Partial<GenerationParamsHex>;
+  const merged: GenerationParamsHex = { ...DEFAULT_GENERATION_DRAFT_PARAMS };
+  type DraftKey = keyof GenerationParamsHex;
+  for (const key of Object.keys(DEFAULT_GENERATION_DRAFT_PARAMS) as DraftKey[]) {
+    const value = source[key];
+    if (value !== undefined) {
+      (merged as Record<DraftKey, unknown>)[key] = value;
+    }
+  }
+  return merged;
+}
+
 function reviveGenerationMinimal(obj: unknown): Partial<GenerationSlice> {
   if (!obj || typeof obj !== 'object') return {};
   const o = obj as Partial<PersistedGenerationMinimal>;
   const normalizedStatus = normalizeRestoredStatus(o.status);
   return {
-    draftParams: o.draftParams ?? undefined,
+    draftParams: mergeDraftParams(o.draftParams),
     // params は非永続化（draft から再生成する設計）
     params: null,
     validationErrors: o.validationErrors ?? [],

@@ -8,12 +8,13 @@ import { pidHex, natureName, shinyLabel } from '@/lib/utils/format-display';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 
 interface GenerationResultsTableCardProps { parentManagesScroll?: boolean; }
+type AppStoreState = ReturnType<typeof useAppStore.getState>;
 export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProps> = ({ parentManagesScroll }) => {
   // 元の生結果 (フィルタ/ソート適用済み GenerationResult)
   const rawResults = useAppStore(selectFilteredSortedResults);
   const total = useAppStore(s => s.results.length);
   // UI表示用解決結果 (locale: 今は固定 'ja')
-  const uiResults = useAppStore((state) => {
+  const uiResults = useAppStore((state: AppStoreState) => {
     const generationState: GenerationSlice = state;
     const overrideState: GenerationSlice = { ...generationState, results: rawResults };
     return selectUiReadyResults(overrideState, 'ja');

@@ -4,9 +4,6 @@ import { validateGenerationParams, hexParamsToGenerationParams, generationParams
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
 
-// 単一インスタンスマネージャ（UI からは slice 経由で操作）
-const manager = new GenerationWorkerManager();
-
 export type GenerationStatus = 'idle' | 'starting' | 'running' | 'paused' | 'stopping' | 'completed' | 'error';
 
 export interface GenerationFilters {
@@ -72,6 +69,30 @@ export interface GenerationSliceActions {
 
 export type GenerationSlice = GenerationSliceState & GenerationSliceActions;
 
+export const DEFAULT_GENERATION_DRAFT_PARAMS: GenerationParamsHex = {
+  baseSeedHex: '1',
+  offsetHex: '0',
+  maxAdvances: 50000,
+  maxResults: 15000,
+  version: 'B',
+  encounterType: 0,
+  tid: 1,
+  sid: 2,
+  syncEnabled: false,
+  syncNatureId: 0,
+  stopAtFirstShiny: false,
+  stopOnCap: true,
+  batchSize: 5000,
+  abilityMode: 'none',
+  shinyCharm: false,
+  memoryLink: false,
+  newGame: false,
+  noSave: false,
+};
+
+// 単一インスタンスマネージャ（UI からは slice 経由で操作）
+const manager = new GenerationWorkerManager();
+
 // Zustand set/get 最小シグネチャ (型安全対象: GenerationSlice の部分更新)
 type PartialState<T> = Partial<T> | ((state: T) => Partial<T>);
 type SetFn = (partial: PartialState<GenerationSlice>, replace?: boolean) => void;
@@ -80,25 +101,7 @@ type GetFn<T> = () => T;
 export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): GenerationSlice => ({
   params: null,
   draftParams: {
-    baseSeedHex: '1',
-    offsetHex: '0',
-  // Defaults adjusted (Phase3/4 tuning): expand search window & batch throughput
-  maxAdvances: 50000,
-  maxResults: 15000,
-    version: 'B',
-    encounterType: 0,
-    tid: 1,
-    sid: 2,
-    syncEnabled: false,
-    syncNatureId: 0,
-    stopAtFirstShiny: false,
-    stopOnCap: true,
-  batchSize: 5000, // 固定 (UI 非表示, tuned from 1000 -> 5000 for reduced worker->UI message overhead)
-  abilityMode: 'none',
-  shinyCharm: false,
-  memoryLink: false,
-  newGame: true,
-  noSave: false,
+    ...DEFAULT_GENERATION_DRAFT_PARAMS,
   },
   // 動的Encounter UI用追加状態（WASMパラメータ未連動のため GenerationParamsHex 外）
   encounterField: undefined,
