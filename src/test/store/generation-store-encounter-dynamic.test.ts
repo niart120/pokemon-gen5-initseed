@@ -27,8 +27,8 @@ describe('generation-store dynamic encounter fields', () => {
     expect(store.getState().draftParams.encounterType).toBe(DomainEncounterType.StaticStarter);
     // dynamic fields cleared
     expect(store.getState().encounterField).toBeUndefined();
-    expect(store.getState().encounterSpeciesId).toBeUndefined();
-    expect(store.getState().staticEncounterId).toBeNull();
+  expect(store.getState().encounterSpeciesId).toBeDefined();
+    expect(store.getState().staticEncounterId).not.toBeNull();
   });
 
   it('encounterField sets also clears speciesId (location change)', () => {
@@ -52,5 +52,16 @@ describe('generation-store dynamic encounter fields', () => {
     store.getState().setStaticEncounterId(null);
     expect(store.getState().staticEncounterId).toBeNull();
     expect('staticEncounterId' in store.getState().draftParams).toBe(false);
+  });
+
+  it('requires static selection when validating or committing static encounters', () => {
+    const store = setupStore();
+    store.getState().setDraftParams({ encounterType: DomainEncounterType.StaticLegendary });
+    store.getState().setStaticEncounterId(null);
+    store.getState().validateDraft();
+    expect(store.getState().validationErrors).toContain('static encounter selection required');
+    const result = store.getState().commitParams();
+    expect(result).toBe(false);
+    expect(store.getState().validationErrors).toContain('static encounter selection required');
   });
 });

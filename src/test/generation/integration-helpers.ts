@@ -6,7 +6,10 @@ export interface RunGenerationResult {
   progressSamples: number;
 }
 
-export async function runGenerationScenario(params: GenerationParams, timeoutMs = 7000): Promise<RunGenerationResult> {
+export async function runGenerationScenario(
+  params: GenerationParams,
+  timeoutMs = 7000,
+): Promise<RunGenerationResult> {
   const manager = new GenerationWorkerManager();
   let progressSamples = 0;
   return await new Promise<RunGenerationResult>((resolve, reject) => {

@@ -140,6 +140,7 @@ interface PersistedGenerationMinimal {
   filters: AppStore['filters'];
   metrics: AppStore['metrics'];
   internalFlags: AppStore['internalFlags'];
+  staticEncounterId: AppStore['staticEncounterId'];
 }
 function extractGenerationForPersist(state: AppStore): PersistedGenerationMinimal {
   return {
@@ -151,6 +152,7 @@ function extractGenerationForPersist(state: AppStore): PersistedGenerationMinima
     filters: state.filters,
     metrics: state.metrics,
     internalFlags: state.internalFlags,
+    staticEncounterId: state.staticEncounterId ?? null,
   };
 }
 
@@ -184,6 +186,7 @@ function reviveGenerationMinimal(obj: unknown): Partial<GenerationSlice> {
     internalFlags: normalizedStatus === 'idle'
       ? { receivedAnyBatch: false }
       : (o.internalFlags ?? { receivedAnyBatch: false }),
+    staticEncounterId: o.staticEncounterId ?? null,
   };
 }
 

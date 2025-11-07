@@ -71,17 +71,10 @@ describe('validateGenerationParams', () => {
     const errs = validateGenerationParams(baseParams({ newGame: false, withSave: false }));
     expect(errs.some(e => e.includes('withSave must be true'))).toBe(true);
   });
-  it('requires staticEncounterId for static encounter types', () => {
-    const errs = validateGenerationParams(baseParams({ encounterType: 10 }), { staticEncounterId: null });
-    expect(errs).toContain('static encounter selection required');
-    const ok = validateGenerationParams(baseParams({ encounterType: 10 }), { staticEncounterId: 'legendary-zekrom' });
-    expect(ok).not.toContain('static encounter selection required');
-  });
-  it('accepts static legendary alias and still enforces static selection', () => {
-    const errs = validateGenerationParams(baseParams({ encounterType: 14 }), { staticEncounterId: null });
-    expect(errs).toContain('static encounter selection required');
-    expect(errs.some(e => e.includes('encounterType invalid'))).toBe(false);
-    const ok = validateGenerationParams(baseParams({ encounterType: 14 }), { staticEncounterId: 'legendary-zekrom' });
-    expect(ok).not.toContain('static encounter selection required');
+  it('does not enforce static encounter selection (UI handles separately)', () => {
+    const errs = validateGenerationParams(baseParams({ encounterType: 10 }));
+    expect(errs).not.toContain('static encounter selection required');
+    const legendary = validateGenerationParams(baseParams({ encounterType: 14 }));
+    expect(legendary).not.toContain('static encounter selection required');
   });
 });

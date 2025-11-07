@@ -216,11 +216,7 @@ export function isProgress(msg: GenerationWorkerResponse): msg is Extract<Genera
 // rawLikeToUnresolved は重複となるため削除 (必要なら GenerationResult をそのまま利用)
 
 // --- Validation ---
-export interface GenerationValidationExtras {
-  staticEncounterId?: string | null;
-}
-
-export function validateGenerationParams(p: GenerationParams, extras?: GenerationValidationExtras): string[] {
+export function validateGenerationParams(p: GenerationParams): string[] {
   const errors: string[] = [];
   // 基本範囲
   if (p.maxAdvances < 1 || p.maxAdvances > 1_000_000) errors.push('maxAdvances out of range');
@@ -234,10 +230,6 @@ export function validateGenerationParams(p: GenerationParams, extras?: Generatio
   if (p.offset >= BigInt(p.maxAdvances)) errors.push('offset must be < maxAdvances');
   const allowedEncounter = new Set([0,1,2,3,4,5,6,7,10,11,12,13,14,20]);
   if (!allowedEncounter.has(p.encounterType)) errors.push('encounterType invalid');
-  const staticEncounterId = extras?.staticEncounterId ?? null;
-  if (requiresStaticSelection(p.encounterType) && !staticEncounterId) {
-    errors.push('static encounter selection required');
-  }
   if (!p.newGame && !p.withSave) errors.push('withSave must be true when continuing a game');
   if ((p.version === 'B' || p.version === 'W') && p.memoryLink) errors.push('memoryLink is only available in BW2');
   if (!p.withSave && p.memoryLink) errors.push('memoryLink requires a save file');

@@ -106,7 +106,7 @@ ctx.onmessage = (ev: MessageEvent<GenerationWorkerRequest>) => {
     try {
       switch (msg.type) {
         case 'START_GENERATION':
-          await handleStart(msg.params, msg.staticEncounterId);
+          await handleStart(msg.params);
           break;
         case 'PAUSE':
           handlePause();
@@ -127,9 +127,9 @@ ctx.onmessage = (ev: MessageEvent<GenerationWorkerRequest>) => {
   })();
 };
 
-async function handleStart(params: GenerationParams, staticEncounterId?: string | null) {
+async function handleStart(params: GenerationParams) {
   if (state.progress.status === 'running') return;
-  const errors = validateGenerationParams(params, { staticEncounterId });
+  const errors = validateGenerationParams(params);
   if (errors.length) {
     post({ type: 'ERROR', message: errors.join(', '), category: 'VALIDATION', fatal: false });
     return;

@@ -233,8 +233,13 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     const { draftParams, staticEncounterId } = get();
     // hex → bigint へ一時変換
     const maybe: GenerationParams | null = canBuildFullHex(draftParams) ? hexParamsToGenerationParams(draftParams as GenerationParamsHex) : null;
-    const errors = maybe ? validateGenerationParams(maybe, { staticEncounterId }) : ['incomplete params'];
-    set({ validationErrors: errors });
+    const baseErrors = maybe ? validateGenerationParams(maybe) : ['incomplete params'];
+    const encounterType = maybe?.encounterType ?? (typeof draftParams.encounterType === 'number' ? draftParams.encounterType : undefined);
+    const needsStaticSelection = typeof encounterType === 'number' && requiresStaticSelection(encounterType);
+    const combinedErrors = needsStaticSelection && !staticEncounterId
+      ? [...baseErrors, 'static encounter selection required']
+      : baseErrors;
+    set({ validationErrors: combinedErrors });
   },
   commitParams: () => {
     const { draftParams, staticEncounterId } = get();
@@ -244,9 +249,13 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     }
     const full = hexParamsToGenerationParams(draftParams as GenerationParamsHex);
     const paramsWithLock = resolveShinyLock(full, staticEncounterId);
-    const errors = validateGenerationParams(paramsWithLock, { staticEncounterId });
-    set({ validationErrors: errors });
-    if (errors.length) return false;
+    const baseErrors = validateGenerationParams(paramsWithLock);
+    const needsStaticSelection = requiresStaticSelection(paramsWithLock.encounterType);
+    const combinedErrors = needsStaticSelection && !staticEncounterId
+      ? [...baseErrors, 'static encounter selection required']
+      : baseErrors;
+    set({ validationErrors: combinedErrors });
+    if (combinedErrors.length) return false;
     set({ params: paramsWithLock });
     return true;
   },
@@ -258,7 +267,8 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     const { status } = get();
     if (status === 'running' || status === 'paused' || status === 'starting') return false;
     if (!get().commitParams()) return false;
-    const params = get().params!;
+    const { params } = get();
+    if (!params) return false;
     set({ status: 'starting', progress: null, results: [], lastCompletion: null, error: null, metrics: { startTime: performance.now() } });
     try {
       await manager.start(params);
