@@ -3,7 +3,7 @@ import type { GenerationParams, GenerationProgress, GenerationCompletion, Genera
 import { validateGenerationParams, hexParamsToGenerationParams, generationParamsToHex, requiresStaticSelection } from '@/types/generation';
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
-import { listEncounterSpeciesOptions } from '@/data/encounters/helpers';
+import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
 import type { DomainEncounterType } from '@/types/domain';
 
 export type GenerationStatus = 'idle' | 'starting' | 'running' | 'paused' | 'stopping' | 'completed' | 'error';
@@ -140,17 +140,68 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
 
   setDraftParams: (partial) => {
     set((state: GenerationSlice) => {
-      const nextDraft = { ...state.draftParams, ...partial };
-      if (partial.encounterType !== undefined && partial.encounterType !== state.draftParams.encounterType) {
-        const resetDraft = { ...nextDraft, isShinyLocked: false };
-        return {
-          draftParams: resetDraft,
-          encounterField: undefined,
-          encounterSpeciesId: undefined,
-          staticEncounterId: null,
-        } as Partial<GenerationSlice>;
+      const prevDraft = state.draftParams;
+      const nextDraft = { ...prevDraft, ...partial } as GenerationParamsHex;
+      const version = nextDraft.version ?? 'B';
+      let encounterField = state.encounterField;
+      let encounterSpeciesId = state.encounterSpeciesId;
+      let staticEncounterId = state.staticEncounterId ?? null;
+
+      const encounterTypeChanged = partial.encounterType !== undefined && partial.encounterType !== prevDraft.encounterType;
+      const versionChanged = partial.version !== undefined && partial.version !== prevDraft.version;
+
+      if (encounterTypeChanged || versionChanged) {
+        // 新しい遭遇タイプ・バージョンに合わせて UI 選択肢を整理
+        const encounterTypeValue = nextDraft.encounterType;
+        if (encounterTypeValue === undefined) {
+          encounterField = undefined;
+          encounterSpeciesId = undefined;
+          staticEncounterId = null;
+          nextDraft.isShinyLocked = false;
+        } else {
+          const domainEncounterType = encounterTypeValue as DomainEncounterType;
+          if (isLocationBasedEncounter(domainEncounterType)) {
+            const locations = listEncounterLocations(version, domainEncounterType);
+            const preferred = locations.find(loc => loc.key === encounterField) ?? locations[0];
+            encounterField = preferred?.key;
+            encounterSpeciesId = undefined;
+            staticEncounterId = null;
+            nextDraft.isShinyLocked = false;
+          } else {
+            const speciesOptions = listEncounterSpeciesOptions(version, domainEncounterType);
+            const staticOptions = speciesOptions.filter(opt => opt.kind === 'static');
+            const selected = staticOptions.find(opt => opt.id === staticEncounterId)
+              ?? staticOptions.find(opt => opt.speciesId === encounterSpeciesId)
+              ?? staticOptions[0];
+            if (selected) {
+              staticEncounterId = selected.id;
+              encounterSpeciesId = selected.speciesId;
+              nextDraft.isShinyLocked = Boolean(selected.isShinyLocked);
+            } else {
+              staticEncounterId = null;
+              encounterSpeciesId = undefined;
+              nextDraft.isShinyLocked = false;
+            }
+            encounterField = undefined;
+          }
+        }
       }
-      return { draftParams: nextDraft } as Partial<GenerationSlice>;
+
+      // Memory Link 制約: BW と withSave=false は update 内で解決済みだが、ここでも安全側で補正
+      if (!nextDraft.withSave) {
+        nextDraft.memoryLink = false;
+      }
+      const resolvedVersion = nextDraft.version ?? 'B';
+      if (resolvedVersion === 'B' || resolvedVersion === 'W') {
+        nextDraft.memoryLink = false;
+      }
+
+      return {
+        draftParams: nextDraft,
+        encounterField,
+        encounterSpeciesId,
+        staticEncounterId,
+      } as Partial<GenerationSlice>;
     });
   },
   setEncounterField: (field) => set((state: GenerationSlice) => ({

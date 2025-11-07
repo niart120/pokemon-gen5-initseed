@@ -132,45 +132,9 @@ export const GenerationParamsCard: React.FC = () => {
   const memoryLinkDisabled = disabled || versionIsBw || !withSave;
   const withSaveDisabled = disabled || !newGame;
 
-  React.useEffect(() => {
-    if (memoryLink && memoryLinkDisabled) {
-      setDraftParams({ memoryLink: false });
-    }
-  }, [memoryLink, memoryLinkDisabled, setDraftParams]);
-
-  React.useEffect(() => {
-    if (!isLocationBased || locationOptions.length === 0) return;
-    const hasSelection = encounterField && locationOptions.some(opt => opt.key === encounterField);
-    if (!hasSelection) {
-      setEncounterField(locationOptions[0]?.key);
-    }
-  }, [isLocationBased, locationOptions, encounterField, setEncounterField]);
-
-  React.useEffect(() => {
-    if (isLocationBased) {
-      if (staticEncounterId) setStaticEncounterId(null);
-      if (encounterSpeciesId !== undefined) setEncounterSpeciesId(undefined);
-      return;
-    }
-    const staticOptions = speciesOptions.filter(opt => opt.kind === 'static');
-    if (staticOptions.length === 0) {
-      if (staticEncounterId) setStaticEncounterId(null);
-      if (encounterSpeciesId !== undefined) setEncounterSpeciesId(undefined);
-      return;
-    }
-    const selected = staticOptions.find(opt => opt.id === staticEncounterId)
-      ?? staticOptions.find(opt => opt.speciesId === encounterSpeciesId)
-      ?? staticOptions[0];
-    if (selected.id !== staticEncounterId) {
-      setStaticEncounterId(selected.id);
-    }
-    if (encounterSpeciesId !== selected.speciesId) {
-      setEncounterSpeciesId(selected.speciesId);
-    }
-  }, [isLocationBased, speciesOptions, encounterSpeciesId, staticEncounterId, setEncounterSpeciesId, setStaticEncounterId]);
-
   // フィールド選択に応じて遭遇テーブルと補助データをストアへ供給
   React.useEffect(() => {
+    // Sync derived encounter context into the shared store for downstream selectors and workers.
     const state = useAppStore.getState();
     const resetContext = () => {
       if (state.encounterTable) setEncounterTable(undefined);
