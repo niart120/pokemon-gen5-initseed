@@ -58,7 +58,10 @@ export function resolvePokemon(
   const speciesId = resolveSpeciesId(raw, ctx.encounterTable);
   const level = resolveLevel(raw, ctx.encounterTable);
   const gender = resolveGender(raw, speciesId, ctx.genderRatios);
-  const abilityIndex = resolveAbilityIndex(raw);
+  const abilityIndex = normalizeAbilityIndex(
+    speciesId,
+    resolveAbilityIndex(raw)
+  );
 
   return {
     seed: raw.seed,
@@ -184,6 +187,30 @@ function resolveAbilityIndex(raw: UnresolvedPokemonData): 0 | 1 | 2 | undefined 
   return undefined;
 }
 
+function normalizeAbilityIndex(
+  speciesId: number | undefined,
+  abilityIndex: 0 | 1 | 2 | undefined
+): 0 | 1 | 2 | undefined {
+  if (speciesId == null || abilityIndex == null) return abilityIndex;
+  const species = getGeneratedSpeciesById(speciesId);
+  if (!species) return abilityIndex;
+
+  const { ability1, ability2, hidden } = species.abilities;
+
+  // Align ability index with available slots so UI filters remain consistent.
+  if (abilityIndex === 0) return ability1 ? 0 : undefined;
+  if (abilityIndex === 1) {
+    if (ability2) return 1;
+    return ability1 ? 0 : undefined;
+  }
+  if (abilityIndex === 2) {
+    if (hidden) return 2;
+    if (ability2) return 1;
+    return ability1 ? 0 : undefined;
+  }
+  return abilityIndex;
+}
+
 function resolveSpeciesIndexSafe(
   raw: UnresolvedPokemonData,
   table: EncounterTable
@@ -224,7 +251,7 @@ function selectAbilityByIndex(
   abilities: GeneratedAbilities
 ): { key: string; names: { en: string; ja: string } } | null {
   if (idx === 0) return abilities.ability1;
-  if (idx === 1) return abilities.ability2;
-  if (idx === 2) return abilities.hidden;
+  if (idx === 1) return abilities.ability2 ?? abilities.ability1;
+  if (idx === 2) return abilities.hidden ?? abilities.ability2 ?? abilities.ability1;
   return null;
 }
