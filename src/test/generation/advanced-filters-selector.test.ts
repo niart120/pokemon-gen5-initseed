@@ -18,7 +18,7 @@ const results: GenerationResult[] = [
   // encounter_slot_value 0 -> species 495, 1 -> species 498
   makeResult(10, 10n, 0x10000001, 0, 0, 0, 0x00, 0, 0n), // slot0 species 495 female (0x00 < 128)
   makeResult(11, 11n, 0x10010002, 0, 0, 1, 0xFF, 1, 0n), // slot1 species 498 male   (0xFF >= 32)
-  makeResult(12, 12n, 0x10020003, 0, 0, 0, 0x80, 0, 0n), // slot0 species 495 male   (0x80 >= 128)
+  makeResult(12, 12n, 0x10020003, 0, 0, 2, 0x80, 0, 0n), // slot0 species 495 male hidden ability (slot 2)
 ];
 
 // Fake encounter table with two slots mapping to species 495 & 498 and level range 10-12
@@ -62,10 +62,10 @@ describe('advanced resolved filters', () => {
     expect(adv).toEqual([10,12]);
   });
 
-  it('filters by speciesIds + abilityIndices (species 498 ability slot 1)', () => {
-    useAppStore.setState(s => ({ filters: { ...s.filters, speciesIds: [498], abilityIndices: [1] } }));
+  it('filters by speciesIds + abilityIndices (hidden ability only)', () => {
+    useAppStore.setState(s => ({ filters: { ...s.filters, speciesIds: [495], abilityIndices: [2] } }));
     const out = selectFilteredSortedResults(useAppStore.getState() as any);
-    expect(out.map(r=>r.advance)).toEqual([11]);
+    expect(out.map(r=>r.advance)).toEqual([12]);
   });
 
   it('filters by speciesIds + genders (male only)', () => {

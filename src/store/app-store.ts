@@ -8,8 +8,11 @@ import { DEMO_TARGET_SEEDS } from '../data/default-seeds';
 
 import type { GenerationSlice } from './generation-store';
 import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS } from './generation-store';
+import { DEFAULT_LOCALE } from '@/types/i18n';
 
 interface AppStore extends GenerationSlice {
+  locale: 'ja' | 'en';
+  setLocale: (locale: 'ja' | 'en') => void;
   // Search conditions
   searchConditions: SearchConditions;
   setSearchConditions: (conditions: Partial<SearchConditions>) => void;
@@ -202,7 +205,9 @@ export const useAppStore = create<AppStore>()(
   persist<AppStore>(
     (set, get) => ({
       // Generation slice 注入
-      ...createGenerationSlice(set, get),
+  ...createGenerationSlice(set, get),
+  locale: DEFAULT_LOCALE,
+      setLocale: (locale) => set({ locale }),
       // 元々の AppStore フィールド
       // Search conditions
       searchConditions: defaultSearchConditions,
@@ -379,6 +384,7 @@ export const useAppStore = create<AppStore>()(
         } as unknown as Parameters<typeof persist<AppStore>>[1]['storage'];
       })(),
       partialize: (state: AppStore) => ({
+        locale: state.locale,
         searchConditions: state.searchConditions,
         targetSeeds: state.targetSeeds,
         parallelSearchSettings: state.parallelSearchSettings,

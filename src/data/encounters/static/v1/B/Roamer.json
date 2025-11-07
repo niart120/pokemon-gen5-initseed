@@ -9,9 +9,9 @@
   "entries": [
     {
       "id": "roamer-thundurus",
-      "displayName": "ボルトロス",
       "speciesId": 642,
-      "level": 40
+      "level": 40,
+      "displayNameKey": "roamer-thundurus"
     }
   ]
 }

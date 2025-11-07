@@ -18,6 +18,11 @@ import { load as loadHtml } from 'cheerio';
 // 未知のJP種名を収集するセット（実行中のみ）
 let MISSING_SPECIES = new Set();
 
+const I18N_DIR = path.resolve('src/data/encounters/i18n');
+const DISPLAY_NAME_DICTIONARY_PATH = path.join(I18N_DIR, 'display-names.json');
+
+let displayNameDictionary = { locations: {}, static: {}, categories: {}, types: {} };
+
 // ターゲットとするメソッド（濃い草むらはスコープ外）
 const METHODS = [
   'Normal', // 草むら, 洞窟
@@ -33,6 +38,51 @@ const VERSIONS = ['B', 'W', 'B2', 'W2'];
 
 function normalizeLocationKey(location) {
   return location.trim().replace(/[\u3000\s]+/g, '').replace(/[‐‑‒–—−\-_.]/g, '');
+}
+
+async function loadDisplayNameDictionary() {
+  try {
+    const text = await fs.readFile(DISPLAY_NAME_DICTIONARY_PATH, 'utf8');
+    const json = JSON.parse(text);
+    return {
+      locations: json.locations ?? {},
+      static: json.static ?? {},
+      categories: json.categories ?? {},
+      types: json.types ?? {},
+    };
+  } catch {
+    return { locations: {}, static: {}, categories: {}, types: {} };
+  }
+}
+
+function upsertDictionaryEntry(bucket, key, jaValue, enValue) {
+  if (!key) return;
+  if (!bucket[key]) {
+    bucket[key] = {};
+  }
+  const entry = bucket[key];
+  if (jaValue && !entry.ja) entry.ja = jaValue;
+  if (enValue && !entry.en) entry.en = enValue;
+}
+
+function upsertLocationDisplayName(key, displayName) {
+  const ja = displayName || key;
+  upsertDictionaryEntry(displayNameDictionary.locations, key, ja, ja);
+}
+
+function sortRecord(record) {
+  return Object.fromEntries(Object.keys(record).sort().map(k => [k, record[k]]));
+}
+
+async function persistDisplayNameDictionary() {
+  const sorted = {
+    locations: sortRecord(displayNameDictionary.locations),
+    static: sortRecord(displayNameDictionary.static),
+    categories: sortRecord(displayNameDictionary.categories),
+    types: sortRecord(displayNameDictionary.types),
+  };
+  await ensureDir(I18N_DIR);
+  await fs.writeFile(DISPLAY_NAME_DICTIONARY_PATH, JSON.stringify(sorted, null, 2), 'utf8');
 }
 
 function todayISO() {
@@ -477,7 +527,9 @@ function parseWaterEncounterPage(html, { version, method, url, aliasJa }) {
       if (limitToOne) break;
     }
     if (mergedSlots.length) {
-      locations[displayName] = { displayName, slots: mergedSlots };
+      const normalizedKey = normalizeLocationKey(displayName);
+      locations[normalizedKey] = { displayNameKey: normalizedKey, slots: mergedSlots };
+      upsertLocationDisplayName(normalizedKey, displayName);
     }
   }
 
@@ -528,7 +580,9 @@ function parseEncounterPage(html, { version, method, url, aliasJa }) {
     const resolved = resolveLocationGroup(baseName, rows, { version, method, suffixRules });
     for (const entry of resolved) {
       if (!entry.displayName || !entry.slots?.length) continue;
-      locations[entry.displayName] = { displayName: entry.displayName, slots: entry.slots };
+      const normalizedKey = normalizeLocationKey(entry.displayName);
+      locations[normalizedKey] = { displayNameKey: normalizedKey, slots: entry.slots };
+      upsertLocationDisplayName(normalizedKey, entry.displayName);
     }
   }
 
@@ -587,6 +641,8 @@ function parseArgs() {
 }
 
 async function main() {
+  displayNameDictionary = await loadDisplayNameDictionary();
+
   const args = parseArgs();
   const versions = args.version ? [args.version] : VERSIONS;
   const methods = args.method ? [args.method] : METHODS;
@@ -600,6 +656,8 @@ async function main() {
       }
     }
   }
+
+  await persistDisplayNameDictionary();
 }
 
 main().catch((e) => {

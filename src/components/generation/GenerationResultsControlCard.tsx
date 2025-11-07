@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { FunnelSimple, DownloadSimple, Trash, ArrowsDownUp } from '@phosphor-icons/react';
 import { getGeneratedSpeciesById } from '@/data/species/generated';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
+import { useLocale } from '@/lib/i18n/locale-context';
 
 // === Precomputed species options (Gen5: 1..649) ===
 // 1回だけ構築し再利用。検索で使う正規化済み文字列を保持。
@@ -29,6 +30,7 @@ const ALL_SPECIES_OPTIONS: SpeciesOptionEntry[] = (() => {
 })();
 
 export const GenerationResultsControlCard: React.FC = () => {
+  const locale = useLocale();
   // NOTE(perf): 以前は useAppStore() 全体取得で encounterField 変更時など不要再レンダーが発生していたため細粒度購読へ分割
   const filters = useAppStore(s => s.filters);
   const applyFilters = useAppStore(s => s.applyFilters);
@@ -46,7 +48,10 @@ export const GenerationResultsControlCard: React.FC = () => {
     const next = selectedSpeciesIds.filter(s=>s!==id);
     applyFilters({ speciesIds: next.length? next: undefined, abilityIndices: undefined, genders: undefined });
   };
-  const speciesSelectItems = useMemo(()=> ALL_SPECIES_OPTIONS.map(o=>({ value:o.id.toString(), label:o.labelJa })), []);
+  const speciesSelectItems = useMemo(() => ALL_SPECIES_OPTIONS.map(o => ({
+    value: o.id.toString(),
+    label: locale === 'ja' ? o.labelJa : o.labelEn,
+  })), [locale]);
   // Abilities derived from selected species (union of indices that exist)
   const availableAbilityIndices: (0|1|2)[] = useMemo(() => {
     if (!selectedSpeciesIds.length) return [];
@@ -196,8 +201,17 @@ export const GenerationResultsControlCard: React.FC = () => {
                   {selectedSpeciesIds.length === 0 && <span className="text-[10px] text-muted-foreground">none</span>}
                   {selectedSpeciesIds.map(id => {
                     const s = getGeneratedSpeciesById(id);
+                    const displayName = locale === 'ja' ? (s?.names.ja || String(id)) : (s?.names.en || String(id));
                     return (
-                      <button key={id} type="button" onClick={()=>removeSpecies(id)} className="text-[10px] px-1 py-[2px] rounded bg-secondary hover:bg-secondary/70" aria-label={`Remove ${s?.names.ja || id}`}>{s?.names.ja || id} ×</button>
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={()=>removeSpecies(id)}
+                        className="text-[10px] px-1 py-[2px] rounded bg-secondary hover:bg-secondary/70"
+                        aria-label={`Remove ${displayName}`}
+                      >
+                        {displayName} ×
+                      </button>
                     );
                   })}
                 </div>

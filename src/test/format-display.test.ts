@@ -31,23 +31,27 @@ describe('format-display', () => {
 
   describe('natureName', () => {
     it('maps valid ids within range', () => {
-      expect(natureName(0)).toBe(DomainNatureNames[0]);
-      expect(natureName(24)).toBe(DomainNatureNames[24]);
+      expect(natureName(0)).toBe(DomainNatureNames.en[0]);
+      expect(natureName(24)).toBe(DomainNatureNames.en[24]);
+      expect(natureName(0, 'ja')).toBe(DomainNatureNames.ja[0]);
     });
     it('returns Unknown for out-of-range', () => {
       expect(natureName(-1)).toBe('Unknown');
       expect(natureName(999)).toBe('Unknown');
+      expect(natureName(999, 'ja')).toBe('不明');
     });
   });
 
   describe('shinyLabel', () => {
     it('maps shiny types', () => {
-      expect(shinyLabel(DomainShinyType.Normal)).toBe('No');
-      expect(shinyLabel(DomainShinyType.Square)).toBe('Square');
-      expect(shinyLabel(DomainShinyType.Star)).toBe('Star');
+      expect(shinyLabel(DomainShinyType.Normal)).toBe('-');
+      expect(shinyLabel(DomainShinyType.Square)).toBe('◇');
+      expect(shinyLabel(DomainShinyType.Star)).toBe('☆');
+      expect(shinyLabel(DomainShinyType.Star, 'ja')).toBe('☆');
     });
     it('returns Unknown for unsupported', () => {
       expect(shinyLabel(9999)).toBe('Unknown');
+      expect(shinyLabel(9999, 'ja')).toBe('Unknown');
     });
   });
 
@@ -74,8 +78,8 @@ describe('format-display', () => {
       expect(adapted).toEqual({
         advance: 42,
         pidHex: '1234ABCD',
-        natureName: DomainNatureNames[5],
-        shinyLabel: 'Square',
+        natureName: DomainNatureNames.en[5],
+        shinyLabel: '◇',
       });
     });
     it('handles out-of-range nature & unknown shiny', () => {
@@ -86,7 +90,17 @@ describe('format-display', () => {
         shiny_type: 999,
       } as any);
       expect(adapted.natureName).toBe('Unknown');
-      expect(['No','Square','Star','Unknown']).toContain(adapted.shinyLabel);
+      expect(['-','◇','☆','Unknown']).toContain(adapted.shinyLabel);
+    });
+    it('respects locale argument', () => {
+      const adapted = adaptGenerationResultDisplay({
+        advance: 7,
+        pid: 0xABCD,
+        nature: 1,
+        shiny_type: DomainShinyType.Star,
+      } as any, 'ja');
+      expect(adapted.natureName).toBe(DomainNatureNames.ja[1]);
+      expect(adapted.shinyLabel).toBe('☆');
     });
   });
 });

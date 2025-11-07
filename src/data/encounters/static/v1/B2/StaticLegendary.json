@@ -9,95 +9,95 @@
   "entries": [
     {
       "id": "route13-cobalion",
-      "displayName": "コバルオン",
       "speciesId": 638,
-      "level": 45
+      "level": 45,
+      "displayNameKey": "route13-cobalion"
     },
     {
       "id": "route22-terrakion",
-      "displayName": "テラキオン",
       "speciesId": 639,
-      "level": 45
+      "level": 45,
+      "displayNameKey": "route22-terrakion"
     },
     {
       "id": "route11-virizion",
-      "displayName": "ビリジオン",
       "speciesId": 640,
-      "level": 45
+      "level": 45,
+      "displayNameKey": "route11-virizion"
     },
     {
       "id": "dragonspiral-zekrom",
-      "displayName": "ゼクロム",
       "speciesId": 644,
       "level": 70,
-      "isShinyLocked": true
+      "isShinyLocked": true,
+      "displayNameKey": "dragonspiral-zekrom"
     },
     {
       "id": "giantchasm-kyurem",
-      "displayName": "キュレム",
       "speciesId": 646,
       "level": 70,
-      "isShinyLocked": true
+      "isShinyLocked": true,
+      "displayNameKey": "giantchasm-kyurem"
     },
     {
       "id": "dreamyard-latios",
-      "displayName": "ラティオス",
       "speciesId": 381,
-      "level": 68
+      "level": 68,
+      "displayNameKey": "dreamyard-latios"
     },
     {
       "id": "underground-ruins-regirock",
-      "displayName": "レジロック",
       "speciesId": 377,
-      "level": 65
+      "level": 65,
+      "displayNameKey": "underground-ruins-regirock"
     },
     {
       "id": "underground-ruins-registeel",
-      "displayName": "レジスチル",
       "speciesId": 379,
-      "level": 65
+      "level": 65,
+      "displayNameKey": "underground-ruins-registeel"
     },
     {
       "id": "underground-ruins-regice",
-      "displayName": "レジアイス",
       "speciesId": 378,
-      "level": 65
+      "level": 65,
+      "displayNameKey": "underground-ruins-regice"
     },
     {
       "id": "twistmountain-regigigas",
-      "displayName": "レジギガス",
       "speciesId": 486,
-      "level": 68
+      "level": 68,
+      "displayNameKey": "twistmountain-regigigas"
     },
     {
       "id": "nacrene-uxie",
-      "displayName": "ユクシー",
       "speciesId": 480,
-      "level": 65
+      "level": 65,
+      "displayNameKey": "nacrene-uxie"
     },
     {
       "id": "celestialtower-mesprit",
-      "displayName": "エムリット",
       "speciesId": 481,
-      "level": 65
+      "level": 65,
+      "displayNameKey": "celestialtower-mesprit"
     },
     {
       "id": "route23-azelf",
-      "displayName": "アグノム",
       "speciesId": 482,
-      "level": 65
+      "level": 65,
+      "displayNameKey": "route23-azelf"
     },
     {
       "id": "marvelousbridge-cresselia",
-      "displayName": "クレセリア",
       "speciesId": 488,
-      "level": 68
+      "level": 68,
+      "displayNameKey": "marvelousbridge-cresselia"
     },
     {
       "id": "reversalmountain-heatran",
-      "displayName": "ヒードラン",
       "speciesId": 485,
-      "level": 68
+      "level": 68,
+      "displayNameKey": "reversalmountain-heatran"
     }
   ]
 }

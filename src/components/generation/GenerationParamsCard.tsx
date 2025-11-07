@@ -9,6 +9,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { useAppStore } from '@/store/app-store';
 import type { GenerationParamsHex } from '@/types/generation';
 import { Gear } from '@phosphor-icons/react';
+import { natureName } from '@/lib/utils/format-display';
 import {
   DomainEncounterType,
   getDomainEncounterTypeName,
@@ -16,11 +17,14 @@ import {
   getDomainEncounterTypeCategory,
   listDomainEncounterTypeNamesByCategory,
   getDomainEncounterTypeDisplayName,
+  getDomainEncounterCategoryDisplayName,
   type DomainEncounterTypeCategoryKey,
 } from '@/types/domain';
 import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
+import { resolveEncounterLocationName, resolveStaticEncounterName } from '@/data/encounters/i18n/display-name-resolver';
 import { buildResolutionContext, enrichForSpecies } from '@/lib/initialization/build-resolution-context';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
+import { useLocale } from '@/lib/i18n/locale-context';
 
 // Simple hex normalization guard
 function isHexLike(v: string) { return /^(0x)?[0-9a-fA-F]*$/.test(v.trim()); }
@@ -40,7 +44,10 @@ const DEFAULT_ENCOUNTER_CATEGORY: DomainEncounterTypeCategoryKey = (
   DomainEncounterCategoryOptions.find(option => !option.disabled)?.key ?? 'wild'
 ) as DomainEncounterTypeCategoryKey;
 
+const SYNC_NATURE_IDS = Array.from({ length: 25 }, (_, id) => id);
+
 export const GenerationParamsCard: React.FC = () => {
+  const locale = useLocale();
   // NOTE(perf): 必要項目のみ個別購読し encounterField 変更時の全体再レンダーを抑制
   const draftParams = useAppStore(s=>s.draftParams);
   const status = useAppStore(s=>s.status);
@@ -94,6 +101,13 @@ export const GenerationParamsCard: React.FC = () => {
     if (encounterType == null || !isLocationBased) return [];
     return listEncounterLocations(version, encounterType);
   }, [version, encounterType, isLocationBased]);
+  const resolvedLocationOptions = React.useMemo(() => {
+    if (!locationOptions.length) return [];
+    return locationOptions.map(option => ({
+      ...option,
+      label: resolveEncounterLocationName(option.displayNameKey, locale, option.displayNameKey),
+    }));
+  }, [locationOptions, locale]);
   const speciesOptions = React.useMemo(()=> {
     if (encounterType == null) return [];
     if (isLocationBased) {
@@ -103,14 +117,27 @@ export const GenerationParamsCard: React.FC = () => {
     return listEncounterSpeciesOptions(version, encounterType);
   }, [version, encounterType, isLocationBased, encounterField]);
   const staticOptions = React.useMemo(() => speciesOptions.filter(opt => opt.kind === 'static'), [speciesOptions]);
+  const staticOptionsWithLabels = React.useMemo(() => {
+    if (!staticOptions.length) return [];
+    return staticOptions.map(option => ({
+      ...option,
+      label: resolveStaticEncounterName(option.displayNameKey, locale, option.displayNameKey),
+    }));
+  }, [staticOptions, locale]);
   const encounterTypeOptions = React.useMemo(() => {
     const names = listDomainEncounterTypeNamesByCategory(encounterCategory);
     return names.map(name => ({
       name,
       value: (DomainEncounterType as Record<string, number>)[name],
-      label: getDomainEncounterTypeDisplayName(name),
+      label: getDomainEncounterTypeDisplayName(name, locale),
     }));
-  }, [encounterCategory]);
+  }, [encounterCategory, locale]);
+  const encounterCategoryOptions = React.useMemo(() => {
+    return DomainEncounterCategoryOptions.map(option => ({
+      ...option,
+      label: getDomainEncounterCategoryDisplayName(option.key, locale),
+    }));
+  }, [locale]);
   const onEncounterCategoryChange = (categoryKey: DomainEncounterTypeCategoryKey) => {
     const names = listDomainEncounterTypeNamesByCategory(categoryKey);
     if (!names.length) return;
@@ -124,6 +151,9 @@ export const GenerationParamsCard: React.FC = () => {
   const locationSelectPlaceholder = locationOptions.length ? 'Select...' : 'N/A';
   const staticSelectPlaceholder = staticOptions.length ? 'Select species' : 'Data unavailable';
   const { isStack } = useResponsiveLayout();
+  const syncNatureOptions = React.useMemo(() => {
+    return SYNC_NATURE_IDS.map(id => ({ id, label: natureName(id, locale) }));
+  }, [locale]);
   const newGame = hexDraft.newGame ?? false;
   const withSave = hexDraft.withSave ?? true;
   const withSaveChecked = newGame ? withSave : false;
@@ -311,7 +341,7 @@ export const GenerationParamsCard: React.FC = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {DomainEncounterCategoryOptions.map(option => (
+                  {encounterCategoryOptions.map(option => (
                     <SelectItem key={option.key} value={option.key} disabled={option.disabled}>{option.label}</SelectItem>
                   ))}
                 </SelectContent>
@@ -342,8 +372,8 @@ export const GenerationParamsCard: React.FC = () => {
                     <SelectValue placeholder={locationSelectPlaceholder} className="!line-clamp-2" />
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
-                    {locationOptions.map(loc => (
-                      <SelectItem key={loc.key} value={loc.key} className="whitespace-normal break-words text-left">{loc.displayName}</SelectItem>
+                    {resolvedLocationOptions.map(loc => (
+                      <SelectItem key={loc.key} value={loc.key} className="whitespace-normal break-words text-left">{loc.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -370,11 +400,11 @@ export const GenerationParamsCard: React.FC = () => {
                     <SelectValue placeholder={staticSelectPlaceholder} className="!line-clamp-2" />
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
-                    {staticOptions.length === 0 ? (
+                    {staticOptionsWithLabels.length === 0 ? (
                       <SelectItem value="__coming-soon" disabled>Data not yet available</SelectItem>
-                    ) : staticOptions.map(sp => (
+                    ) : staticOptionsWithLabels.map(sp => (
                       <SelectItem key={sp.id} value={sp.id} className="text-left">
-                        {`${sp.displayName} (Lv.${sp.level})`}
+                        {`${sp.label} (Lv.${sp.level})`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -401,7 +431,9 @@ export const GenerationParamsCard: React.FC = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
-                  {Array.from({length:25},(_,i)=>i).map(id=> <SelectItem key={id} value={id.toString()}>{id}</SelectItem>)}
+                  {syncNatureOptions.map(option => (
+                    <SelectItem key={option.id} value={option.id.toString()}>{option.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

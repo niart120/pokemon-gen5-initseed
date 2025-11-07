@@ -9,9 +9,9 @@
   "entries": [
     {
       "id": "roamer-tornadus",
-      "displayName": "トルネロス",
       "speciesId": 641,
-      "level": 40
+      "level": 40,
+      "displayNameKey": "roamer-tornadus"
     }
   ]
 }

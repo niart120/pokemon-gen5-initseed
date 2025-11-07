@@ -40,9 +40,11 @@
 5. 拡張 (E 系) は計測結果で優先度再評価
 
 ## 現在状態メモ
-- Worker: batchIndex/cumulativeResults OK, early termination/shiny 未実装
-- Store: results append 基本実装済 (maxResults guard 要再確認)
-- UI: タブ/フォーム骨組み未着手
 
+
+## 追加タスク (2025-11-08)
+- [ ] Encounter JSON スキーマを `displayNameKey` + 翻訳辞書方式へ更新し、関連型/ローダー/スクリプトを整備する。
+- [ ] 翻訳辞書 (location/static) の初期データを用意し、UI 側でロケールに応じて displayName を解決する仕組みを追加する。
+- [ ] データ生成スクリプトとテストを新スキーマに対応させ、既存 JSON を安全に移行する。
 
 更新日時: 2025-08-12 (Revised)

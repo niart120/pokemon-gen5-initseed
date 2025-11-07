@@ -9,23 +9,23 @@
   "entries": [
     {
       "id": "dreamyard-musharna",
-      "displayName": "ムシャーナ",
       "speciesId": 518,
       "level": 50,
-      "isHiddenAbility": true
+      "isHiddenAbility": true,
+      "displayNameKey": "dreamyard-musharna"
     },
     {
       "id": "desertresort-darmanitan-statue",
-      "displayName": "ヒヒダルマ",
       "speciesId": 555,
       "level": 35,
-      "isHiddenAbility": true
+      "isHiddenAbility": true,
+      "displayNameKey": "desertresort-darmanitan-statue"
     },
     {
       "id": "reliccastle-volcarona",
-      "displayName": "ウルガモス",
       "speciesId": 637,
-      "level": 70
+      "level": 70,
+      "displayNameKey": "reliccastle-volcarona"
     }
   ]
 }

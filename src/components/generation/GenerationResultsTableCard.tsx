@@ -6,18 +6,20 @@ import { useAppStore } from '@/store/app-store';
 import { selectFilteredSortedResults, selectUiReadyResults, type GenerationSlice } from '@/store/generation-store';
 import { pidHex, natureName, shinyLabel } from '@/lib/utils/format-display';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
+import { useLocale } from '@/lib/i18n/locale-context';
 
 interface GenerationResultsTableCardProps { parentManagesScroll?: boolean; }
 type AppStoreState = ReturnType<typeof useAppStore.getState>;
 export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProps> = ({ parentManagesScroll }) => {
+  const locale = useLocale();
   // 元の生結果 (フィルタ/ソート適用済み GenerationResult)
   const rawResults = useAppStore(selectFilteredSortedResults);
   const total = useAppStore(s => s.results.length);
-  // UI表示用解決結果 (locale: 今は固定 'ja')
+  // UI表示用解決結果（ロケール依存）
   const uiResults = useAppStore((state: AppStoreState) => {
     const generationState: GenerationSlice = state;
     const overrideState: GenerationSlice = { ...generationState, results: rawResults };
-    return selectUiReadyResults(overrideState, 'ja');
+    return selectUiReadyResults(overrideState, locale);
   });
   const { isStack } = useResponsiveLayout();
   // スクロール方針
@@ -50,11 +52,11 @@ export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProp
                   <td className="px-2 py-1 font-mono tabular-nums">{r.advance}</td>
                   <td className="px-2 py-1 truncate max-w-[120px]" title={u?.speciesName || 'Unknown'}>{u?.speciesName || 'Unknown'}</td>
                   <td className="px-2 py-1 font-mono whitespace-nowrap">{pidHex(r.pid)}</td>
-                  <td className="px-2 py-1 whitespace-nowrap">{natureName(r.nature)}</td>
+                  <td className="px-2 py-1 whitespace-nowrap">{natureName(r.nature, locale)}</td>
                   <td className="px-2 py-1 truncate max-w-[120px] hidden md:table-cell" title={u?.abilityName || 'Unknown'}>{u?.abilityName || 'Unknown'}</td>
                   <td className="px-2 py-1">{u?.gender || '?'}</td>
                   <td className="px-2 py-1 tabular-nums">{u?.level ?? ''}</td>
-                  <td className="px-2 py-1">{shinyLabel(r.shiny_type)}</td>
+                  <td className="px-2 py-1">{shinyLabel(r.shiny_type, locale)}</td>
                 </tr>
               );
             })}

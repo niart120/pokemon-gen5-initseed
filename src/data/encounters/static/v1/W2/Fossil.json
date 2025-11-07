@@ -9,57 +9,57 @@
   "entries": [
     {
       "id": "fossil-omanyte",
-      "displayName": "オムナイト",
       "speciesId": 138,
-      "level": 25
+      "level": 25,
+      "displayNameKey": "fossil-omanyte"
     },
     {
       "id": "fossil-kabuto",
-      "displayName": "カブト",
       "speciesId": 140,
-      "level": 25
+      "level": 25,
+      "displayNameKey": "fossil-kabuto"
     },
     {
       "id": "fossil-aerodactyl",
-      "displayName": "プテラ",
       "speciesId": 142,
-      "level": 25
+      "level": 25,
+      "displayNameKey": "fossil-aerodactyl"
     },
     {
       "id": "fossil-lileep",
-      "displayName": "リリーラ",
       "speciesId": 345,
-      "level": 25
+      "level": 25,
+      "displayNameKey": "fossil-lileep"
     },
     {
       "id": "fossil-anorith",
-      "displayName": "アノプス",
       "speciesId": 347,
-      "level": 25
+      "level": 25,
+      "displayNameKey": "fossil-anorith"
     },
     {
       "id": "fossil-cranidos",
-      "displayName": "ズガイドス",
       "speciesId": 408,
-      "level": 25
+      "level": 25,
+      "displayNameKey": "fossil-cranidos"
     },
     {
       "id": "fossil-shieldon",
-      "displayName": "タテトプス",
       "speciesId": 410,
-      "level": 25
+      "level": 25,
+      "displayNameKey": "fossil-shieldon"
     },
     {
       "id": "fossil-tirtouga",
-      "displayName": "プロトーガ",
       "speciesId": 564,
-      "level": 25
+      "level": 25,
+      "displayNameKey": "fossil-tirtouga"
     },
     {
       "id": "fossil-archen",
-      "displayName": "アーケン",
       "speciesId": 566,
-      "level": 25
+      "level": 25,
+      "displayNameKey": "fossil-archen"
     }
   ]
 }

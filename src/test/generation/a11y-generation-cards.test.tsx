@@ -5,6 +5,7 @@ import { axe, toHaveNoViolations } from 'jest-axe';
 import { GenerationParamsCard } from '@/components/generation/GenerationParamsCard';
 import { GenerationResultsControlCard } from '@/components/generation/GenerationResultsControlCard';
 import { GenerationResultsTableCard } from '@/components/generation/GenerationResultsTableCard';
+import { LocaleProvider } from '@/lib/i18n/locale-context';
 
 expect.extend(toHaveNoViolations);
 declare module 'vitest' {
@@ -15,6 +16,10 @@ declare module 'vitest' {
 
 // シンプルなストアモック: UI要求される最小のshapeのみ
 const baseState = {
+  locale: 'ja' as 'ja' | 'en',
+  setLocale: vi.fn((value: 'ja' | 'en') => {
+    baseState.locale = value;
+  }),
   validateDraft: vi.fn(),
   validationErrors: [] as string[],
   startGeneration: vi.fn(async () => {}),
@@ -84,11 +89,13 @@ vi.mock('@/store/generation-store', () => ({
 describe('Generation cards accessibility', () => {
   it('has no axe violations (core cards)', async () => {
     const { container } = render(
-      <div>
-        <GenerationParamsCard />
-        <GenerationResultsControlCard />
-        <GenerationResultsTableCard />
-      </div>
+      <LocaleProvider>
+        <div>
+          <GenerationParamsCard />
+          <GenerationResultsControlCard />
+          <GenerationResultsTableCard />
+        </div>
+      </LocaleProvider>
     );
     const results = await axe(container, { rules: { region: { enabled: true } } });
     expect(results).toHaveNoViolations();

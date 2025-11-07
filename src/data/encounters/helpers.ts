@@ -1,11 +1,11 @@
 import type { ROMVersion } from '@/types/rom';
 import type { DomainEncounterType } from '@/types/domain';
-import { DomainEncounterType as EncounterTypeEnum, DomainEncounterTypeNames } from '@/types/domain';
+import { DomainEncounterType as EncounterTypeEnum } from '@/types/domain';
 import { listRegistryLocations, getEncounterFromRegistry, listStaticEncounterEntries } from './loader';
 
 export interface EncounterLocationOption {
-  key: string; // normalized key
-  displayName: string; // original display name
+  key: string; // normalized key used in registry
+  displayNameKey: string;
 }
 
 export type EncounterSpeciesOption =
@@ -21,7 +21,7 @@ export type EncounterSpeciesOption =
   | {
       kind: 'static';
       id: string;
-      displayName: string;
+  displayNameKey: string;
       speciesId: number;
       level: number;
       gender?: 'male' | 'female';
@@ -60,7 +60,7 @@ export function listEncounterLocations(version: ROMVersion, method: DomainEncoun
   const key = locKey(version, method);
   const hit = cacheLocations.get(key);
   if (hit) return hit;
-  const rows = listRegistryLocations(version, method).map(r => ({ key: r.key, displayName: r.displayName }));
+  const rows = listRegistryLocations(version, method).map(r => ({ key: r.key, displayNameKey: r.displayNameKey }));
   cacheLocations.set(key, rows);
   return rows;
 }
@@ -101,7 +101,7 @@ export function listEncounterSpeciesOptions(version: ROMVersion, method: DomainE
     rows = entries.map(entry => ({
       kind: 'static',
       id: entry.id,
-      displayName: entry.displayName,
+      displayNameKey: entry.displayNameKey,
       speciesId: entry.speciesId,
       level: entry.level,
       gender: entry.gender,

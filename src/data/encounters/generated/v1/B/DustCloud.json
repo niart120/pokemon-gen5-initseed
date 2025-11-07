@@ -7,8 +7,8 @@
     "retrievedAt": "2025-11-06"
   },
   "locations": {
-    "電気石の洞穴 1F": {
-      "displayName": "電気石の洞穴 1F",
+    "電気石の洞穴1F": {
+      "displayNameKey": "電気石の洞穴1F",
       "slots": [
         {
           "speciesId": 529,
@@ -109,7 +109,7 @@
       ]
     },
     "ネジ山(春)": {
-      "displayName": "ネジ山(春)",
+      "displayNameKey": "ネジ山(春)",
       "slots": [
         {
           "speciesId": 529,
@@ -210,7 +210,7 @@
       ]
     },
     "ネジ山(夏)": {
-      "displayName": "ネジ山(夏)",
+      "displayNameKey": "ネジ山(夏)",
       "slots": [
         {
           "speciesId": 529,
@@ -311,7 +311,7 @@
       ]
     },
     "ネジ山(秋)": {
-      "displayName": "ネジ山(秋)",
+      "displayNameKey": "ネジ山(秋)",
       "slots": [
         {
           "speciesId": 529,
@@ -412,7 +412,7 @@
       ]
     },
     "ネジ山(冬)": {
-      "displayName": "ネジ山(冬)",
+      "displayNameKey": "ネジ山(冬)",
       "slots": [
         {
           "speciesId": 529,
@@ -512,8 +512,8 @@
         }
       ]
     },
-    "チャンピオンロード 外部": {
-      "displayName": "チャンピオンロード 外部",
+    "チャンピオンロード外部": {
+      "displayNameKey": "チャンピオンロード外部",
       "slots": [
         {
           "speciesId": 530,
@@ -613,8 +613,8 @@
         }
       ]
     },
-    "チャンピオンロード 内部1F(中央・右)": {
-      "displayName": "チャンピオンロード 内部1F(中央・右)",
+    "チャンピオンロード内部1F(中央・右)": {
+      "displayNameKey": "チャンピオンロード内部1F(中央・右)",
       "slots": [
         {
           "speciesId": 530,
@@ -715,7 +715,7 @@
       ]
     },
     "試練の室": {
-      "displayName": "試練の室",
+      "displayNameKey": "試練の室",
       "slots": [
         {
           "speciesId": 530,
@@ -815,8 +815,8 @@
         }
       ]
     },
-    "ジャイアントホール 外部": {
-      "displayName": "ジャイアントホール 外部",
+    "ジャイアントホール外部": {
+      "displayNameKey": "ジャイアントホール外部",
       "slots": [
         {
           "speciesId": 530,
@@ -916,8 +916,8 @@
         }
       ]
     },
-    "ジャイアントホール B1F": {
-      "displayName": "ジャイアントホール B1F",
+    "ジャイアントホールB1F": {
+      "displayNameKey": "ジャイアントホールB1F",
       "slots": [
         {
           "speciesId": 530,
@@ -1018,7 +1018,7 @@
       ]
     },
     "地下水脈の穴": {
-      "displayName": "地下水脈の穴",
+      "displayNameKey": "地下水脈の穴",
       "slots": [
         {
           "speciesId": 529,
@@ -1119,7 +1119,7 @@
       ]
     },
     "フキヨセの洞穴": {
-      "displayName": "フキヨセの洞穴",
+      "displayNameKey": "フキヨセの洞穴",
       "slots": [
         {
           "speciesId": 529,
@@ -1220,7 +1220,7 @@
       ]
     },
     "導の間": {
-      "displayName": "導の間",
+      "displayNameKey": "導の間",
       "slots": [
         {
           "speciesId": 529,
@@ -1320,8 +1320,8 @@
         }
       ]
     },
-    "修行の岩屋 1F": {
-      "displayName": "修行の岩屋 1F",
+    "修行の岩屋1F": {
+      "displayNameKey": "修行の岩屋1F",
       "slots": [
         {
           "speciesId": 530,

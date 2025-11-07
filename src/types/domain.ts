@@ -1,3 +1,6 @@
+import type { SupportedLocale } from './i18n';
+import { resolveEncounterCategoryName, resolveEncounterTypeName } from '@/data/encounters/i18n/display-name-resolver';
+
 /**
  * Domain-wide enum definitions (single source of truth for app-level concepts)
  *
@@ -82,8 +85,7 @@ export function getDomainEncounterTypeName(value: number): DomainEncounterTypeNa
   return _DomainEncounterTypeReverse[value];
 }
 
-const DomainEncounterTypeCategoryKeys = ['wild', 'static', 'gift'] as const;
-export type DomainEncounterTypeCategoryKey = typeof DomainEncounterTypeCategoryKeys[number];
+export type DomainEncounterTypeCategoryKey = 'wild' | 'static' | 'gift';
 
 export interface DomainEncounterCategoryOption {
   key: DomainEncounterTypeCategoryKey;
@@ -91,6 +93,12 @@ export interface DomainEncounterCategoryOption {
   disabled?: boolean;
   typeNames: readonly DomainEncounterTypeName[];
 }
+
+const DomainEncounterCategoryDisplayNames: Record<DomainEncounterTypeCategoryKey, string> = {
+  wild: 'Wild',
+  static: 'Static',
+  gift: 'Gift (WIP)',
+};
 
 const WILD_ENCOUNTER_TYPE_NAMES = [
   'Normal',
@@ -113,9 +121,9 @@ const STATIC_ENCOUNTER_TYPE_NAMES = [
 ] as const satisfies readonly DomainEncounterTypeName[];
 
 export const DomainEncounterCategoryOptions: readonly DomainEncounterCategoryOption[] = [
-  { key: 'wild', label: 'Wild', typeNames: WILD_ENCOUNTER_TYPE_NAMES },
-  { key: 'static', label: 'Static', typeNames: STATIC_ENCOUNTER_TYPE_NAMES },
-  { key: 'gift', label: 'Gift (WIP)', typeNames: [], disabled: true },
+  { key: 'wild', label: DomainEncounterCategoryDisplayNames.wild, typeNames: WILD_ENCOUNTER_TYPE_NAMES },
+  { key: 'static', label: DomainEncounterCategoryDisplayNames.static, typeNames: STATIC_ENCOUNTER_TYPE_NAMES },
+  { key: 'gift', label: DomainEncounterCategoryDisplayNames.gift, typeNames: [], disabled: true },
 ] as const;
 
 const DEFAULT_ENCOUNTER_CATEGORY: DomainEncounterTypeCategoryKey = 'wild';
@@ -154,11 +162,25 @@ export function listDomainEncounterTypeNamesByCategory(category: DomainEncounter
   return [...option.typeNames];
 }
 
-export function getDomainEncounterTypeDisplayName(value: DomainEncounterType | DomainEncounterTypeName | undefined): string {
+export function getDomainEncounterTypeDisplayName(
+  value: DomainEncounterType | DomainEncounterTypeName | undefined,
+  locale?: SupportedLocale,
+): string {
   if (value === undefined) return '';
   const name = typeof value === 'string' ? value : getDomainEncounterTypeName(value);
   if (!name) return '';
-  return DomainEncounterTypeDisplayNames[name] ?? name;
+  const fallback = DomainEncounterTypeDisplayNames[name] ?? name;
+  if (!locale) return fallback;
+  return resolveEncounterTypeName(name, locale, fallback);
+}
+
+export function getDomainEncounterCategoryDisplayName(
+  key: DomainEncounterTypeCategoryKey,
+  locale?: SupportedLocale,
+): string {
+  const fallback = DomainEncounterCategoryDisplayNames[key] ?? key;
+  if (!locale) return fallback;
+  return resolveEncounterCategoryName(key, locale, fallback);
 }
 
 export enum DomainShinyType {
@@ -185,11 +207,22 @@ export enum DomainDustCloudContent {
   EvolutionStone = 2,
 }
 
-// Nature names (EN) - single source of truth for nature display
-export const DomainNatureNames = [
-  'Hardy', 'Lonely', 'Brave', 'Adamant', 'Naughty',
-  'Bold', 'Docile', 'Relaxed', 'Impish', 'Lax',
-  'Timid', 'Hasty', 'Serious', 'Jolly', 'Naive',
-  'Modest', 'Mild', 'Quiet', 'Bashful', 'Rash',
-  'Calm', 'Gentle', 'Sassy', 'Careful', 'Quirky'
-] as const;
+// Nature names (localized) - single source of truth for nature display
+export const DomainNatureNames = {
+  en: [
+    'Hardy', 'Lonely', 'Brave', 'Adamant', 'Naughty',
+    'Bold', 'Docile', 'Relaxed', 'Impish', 'Lax',
+    'Timid', 'Hasty', 'Serious', 'Jolly', 'Naive',
+    'Modest', 'Mild', 'Quiet', 'Bashful', 'Rash',
+    'Calm', 'Gentle', 'Sassy', 'Careful', 'Quirky'
+  ],
+  ja: [
+    'がんばりや', 'さみしがり', 'ゆうかん', 'いじっぱり', 'やんちゃ',
+    'ずぶとい', 'すなお', 'のんき', 'わんぱく', 'のうてんき',
+    'おくびょう', 'せっかち', 'まじめ', 'ようき', 'むじゃき',
+    'ひかえめ', 'おっとり', 'れいせい', 'てれや', 'うっかりや',
+    'おだやか', 'おとなしい', 'なまいき', 'しんちょう', 'きまぐれ'
+  ],
+} as const satisfies Record<SupportedLocale, readonly string[]>;
+
+export const DOMAIN_NATURE_COUNT = DomainNatureNames.en.length;

@@ -9,21 +9,21 @@
   "entries": [
     {
       "id": "starter-tepig",
-      "displayName": "ポカブ",
       "speciesId": 498,
-      "level": 5
+      "level": 5,
+      "displayNameKey": "starter-tepig"
     },
     {
       "id": "starter-oshawott",
-      "displayName": "ミジュマル",
       "speciesId": 501,
-      "level": 5
+      "level": 5,
+      "displayNameKey": "starter-oshawott"
     },
     {
       "id": "starter-snivy",
-      "displayName": "ツタージャ",
       "speciesId": 495,
-      "level": 5
+      "level": 5,
+      "displayNameKey": "starter-snivy"
     }
   ]
 }

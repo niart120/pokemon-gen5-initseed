@@ -9,47 +9,47 @@
   "entries": [
     {
       "id": "libertygarden-victini",
-      "displayName": "ビクティニ",
       "speciesId": 494,
       "level": 15,
-      "isShinyLocked": true
+      "isShinyLocked": true,
+      "displayNameKey": "libertygarden-victini"
     },
     {
       "id": "guidancechamber-cobalion",
-      "displayName": "コバルオン",
       "speciesId": 638,
-      "level": 42
+      "level": 42,
+      "displayNameKey": "guidancechamber-cobalion"
     },
     {
       "id": "trialchamber-terrakion",
-      "displayName": "テラキオン",
       "speciesId": 639,
-      "level": 42
+      "level": 42,
+      "displayNameKey": "trialchamber-terrakion"
     },
     {
       "id": "ruminationfield-virizion",
-      "displayName": "ビリジオン",
       "speciesId": 640,
-      "level": 42
+      "level": 42,
+      "displayNameKey": "ruminationfield-virizion"
     },
     {
       "id": "abundant-shrine-landorus",
-      "displayName": "ランドロス",
       "speciesId": 645,
-      "level": 70
+      "level": 70,
+      "displayNameKey": "abundant-shrine-landorus"
     },
     {
       "id": "giantchasm-kyurem",
-      "displayName": "キュレム",
       "speciesId": 646,
-      "level": 75
+      "level": 75,
+      "displayNameKey": "giantchasm-kyurem"
     },
     {
       "id": "ns-castle-zekrom",
-      "displayName": "ゼクロム",
       "speciesId": 644,
       "level": 50,
-      "isShinyLocked": true
+      "isShinyLocked": true,
+      "displayNameKey": "ns-castle-zekrom"
     }
   ]
 }

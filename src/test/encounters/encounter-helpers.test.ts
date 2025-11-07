@@ -19,7 +19,7 @@ describe('encounter helpers (dynamic UI)', () => {
     // shape
     const first = locs[0];
     expect(first).toHaveProperty('key');
-    expect(first).toHaveProperty('displayName');
+  expect(first).toHaveProperty('displayNameKey');
   });
 
   it('listEncounterSpeciesOptions returns empty until locationKey provided', () => {
@@ -60,7 +60,7 @@ describe('encounter helpers (dynamic UI)', () => {
     expect(species.length).toBeGreaterThan(0);
     const entry = species[0];
     expect(entry.kind).toBe('static');
-    expect(entry).toHaveProperty('displayName');
+  expect(entry).toHaveProperty('displayNameKey');
     expect(entry).toHaveProperty('level');
   });
 });

@@ -8,7 +8,7 @@
   },
   "locations": {
     "夢の跡地": {
-      "displayName": "夢の跡地",
+      "displayNameKey": "夢の跡地",
       "slots": [
         {
           "speciesId": 531,
@@ -108,8 +108,8 @@
         }
       ]
     },
-    "ヤグルマの森 外部": {
-      "displayName": "ヤグルマの森 外部",
+    "ヤグルマの森外部": {
+      "displayNameKey": "ヤグルマの森外部",
       "slots": [
         {
           "speciesId": 531,
@@ -209,8 +209,8 @@
         }
       ]
     },
-    "ヤグルマの森 内部": {
-      "displayName": "ヤグルマの森 内部",
+    "ヤグルマの森内部": {
+      "displayNameKey": "ヤグルマの森内部",
       "slots": [
         {
           "speciesId": 531,
@@ -311,7 +311,7 @@
       ]
     },
     "冷凍コンテナ": {
-      "displayName": "冷凍コンテナ",
+      "displayNameKey": "冷凍コンテナ",
       "slots": [
         {
           "speciesId": 531,
@@ -411,8 +411,8 @@
         }
       ]
     },
-    "リュウラセンの塔(春) 外部(南)": {
-      "displayName": "リュウラセンの塔(春) 外部(南)",
+    "リュウラセンの塔(春)外部(南)": {
+      "displayNameKey": "リュウラセンの塔(春)外部(南)",
       "slots": [
         {
           "speciesId": 531,
@@ -512,8 +512,8 @@
         }
       ]
     },
-    "リュウラセンの塔(夏) 外部(南)": {
-      "displayName": "リュウラセンの塔(夏) 外部(南)",
+    "リュウラセンの塔(夏)外部(南)": {
+      "displayNameKey": "リュウラセンの塔(夏)外部(南)",
       "slots": [
         {
           "speciesId": 531,
@@ -613,8 +613,8 @@
         }
       ]
     },
-    "リュウラセンの塔(秋) 外部(南)": {
-      "displayName": "リュウラセンの塔(秋) 外部(南)",
+    "リュウラセンの塔(秋)外部(南)": {
+      "displayNameKey": "リュウラセンの塔(秋)外部(南)",
       "slots": [
         {
           "speciesId": 531,
@@ -714,8 +714,8 @@
         }
       ]
     },
-    "リュウラセンの塔(冬) 外部(南)": {
-      "displayName": "リュウラセンの塔(冬) 外部(南)",
+    "リュウラセンの塔(冬)外部(南)": {
+      "displayNameKey": "リュウラセンの塔(冬)外部(南)",
       "slots": [
         {
           "speciesId": 531,
@@ -815,8 +815,8 @@
         }
       ]
     },
-    "ジャイアントホール 外部": {
-      "displayName": "ジャイアントホール 外部",
+    "ジャイアントホール外部": {
+      "displayNameKey": "ジャイアントホール外部",
       "slots": [
         {
           "speciesId": 531,
@@ -916,8 +916,8 @@
         }
       ]
     },
-    "ジャイアントホール B1F": {
-      "displayName": "ジャイアントホール B1F",
+    "ジャイアントホールB1F": {
+      "displayNameKey": "ジャイアントホールB1F",
       "slots": [
         {
           "speciesId": 531,
@@ -1018,7 +1018,7 @@
       ]
     },
     "P2ラボ": {
-      "displayName": "P2ラボ",
+      "displayNameKey": "P2ラボ",
       "slots": [
         {
           "speciesId": 531,
@@ -1119,7 +1119,7 @@
       ]
     },
     "ホドモエの跳ね橋": {
-      "displayName": "ホドモエの跳ね橋",
+      "displayNameKey": "ホドモエの跳ね橋",
       "slots": [
         {
           "speciesId": 580,
@@ -1220,7 +1220,7 @@
       ]
     },
     "ビレッジブリッジ": {
-      "displayName": "ビレッジブリッジ",
+      "displayNameKey": "ビレッジブリッジ",
       "slots": [
         {
           "speciesId": 531,
@@ -1321,7 +1321,7 @@
       ]
     },
     "ワンダーブリッジ": {
-      "displayName": "ワンダーブリッジ",
+      "displayNameKey": "ワンダーブリッジ",
       "slots": [
         {
           "speciesId": 581,
@@ -1422,7 +1422,7 @@
       ]
     },
     "1番道路": {
-      "displayName": "1番道路",
+      "displayNameKey": "1番道路",
       "slots": [
         {
           "speciesId": 531,
@@ -1523,7 +1523,7 @@
       ]
     },
     "2番道路": {
-      "displayName": "2番道路",
+      "displayNameKey": "2番道路",
       "slots": [
         {
           "speciesId": 531,
@@ -1624,7 +1624,7 @@
       ]
     },
     "3番道路": {
-      "displayName": "3番道路",
+      "displayNameKey": "3番道路",
       "slots": [
         {
           "speciesId": 531,
@@ -1725,7 +1725,7 @@
       ]
     },
     "5番道路": {
-      "displayName": "5番道路",
+      "displayNameKey": "5番道路",
       "slots": [
         {
           "speciesId": 531,
@@ -1826,7 +1826,7 @@
       ]
     },
     "6番道路(春)": {
-      "displayName": "6番道路(春)",
+      "displayNameKey": "6番道路(春)",
       "slots": [
         {
           "speciesId": 531,
@@ -1927,7 +1927,7 @@
       ]
     },
     "6番道路(夏)": {
-      "displayName": "6番道路(夏)",
+      "displayNameKey": "6番道路(夏)",
       "slots": [
         {
           "speciesId": 531,
@@ -2028,7 +2028,7 @@
       ]
     },
     "6番道路(秋)": {
-      "displayName": "6番道路(秋)",
+      "displayNameKey": "6番道路(秋)",
       "slots": [
         {
           "speciesId": 531,
@@ -2129,7 +2129,7 @@
       ]
     },
     "6番道路(冬)": {
-      "displayName": "6番道路(冬)",
+      "displayNameKey": "6番道路(冬)",
       "slots": [
         {
           "speciesId": 531,
@@ -2230,7 +2230,7 @@
       ]
     },
     "7番道路(春)": {
-      "displayName": "7番道路(春)",
+      "displayNameKey": "7番道路(春)",
       "slots": [
         {
           "speciesId": 531,
@@ -2331,7 +2331,7 @@
       ]
     },
     "7番道路(夏)": {
-      "displayName": "7番道路(夏)",
+      "displayNameKey": "7番道路(夏)",
       "slots": [
         {
           "speciesId": 531,
@@ -2432,7 +2432,7 @@
       ]
     },
     "7番道路(秋)": {
-      "displayName": "7番道路(秋)",
+      "displayNameKey": "7番道路(秋)",
       "slots": [
         {
           "speciesId": 531,
@@ -2533,7 +2533,7 @@
       ]
     },
     "7番道路(冬)": {
-      "displayName": "7番道路(冬)",
+      "displayNameKey": "7番道路(冬)",
       "slots": [
         {
           "speciesId": 531,
@@ -2634,7 +2634,7 @@
       ]
     },
     "9番道路": {
-      "displayName": "9番道路",
+      "displayNameKey": "9番道路",
       "slots": [
         {
           "speciesId": 531,
@@ -2734,8 +2734,8 @@
         }
       ]
     },
-    "10番道路 外部": {
-      "displayName": "10番道路 外部",
+    "10番道路外部": {
+      "displayNameKey": "10番道路外部",
       "slots": [
         {
           "speciesId": 531,
@@ -2836,7 +2836,7 @@
       ]
     },
     "11番道路": {
-      "displayName": "11番道路",
+      "displayNameKey": "11番道路",
       "slots": [
         {
           "speciesId": 531,
@@ -2937,7 +2937,7 @@
       ]
     },
     "12番道路": {
-      "displayName": "12番道路",
+      "displayNameKey": "12番道路",
       "slots": [
         {
           "speciesId": 531,
@@ -3038,7 +3038,7 @@
       ]
     },
     "13番道路": {
-      "displayName": "13番道路",
+      "displayNameKey": "13番道路",
       "slots": [
         {
           "speciesId": 531,
@@ -3139,7 +3139,7 @@
       ]
     },
     "14番道路": {
-      "displayName": "14番道路",
+      "displayNameKey": "14番道路",
       "slots": [
         {
           "speciesId": 531,
@@ -3240,7 +3240,7 @@
       ]
     },
     "ほうじょうの社": {
-      "displayName": "ほうじょうの社",
+      "displayNameKey": "ほうじょうの社",
       "slots": [
         {
           "speciesId": 531,
@@ -3341,7 +3341,7 @@
       ]
     },
     "15番道路": {
-      "displayName": "15番道路",
+      "displayNameKey": "15番道路",
       "slots": [
         {
           "speciesId": 531,
@@ -3442,7 +3442,7 @@
       ]
     },
     "16番道路": {
-      "displayName": "16番道路",
+      "displayNameKey": "16番道路",
       "slots": [
         {
           "speciesId": 531,
@@ -3543,7 +3543,7 @@
       ]
     },
     "迷いの森": {
-      "displayName": "迷いの森",
+      "displayNameKey": "迷いの森",
       "slots": [
         {
           "speciesId": 531,
@@ -3644,7 +3644,7 @@
       ]
     },
     "18番道路": {
-      "displayName": "18番道路",
+      "displayNameKey": "18番道路",
       "slots": [
         {
           "speciesId": 531,
