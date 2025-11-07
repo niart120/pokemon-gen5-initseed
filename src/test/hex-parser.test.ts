@@ -53,6 +53,24 @@ describe('hex-parser', () => {
       expect(formatHexDisplay(255, 1, true)).toBe('FF');
       expect(formatHexDisplay(255, 1, false)).toBe('ff');
     });
+
+    it('should format max 32-bit unsigned value', () => {
+      expect(formatHexDisplay(0xFFFFFFFF, 8)).toBe('FFFFFFFF');
+    });
+
+    it('should accept bigint input within range', () => {
+      expect(formatHexDisplay(255n, 4)).toBe('00FF');
+    });
+
+    it('should throw on negative value', () => {
+      expect(() => formatHexDisplay(-1)).toThrow(/negative/);
+      expect(() => formatHexDisplay(-1n)).toThrow(/negative/);
+    });
+    
+    it('should support values >32bit (e.g. 64-bit seed)', () => {
+      // 0x1_0000_0000 = 2^32 → 64bit範囲で許容
+      expect(formatHexDisplay(0x1_0000_0000n, 9)).toBe('100000000');
+    });
   });
 
   describe('parseMacByte', () => {

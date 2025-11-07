@@ -1,11 +1,18 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { SearchConditions, InitialSeedResult, TargetSeedList, SearchProgress, SearchPreset } from '../types/search';
+import type { GenerationParamsHex } from '@/types/generation';
 import type { ROMVersion, ROMRegion, Hardware } from '../types/rom';
 import type { ParallelSearchSettings, AggregatedProgress } from '../types/parallel';
 import { DEMO_TARGET_SEEDS } from '../data/default-seeds';
 
-interface AppStore {
+import type { GenerationSlice } from './generation-store';
+import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS } from './generation-store';
+import { DEFAULT_LOCALE } from '@/types/i18n';
+
+interface AppStore extends GenerationSlice {
+  locale: 'ja' | 'en';
+  setLocale: (locale: 'ja' | 'en') => void;
   // Search conditions
   searchConditions: SearchConditions;
   setSearchConditions: (conditions: Partial<SearchConditions>) => void;
@@ -125,9 +132,83 @@ if (import.meta.env.DEV) {
   console.warn('Using demo target seeds:', DEMO_TARGET_SEEDS.map(s => '0x' + s.toString(16).padStart(8, '0')));
 }
 
+// 以前の BigInt 変換ロジックは撤去。persist 対象を必要最低限に制限。
+interface PersistedGenerationMinimal {
+  draftParams: AppStore['draftParams'];
+  // NOTE: params には bigint を含むため永続化しない（JSON.stringify 失敗回避）
+  validationErrors: string[];
+  status: AppStore['status'];
+  lastCompletion: AppStore['lastCompletion'];
+  error: string | null;
+  filters: AppStore['filters'];
+  metrics: AppStore['metrics'];
+  internalFlags: AppStore['internalFlags'];
+  staticEncounterId: AppStore['staticEncounterId'];
+}
+function extractGenerationForPersist(state: AppStore): PersistedGenerationMinimal {
+  return {
+    draftParams: state.draftParams,
+    validationErrors: state.validationErrors,
+    status: state.status,
+    lastCompletion: state.lastCompletion,
+    error: state.error,
+    filters: state.filters,
+    metrics: state.metrics,
+    internalFlags: state.internalFlags,
+    staticEncounterId: state.staticEncounterId ?? null,
+  };
+}
+
+function mergeDraftParams(restored: Partial<GenerationSlice['draftParams']> | undefined): GenerationSlice['draftParams'] {
+  const source = (restored ?? {}) as Partial<GenerationParamsHex>;
+  const merged: GenerationParamsHex = { ...DEFAULT_GENERATION_DRAFT_PARAMS };
+  type DraftKey = keyof GenerationParamsHex;
+  for (const key of Object.keys(DEFAULT_GENERATION_DRAFT_PARAMS) as DraftKey[]) {
+    const value = source[key];
+    if (value !== undefined) {
+      (merged as Record<DraftKey, unknown>)[key] = value;
+    }
+  }
+  return merged;
+}
+
+function reviveGenerationMinimal(obj: unknown): Partial<GenerationSlice> {
+  if (!obj || typeof obj !== 'object') return {};
+  const o = obj as Partial<PersistedGenerationMinimal>;
+  const normalizedStatus = normalizeRestoredStatus(o.status);
+  return {
+    draftParams: mergeDraftParams(o.draftParams),
+    // params は非永続化（draft から再生成する設計）
+    params: null,
+    validationErrors: o.validationErrors ?? [],
+    status: normalizedStatus,
+    lastCompletion: o.lastCompletion ?? null,
+    error: o.error ?? null,
+    filters: o.filters ?? { shinyOnly: false, natureIds: [] },
+    metrics: normalizedStatus === 'idle' ? {} : (o.metrics ?? {}),
+    internalFlags: normalizedStatus === 'idle'
+      ? { receivedAnyBatch: false }
+      : (o.internalFlags ?? { receivedAnyBatch: false }),
+    staticEncounterId: o.staticEncounterId ?? null,
+  };
+}
+
+function normalizeRestoredStatus(status: AppStore['status'] | undefined): AppStore['status'] {
+  if (!status) return 'idle';
+  if (status === 'running' || status === 'starting' || status === 'paused' || status === 'stopping') {
+    return 'idle';
+  }
+  return status;
+}
+
 export const useAppStore = create<AppStore>()(
-  persist(
-    (set, _get, _api) => ({
+  persist<AppStore>(
+    (set, get) => ({
+      // Generation slice 注入
+  ...createGenerationSlice(set, get),
+  locale: DEFAULT_LOCALE,
+      setLocale: (locale) => set({ locale }),
+      // 元々の AppStore フィールド
       // Search conditions
       searchConditions: defaultSearchConditions,
       setSearchConditions: (conditions) =>
@@ -258,15 +339,82 @@ export const useAppStore = create<AppStore>()(
           }
           return state;
         }),
-    }),
+  }),
     {
       name: 'app-store',
-      version: 2,
-      migrate: (persistedState: unknown, _version: number) => {
-        // ここでは単純にそのまま返す（将来のマイグレーション時に更新）
-        return persistedState as unknown as AppStore;
+      version: 1,
+      // BigInt を含む値が万一混入しても JSON.stringify で落ちないように、
+      // シリアライズ/デシリアライズをカスタマイズ（型は起動時に復元）。
+      storage: (() => {
+        const storage = {
+          getItem: (name: string) => {
+            const raw = localStorage.getItem(name);
+            if (raw == null) return null;
+            try {
+              const parsed = JSON.parse(raw, (_k, v) => {
+                if (typeof v === 'string' && /^__bigint__:.+/.test(v)) {
+                  // 復元は必要箇所（types 側）で行うため、ここでは文字列のまま返す
+                  // 例: "__bigint__:0x1234" -> そのまま文字列
+                  return v;
+                }
+                return v;
+              });
+              return parsed as unknown as string;
+            } catch {
+              return raw as unknown as string;
+            }
+          },
+          setItem: (name: string, value: unknown) => {
+            const json = JSON.stringify(value, (_k, v) => {
+              if (typeof v === 'bigint') {
+                // 文字列タグ化して stringify 可能に（復元は型側の変換で対応）
+                return `__bigint__:${'0x' + v.toString(16)}`;
+              }
+              return v;
+            });
+            localStorage.setItem(name, json);
+          },
+          removeItem: (name: string) => localStorage.removeItem(name),
+        } as const;
+        // 型が合うように adapter を返す
+        return {
+          getItem: async (name: string) => storage.getItem(name),
+          setItem: async (name: string, value: unknown) => storage.setItem(name, value),
+          removeItem: async (name: string) => storage.removeItem(name),
+        } as unknown as Parameters<typeof persist<AppStore>>[1]['storage'];
+      })(),
+      partialize: (state: AppStore) => ({
+        locale: state.locale,
+        searchConditions: state.searchConditions,
+        targetSeeds: state.targetSeeds,
+        parallelSearchSettings: state.parallelSearchSettings,
+        activeTab: state.activeTab,
+        wakeLockEnabled: state.wakeLockEnabled,
+        targetSeedInput: state.targetSeedInput,
+        presets: state.presets,
+        __generation: extractGenerationForPersist(state),
+      }) as unknown as AppStore,
+      merge: (persisted: unknown, current: AppStore) => {
+        if (!persisted || typeof persisted !== 'object') return current;
+        const { __generation, ...rest } = persisted as Partial<AppStore> & { __generation?: unknown };
+        const revived = __generation ? reviveGenerationMinimal(__generation) : {};
+        return {
+          ...current,
+          ...rest,
+          ...revived,
+          searchResults: [],
+          searchProgress: { ...defaultSearchProgress },
+          parallelProgress: null,
+          lastSearchDuration: null,
+          results: current.results,
+          progress: current.progress,
+        } as AppStore;
       },
-      // ...existing code...
+      // migrate 不要（新キーで旧スキーマ非対応）
+      migrate: (s) => s as AppStore,
     },
-  ),
+   ),
 );
+
+// バインド（store インスタンス生成後）
+bindGenerationManager(() => useAppStore.getState());

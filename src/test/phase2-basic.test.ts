@@ -9,9 +9,11 @@ import { getGeneratedSpeciesById } from '../data/species/generated';
 describe('Phase 2 Basic Validation', () => {
   describe('Raw Pokemon Data utilities', () => {
     it('should convert nature IDs to names correctly (domain table)', () => {
-      expect(DomainNatureNames[0]).toBe('Hardy');
-      expect(DomainNatureNames[12]).toBe('Serious');
-      expect(DomainNatureNames[24]).toBe('Quirky');
+      expect(DomainNatureNames.en[0]).toBe('Hardy');
+      expect(DomainNatureNames.en[12]).toBe('Serious');
+      expect(DomainNatureNames.en[24]).toBe('Quirky');
+      expect(DomainNatureNames.ja[0]).toBe('がんばりや');
+      expect(DomainNatureNames.ja[24]).toBe('きまぐれ');
     });
 
     it('should convert shiny types to status names (resolver semantics)', () => {

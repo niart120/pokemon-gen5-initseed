@@ -59,7 +59,12 @@ export function formatHexDisplay(
   minDigits: number = 1,
   uppercase: boolean = true,
 ): string {
-  const hexRaw = (typeof value === 'bigint' ? value.toString(16) : value.toString(16)).padStart(minDigits, '0');
+  // 正常化と検証: Generation 系 seed / u32 値を想定 (0 <= v <= 0xFFFFFFFF)
+  const v = typeof value === 'bigint' ? value : BigInt(Math.trunc(value));
+  if (v < 0n) {
+    throw new Error(`formatHexDisplay: negative value not allowed (${v.toString()})`);
+  }
+  const hexRaw = v.toString(16).padStart(minDigits, '0');
   return uppercase ? hexRaw.toUpperCase() : hexRaw;
 }
 

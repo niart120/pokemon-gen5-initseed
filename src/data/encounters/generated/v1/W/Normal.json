@@ -4,11 +4,11 @@
   "source": {
     "name": "Pokebook",
     "url": "https://pokebook.jp/data/sp5/enc_w",
-    "retrievedAt": "2025-08-10"
+    "retrievedAt": "2025-11-06"
   },
   "locations": {
     "セッカシティ(春)": {
-      "displayName": "セッカシティ(春)",
+      "displayNameKey": "セッカシティ(春)",
       "slots": [
         {
           "speciesId": 536,
@@ -109,7 +109,7 @@
       ]
     },
     "セッカシティ(夏)": {
-      "displayName": "セッカシティ(夏)",
+      "displayNameKey": "セッカシティ(夏)",
       "slots": [
         {
           "speciesId": 536,
@@ -210,7 +210,7 @@
       ]
     },
     "セッカシティ(秋)": {
-      "displayName": "セッカシティ(秋)",
+      "displayNameKey": "セッカシティ(秋)",
       "slots": [
         {
           "speciesId": 536,
@@ -311,7 +311,7 @@
       ]
     },
     "夢の跡地": {
-      "displayName": "夢の跡地",
+      "displayNameKey": "夢の跡地",
       "slots": [
         {
           "speciesId": 504,
@@ -411,8 +411,8 @@
         }
       ]
     },
-    "ヤグルマの森": {
-      "displayName": "ヤグルマの森",
+    "ヤグルマの森外部": {
+      "displayNameKey": "ヤグルマの森外部",
       "slots": [
         {
           "speciesId": 535,
@@ -509,7 +509,12 @@
             "min": 15,
             "max": 15
           }
-        },
+        }
+      ]
+    },
+    "ヤグルマの森内部": {
+      "displayNameKey": "ヤグルマの森内部",
+      "slots": [
         {
           "speciesId": 548,
           "rate": 20,
@@ -608,8 +613,8 @@
         }
       ]
     },
-    "リゾートデザート": {
-      "displayName": "リゾートデザート",
+    "リゾートデザート外部": {
+      "displayNameKey": "リゾートデザート外部",
       "slots": [
         {
           "speciesId": 551,
@@ -706,7 +711,12 @@
             "min": 22,
             "max": 22
           }
-        },
+        }
+      ]
+    },
+    "リゾートデザート内部": {
+      "displayNameKey": "リゾートデザート内部",
+      "slots": [
         {
           "speciesId": 551,
           "rate": 20,
@@ -805,2889 +815,9 @@
         }
       ]
     },
-    "古代の城": {
-      "displayName": "古代の城",
+    "古代の城1F,B1F": {
+      "displayNameKey": "古代の城1F,B1F",
       "slots": [
-        {
-          "speciesId": 551,
-          "rate": 20,
-          "levelRange": {
-            "min": 19,
-            "max": 19
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 20,
-          "levelRange": {
-            "min": 19,
-            "max": 19
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 10,
-          "levelRange": {
-            "min": 20,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 10,
-          "levelRange": {
-            "min": 20,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 10,
-          "levelRange": {
-            "min": 21,
-            "max": 21
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 10,
-          "levelRange": {
-            "min": 21,
-            "max": 21
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 5,
-          "levelRange": {
-            "min": 21,
-            "max": 21
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 5,
-          "levelRange": {
-            "min": 21,
-            "max": 21
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 4,
-          "levelRange": {
-            "min": 22,
-            "max": 22
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 4,
-          "levelRange": {
-            "min": 22,
-            "max": 22
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 1,
-          "levelRange": {
-            "min": 22,
-            "max": 22
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 1,
-          "levelRange": {
-            "min": 22,
-            "max": 22
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 20,
-          "levelRange": {
-            "min": 19,
-            "max": 19
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 20,
-          "levelRange": {
-            "min": 19,
-            "max": 19
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 10,
-          "levelRange": {
-            "min": 20,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 10,
-          "levelRange": {
-            "min": 20,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 10,
-          "levelRange": {
-            "min": 21,
-            "max": 21
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 10,
-          "levelRange": {
-            "min": 21,
-            "max": 21
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 5,
-          "levelRange": {
-            "min": 21,
-            "max": 21
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 5,
-          "levelRange": {
-            "min": 21,
-            "max": 21
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 4,
-          "levelRange": {
-            "min": 22,
-            "max": 22
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 4,
-          "levelRange": {
-            "min": 22,
-            "max": 22
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 1,
-          "levelRange": {
-            "min": 22,
-            "max": 22
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 1,
-          "levelRange": {
-            "min": 22,
-            "max": 22
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 5,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 5,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 5,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 5,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 344,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 20,
-          "levelRange": {
-            "min": 47,
-            "max": 47
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 48,
-            "max": 48
-          }
-        },
-        {
-          "speciesId": 28,
-          "rate": 10,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 95,
-          "rate": 5,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 49,
-            "max": 49
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 20,
-          "levelRange": {
-            "min": 34,
-            "max": 34
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 35,
-            "max": 35
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 10,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 5,
-          "levelRange": {
-            "min": 36,
-            "max": 36
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 4,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 552,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 563,
-          "rate": 1,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 20,
-          "levelRange": {
-            "min": 19,
-            "max": 19
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 20,
-          "levelRange": {
-            "min": 19,
-            "max": 19
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 10,
-          "levelRange": {
-            "min": 20,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 10,
-          "levelRange": {
-            "min": 20,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 10,
-          "levelRange": {
-            "min": 21,
-            "max": 21
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 10,
-          "levelRange": {
-            "min": 21,
-            "max": 21
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 5,
-          "levelRange": {
-            "min": 21,
-            "max": 21
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 5,
-          "levelRange": {
-            "min": 21,
-            "max": 21
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 4,
-          "levelRange": {
-            "min": 22,
-            "max": 22
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 4,
-          "levelRange": {
-            "min": 22,
-            "max": 22
-          }
-        },
-        {
-          "speciesId": 551,
-          "rate": 1,
-          "levelRange": {
-            "min": 22,
-            "max": 22
-          }
-        },
-        {
-          "speciesId": 562,
-          "rate": 1,
-          "levelRange": {
-            "min": 22,
-            "max": 22
-          }
-        },
         {
           "speciesId": 551,
           "rate": 20,
@@ -3786,8 +916,311 @@
         }
       ]
     },
+    "古代の城B2FB6F": {
+      "displayNameKey": "古代の城B2FB6F",
+      "slots": [
+        {
+          "speciesId": 552,
+          "rate": 20,
+          "levelRange": {
+            "min": 34,
+            "max": 34
+          }
+        },
+        {
+          "speciesId": 563,
+          "rate": 20,
+          "levelRange": {
+            "min": 34,
+            "max": 34
+          }
+        },
+        {
+          "speciesId": 552,
+          "rate": 10,
+          "levelRange": {
+            "min": 35,
+            "max": 35
+          }
+        },
+        {
+          "speciesId": 563,
+          "rate": 10,
+          "levelRange": {
+            "min": 35,
+            "max": 35
+          }
+        },
+        {
+          "speciesId": 552,
+          "rate": 10,
+          "levelRange": {
+            "min": 36,
+            "max": 36
+          }
+        },
+        {
+          "speciesId": 563,
+          "rate": 10,
+          "levelRange": {
+            "min": 36,
+            "max": 36
+          }
+        },
+        {
+          "speciesId": 552,
+          "rate": 5,
+          "levelRange": {
+            "min": 36,
+            "max": 36
+          }
+        },
+        {
+          "speciesId": 563,
+          "rate": 5,
+          "levelRange": {
+            "min": 36,
+            "max": 36
+          }
+        },
+        {
+          "speciesId": 552,
+          "rate": 4,
+          "levelRange": {
+            "min": 37,
+            "max": 37
+          }
+        },
+        {
+          "speciesId": 563,
+          "rate": 4,
+          "levelRange": {
+            "min": 37,
+            "max": 37
+          }
+        },
+        {
+          "speciesId": 552,
+          "rate": 1,
+          "levelRange": {
+            "min": 37,
+            "max": 37
+          }
+        },
+        {
+          "speciesId": 563,
+          "rate": 1,
+          "levelRange": {
+            "min": 37,
+            "max": 37
+          }
+        }
+      ]
+    },
+    "古代の城最下層": {
+      "displayNameKey": "古代の城最下層",
+      "slots": [
+        {
+          "speciesId": 552,
+          "rate": 20,
+          "levelRange": {
+            "min": 47,
+            "max": 47
+          }
+        },
+        {
+          "speciesId": 28,
+          "rate": 20,
+          "levelRange": {
+            "min": 47,
+            "max": 47
+          }
+        },
+        {
+          "speciesId": 563,
+          "rate": 10,
+          "levelRange": {
+            "min": 48,
+            "max": 48
+          }
+        },
+        {
+          "speciesId": 95,
+          "rate": 10,
+          "levelRange": {
+            "min": 48,
+            "max": 48
+          }
+        },
+        {
+          "speciesId": 552,
+          "rate": 10,
+          "levelRange": {
+            "min": 48,
+            "max": 48
+          }
+        },
+        {
+          "speciesId": 28,
+          "rate": 10,
+          "levelRange": {
+            "min": 49,
+            "max": 49
+          }
+        },
+        {
+          "speciesId": 563,
+          "rate": 5,
+          "levelRange": {
+            "min": 49,
+            "max": 49
+          }
+        },
+        {
+          "speciesId": 95,
+          "rate": 5,
+          "levelRange": {
+            "min": 49,
+            "max": 49
+          }
+        },
+        {
+          "speciesId": 552,
+          "rate": 4,
+          "levelRange": {
+            "min": 49,
+            "max": 49
+          }
+        },
+        {
+          "speciesId": 563,
+          "rate": 4,
+          "levelRange": {
+            "min": 50,
+            "max": 50
+          }
+        },
+        {
+          "speciesId": 552,
+          "rate": 1,
+          "levelRange": {
+            "min": 50,
+            "max": 50
+          }
+        },
+        {
+          "speciesId": 563,
+          "rate": 1,
+          "levelRange": {
+            "min": 50,
+            "max": 50
+          }
+        }
+      ]
+    },
+    "古代の城小部屋": {
+      "displayNameKey": "古代の城小部屋",
+      "slots": [
+        {
+          "speciesId": 344,
+          "rate": 20,
+          "levelRange": {
+            "min": 47,
+            "max": 47
+          }
+        },
+        {
+          "speciesId": 344,
+          "rate": 20,
+          "levelRange": {
+            "min": 47,
+            "max": 47
+          }
+        },
+        {
+          "speciesId": 344,
+          "rate": 10,
+          "levelRange": {
+            "min": 48,
+            "max": 48
+          }
+        },
+        {
+          "speciesId": 344,
+          "rate": 10,
+          "levelRange": {
+            "min": 48,
+            "max": 48
+          }
+        },
+        {
+          "speciesId": 344,
+          "rate": 10,
+          "levelRange": {
+            "min": 49,
+            "max": 49
+          }
+        },
+        {
+          "speciesId": 344,
+          "rate": 10,
+          "levelRange": {
+            "min": 49,
+            "max": 49
+          }
+        },
+        {
+          "speciesId": 344,
+          "rate": 5,
+          "levelRange": {
+            "min": 50,
+            "max": 50
+          }
+        },
+        {
+          "speciesId": 344,
+          "rate": 5,
+          "levelRange": {
+            "min": 50,
+            "max": 50
+          }
+        },
+        {
+          "speciesId": 344,
+          "rate": 4,
+          "levelRange": {
+            "min": 50,
+            "max": 50
+          }
+        },
+        {
+          "speciesId": 344,
+          "rate": 4,
+          "levelRange": {
+            "min": 50,
+            "max": 50
+          }
+        },
+        {
+          "speciesId": 344,
+          "rate": 1,
+          "levelRange": {
+            "min": 50,
+            "max": 50
+          }
+        },
+        {
+          "speciesId": 344,
+          "rate": 1,
+          "levelRange": {
+            "min": 50,
+            "max": 50
+          }
+        }
+      ]
+    },
     "冷凍コンテナ": {
-      "displayName": "冷凍コンテナ",
+      "displayNameKey": "冷凍コンテナ",
       "slots": [
         {
           "speciesId": 507,
@@ -3887,8 +1320,8 @@
         }
       ]
     },
-    "電気石の洞穴": {
-      "displayName": "電気石の洞穴",
+    "電気石の洞穴1F": {
+      "displayNameKey": "電気石の洞穴1F",
       "slots": [
         {
           "speciesId": 595,
@@ -3985,7 +1418,12 @@
             "min": 27,
             "max": 27
           }
-        },
+        }
+      ]
+    },
+    "電気石の洞穴B1F": {
+      "displayNameKey": "電気石の洞穴B1F",
+      "slots": [
         {
           "speciesId": 595,
           "rate": 20,
@@ -4081,7 +1519,12 @@
             "min": 27,
             "max": 27
           }
-        },
+        }
+      ]
+    },
+    "電気石の洞穴B2F": {
+      "displayNameKey": "電気石の洞穴B2F",
+      "slots": [
         {
           "speciesId": 595,
           "rate": 20,
@@ -4181,296 +1624,8 @@
       ]
     },
     "ネジ山(春)": {
-      "displayName": "ネジ山(春)",
+      "displayNameKey": "ネジ山(春)",
       "slots": [
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 10,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 5,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 4,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 10,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 5,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 4,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 10,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 5,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 4,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
         {
           "speciesId": 525,
           "rate": 20,
@@ -4570,296 +1725,8 @@
       ]
     },
     "ネジ山(夏)": {
-      "displayName": "ネジ山(夏)",
+      "displayNameKey": "ネジ山(夏)",
       "slots": [
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 5,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 4,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 1,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 5,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 4,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 1,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 5,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 4,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 1,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
         {
           "speciesId": 525,
           "rate": 20,
@@ -4959,296 +1826,8 @@
       ]
     },
     "ネジ山(秋)": {
-      "displayName": "ネジ山(秋)",
+      "displayNameKey": "ネジ山(秋)",
       "slots": [
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 10,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 5,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 4,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 10,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 5,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 4,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 10,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 5,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 4,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
         {
           "speciesId": 525,
           "rate": 20,
@@ -5348,7 +1927,7 @@
       ]
     },
     "ネジ山(冬)": {
-      "displayName": "ネジ山(冬)",
+      "displayNameKey": "ネジ山(冬)",
       "slots": [
         {
           "speciesId": 613,
@@ -5445,299 +2024,11 @@
             "min": 30,
             "max": 30
           }
-        },
-        {
-          "speciesId": 613,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 5,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 4,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 5,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 4,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 533,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 613,
-          "rate": 5,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 4,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 615,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
         }
       ]
     },
-    "リュウラセンの塔(春)": {
-      "displayName": "リュウラセンの塔(春)",
+    "リュウラセンの塔(春)外部(南)": {
+      "displayNameKey": "リュウラセンの塔(春)外部(南)",
       "slots": [
         {
           "speciesId": 520,
@@ -5834,7 +2125,12 @@
             "min": 33,
             "max": 33
           }
-        },
+        }
+      ]
+    },
+    "リュウラセンの塔(春)外部(北東)": {
+      "displayNameKey": "リュウラセンの塔(春)外部(北東)",
+      "slots": [
         {
           "speciesId": 520,
           "rate": 20,
@@ -5933,8 +2229,8 @@
         }
       ]
     },
-    "リュウラセンの塔(夏)": {
-      "displayName": "リュウラセンの塔(夏)",
+    "リュウラセンの塔(夏)外部(南)": {
+      "displayNameKey": "リュウラセンの塔(夏)外部(南)",
       "slots": [
         {
           "speciesId": 520,
@@ -6031,7 +2327,12 @@
             "min": 33,
             "max": 33
           }
-        },
+        }
+      ]
+    },
+    "リュウラセンの塔(夏)外部(北東)": {
+      "displayNameKey": "リュウラセンの塔(夏)外部(北東)",
+      "slots": [
         {
           "speciesId": 520,
           "rate": 20,
@@ -6130,8 +2431,8 @@
         }
       ]
     },
-    "リュウラセンの塔(秋)": {
-      "displayName": "リュウラセンの塔(秋)",
+    "リュウラセンの塔(秋)外部(南)": {
+      "displayNameKey": "リュウラセンの塔(秋)外部(南)",
       "slots": [
         {
           "speciesId": 520,
@@ -6228,7 +2529,12 @@
             "min": 33,
             "max": 33
           }
-        },
+        }
+      ]
+    },
+    "リュウラセンの塔(秋)外部(北東)": {
+      "displayNameKey": "リュウラセンの塔(秋)外部(北東)",
+      "slots": [
         {
           "speciesId": 520,
           "rate": 20,
@@ -6327,8 +2633,8 @@
         }
       ]
     },
-    "リュウラセンの塔(冬)": {
-      "displayName": "リュウラセンの塔(冬)",
+    "リュウラセンの塔(冬)外部(南)": {
+      "displayNameKey": "リュウラセンの塔(冬)外部(南)",
       "slots": [
         {
           "speciesId": 582,
@@ -6425,7 +2731,12 @@
             "min": 33,
             "max": 33
           }
-        },
+        }
+      ]
+    },
+    "リュウラセンの塔(冬)外部(北東)": {
+      "displayNameKey": "リュウラセンの塔(冬)外部(北東)",
+      "slots": [
         {
           "speciesId": 582,
           "rate": 20,
@@ -6524,8 +2835,8 @@
         }
       ]
     },
-    "リュウラセンの塔": {
-      "displayName": "リュウラセンの塔",
+    "リュウラセンの塔1F": {
+      "displayNameKey": "リュウラセンの塔1F",
       "slots": [
         {
           "speciesId": 622,
@@ -6622,7 +2933,12 @@
             "min": 33,
             "max": 33
           }
-        },
+        }
+      ]
+    },
+    "リュウラセンの塔2F": {
+      "displayNameKey": "リュウラセンの塔2F",
+      "slots": [
         {
           "speciesId": 622,
           "rate": 20,
@@ -6721,8 +3037,8 @@
         }
       ]
     },
-    "チャンピオンロード": {
-      "displayName": "チャンピオンロード",
+    "チャンピオンロード外部": {
+      "displayNameKey": "チャンピオンロード外部",
       "slots": [
         {
           "speciesId": 627,
@@ -6819,7 +3135,12 @@
             "min": 40,
             "max": 40
           }
-        },
+        }
+      ]
+    },
+    "チャンピオンロード内部1F(中央・右)": {
+      "displayNameKey": "チャンピオンロード内部1F(中央・右)",
+      "slots": [
         {
           "speciesId": 632,
           "rate": 20,
@@ -6915,7 +3236,12 @@
             "min": 40,
             "max": 40
           }
-        },
+        }
+      ]
+    },
+    "チャンピオンロード内部1F(右),2F,3F": {
+      "displayNameKey": "チャンピオンロード内部1F(右),2F,3F",
+      "slots": [
         {
           "speciesId": 632,
           "rate": 20,
@@ -7011,103 +3337,12 @@
             "min": 40,
             "max": 40
           }
-        },
-        {
-          "speciesId": 632,
-          "rate": 20,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 10,
-          "levelRange": {
-            "min": 38,
-            "max": 38
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 619,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 5,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 38,
-            "max": 38
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 4,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
+        }
+      ]
+    },
+    "チャンピオンロード内部4F(中央)": {
+      "displayNameKey": "チャンピオンロード内部4F(中央)",
+      "slots": [
         {
           "speciesId": 632,
           "rate": 20,
@@ -7203,871 +3438,12 @@
             "min": 42,
             "max": 42
           }
-        },
-        {
-          "speciesId": 632,
-          "rate": 20,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 10,
-          "levelRange": {
-            "min": 38,
-            "max": 38
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 619,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 5,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 38,
-            "max": 38
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 4,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 20,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 10,
-          "levelRange": {
-            "min": 38,
-            "max": 38
-          }
-        },
-        {
-          "speciesId": 633,
-          "rate": 10,
-          "levelRange": {
-            "min": 38,
-            "max": 38
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 619,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 5,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 633,
-          "rate": 5,
-          "levelRange": {
-            "min": 38,
-            "max": 38
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 4,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 633,
-          "rate": 4,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 633,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 20,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 10,
-          "levelRange": {
-            "min": 38,
-            "max": 38
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 619,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 5,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 38,
-            "max": 38
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 4,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 20,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 10,
-          "levelRange": {
-            "min": 38,
-            "max": 38
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 619,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 5,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 38,
-            "max": 38
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 4,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 20,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 10,
-          "levelRange": {
-            "min": 38,
-            "max": 38
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 37,
-            "max": 37
-          }
-        },
-        {
-          "speciesId": 619,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 5,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 38,
-            "max": 38
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 4,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 20,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 10,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 619,
-          "rate": 10,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 5,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 4,
-          "levelRange": {
-            "min": 42,
-            "max": 42
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 1,
-          "levelRange": {
-            "min": 42,
-            "max": 42
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 42,
-            "max": 42
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 20,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 10,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 619,
-          "rate": 10,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 5,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 4,
-          "levelRange": {
-            "min": 42,
-            "max": 42
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 1,
-          "levelRange": {
-            "min": 42,
-            "max": 42
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 42,
-            "max": 42
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 20,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 10,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 619,
-          "rate": 10,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 5,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 4,
-          "levelRange": {
-            "min": 42,
-            "max": 42
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 1,
-          "levelRange": {
-            "min": 42,
-            "max": 42
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 42,
-            "max": 42
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 20,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 10,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 39,
-            "max": 39
-          }
-        },
-        {
-          "speciesId": 619,
-          "rate": 10,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 5,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 40,
-            "max": 40
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 4,
-          "levelRange": {
-            "min": 42,
-            "max": 42
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 41,
-            "max": 41
-          }
-        },
-        {
-          "speciesId": 632,
-          "rate": 1,
-          "levelRange": {
-            "min": 42,
-            "max": 42
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 42,
-            "max": 42
-          }
-        },
+        }
+      ]
+    },
+    "チャンピオンロード内部4F(左・右),5F7F": {
+      "displayNameKey": "チャンピオンロード内部4F(左・右),5F7F",
+      "slots": [
         {
           "speciesId": 632,
           "rate": 20,
@@ -8167,7 +3543,7 @@
       ]
     },
     "試練の室": {
-      "displayName": "試練の室",
+      "displayNameKey": "試練の室",
       "slots": [
         {
           "speciesId": 632,
@@ -8267,8 +3643,8 @@
         }
       ]
     },
-    "ジャイアントホール": {
-      "displayName": "ジャイアントホール",
+    "ジャイアントホール外部": {
+      "displayNameKey": "ジャイアントホール外部",
       "slots": [
         {
           "speciesId": 114,
@@ -8365,7 +3741,12 @@
             "min": 50,
             "max": 50
           }
-        },
+        }
+      ]
+    },
+    "ジャイアントホールB1F": {
+      "displayNameKey": "ジャイアントホールB1F",
+      "slots": [
         {
           "speciesId": 42,
           "rate": 20,
@@ -8461,7 +3842,12 @@
             "min": 50,
             "max": 50
           }
-        },
+        }
+      ]
+    },
+    "ジャイアントホール地底森林": {
+      "displayNameKey": "ジャイアントホール地底森林",
+      "slots": [
         {
           "speciesId": 35,
           "rate": 20,
@@ -8557,7 +3943,12 @@
             "min": 55,
             "max": 55
           }
-        },
+        }
+      ]
+    },
+    "ジャイアントホール最奥部": {
+      "displayNameKey": "ジャイアントホール最奥部",
+      "slots": [
         {
           "speciesId": 42,
           "rate": 20,
@@ -8657,7 +4048,7 @@
       ]
     },
     "P2ラボ": {
-      "displayName": "P2ラボ",
+      "displayNameKey": "P2ラボ",
       "slots": [
         {
           "speciesId": 505,
@@ -8758,7 +4149,7 @@
       ]
     },
     "ビレッジブリッジ": {
-      "displayName": "ビレッジブリッジ",
+      "displayNameKey": "ビレッジブリッジ",
       "slots": [
         {
           "speciesId": 55,
@@ -8859,7 +4250,7 @@
       ]
     },
     "1番道路": {
-      "displayName": "1番道路",
+      "displayNameKey": "1番道路",
       "slots": [
         {
           "speciesId": 504,
@@ -8960,7 +4351,7 @@
       ]
     },
     "2番道路": {
-      "displayName": "2番道路",
+      "displayNameKey": "2番道路",
       "slots": [
         {
           "speciesId": 504,
@@ -9061,7 +4452,7 @@
       ]
     },
     "3番道路": {
-      "displayName": "3番道路",
+      "displayNameKey": "3番道路",
       "slots": [
         {
           "speciesId": 504,
@@ -9162,104 +4553,8 @@
       ]
     },
     "地下水脈の穴": {
-      "displayName": "地下水脈の穴",
+      "displayNameKey": "地下水脈の穴",
       "slots": [
-        {
-          "speciesId": 524,
-          "rate": 20,
-          "levelRange": {
-            "min": 10,
-            "max": 10
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 20,
-          "levelRange": {
-            "min": 10,
-            "max": 10
-          }
-        },
-        {
-          "speciesId": 524,
-          "rate": 10,
-          "levelRange": {
-            "min": 11,
-            "max": 11
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 11,
-            "max": 11
-          }
-        },
-        {
-          "speciesId": 524,
-          "rate": 10,
-          "levelRange": {
-            "min": 11,
-            "max": 11
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 11,
-            "max": 11
-          }
-        },
-        {
-          "speciesId": 524,
-          "rate": 5,
-          "levelRange": {
-            "min": 12,
-            "max": 12
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 5,
-          "levelRange": {
-            "min": 12,
-            "max": 12
-          }
-        },
-        {
-          "speciesId": 524,
-          "rate": 4,
-          "levelRange": {
-            "min": 13,
-            "max": 13
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 4,
-          "levelRange": {
-            "min": 13,
-            "max": 13
-          }
-        },
-        {
-          "speciesId": 524,
-          "rate": 1,
-          "levelRange": {
-            "min": 13,
-            "max": 13
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 1,
-          "levelRange": {
-            "min": 13,
-            "max": 13
-          }
-        },
         {
           "speciesId": 524,
           "rate": 20,
@@ -9359,7 +4654,7 @@
       ]
     },
     "4番道路": {
-      "displayName": "4番道路",
+      "displayNameKey": "4番道路",
       "slots": [
         {
           "speciesId": 551,
@@ -9460,7 +4755,7 @@
       ]
     },
     "5番道路": {
-      "displayName": "5番道路",
+      "displayNameKey": "5番道路",
       "slots": [
         {
           "speciesId": 577,
@@ -9561,7 +4856,7 @@
       ]
     },
     "6番道路(春)": {
-      "displayName": "6番道路(春)",
+      "displayNameKey": "6番道路(春)",
       "slots": [
         {
           "speciesId": 585,
@@ -9662,7 +4957,7 @@
       ]
     },
     "6番道路(夏)": {
-      "displayName": "6番道路(夏)",
+      "displayNameKey": "6番道路(夏)",
       "slots": [
         {
           "speciesId": 585,
@@ -9763,7 +5058,7 @@
       ]
     },
     "6番道路(秋)": {
-      "displayName": "6番道路(秋)",
+      "displayNameKey": "6番道路(秋)",
       "slots": [
         {
           "speciesId": 585,
@@ -9864,7 +5159,7 @@
       ]
     },
     "6番道路(冬)": {
-      "displayName": "6番道路(冬)",
+      "displayNameKey": "6番道路(冬)",
       "slots": [
         {
           "speciesId": 585,
@@ -9965,104 +5260,8 @@
       ]
     },
     "フキヨセの洞穴": {
-      "displayName": "フキヨセの洞穴",
+      "displayNameKey": "フキヨセの洞穴",
       "slots": [
-        {
-          "speciesId": 525,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 20,
-          "levelRange": {
-            "min": 28,
-            "max": 28
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 29,
-            "max": 29
-          }
-        },
-        {
-          "speciesId": 527,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 610,
-          "rate": 10,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 5,
-          "levelRange": {
-            "min": 30,
-            "max": 30
-          }
-        },
-        {
-          "speciesId": 610,
-          "rate": 5,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 4,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 610,
-          "rate": 4,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 525,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
-        {
-          "speciesId": 610,
-          "rate": 1,
-          "levelRange": {
-            "min": 31,
-            "max": 31
-          }
-        },
         {
           "speciesId": 525,
           "rate": 20,
@@ -10162,7 +5361,7 @@
       ]
     },
     "導の間": {
-      "displayName": "導の間",
+      "displayNameKey": "導の間",
       "slots": [
         {
           "speciesId": 525,
@@ -10263,7 +5462,7 @@
       ]
     },
     "7番道路(春)": {
-      "displayName": "7番道路(春)",
+      "displayNameKey": "7番道路(春)",
       "slots": [
         {
           "speciesId": 520,
@@ -10364,7 +5563,7 @@
       ]
     },
     "7番道路(夏)": {
-      "displayName": "7番道路(夏)",
+      "displayNameKey": "7番道路(夏)",
       "slots": [
         {
           "speciesId": 520,
@@ -10465,7 +5664,7 @@
       ]
     },
     "7番道路(秋)": {
-      "displayName": "7番道路(秋)",
+      "displayNameKey": "7番道路(秋)",
       "slots": [
         {
           "speciesId": 520,
@@ -10566,7 +5765,7 @@
       ]
     },
     "7番道路(冬)": {
-      "displayName": "7番道路(冬)",
+      "displayNameKey": "7番道路(冬)",
       "slots": [
         {
           "speciesId": 613,
@@ -10666,8 +5865,8 @@
         }
       ]
     },
-    "タワーオブヘブン": {
-      "displayName": "タワーオブヘブン",
+    "タワーオブヘブン2F": {
+      "displayNameKey": "タワーオブヘブン2F",
       "slots": [
         {
           "speciesId": 607,
@@ -10764,7 +5963,12 @@
             "min": 29,
             "max": 29
           }
-        },
+        }
+      ]
+    },
+    "タワーオブヘブン3F": {
+      "displayNameKey": "タワーオブヘブン3F",
+      "slots": [
         {
           "speciesId": 607,
           "rate": 20,
@@ -10860,7 +6064,12 @@
             "min": 28,
             "max": 28
           }
-        },
+        }
+      ]
+    },
+    "タワーオブヘブン4F": {
+      "displayNameKey": "タワーオブヘブン4F",
+      "slots": [
         {
           "speciesId": 607,
           "rate": 20,
@@ -10956,7 +6165,12 @@
             "min": 29,
             "max": 29
           }
-        },
+        }
+      ]
+    },
+    "タワーオブヘブン5F": {
+      "displayNameKey": "タワーオブヘブン5F",
+      "slots": [
         {
           "speciesId": 607,
           "rate": 20,
@@ -11056,7 +6270,7 @@
       ]
     },
     "8番道路(春)": {
-      "displayName": "8番道路(春)",
+      "displayNameKey": "8番道路(春)",
       "slots": [
         {
           "speciesId": 536,
@@ -11157,7 +6371,7 @@
       ]
     },
     "8番道路(夏)": {
-      "displayName": "8番道路(夏)",
+      "displayNameKey": "8番道路(夏)",
       "slots": [
         {
           "speciesId": 536,
@@ -11258,7 +6472,7 @@
       ]
     },
     "8番道路(秋)": {
-      "displayName": "8番道路(秋)",
+      "displayNameKey": "8番道路(秋)",
       "slots": [
         {
           "speciesId": 536,
@@ -11359,7 +6573,7 @@
       ]
     },
     "セッカの湿原(春)": {
-      "displayName": "セッカの湿原(春)",
+      "displayNameKey": "セッカの湿原(春)",
       "slots": [
         {
           "speciesId": 536,
@@ -11460,7 +6674,7 @@
       ]
     },
     "セッカの湿原(夏)": {
-      "displayName": "セッカの湿原(夏)",
+      "displayNameKey": "セッカの湿原(夏)",
       "slots": [
         {
           "speciesId": 536,
@@ -11561,7 +6775,7 @@
       ]
     },
     "セッカの湿原(秋)": {
-      "displayName": "セッカの湿原(秋)",
+      "displayNameKey": "セッカの湿原(秋)",
       "slots": [
         {
           "speciesId": 536,
@@ -11662,7 +6876,7 @@
       ]
     },
     "9番道路": {
-      "displayName": "9番道路",
+      "displayNameKey": "9番道路",
       "slots": [
         {
           "speciesId": 578,
@@ -11762,8 +6976,8 @@
         }
       ]
     },
-    "修行の岩屋": {
-      "displayName": "修行の岩屋",
+    "修行の岩屋1F": {
+      "displayNameKey": "修行の岩屋1F",
       "slots": [
         {
           "speciesId": 525,
@@ -11860,7 +7074,12 @@
             "min": 49,
             "max": 49
           }
-        },
+        }
+      ]
+    },
+    "修行の岩屋B1F": {
+      "displayNameKey": "修行の岩屋B1F",
+      "slots": [
         {
           "speciesId": 525,
           "rate": 20,
@@ -11956,7 +7175,12 @@
             "min": 49,
             "max": 49
           }
-        },
+        }
+      ]
+    },
+    "修行の岩屋B2F": {
+      "displayNameKey": "修行の岩屋B2F",
+      "slots": [
         {
           "speciesId": 525,
           "rate": 20,
@@ -12055,8 +7279,8 @@
         }
       ]
     },
-    "10番道路": {
-      "displayName": "10番道路",
+    "10番道路外部": {
+      "displayNameKey": "10番道路外部",
       "slots": [
         {
           "speciesId": 507,
@@ -12153,7 +7377,12 @@
             "min": 36,
             "max": 36
           }
-        },
+        }
+      ]
+    },
+    "10番道路内部": {
+      "displayNameKey": "10番道路内部",
+      "slots": [
         {
           "speciesId": 507,
           "rate": 20,
@@ -12253,7 +7482,7 @@
       ]
     },
     "11番道路": {
-      "displayName": "11番道路",
+      "displayNameKey": "11番道路",
       "slots": [
         {
           "speciesId": 627,
@@ -12354,7 +7583,7 @@
       ]
     },
     "12番道路": {
-      "displayName": "12番道路",
+      "displayNameKey": "12番道路",
       "slots": [
         {
           "speciesId": 415,
@@ -12455,7 +7684,7 @@
       ]
     },
     "13番道路": {
-      "displayName": "13番道路",
+      "displayNameKey": "13番道路",
       "slots": [
         {
           "speciesId": 114,
@@ -12556,7 +7785,7 @@
       ]
     },
     "14番道路": {
-      "displayName": "14番道路",
+      "displayNameKey": "14番道路",
       "slots": [
         {
           "speciesId": 55,
@@ -12657,7 +7886,7 @@
       ]
     },
     "ほうじょうの社": {
-      "displayName": "ほうじょうの社",
+      "displayNameKey": "ほうじょうの社",
       "slots": [
         {
           "speciesId": 37,
@@ -12758,7 +7987,7 @@
       ]
     },
     "15番道路": {
-      "displayName": "15番道路",
+      "displayNameKey": "15番道路",
       "slots": [
         {
           "speciesId": 105,
@@ -12859,7 +8088,7 @@
       ]
     },
     "16番道路": {
-      "displayName": "16番道路",
+      "displayNameKey": "16番道路",
       "slots": [
         {
           "speciesId": 577,
@@ -12960,7 +8189,7 @@
       ]
     },
     "迷いの森": {
-      "displayName": "迷いの森",
+      "displayNameKey": "迷いの森",
       "slots": [
         {
           "speciesId": 548,
@@ -13061,7 +8290,7 @@
       ]
     },
     "18番道路": {
-      "displayName": "18番道路",
+      "displayNameKey": "18番道路",
       "slots": [
         {
           "speciesId": 559,

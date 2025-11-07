@@ -1,9 +1,20 @@
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { useAppStore } from '@/store/app-store';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { SUPPORTED_LOCALES, type SupportedLocale } from '@/types/i18n';
+import { useLocale, useLocaleControls } from '@/lib/i18n/locale-context';
 
 export function AppHeader() {
-  const { targetSeeds, searchResults, searchProgress } = useAppStore();
+  const locale = useLocale();
+  const { setLocale } = useLocaleControls();
+
+  const localeLabels: Record<SupportedLocale, string> = {
+    ja: '日本語',
+    en: 'English',
+  };
+
+  const handleLocaleChange = (value: string) => {
+    setLocale(value as SupportedLocale);
+  };
 
   return (
     <header className="border-b bg-card">
@@ -17,25 +28,20 @@ export function AppHeader() {
               Advanced seed calculation for competitive RNG
             </p>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            <div className="text-right">
-              <div className="text-xs sm:text-sm text-muted-foreground">Target Seeds</div>
-              <Badge variant="secondary">{targetSeeds.seeds.length}</Badge>
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">Locale</span>
+              <Select value={locale} onValueChange={handleLocaleChange}>
+                <SelectTrigger className="w-[110px] h-8">
+                  <SelectValue>{localeLabels[locale]}</SelectValue>
+                </SelectTrigger>
+                <SelectContent align="end" className="min-w-[120px]">
+                  {SUPPORTED_LOCALES.map(code => (
+                    <SelectItem key={code} value={code}>{localeLabels[code]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="text-right">
-              <div className="text-xs sm:text-sm text-muted-foreground">Matches Found</div>
-              <Badge variant={searchResults.length > 0 ? "default" : "secondary"}>
-                {searchResults.length}
-              </Badge>
-            </div>
-            {searchProgress.isRunning && (
-              <div className="text-right hidden sm:block">
-                <div className="text-sm text-muted-foreground">Status</div>
-                <Badge variant="outline" className="animate-pulse">
-                  {searchProgress.isPaused ? 'Paused' : 'Searching...'}
-                </Badge>
-              </div>
-            )}
           </div>
         </div>
       </div>

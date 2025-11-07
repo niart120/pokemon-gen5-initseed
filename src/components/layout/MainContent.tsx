@@ -1,7 +1,8 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { MagnifyingGlass, Info, Gear } from '@phosphor-icons/react';
+import { MagnifyingGlass, Info, Gear, Sparkle } from '@phosphor-icons/react';
+import { GenerationPanel } from './GenerationPanel';
 import { useAppStore } from '@/store/app-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { SearchPanel } from './SearchPanel';
@@ -14,7 +15,7 @@ export function MainContent() {
 
   // レスポンシブに応じたoverflow設定とレイアウト
   const overflowClasses = isStack 
-    ? "overflow-y-auto overflow-x-hidden" // 縦スタック時：垂直スクロール有り、水平スクロール無し
+    ? "overflow-y-auto overflow-x-visible" // 縦スタック時：垂直スクロール有り、水平スクロール無し
     : "overflow-x-auto overflow-y-auto"; // 横並び時：両方向スクロール有り（必要に応じて）
 
   const layoutClasses = isStack
@@ -22,10 +23,10 @@ export function MainContent() {
     : "flex flex-col"; // デスクトップも一旦flex-colのまま（SearchPanelが内部で横並びを制御）
 
   return (
-    <main className={`px-2 sm:px-3 lg:px-4 xl:px-6 2xl:px-8 py-1 max-w-none flex-1 ${layoutClasses} ${overflowClasses}`}>
+    <main className={`px-2 sm:px-3 lg:px-4 xl:px-6 2xl:px-8 py-1 max-w-none flex-1 min-h-0 ${layoutClasses} ${overflowClasses}`}>
       <div className="max-w-screen-2xl mx-auto w-full flex-1 flex flex-col min-w-0 min-h-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-2 flex flex-col flex-1 min-h-0">
-          <TabsList className="grid grid-cols-3 w-full max-w-6xl mx-auto flex-shrink-0 h-9">
+          <TabsList className="grid grid-cols-4 w-full max-w-6xl mx-auto flex-shrink-0 h-9">
           <TabsTrigger value="search" className="flex items-center gap-2">
             <MagnifyingGlass size={16} />
             Search
@@ -40,6 +41,10 @@ export function MainContent() {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="generation" className="flex items-center gap-2">
+            <Sparkle size={16} />
+            Generation
+          </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2">
             <Gear size={16} />
             Option
@@ -52,6 +57,10 @@ export function MainContent() {
 
         <TabsContent value="search" className="flex-1 min-h-0">
           <SearchPanel />
+        </TabsContent>
+
+        <TabsContent value="generation" className="flex-1 min-h-0">
+          <GenerationPanel />
         </TabsContent>
 
         <TabsContent value="history" className="flex-1 min-h-0">

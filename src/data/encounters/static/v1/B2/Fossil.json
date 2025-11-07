@@ -1,0 +1,65 @@
+{
+  "version": "B2",
+  "method": "StaticFossil",
+  "source": {
+    "name": "Serebii.net / atwiki(BW2攻略情報)",
+    "url": "https://serebii.net/black2white2/fossils.shtml",
+    "retrievedAt": "2025-11-07"
+  },
+  "entries": [
+    {
+      "id": "fossil-omanyte",
+      "speciesId": 138,
+      "level": 25,
+      "displayNameKey": "fossil-omanyte"
+    },
+    {
+      "id": "fossil-kabuto",
+      "speciesId": 140,
+      "level": 25,
+      "displayNameKey": "fossil-kabuto"
+    },
+    {
+      "id": "fossil-aerodactyl",
+      "speciesId": 142,
+      "level": 25,
+      "displayNameKey": "fossil-aerodactyl"
+    },
+    {
+      "id": "fossil-lileep",
+      "speciesId": 345,
+      "level": 25,
+      "displayNameKey": "fossil-lileep"
+    },
+    {
+      "id": "fossil-anorith",
+      "speciesId": 347,
+      "level": 25,
+      "displayNameKey": "fossil-anorith"
+    },
+    {
+      "id": "fossil-cranidos",
+      "speciesId": 408,
+      "level": 25,
+      "displayNameKey": "fossil-cranidos"
+    },
+    {
+      "id": "fossil-shieldon",
+      "speciesId": 410,
+      "level": 25,
+      "displayNameKey": "fossil-shieldon"
+    },
+    {
+      "id": "fossil-tirtouga",
+      "speciesId": 564,
+      "level": 25,
+      "displayNameKey": "fossil-tirtouga"
+    },
+    {
+      "id": "fossil-archen",
+      "speciesId": 566,
+      "level": 25,
+      "displayNameKey": "fossil-archen"
+    }
+  ]
+}

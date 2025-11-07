@@ -1,0 +1,17 @@
+{
+  "version": "W",
+  "method": "Roaming",
+  "source": {
+    "name": "Serebii.net / atwiki(BW攻略情報)",
+    "url": "https://serebii.net/blackwhite/legends.shtml",
+    "retrievedAt": "2025-11-07"
+  },
+  "entries": [
+    {
+      "id": "roamer-tornadus",
+      "speciesId": 641,
+      "level": 40,
+      "displayNameKey": "roamer-tornadus"
+    }
+  ]
+}

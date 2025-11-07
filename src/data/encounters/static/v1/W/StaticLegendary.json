@@ -1,0 +1,55 @@
+{
+  "version": "W",
+  "method": "StaticLegendary",
+  "source": {
+    "name": "Serebii.net / atwiki(BW攻略情報)",
+    "url": "https://serebii.net/blackwhite/legends.shtml",
+    "retrievedAt": "2025-11-07"
+  },
+  "entries": [
+    {
+      "id": "libertygarden-victini",
+      "speciesId": 494,
+      "level": 15,
+      "isShinyLocked": true,
+      "displayNameKey": "libertygarden-victini"
+    },
+    {
+      "id": "guidancechamber-cobalion",
+      "speciesId": 638,
+      "level": 42,
+      "displayNameKey": "guidancechamber-cobalion"
+    },
+    {
+      "id": "trialchamber-terrakion",
+      "speciesId": 639,
+      "level": 42,
+      "displayNameKey": "trialchamber-terrakion"
+    },
+    {
+      "id": "ruminationfield-virizion",
+      "speciesId": 640,
+      "level": 42,
+      "displayNameKey": "ruminationfield-virizion"
+    },
+    {
+      "id": "abundant-shrine-landorus",
+      "speciesId": 645,
+      "level": 70,
+      "displayNameKey": "abundant-shrine-landorus"
+    },
+    {
+      "id": "giantchasm-kyurem",
+      "speciesId": 646,
+      "level": 75,
+      "displayNameKey": "giantchasm-kyurem"
+    },
+    {
+      "id": "ns-castle-zekrom",
+      "speciesId": 644,
+      "level": 50,
+      "isShinyLocked": true,
+      "displayNameKey": "ns-castle-zekrom"
+    }
+  ]
+}

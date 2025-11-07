@@ -18,6 +18,64 @@
 - **エクスポート**: CSV/JSON/テキスト形式での結果出力
 - **包括的テスト環境**: Playwright-MCP によるE2Eテスト自動化、開発・統合テストページによる品質保証
 
+### アクセシビリティ
+
+Generation/Search パネルの主要カードは aria 属性整備 + 自動検査 (jest-axe) により回帰検出を行う。
+
+- ガイド: `docs/ACCESSIBILITY_GUIDE.md`
+- ローカル検査 (対象カード a11y):
+    ```bash
+    npm run test -- --runTestsByPath src/test/generation/a11y-generation-cards.test.tsx
+    ```
+    0違反を維持すること。
+
+## Generation 機能概要 (Phase3-4 MVP)
+
+初期Seedから連続する乱数列を列挙し、ポケモン生成コア属性 (PID, 性格, 特性スロット, 色違い種別, スロット値, 同期適用) を WebWorker + WASM でストリーミング取得します。Search (SHA-1 初期Seed探索) と独立したタブ/ストア領域を持ち、相互に干渉しません。
+
+### 主API / 主要構成
+- GenerationWorkerManager: WebWorker ライフサイクル管理 (開始/停止/進捗/結果バッチ)
+- generation-worker: WASM PokemonGenerator / SeedEnumerator 呼び出し
+- Store Slice: processedAdvances, resultsCount, throughputRaw, throughputEma, etaMs, shinyCount を保持
+- Exporter: CSV / JSON / TXT (BigInt は hex + decimal 併記 or 文字列化)
+
+### 主パラメータ (GenerationParams 抜粋)
+| Param | 説明 | 制約 |
+|-------|------|------|
+| baseSeed | 初期Seed bigint | 0 ≤ < 2^64 |
+| offset | 開始オフセット | 0..maxAdvances |
+| maxAdvances | 消費上限 | 1..1,000,000 |
+| maxResults | 収集上限 | 1..100,000 且つ ≤ maxAdvances |
+| tid / sid | 表/裏ID | 0..65535 |
+| syncEnabled + syncNatureId | シンクロ設定 | natureId 0..24 |
+| stopAtFirstShiny | 最初の色違いで停止 | boolean |
+| stopOnCap | maxResults 到達停止 | default true |
+| batchSize | バッチ生成数 | 1..10,000 |
+| progressIntervalMs | 進捗間隔 | default 250ms |
+
+### 完了理由 (reason)
+- max-advances: 上限消費到達
+- max-results: 収集上限 + stopOnCap
+- first-shiny: 最初の色違い検出 + stopAtFirstShiny
+- stopped: ユーザー停止
+- error: 例外 / 検証失敗
+
+### 進捗/性能指標
+- throughputRaw = processedAdvances / 実行秒
+- throughputEma = EMA(α=0.2) 平滑化
+- etaMs = (remainingAdvances / basis) * 1000 (basis=Ema>0?Ema:Raw)
+
+### Search との違い
+| 項目 | Search | Generation |
+|------|--------|------------|
+| 目的 | 初期Seed探索(SHA-1) | Seed から遭遇結果列挙 |
+| 計算単位 | メッセージ -> ハッシュ | RNG advance -> Pokemon Raw |
+| 早期終了 | 条件Seed発見 | max / shiny / results / stop |
+| 出力 | 初期Seed候補 | Pokemon Raw 属性列 |
+| 性能指標 | Hash/s (SIMD) | Advances/s (EMA) |
+
+詳細仕様: docs/GENERATION_PHASE3_4_PLAN.md, spec/pokemon-generation-feature-spec.md を参照。
+
 ## 技術スタック
 
 - **フロントエンド**: React 18 + TypeScript + Vite
@@ -242,3 +300,37 @@ npm run dev
 ## ライセンス
 
 MIT License - 詳細は [LICENSE](LICENSE) ファイルを参照
+
+## Generation Results Export 仕様
+
+Generation タブで取得した結果は CSV / JSON / TXT 形式でエクスポートできます。各形式の共通フィールドは以下です:
+
+| 列名 | 説明 |
+|------|------|
+| Advance | その結果が得られた RNG advance (1-based) |
+| SeedHex | 基底シード (16桁, 0x接頭辞, 小文字) |
+| SeedDec | 基底シード 10進 (BigInt 文字列) |
+| PIDHex | PID (8桁, 0x接頭辞, 小文字) |
+| PIDDec | PID 10進 |
+| NatureId | 性格 ID (0-24) |
+| NatureName | 性格名 (英語, DomainNatureNames) |
+| ShinyType | 色違い種別コード (0:Normal 1:Square 2:Star) |
+| ShinyLabel | ShinyType ラベル (No / Square / Star / Unknown) |
+| AbilitySlot | 特性スロット値 |
+| EncounterType | 遭遇タイプ (内部コード) |
+| EncounterSlotValue | スロット決定用数値 |
+| SyncApplied | シンクロ適用有無 |
+| GenderValue | 性別判定用値 (0-255) |
+| LevelRandHex | レベル用乱数 (0x...16桁) |
+| LevelRandDec | レベル用乱数 10進 |
+
+### 変更履歴
+- 2025-08: NatureName 列を追加し、人が読みやすい性格名を直接含めるよう改善。
+
+### 形式別補足
+- CSV: 1行目に上記ヘッダ。値はカンマ区切り / 文字列クォート無し (内部にカンマを含まないため)。
+- JSON: メタデータ (exportDate, format, totalResults) と results 配列。
+- TXT: 人間可読なブロック列挙。スクリプト処理用途には CSV/JSON を推奨。
+
+### 互換性
+以前バージョンのエクスポートとの互換性: 既存列の順序は維持し NatureName を NatureId の直後に挿入。旧ツールで列数固定パースをしている場合は更新が必要です。

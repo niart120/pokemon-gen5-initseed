@@ -21,11 +21,4 @@ export interface NavigatorWithWakeLock extends Navigator {
   wakeLock?: WakeLock;
 }
 
-// Runtime feature flags exposure in development
-declare global {
-  interface Window {
-    featureFlags?: typeof import('./lib/core/feature-flags').featureFlags;
-  }
-}
-
 export {};

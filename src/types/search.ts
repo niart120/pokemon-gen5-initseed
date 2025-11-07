@@ -51,9 +51,10 @@ export interface InitialSeedResult {
   isMatch: boolean;
 }
 
+// NOTE: Export等で使用する軽量結果。InitialSeedResult との整合性のためフィールド名を `datetime` に統一。
 export interface SearchResult {
   seed: number;
-  dateTime: Date;
+  datetime: Date;
   timer0: number;
   vcount: number;
   romVersion: ROMVersion;

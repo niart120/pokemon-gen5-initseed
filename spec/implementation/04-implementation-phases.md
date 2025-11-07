@@ -111,7 +111,6 @@
 5. **API移行（残タスク）**
     - 新しい関数ベース統合APIをUIコンポーネントから直接呼び出すように切替
    - 参照先: `src/lib/generation/pokemon-resolver.ts`（統合解決）および `src/workers/search-worker.ts`（WASM呼び出し境界）
-   - 旧 `src/lib/integration/wasm-service.ts` は削除済み（サービス層の集中化は廃止）
     - 対応内容: インポートの置換、型の調整、呼び出し箇所の更新（検索設定/実行/結果表示）
     - 完了条件: ビルド/テスト緑、開発テストページ（test-integration.html）でUI操作による検索〜結果表示の動作確認
 
@@ -124,7 +123,6 @@
    - 進捗通知の最適化
 3. **パフォーマンステスト**
    - 生成速度測定
-   - メモリ使用量監視
 
 ### 8.5 Phase 5: Polish & Validation（1週間）
 1. **品質向上**

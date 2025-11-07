@@ -1,7 +1,7 @@
-import type { EncounterLocationsJson, EncounterSlotJson } from './schema';
+import type { EncounterLocationsJson, EncounterSlotJson, EncounterSpeciesEntryJson, EncounterSpeciesJson } from './schema';
 import type { DomainEncounterType as EncounterType } from '@/types/domain';
 import type { ROMVersion } from '@/types/rom';
-import { DomainEncounterType } from '@/types/domain';
+import { DomainEncounterType, getDomainEncounterTypeName } from '@/types/domain';
 
 function normalizeLocationKey(location: string): string {
   return location.trim().replace(/[\u3000\s]+/g, '').replace(/[‐‑‒–—−\-_.]/g, '');
@@ -16,15 +16,18 @@ function applyLocationAlias(input: string): string {
   return s;
 }
 
-// Local resolver: numeric enum value -> canonical name
+// Local resolver: numeric value -> canonical encounter type name
 const methodName = (method: EncounterType): keyof typeof DomainEncounterType => {
-  // DomainEncounterType is a numeric enum; reverse mapping provides the name
-  return DomainEncounterType[method] as unknown as keyof typeof DomainEncounterType;
+  const name = getDomainEncounterTypeName(method);
+  if (!name) throw new Error(`Unknown encounter method value: ${method}`);
+  return name as keyof typeof DomainEncounterType;
 };
 
-export type EncounterRegistry = Record<string, { displayName: string; slots: EncounterSlotJson[] }>
+export type EncounterRegistry = Record<string, { displayNameKey: string; slots: EncounterSlotJson[] }>;
+export type StaticEncounterRegistry = Record<string, EncounterSpeciesEntryJson[]>;
 
 let registry: Record<string, EncounterRegistry> | null = null; // key: `${version}_${method}`
+let staticRegistry: StaticEncounterRegistry | null = null; // key: `${version}_${method}`
 
 // 同期初期化（ビルド時取り込み済みJSONのみ）
 (function initRegistry() {
@@ -35,14 +38,38 @@ let registry: Record<string, EncounterRegistry> | null = null; // key: `${versio
     const key = `${data.version}_${data.method}`;
     if (!acc[key]) acc[key] = {};
     for (const [locKey, payload] of Object.entries(data.locations)) {
-      acc[key][normalizeLocationKey(locKey)] = payload;
+      const normalizedKey = normalizeLocationKey(locKey);
+      const safePayload = {
+        displayNameKey: (payload as { displayNameKey?: string }).displayNameKey ?? normalizedKey,
+        slots: payload.slots,
+      } satisfies EncounterRegistry[string];
+      acc[key][normalizedKey] = safePayload;
     }
   }
   registry = acc;
 })();
 
+// Static encounters are pre-bundled species catalogs (no location grouping)
+(function initStaticRegistry() {
+  const modules = import.meta.glob('./static/v1/**/**/*.json', { eager: true }) as Record<string, { default: EncounterSpeciesJson } | EncounterSpeciesJson>;
+  const acc: StaticEncounterRegistry = {};
+  for (const [, mod] of Object.entries(modules)) {
+    const data: EncounterSpeciesJson = (('default' in (mod as object)) ? (mod as { default: EncounterSpeciesJson }).default : (mod as EncounterSpeciesJson));
+    const key = `${data.version}_${data.method}`;
+    acc[key] = data.entries.map(entry => ({
+      ...entry,
+      displayNameKey: (entry as { displayNameKey?: string }).displayNameKey ?? entry.id,
+    }));
+  }
+  staticRegistry = acc;
+})();
+
 export function ensureEncounterRegistryLoaded(): void {
   if (!registry) throw new Error('Encounter registry not initialized.');
+}
+
+function ensureStaticRegistryLoaded(): void {
+  if (!staticRegistry) throw new Error('Static encounter registry not initialized.');
 }
 
 export function getEncounterFromRegistry(version: ROMVersion, location: string, method: EncounterType) {
@@ -52,4 +79,28 @@ export function getEncounterFromRegistry(version: ROMVersion, location: string, 
   const loc = normalizeLocationKey(applyLocationAlias(location));
   const hit = registry![key]?.[loc];
   return hit ?? null;
+}
+
+export function listStaticEncounterEntries(version: ROMVersion, method: EncounterType): EncounterSpeciesEntryJson[] {
+  ensureStaticRegistryLoaded();
+  const key = `${version}_${methodName(method)}`;
+  const bucket = staticRegistry![key];
+  if (!bucket) return [];
+  return bucket.slice();
+}
+
+/**
+ * List normalized location entries for a given version & method.
+ * Order: JSON 定義読み込み順 (registry 格納順) を維持。
+ */
+export function listRegistryLocations(version: ROMVersion, method: EncounterType): { key: string; displayNameKey: string }[] {
+  ensureEncounterRegistryLoaded();
+  const key = `${version}_${methodName(method)}`;
+  const bucket = registry![key];
+  if (!bucket) return [];
+  const out: { key: string; displayNameKey: string }[] = [];
+  for (const [locKey, payload] of Object.entries(bucket)) {
+    out.push({ key: locKey, displayNameKey: payload.displayNameKey });
+  }
+  return out;
 }

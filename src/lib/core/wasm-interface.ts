@@ -7,8 +7,10 @@
 import type {
   BWGenerationConfig as WasmBWGenerationConfig,
   PokemonGenerator as WasmPokemonGenerator,
+  SeedEnumerator as WasmSeedEnumerator,
   EncounterType as WasmEncounterType,
   GameVersion as WasmGameVersion,
+  GameMode as WasmGameMode,
 } from '../../wasm/wasm_pkg';
 // Local type alias for internal interface references
 type WasmSearchResult = import('../../wasm/wasm_pkg').SearchResult;
@@ -46,10 +48,14 @@ export interface WasmModule {
   // 追加: ポケモン生成API
   BWGenerationConfig: typeof WasmBWGenerationConfig;
   PokemonGenerator: typeof WasmPokemonGenerator;
+  SeedEnumerator: typeof WasmSeedEnumerator;
 
   // 追加: 列挙（数値）
   EncounterType: typeof WasmEncounterType;
   GameVersion: typeof WasmGameVersion;
+  GameMode: typeof WasmGameMode;
+
+  calculate_game_offset(initial_seed: bigint, mode: number): number;
 }
 
 let wasmModule: WasmModule | null = null;
@@ -73,15 +79,17 @@ export async function initWasm(): Promise<WasmModule> {
       const module = await import('../../wasm/wasm_pkg.js');
 
       // Node(vitest) 環境では fetch が file: URL をサポートしないため、
-      // 可能ならバイト列を直接渡す
+      // 可能ならバイト列を直接渡す。Web/Worker では URL を渡す。
       let initArg: WasmInitArg;
-      if (typeof window === 'undefined') {
+      const isNode = typeof process !== 'undefined' && !!(process as NodeJS.Process).versions?.node;
+      if (isNode) {
         const fs = await import('fs');
         const path = await import('path');
         const wasmPath = path.join(process.cwd(), 'src/wasm/wasm_pkg_bg.wasm');
         const bytes = fs.readFileSync(wasmPath);
         initArg = { module_or_path: bytes };
       } else {
+        // ブラウザ/Worker 環境（window が未定義でも WorkerGlobalScope で動作）
         initArg = { module_or_path: new URL('../../wasm/wasm_pkg_bg.wasm', import.meta.url) };
       }
 
@@ -91,8 +99,11 @@ export async function initWasm(): Promise<WasmModule> {
         IntegratedSeedSearcher: module.IntegratedSeedSearcher,
         BWGenerationConfig: module.BWGenerationConfig,
         PokemonGenerator: module.PokemonGenerator,
+        SeedEnumerator: module.SeedEnumerator,
         EncounterType: module.EncounterType,
         GameVersion: module.GameVersion,
+        GameMode: module.GameMode,
+        calculate_game_offset: module.calculate_game_offset,
       } as unknown as WasmModule;
       
       return wasmModule;

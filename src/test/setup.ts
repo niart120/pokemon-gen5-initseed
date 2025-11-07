@@ -6,6 +6,8 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import fetch, { Request, Response } from 'node-fetch';
 import { TextDecoder as NodeTextDecoder, TextEncoder as NodeTextEncoder } from 'util';
+// DOMマッチャー拡張 (@testing-library/jest-dom)
+import '@testing-library/jest-dom';
 
 // Node.js環境でのfetch polyfill（Node 18+ では既に存在するが、未定義時のみ設定）
 declare global {

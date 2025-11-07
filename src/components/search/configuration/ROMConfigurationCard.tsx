@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
+import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { GameController } from '@phosphor-icons/react';
@@ -34,13 +35,8 @@ export function ROMConfigurationCard() {
 
   return (
     <Card className="py-2 flex flex-col h-full gap-2">
-      <CardHeader className="pb-0 flex-shrink-0">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <GameController size={20} />
-          ROM Configuration
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 flex-1 min-h-0 flex flex-col">
+      <StandardCardHeader icon={<GameController size={20} className="opacity-80" />} title="ROM Configuration" />
+      <StandardCardContent>
         <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
           <div className="flex-1">
             <Label htmlFor="rom-version" className="text-xs sm:text-sm">ROM Version</Label>
@@ -99,7 +95,7 @@ export function ROMConfigurationCard() {
             </Select>
           </div>
         </div>
-      </CardContent>
+      </StandardCardContent>
     </Card>
   );
 }

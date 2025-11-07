@@ -4,11 +4,11 @@
   "source": {
     "name": "Pokebook",
     "url": "https://pokebook.jp/data/sp5/enc_w2",
-    "retrievedAt": "2025-08-10"
+    "retrievedAt": "2025-11-06"
   },
   "locations": {
     "サンヨウシティ": {
-      "displayName": "サンヨウシティ",
+      "displayNameKey": "サンヨウシティ",
       "slots": [
         {
           "speciesId": 550,
@@ -53,7 +53,7 @@
       ]
     },
     "セッカシティ(春)": {
-      "displayName": "セッカシティ(春)",
+      "displayNameKey": "セッカシティ(春)",
       "slots": [
         {
           "speciesId": 618,
@@ -98,7 +98,7 @@
       ]
     },
     "セッカシティ(夏)": {
-      "displayName": "セッカシティ(夏)",
+      "displayNameKey": "セッカシティ(夏)",
       "slots": [
         {
           "speciesId": 618,
@@ -143,7 +143,7 @@
       ]
     },
     "セッカシティ(秋)": {
-      "displayName": "セッカシティ(秋)",
+      "displayNameKey": "セッカシティ(秋)",
       "slots": [
         {
           "speciesId": 618,
@@ -188,7 +188,7 @@
       ]
     },
     "セッカシティ(冬)": {
-      "displayName": "セッカシティ(冬)",
+      "displayNameKey": "セッカシティ(冬)",
       "slots": [
         {
           "speciesId": 618,
@@ -233,7 +233,7 @@
       ]
     },
     "ヒオウギシティ": {
-      "displayName": "ヒオウギシティ",
+      "displayNameKey": "ヒオウギシティ",
       "slots": [
         {
           "speciesId": 550,
@@ -278,7 +278,7 @@
       ]
     },
     "タチワキシティ": {
-      "displayName": "タチワキシティ",
+      "displayNameKey": "タチワキシティ",
       "slots": [
         {
           "speciesId": 594,
@@ -323,7 +323,7 @@
       ]
     },
     "セイガイハシティ": {
-      "displayName": "セイガイハシティ",
+      "displayNameKey": "セイガイハシティ",
       "slots": [
         {
           "speciesId": 593,
@@ -368,7 +368,7 @@
       ]
     },
     "ヤグルマの森": {
-      "displayName": "ヤグルマの森",
+      "displayNameKey": "ヤグルマの森",
       "slots": [
         {
           "speciesId": 183,
@@ -413,7 +413,7 @@
       ]
     },
     "リュウラセンの塔(春)": {
-      "displayName": "リュウラセンの塔(春)",
+      "displayNameKey": "リュウラセンの塔(春)",
       "slots": [
         {
           "speciesId": 550,
@@ -458,7 +458,7 @@
       ]
     },
     "リュウラセンの塔(夏)": {
-      "displayName": "リュウラセンの塔(夏)",
+      "displayNameKey": "リュウラセンの塔(夏)",
       "slots": [
         {
           "speciesId": 550,
@@ -503,7 +503,7 @@
       ]
     },
     "リュウラセンの塔(秋)": {
-      "displayName": "リュウラセンの塔(秋)",
+      "displayNameKey": "リュウラセンの塔(秋)",
       "slots": [
         {
           "speciesId": 550,
@@ -548,7 +548,7 @@
       ]
     },
     "リュウラセンの塔(冬)": {
-      "displayName": "リュウラセンの塔(冬)",
+      "displayNameKey": "リュウラセンの塔(冬)",
       "slots": [
         {
           "speciesId": 550,
@@ -593,48 +593,8 @@
       ]
     },
     "ジャイアントホール": {
-      "displayName": "ジャイアントホール",
+      "displayNameKey": "ジャイアントホール",
       "slots": [
-        {
-          "speciesId": 86,
-          "rate": 60,
-          "levelRange": {
-            "min": 35,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 30,
-          "levelRange": {
-            "min": 35,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 87,
-          "rate": 5,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 87,
-          "rate": 4,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 87,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
         {
           "speciesId": 86,
           "rate": 60,
@@ -678,168 +638,8 @@
       ]
     },
     "ヒウン下水道": {
-      "displayName": "ヒウン下水道",
+      "displayNameKey": "ヒウン下水道",
       "slots": [
-        {
-          "speciesId": 88,
-          "rate": 60,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 88,
-          "rate": 30,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 88,
-          "rate": 5,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 89,
-          "rate": 4,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 89,
-          "rate": 1,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 88,
-          "rate": 60,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 88,
-          "rate": 30,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 88,
-          "rate": 5,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 89,
-          "rate": 4,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 89,
-          "rate": 1,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 88,
-          "rate": 60,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 88,
-          "rate": 30,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 88,
-          "rate": 5,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 89,
-          "rate": 4,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 89,
-          "rate": 1,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 88,
-          "rate": 60,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 88,
-          "rate": 30,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 88,
-          "rate": 5,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 89,
-          "rate": 4,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 89,
-          "rate": 1,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
         {
           "speciesId": 88,
           "rate": 60,
@@ -883,7 +683,7 @@
       ]
     },
     "P2ラボ": {
-      "displayName": "P2ラボ",
+      "displayNameKey": "P2ラボ",
       "slots": [
         {
           "speciesId": 594,
@@ -928,7 +728,7 @@
       ]
     },
     "サザナミ湾(春)": {
-      "displayName": "サザナミ湾(春)",
+      "displayNameKey": "サザナミ湾(春)",
       "slots": [
         {
           "speciesId": 593,
@@ -973,7 +773,7 @@
       ]
     },
     "サザナミ湾(夏)": {
-      "displayName": "サザナミ湾(夏)",
+      "displayNameKey": "サザナミ湾(夏)",
       "slots": [
         {
           "speciesId": 593,
@@ -1018,7 +818,7 @@
       ]
     },
     "サザナミ湾(秋)": {
-      "displayName": "サザナミ湾(秋)",
+      "displayNameKey": "サザナミ湾(秋)",
       "slots": [
         {
           "speciesId": 593,
@@ -1063,7 +863,7 @@
       ]
     },
     "サザナミ湾(冬)": {
-      "displayName": "サザナミ湾(冬)",
+      "displayNameKey": "サザナミ湾(冬)",
       "slots": [
         {
           "speciesId": 320,
@@ -1108,48 +908,8 @@
       ]
     },
     "サンギ牧場": {
-      "displayName": "サンギ牧場",
+      "displayNameKey": "サンギ牧場",
       "slots": [
-        {
-          "speciesId": 550,
-          "rate": 60,
-          "levelRange": {
-            "min": 5,
-            "max": 15
-          }
-        },
-        {
-          "speciesId": 183,
-          "rate": 30,
-          "levelRange": {
-            "min": 5,
-            "max": 15
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 5,
-          "levelRange": {
-            "min": 5,
-            "max": 15
-          }
-        },
-        {
-          "speciesId": 184,
-          "rate": 4,
-          "levelRange": {
-            "min": 5,
-            "max": 15
-          }
-        },
-        {
-          "speciesId": 184,
-          "rate": 1,
-          "levelRange": {
-            "min": 5,
-            "max": 15
-          }
-        },
         {
           "speciesId": 550,
           "rate": 60,
@@ -1193,7 +953,7 @@
       ]
     },
     "タチワキコンビナート": {
-      "displayName": "タチワキコンビナート",
+      "displayNameKey": "タチワキコンビナート",
       "slots": [
         {
           "speciesId": 594,
@@ -1238,7 +998,7 @@
       ]
     },
     "チャンピオンロード": {
-      "displayName": "チャンピオンロード",
+      "displayNameKey": "チャンピオンロード",
       "slots": [
         {
           "speciesId": 183,
@@ -1279,171 +1039,11 @@
             "min": 40,
             "max": 50
           }
-        },
-        {
-          "speciesId": 418,
-          "rate": 60,
-          "levelRange": {
-            "min": 35,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 30,
-          "levelRange": {
-            "min": 35,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 419,
-          "rate": 5,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 419,
-          "rate": 4,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 419,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 183,
-          "rate": 60,
-          "levelRange": {
-            "min": 35,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 30,
-          "levelRange": {
-            "min": 35,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 5,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 184,
-          "rate": 4,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 184,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 183,
-          "rate": 60,
-          "levelRange": {
-            "min": 35,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 30,
-          "levelRange": {
-            "min": 35,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 5,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 184,
-          "rate": 4,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 184,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 418,
-          "rate": 60,
-          "levelRange": {
-            "min": 35,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 30,
-          "levelRange": {
-            "min": 35,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 419,
-          "rate": 5,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 419,
-          "rate": 4,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
-        },
-        {
-          "speciesId": 419,
-          "rate": 1,
-          "levelRange": {
-            "min": 40,
-            "max": 50
-          }
         }
       ]
     },
     "古代の抜け道": {
-      "displayName": "古代の抜け道",
+      "displayNameKey": "古代の抜け道",
       "slots": [
         {
           "speciesId": 183,
@@ -1488,48 +1088,8 @@
       ]
     },
     "ヤーコンロード": {
-      "displayName": "ヤーコンロード",
+      "displayNameKey": "ヤーコンロード",
       "slots": [
-        {
-          "speciesId": 550,
-          "rate": 60,
-          "levelRange": {
-            "min": 45,
-            "max": 60
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 30,
-          "levelRange": {
-            "min": 45,
-            "max": 60
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 5,
-          "levelRange": {
-            "min": 50,
-            "max": 60
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 60
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 60
-          }
-        },
         {
           "speciesId": 550,
           "rate": 60,
@@ -1573,7 +1133,7 @@
       ]
     },
     "海辺の洞穴": {
-      "displayName": "海辺の洞穴",
+      "displayNameKey": "海辺の洞穴",
       "slots": [
         {
           "speciesId": 86,
@@ -1618,7 +1178,7 @@
       ]
     },
     "自然保護区": {
-      "displayName": "自然保護区",
+      "displayNameKey": "自然保護区",
       "slots": [
         {
           "speciesId": 418,
@@ -1663,7 +1223,7 @@
       ]
     },
     "ビレッジブリッジ": {
-      "displayName": "ビレッジブリッジ",
+      "displayNameKey": "ビレッジブリッジ",
       "slots": [
         {
           "speciesId": 183,
@@ -1708,7 +1268,7 @@
       ]
     },
     "1番道路": {
-      "displayName": "1番道路",
+      "displayNameKey": "1番道路",
       "slots": [
         {
           "speciesId": 550,
@@ -1753,7 +1313,7 @@
       ]
     },
     "3番道路": {
-      "displayName": "3番道路",
+      "displayNameKey": "3番道路",
       "slots": [
         {
           "speciesId": 341,
@@ -1798,48 +1358,8 @@
       ]
     },
     "地下水脈の穴": {
-      "displayName": "地下水脈の穴",
+      "displayNameKey": "地下水脈の穴",
       "slots": [
-        {
-          "speciesId": 550,
-          "rate": 60,
-          "levelRange": {
-            "min": 45,
-            "max": 60
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 30,
-          "levelRange": {
-            "min": 45,
-            "max": 60
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 5,
-          "levelRange": {
-            "min": 50,
-            "max": 60
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 4,
-          "levelRange": {
-            "min": 50,
-            "max": 60
-          }
-        },
-        {
-          "speciesId": 550,
-          "rate": 1,
-          "levelRange": {
-            "min": 50,
-            "max": 60
-          }
-        },
         {
           "speciesId": 550,
           "rate": 60,
@@ -1883,48 +1403,8 @@
       ]
     },
     "4番道路": {
-      "displayName": "4番道路",
+      "displayNameKey": "4番道路",
       "slots": [
-        {
-          "speciesId": 594,
-          "rate": 60,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 594,
-          "rate": 30,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 594,
-          "rate": 5,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 593,
-          "rate": 4,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
-        {
-          "speciesId": 593,
-          "rate": 1,
-          "levelRange": {
-            "min": 5,
-            "max": 20
-          }
-        },
         {
           "speciesId": 594,
           "rate": 60,
@@ -1968,7 +1448,7 @@
       ]
     },
     "6番道路(春)": {
-      "displayName": "6番道路(春)",
+      "displayNameKey": "6番道路(春)",
       "slots": [
         {
           "speciesId": 183,
@@ -2013,7 +1493,7 @@
       ]
     },
     "6番道路(夏)": {
-      "displayName": "6番道路(夏)",
+      "displayNameKey": "6番道路(夏)",
       "slots": [
         {
           "speciesId": 183,
@@ -2058,7 +1538,7 @@
       ]
     },
     "6番道路(秋)": {
-      "displayName": "6番道路(秋)",
+      "displayNameKey": "6番道路(秋)",
       "slots": [
         {
           "speciesId": 183,
@@ -2103,7 +1583,7 @@
       ]
     },
     "6番道路(冬)": {
-      "displayName": "6番道路(冬)",
+      "displayNameKey": "6番道路(冬)",
       "slots": [
         {
           "speciesId": 183,
@@ -2148,7 +1628,7 @@
       ]
     },
     "8番道路(春)": {
-      "displayName": "8番道路(春)",
+      "displayNameKey": "8番道路(春)",
       "slots": [
         {
           "speciesId": 618,
@@ -2193,7 +1673,7 @@
       ]
     },
     "8番道路(夏)": {
-      "displayName": "8番道路(夏)",
+      "displayNameKey": "8番道路(夏)",
       "slots": [
         {
           "speciesId": 618,
@@ -2238,7 +1718,7 @@
       ]
     },
     "8番道路(秋)": {
-      "displayName": "8番道路(秋)",
+      "displayNameKey": "8番道路(秋)",
       "slots": [
         {
           "speciesId": 618,
@@ -2283,7 +1763,7 @@
       ]
     },
     "8番道路(冬)": {
-      "displayName": "8番道路(冬)",
+      "displayNameKey": "8番道路(冬)",
       "slots": [
         {
           "speciesId": 618,
@@ -2328,7 +1808,7 @@
       ]
     },
     "セッカの湿原(春)": {
-      "displayName": "セッカの湿原(春)",
+      "displayNameKey": "セッカの湿原(春)",
       "slots": [
         {
           "speciesId": 618,
@@ -2373,7 +1853,7 @@
       ]
     },
     "セッカの湿原(夏)": {
-      "displayName": "セッカの湿原(夏)",
+      "displayNameKey": "セッカの湿原(夏)",
       "slots": [
         {
           "speciesId": 618,
@@ -2418,7 +1898,7 @@
       ]
     },
     "セッカの湿原(秋)": {
-      "displayName": "セッカの湿原(秋)",
+      "displayNameKey": "セッカの湿原(秋)",
       "slots": [
         {
           "speciesId": 618,
@@ -2463,7 +1943,7 @@
       ]
     },
     "セッカの湿原(冬)": {
-      "displayName": "セッカの湿原(冬)",
+      "displayNameKey": "セッカの湿原(冬)",
       "slots": [
         {
           "speciesId": 618,
@@ -2508,7 +1988,7 @@
       ]
     },
     "11番道路": {
-      "displayName": "11番道路",
+      "displayNameKey": "11番道路",
       "slots": [
         {
           "speciesId": 418,
@@ -2553,7 +2033,7 @@
       ]
     },
     "13番道路": {
-      "displayName": "13番道路",
+      "displayNameKey": "13番道路",
       "slots": [
         {
           "speciesId": 120,
@@ -2598,7 +2078,7 @@
       ]
     },
     "14番道路": {
-      "displayName": "14番道路",
+      "displayNameKey": "14番道路",
       "slots": [
         {
           "speciesId": 418,
@@ -2643,7 +2123,7 @@
       ]
     },
     "ほうじょうの社": {
-      "displayName": "ほうじょうの社",
+      "displayNameKey": "ほうじょうの社",
       "slots": [
         {
           "speciesId": 183,
@@ -2688,7 +2168,7 @@
       ]
     },
     "迷いの森": {
-      "displayName": "迷いの森",
+      "displayNameKey": "迷いの森",
       "slots": [
         {
           "speciesId": 418,
@@ -2733,7 +2213,7 @@
       ]
     },
     "18番道路": {
-      "displayName": "18番道路",
+      "displayNameKey": "18番道路",
       "slots": [
         {
           "speciesId": 594,
@@ -2778,7 +2258,7 @@
       ]
     },
     "19番道路": {
-      "displayName": "19番道路",
+      "displayNameKey": "19番道路",
       "slots": [
         {
           "speciesId": 550,
@@ -2823,7 +2303,7 @@
       ]
     },
     "20番道路(春)": {
-      "displayName": "20番道路(春)",
+      "displayNameKey": "20番道路(春)",
       "slots": [
         {
           "speciesId": 550,
@@ -2868,7 +2348,7 @@
       ]
     },
     "20番道路(夏)": {
-      "displayName": "20番道路(夏)",
+      "displayNameKey": "20番道路(夏)",
       "slots": [
         {
           "speciesId": 550,
@@ -2913,7 +2393,7 @@
       ]
     },
     "20番道路(秋)": {
-      "displayName": "20番道路(秋)",
+      "displayNameKey": "20番道路(秋)",
       "slots": [
         {
           "speciesId": 550,
@@ -2958,7 +2438,7 @@
       ]
     },
     "20番道路(冬)": {
-      "displayName": "20番道路(冬)",
+      "displayNameKey": "20番道路(冬)",
       "slots": [
         {
           "speciesId": 550,
@@ -3003,7 +2483,7 @@
       ]
     },
     "22番道路": {
-      "displayName": "22番道路",
+      "displayNameKey": "22番道路",
       "slots": [
         {
           "speciesId": 183,
@@ -3048,7 +2528,7 @@
       ]
     },
     "23番道路": {
-      "displayName": "23番道路",
+      "displayNameKey": "23番道路",
       "slots": [
         {
           "speciesId": 418,
@@ -3093,7 +2573,7 @@
       ]
     },
     "サザナミタウン": {
-      "displayName": "サザナミタウン",
+      "displayNameKey": "サザナミタウン",
       "slots": [
         {
           "speciesId": 120,
@@ -3138,7 +2618,7 @@
       ]
     },
     "17番水道": {
-      "displayName": "17番水道",
+      "displayNameKey": "17番水道",
       "slots": [
         {
           "speciesId": 594,
@@ -3183,7 +2663,7 @@
       ]
     },
     "21番水道": {
-      "displayName": "21番水道",
+      "displayNameKey": "21番水道",
       "slots": [
         {
           "speciesId": 593,

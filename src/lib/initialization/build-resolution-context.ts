@@ -13,23 +13,29 @@ import type { ROMVersion } from '@/types/rom';
 import type { EncounterTable as UiEncounterTable } from '@/data/encounter-tables';
 import { getEncounterTable } from '@/data/encounter-tables';
 import type { DomainEncounterType } from '@/types/domain';
+import type { EncounterSpeciesEntryJson } from '@/data/encounters/schema';
 
 // Species/generated dataset adapters
 // For M1, we gather only what resolver uses immediately (gender ratios, ability names placeholder)
 // The real, species-scoped catalogs can be wired here later without changing service code.
 import { getGeneratedSpeciesById } from '@/data/species/generated';
 
+type StaticEncounterInput = Pick<EncounterSpeciesEntryJson, 'id' | 'speciesId' | 'level'>;
+
 export interface BuildContextOptions {
   version: ROMVersion;
-  location: string;
   encounterType: DomainEncounterType;
+  location?: string;
+  staticEncounter?: StaticEncounterInput | null;
 }
 
 /** Lightweight cache to avoid repeated construction */
 const cache = new Map<string, ResolutionContext>();
 
 function cacheKey(opts: BuildContextOptions): string {
-  return `${opts.version}__${opts.location}__${opts.encounterType}`;
+  const loc = opts.location ?? '-';
+  const staticKey = opts.staticEncounter ? `static:${opts.staticEncounter.id}:${opts.staticEncounter.speciesId}:${opts.staticEncounter.level}` : 'static:-';
+  return `${opts.version}__${opts.encounterType}__${loc}__${staticKey}`;
 }
 
 /**
@@ -38,15 +44,32 @@ function cacheKey(opts: BuildContextOptions): string {
  * - genderRatios / abilityCatalog: 必要最低限を species/generated から動的参照
  */
 export function buildResolutionContext(opts: BuildContextOptions): ResolutionContext {
+  if (!opts.location && !opts.staticEncounter) {
+    throw new Error('buildResolutionContext requires either location or static encounter input.');
+  }
   const key = cacheKey(opts);
   const hit = cache.get(key);
   if (hit) return hit;
 
-  const table: UiEncounterTable | null = getEncounterTable(
-    opts.version,
-    opts.location,
-    opts.encounterType as unknown as number // EncounterType is numeric under the hood
-  );
+  let table: UiEncounterTable | null = null;
+  if (opts.staticEncounter) {
+    table = {
+      location: opts.staticEncounter.id,
+      method: opts.encounterType,
+      version: opts.version,
+      slots: [{
+        speciesId: opts.staticEncounter.speciesId,
+        rate: 100,
+        levelRange: { min: opts.staticEncounter.level, max: opts.staticEncounter.level },
+      }],
+    };
+  } else if (opts.location) {
+    table = getEncounterTable(
+      opts.version,
+      opts.location,
+      opts.encounterType
+    );
+  }
 
   const ctx: ResolutionContext = {
     encounterTable: table ?? undefined,

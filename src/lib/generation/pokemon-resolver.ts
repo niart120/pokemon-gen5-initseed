@@ -13,7 +13,7 @@
 
 import type { UnresolvedPokemonData, GenderRatio } from '@/types/pokemon-raw';
 import type { EncounterTable } from '@/data/encounter-tables';
-import { DomainNatureNames, DomainShinyType } from '@/types/domain';
+import { natureName as formatNatureName, shinyDomainStatus } from '@/lib/utils/format-display';
 import { getGeneratedSpeciesById, type GeneratedAbilities } from '@/data/species/generated';
 import { formatHexDisplay } from '@/lib/utils/hex-parser';
 
@@ -58,7 +58,10 @@ export function resolvePokemon(
   const speciesId = resolveSpeciesId(raw, ctx.encounterTable);
   const level = resolveLevel(raw, ctx.encounterTable);
   const gender = resolveGender(raw, speciesId, ctx.genderRatios);
-  const abilityIndex = resolveAbilityIndex(raw);
+  const abilityIndex = normalizeAbilityIndex(
+    speciesId,
+    resolveAbilityIndex(raw)
+  );
 
   return {
     seed: raw.seed,
@@ -99,11 +102,11 @@ export function toUiReadyPokemon(
     seedHex: formatHexDisplay(data.seed, 16, true),
     pidHex: formatHexDisplay(data.pid >>> 0, 8, true),
     speciesName,
-    natureName: getNatureName(data.natureId),
+  natureName: formatNatureName(data.natureId),
     abilityName,
     gender,
     level: data.level,
-    shinyStatus: toShinyStatus(data.shinyType),
+  shinyStatus: shinyDomainStatus(data.shinyType),
   };
 }
 
@@ -184,6 +187,30 @@ function resolveAbilityIndex(raw: UnresolvedPokemonData): 0 | 1 | 2 | undefined 
   return undefined;
 }
 
+function normalizeAbilityIndex(
+  speciesId: number | undefined,
+  abilityIndex: 0 | 1 | 2 | undefined
+): 0 | 1 | 2 | undefined {
+  if (speciesId == null || abilityIndex == null) return abilityIndex;
+  const species = getGeneratedSpeciesById(speciesId);
+  if (!species) return abilityIndex;
+
+  const { ability1, ability2, hidden } = species.abilities;
+
+  // Align ability index with available slots so UI filters remain consistent.
+  if (abilityIndex === 0) return ability1 ? 0 : undefined;
+  if (abilityIndex === 1) {
+    if (ability2) return 1;
+    return ability1 ? 0 : undefined;
+  }
+  if (abilityIndex === 2) {
+    if (hidden) return 2;
+    if (ability2) return 1;
+    return ability1 ? 0 : undefined;
+  }
+  return abilityIndex;
+}
+
 function resolveSpeciesIndexSafe(
   raw: UnresolvedPokemonData,
   table: EncounterTable
@@ -193,25 +220,7 @@ function resolveSpeciesIndexSafe(
   return Math.abs(idx) % table.slots.length;
 }
 
-function getNatureName(natureId: number): string {
-  if (natureId < 0 || natureId >= DomainNatureNames.length) {
-    return 'Unknown';
-  }
-  return DomainNatureNames[natureId];
-}
-
-function toShinyStatus(shinyType: number): 'normal' | 'square' | 'star' {
-  switch (shinyType) {
-    case DomainShinyType.Normal:
-      return 'normal';
-    case DomainShinyType.Square:
-      return 'square';
-    case DomainShinyType.Star:
-      return 'star';
-    default:
-      return 'normal';
-  }
-}
+// (moved) nature/shiny formatting now lives in format-display.ts
 
 // ======== UI adapter helpers (name/formatting) ========
 
@@ -242,7 +251,7 @@ function selectAbilityByIndex(
   abilities: GeneratedAbilities
 ): { key: string; names: { en: string; ja: string } } | null {
   if (idx === 0) return abilities.ability1;
-  if (idx === 1) return abilities.ability2;
-  if (idx === 2) return abilities.hidden;
+  if (idx === 1) return abilities.ability2 ?? abilities.ability1;
+  if (idx === 2) return abilities.hidden ?? abilities.ability2 ?? abilities.ability1;
   return null;
 }

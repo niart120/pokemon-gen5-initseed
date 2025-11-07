@@ -18,6 +18,11 @@ import { load as loadHtml } from 'cheerio';
 // 未知のJP種名を収集するセット（実行中のみ）
 let MISSING_SPECIES = new Set();
 
+const I18N_DIR = path.resolve('src/data/encounters/i18n');
+const DISPLAY_NAME_DICTIONARY_PATH = path.join(I18N_DIR, 'display-names.json');
+
+let displayNameDictionary = { locations: {}, static: {}, categories: {}, types: {} };
+
 // ターゲットとするメソッド（濃い草むらはスコープ外）
 const METHODS = [
   'Normal', // 草むら, 洞窟
@@ -33,6 +38,51 @@ const VERSIONS = ['B', 'W', 'B2', 'W2'];
 
 function normalizeLocationKey(location) {
   return location.trim().replace(/[\u3000\s]+/g, '').replace(/[‐‑‒–—−\-_.]/g, '');
+}
+
+async function loadDisplayNameDictionary() {
+  try {
+    const text = await fs.readFile(DISPLAY_NAME_DICTIONARY_PATH, 'utf8');
+    const json = JSON.parse(text);
+    return {
+      locations: json.locations ?? {},
+      static: json.static ?? {},
+      categories: json.categories ?? {},
+      types: json.types ?? {},
+    };
+  } catch {
+    return { locations: {}, static: {}, categories: {}, types: {} };
+  }
+}
+
+function upsertDictionaryEntry(bucket, key, jaValue, enValue) {
+  if (!key) return;
+  if (!bucket[key]) {
+    bucket[key] = {};
+  }
+  const entry = bucket[key];
+  if (jaValue && !entry.ja) entry.ja = jaValue;
+  if (enValue && !entry.en) entry.en = enValue;
+}
+
+function upsertLocationDisplayName(key, displayName) {
+  const ja = displayName || key;
+  upsertDictionaryEntry(displayNameDictionary.locations, key, ja, ja);
+}
+
+function sortRecord(record) {
+  return Object.fromEntries(Object.keys(record).sort().map(k => [k, record[k]]));
+}
+
+async function persistDisplayNameDictionary() {
+  const sorted = {
+    locations: sortRecord(displayNameDictionary.locations),
+    static: sortRecord(displayNameDictionary.static),
+    categories: sortRecord(displayNameDictionary.categories),
+    types: sortRecord(displayNameDictionary.types),
+  };
+  await ensureDir(I18N_DIR);
+  await fs.writeFile(DISPLAY_NAME_DICTIONARY_PATH, JSON.stringify(sorted, null, 2), 'utf8');
 }
 
 function todayISO() {
@@ -116,6 +166,76 @@ const SLOT_RATE_PRESETS = {
   Fishing: [60, 30, 5, 4, 1],
   FishingBubble: [60, 30, 5, 4, 1],
 };
+
+const WATER_SINGLE_ROW_LOCATIONS = new Map([
+  ['チャンピオンロード', {}],
+  ['ジャイアントホール', {}],
+  ['地下水脈の穴', {}],
+  ['ヒウン下水道', {}],
+  ['サンギ牧場', {}],
+  ['ヤーコンロード', {}],
+  ['4番道路', {}],
+]);
+
+const DUPLICATE_SUFFIX_RULES_BW = Object.freeze({
+  'ヤグルマの森': ['外部', '内部'],
+  'リゾートデザート': ['外部', '内部'],
+  '古代の城': ['1F,B1F', 'B2F-B6F', '最下層', '小部屋'],
+  '電気石の洞穴': ['1F', 'B1F', 'B2F'],
+  'ネジ山(春)': null,
+  'ネジ山(夏)': null,
+  'ネジ山(秋)': null,
+  'ネジ山(冬)': null,
+  'リュウラセンの塔(春)': ['外部(南)', '外部(北東)'],
+  'リュウラセンの塔(夏)': ['外部(南)', '外部(北東)'],
+  'リュウラセンの塔(秋)': ['外部(南)', '外部(北東)'],
+  'リュウラセンの塔(冬)': ['外部(南)', '外部(北東)'],
+  'リュウラセンの塔': ['1F', '2F'],
+  'チャンピオンロード': ['外部', '内部1F(中央・右)', '内部1F(右),2F,3F', '内部4F(中央)', '内部4F(左・右),5F-7F'],
+  'ジャイアントホール': ['外部', 'B1F', '地底森林', '最奥部'],
+  '地下水脈の穴': null,
+  'フキヨセの洞穴': null,
+  'タワーオブヘブン': ['2F', '3F', '4F', '5F'],
+  '修行の岩屋': ['1F', 'B1F', 'B2F'],
+  '10番道路': ['外部', '内部'],
+});
+
+const DUPLICATE_SUFFIX_RULES_B2W2 = Object.freeze({
+  'ヤグルマの森': ['外部', '内部'],
+  'リゾートデザート': ['外部', '内部'],
+  '古代の城': ['1F,B1F', '最下層', '小部屋'],
+  '電気石の洞穴': ['1F', 'B1F', 'B2F'],
+  'ネジ山(春)': null,
+  'ネジ山(夏)': null,
+  'ネジ山(秋)': null,
+  'ネジ山(冬)': null,
+  'リュウラセンの塔(春)': ['外部(南)', '外部(北東)'],
+  'リュウラセンの塔(夏)': ['外部(南)', '外部(北東)'],
+  'リュウラセンの塔(秋)': ['外部(南)', '外部(北東)'],
+  'リュウラセンの塔(冬)': ['外部(南)', '外部(北東)'],
+  'リュウラセンの塔': ['1F', '2F'],
+  'チャンピオンロード': ['内部1F', '内部2F(前部)', '内部2F(後部)', '内部3F', '内部4F', '樹林', '外壁(下層)', '外壁(上層)'],
+  'ジャイアントホール': ['外部', 'B1F', '地底森林', '最奥部'],
+  'ヒウン下水道': null,
+  'タチワキコンビナート': ['北部', '南部'],
+  'リバースマウンテン': ['外部', '内部', '小部屋'],
+  'ストレンジャーハウス': ['入口,B1F', '小部屋'],
+  '古代の抜け道': ['南部', '北部', '中央部'],
+  'ヤーコンロード': null,
+  '地底遺跡': null,
+  '海辺の洞穴': ['1F', 'B1F'],
+  '4番道路': null,
+  '地下水脈の穴': null,
+  'フキヨセの洞穴': null,
+  'タワーオブヘブン': ['2F', '3F', '4F', '5F'],
+});
+
+const DUPLICATE_SUFFIX_RULES = Object.freeze({
+  B: DUPLICATE_SUFFIX_RULES_BW,
+  W: DUPLICATE_SUFFIX_RULES_BW,
+  B2: DUPLICATE_SUFFIX_RULES_B2W2,
+  W2: DUPLICATE_SUFFIX_RULES_B2W2,
+});
 
 async function fetchHtml(url) {
   const res = await fetch(url, { headers: { 'User-Agent': 'encounter-scraper/1.0' } });
@@ -219,7 +339,8 @@ function parseWideRowIntoSlots($, tr, method, aliasJa) {
   const tds = $(tr).find('td');
   if (tds.length < 13) return null; // 1列:ロケーション + 12枠
   const locText = $(tds[0]).text().trim();
-  const displayName = locText.replace(/^\[[^\]]+\]\s*/, '').trim();
+  const locMatch = locText.match(/^\[([^\]]+)\]\s*(.*)$/);
+  const baseName = (locMatch ? locMatch[2] : locText.replace(/^\[[^\]]+\]\s*/, '')).trim();
 
   const rates = SLOT_RATE_PRESETS[method] || SLOT_RATE_PRESETS.Normal;
   const slots = [];
@@ -243,7 +364,7 @@ function parseWideRowIntoSlots($, tr, method, aliasJa) {
     slots.push({ speciesId, rate, levelRange });
   }
   if (!slots.length) return null;
-  return { displayName, slots };
+  return { baseName, slots };
 }
 
 function rowLooksLikeDust($, tr) {
@@ -279,6 +400,75 @@ function parseWaterRowSlots($, tr, method, aliasJa) {
   return slots;
 }
 
+function makeSlotSignature(slot) {
+  if (!slot) return '';
+  const speciesId = slot.speciesId ?? 'null';
+  const rate = slot.rate ?? 'null';
+  const min = slot.levelRange?.min ?? 'null';
+  const max = slot.levelRange?.max ?? 'null';
+  return `${speciesId}:${rate}:${min}-${max}`;
+}
+
+function makeRowSignature(slots) {
+  if (!slots || !slots.length) return '';
+  return slots.map(makeSlotSignature).join('|');
+}
+
+function uniqueRowsBySignature(rows) {
+  const seen = new Set();
+  const uniques = [];
+  for (const row of rows) {
+    const signature = makeRowSignature(row.slots);
+    if (!signature) continue;
+    if (seen.has(signature)) continue;
+    seen.add(signature);
+    uniques.push(row);
+  }
+  return uniques;
+}
+
+function resolveLocationGroup(baseName, rows, { version, method, suffixRules }) {
+  const uniques = uniqueRowsBySignature(rows);
+  if (!uniques.length) return [];
+
+  const plan = suffixRules ? suffixRules[baseName] : undefined;
+  if (plan === undefined) {
+    const merged = [];
+    for (const row of rows) merged.push(...row.slots);
+    return merged.length ? [{ displayName: baseName, slots: merged }] : [];
+  }
+
+  if (plan === null) {
+    if (uniques.length > 1) {
+      console.warn(
+        `[warn] Expected identical rows for ${version}/${method}/${baseName}, found ${uniques.length} variants; using first variant.`
+      );
+    }
+    return [{ displayName: baseName, slots: uniques[0].slots }];
+  }
+
+  if (!Array.isArray(plan) || !plan.length) {
+    console.warn(`[warn] No valid suffix plan for ${version}/${method}/${baseName}; merging rows.`);
+    const merged = [];
+    for (const row of rows) merged.push(...row.slots);
+    return merged.length ? [{ displayName: baseName, slots: merged }] : [];
+  }
+
+  if (uniques.length > plan.length) {
+    console.warn(
+      `[warn] Insufficient suffix entries for ${version}/${method}/${baseName}: need ${uniques.length}, have ${plan.length}. Extra variants reuse last suffix.`
+    );
+  }
+
+  const result = [];
+  for (let i = 0; i < uniques.length; i++) {
+    const suffix = plan[Math.min(i, plan.length - 1)] ?? null;
+    const displayName = suffix ? `${baseName} ${suffix}` : baseName;
+    result.push({ displayName, slots: uniques[i].slots });
+  }
+  return result;
+}
+
 function isLocationRow($, tr) {
   const td0 = $(tr).find('td').first();
   if (!td0.length) return false;
@@ -294,9 +484,10 @@ function extractDisplayNameFromRow($, tr) {
 
 function parseWaterEncounterPage(html, { version, method, url, aliasJa }) {
   const $ = loadHtml(html);
-  const locations = {};
+  const rawLocations = new Map();
   const tables = findSectionTables($, method);
-  if (!tables.length) return { version, method, source: { name: 'Pokebook', url, retrievedAt: todayISO() }, locations };
+  if (!tables.length)
+    return { version, method, source: { name: 'Pokebook', url, retrievedAt: todayISO() }, locations: {} };
 
   for (const tbl of tables) {
     const rows = $(tbl).find('tbody tr, tr').toArray();
@@ -312,10 +503,33 @@ function parseWaterEncounterPage(html, { version, method, url, aliasJa }) {
         if (targetMethod !== method) continue;
         const slots = parseWaterRowSlots($, group[gi], method, aliasJa);
         if (!slots.length) continue;
-        if (!locations[displayName]) locations[displayName] = { displayName, slots: [] };
-        locations[displayName].slots.push(...slots);
+        if (!rawLocations.has(displayName)) rawLocations.set(displayName, []);
+        rawLocations.get(displayName).push(slots);
       }
       i += Math.max(0, group.length - 1); // グループ分スキップ
+    }
+  }
+
+  const locations = {};
+  for (const [displayName, rows] of rawLocations) {
+    const seen = new Set();
+    const mergedSlots = [];
+    const options = WATER_SINGLE_ROW_LOCATIONS.get(displayName);
+    const limitToOne = options && options.keepAll !== true;
+    const enforceUnique = !options || options.keepAll !== true;
+    for (const rowSlots of rows) {
+      const signature = makeRowSignature(rowSlots);
+      if (enforceUnique) {
+        if (signature && seen.has(signature)) continue;
+        if (signature) seen.add(signature);
+      }
+      mergedSlots.push(...rowSlots);
+      if (limitToOne) break;
+    }
+    if (mergedSlots.length) {
+      const normalizedKey = normalizeLocationKey(displayName);
+      locations[normalizedKey] = { displayNameKey: normalizedKey, slots: mergedSlots };
+      upsertLocationDisplayName(normalizedKey, displayName);
     }
   }
 
@@ -331,6 +545,7 @@ function parseEncounterPage(html, { version, method, url, aliasJa }) {
 
   const $ = loadHtml(html);
   const locations = {};
+  const parsedRows = [];
 
   const tables = findSectionTables($, method);
   if (!tables.length) {
@@ -347,11 +562,28 @@ function parseEncounterPage(html, { version, method, url, aliasJa }) {
 
         const parsed = parseWideRowIntoSlots($, tr, method, aliasJa);
         if (!parsed) return;
-        const key = parsed.displayName; // displayNameはそのまま保持（内部正規化はローダ側）
-        if (!locations[key]) locations[key] = { displayName: parsed.displayName, slots: [] };
-        // 同一ロケーションが複数行になる場合は統合（出現枠の上書きはしないが末尾追加）
-        locations[key].slots.push(...parsed.slots);
+        parsedRows.push(parsed);
       });
+  }
+
+  const suffixRules = ['Normal', 'ShakingGrass', 'DustCloud'].includes(method)
+    ? DUPLICATE_SUFFIX_RULES[version]
+    : undefined;
+  const grouped = new Map();
+  for (const row of parsedRows) {
+    const key = row.baseName;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(row);
+  }
+
+  for (const [baseName, rows] of grouped) {
+    const resolved = resolveLocationGroup(baseName, rows, { version, method, suffixRules });
+    for (const entry of resolved) {
+      if (!entry.displayName || !entry.slots?.length) continue;
+      const normalizedKey = normalizeLocationKey(entry.displayName);
+      locations[normalizedKey] = { displayNameKey: normalizedKey, slots: entry.slots };
+      upsertLocationDisplayName(normalizedKey, entry.displayName);
+    }
   }
 
   return {
@@ -409,6 +641,8 @@ function parseArgs() {
 }
 
 async function main() {
+  displayNameDictionary = await loadDisplayNameDictionary();
+
   const args = parseArgs();
   const versions = args.version ? [args.version] : VERSIONS;
   const methods = args.method ? [args.method] : METHODS;
@@ -422,6 +656,8 @@ async function main() {
       }
     }
   }
+
+  await persistDisplayNameDictionary();
 }
 
 main().catch((e) => {

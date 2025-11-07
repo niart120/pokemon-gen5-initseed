@@ -61,7 +61,7 @@ export class ResultExporter {
     results.forEach(result => {
       const row = [
         `0x${result.seed.toString(16).padStart(8, '0')}`,
-        result.dateTime.toISOString(),
+        result.datetime.toISOString(),
         `0x${result.timer0.toString(16).padStart(4, '0')}`,
         `0x${result.vcount.toString(16).padStart(2, '0')}`,
         result.romVersion,
@@ -119,7 +119,7 @@ export class ResultExporter {
         } = {
           seed: `0x${result.seed.toString(16).padStart(8, '0')}`,
           seedDecimal: result.seed,
-          dateTime: result.dateTime.toISOString(),
+          dateTime: result.datetime.toISOString(),
           timer0: `0x${result.timer0.toString(16).padStart(4, '0')}`,
           timer0Decimal: result.timer0,
           vcount: `0x${result.vcount.toString(16).padStart(2, '0')}`,
@@ -166,7 +166,7 @@ export class ResultExporter {
     results.forEach((result, index) => {
       lines.push(`Result #${index + 1}:`);
       lines.push(`  Seed: 0x${result.seed.toString(16).padStart(8, '0')} (${result.seed})`);
-      lines.push(`  DateTime: ${result.dateTime.toLocaleString()}`);
+  lines.push(`  DateTime: ${result.datetime.toLocaleString()}`);
       lines.push(`  Timer0: 0x${result.timer0.toString(16).padStart(4, '0')} (${result.timer0})`);
       lines.push(`  VCount: 0x${result.vcount.toString(16).padStart(2, '0')} (${result.vcount})`);
       lines.push(`  ROM: ${result.romVersion} ${result.romRegion} (${result.hardware})`);
