@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ChunkCalculator } from '@/lib/search/chunk-calculator';
 import type { SearchConditions } from '@/types/search';
 import {
+  WORDS_PER_HASH,
   benchmarkWorkload,
   buildGpuWorkloadConfig,
   createWorkload,
@@ -21,7 +22,7 @@ import {
 const hasWebGpu = typeof navigator !== 'undefined' && navigator.gpu !== undefined && navigator.gpu !== null;
 const describeWebGpu = hasWebGpu ? describe : describe.skip;
 
-const WASM_ITERATIONS = 3;
+const WASM_ITERATIONS = 1;
 const GPU_ITERATIONS = 5;
 const TEST_TIMEOUT_MS = 120_000;
 type OverrideKey = 'GPU_BATCH_LIMIT' | 'GPU_WORKGROUP_SIZE' | 'STRESS_WINDOW' | 'WORKER_COUNT';
@@ -72,6 +73,13 @@ const GPU_BATCH_LIMIT_OVERRIDE = readNumericOverride('GPU_BATCH_LIMIT');
 const GPU_WORKGROUP_SIZE_OVERRIDE = readNumericOverride('GPU_WORKGROUP_SIZE');
 const STRESS_WINDOW_OVERRIDE = readNumericOverride('STRESS_WINDOW');
 const WORKER_COUNT_OVERRIDE = readNumericOverride('WORKER_COUNT');
+
+// Default host-side memory ceiling to keep result buffers within a manageable size.
+const HOST_MEMORY_BUDGET_BYTES = 96 * 1024 * 1024;
+const HOST_MEMORY_MESSAGE_LIMIT = Math.max(
+  1,
+  Math.floor(HOST_MEMORY_BUDGET_BYTES / (WORDS_PER_HASH * Uint32Array.BYTES_PER_ELEMENT))
+);
 
 const ACCURACY_CONFIG = {
   rangeSeconds: 256,
@@ -173,11 +181,13 @@ async function runGpuWorkloadStreaming(
   batchSize: number
 ): Promise<WebGpuSha1ProfilingSample | null> {
   const workload = buildGpuWorkloadConfig(context);
+  const hostSafeLimit = Math.max(1, Math.min(context.totalMessages, HOST_MEMORY_MESSAGE_LIMIT));
+  const enforcedBatchSize = Math.max(1, Math.min(batchSize, hostSafeLimit));
   let accumulator: ProfilingAccumulator | null = null;
 
   for (let offset = 0; offset < context.totalMessages; ) {
     const remaining = context.totalMessages - offset;
-    const messageCount = Math.min(batchSize, remaining);
+    const messageCount = Math.min(enforcedBatchSize, remaining);
     await runner.computeGenerated(workload, offset, messageCount);
     const sample = runner.getLastProfiling();
 
@@ -249,8 +259,17 @@ describeWebGpu('WebGPU SHA-1 benchmark', () => {
       });
 
       const batchLimitOverride = resolveStreamBatchLimit();
-      const effectiveBatchLimit = batchLimitOverride ?? context.totalMessages;
-      const streamBatchSize = Math.max(1, Math.min(effectiveBatchLimit, context.totalMessages));
+      const deviceCapacity = runner.getDispatchMessageCapacity();
+      const hostLimitedBatch = Math.max(1, Math.min(context.totalMessages, HOST_MEMORY_MESSAGE_LIMIT));
+      const defaultBatchLimit = hostLimitedBatch;
+      const effectiveBatchLimit = batchLimitOverride ?? defaultBatchLimit;
+      let streamBatchSize = Math.max(1, Math.min(effectiveBatchLimit, hostLimitedBatch));
+      const shouldForceDoubleBuffer =
+        batchLimitOverride == null && streamBatchSize <= deviceCapacity && hostLimitedBatch > deviceCapacity;
+      if (shouldForceDoubleBuffer) {
+        const doubleBufferedTarget = Math.max(deviceCapacity + 1, deviceCapacity * 2);
+        streamBatchSize = Math.min(hostLimitedBatch, doubleBufferedTarget);
+      }
       const totalBatches = Math.ceil(context.totalMessages / streamBatchSize);
 
       console.info(

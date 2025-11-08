@@ -10,6 +10,8 @@ import type { GenerationSlice } from './generation-store';
 import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS } from './generation-store';
 import { DEFAULT_LOCALE } from '@/types/i18n';
 
+export type SearchExecutionMode = 'gpu' | 'cpu-parallel' | 'cpu-single';
+
 interface AppStore extends GenerationSlice {
   locale: 'ja' | 'en';
   setLocale: (locale: 'ja' | 'en') => void;
@@ -60,6 +62,10 @@ interface AppStore extends GenerationSlice {
   // Wake Lock settings for preventing screen sleep on mobile devices
   wakeLockEnabled: boolean;
   setWakeLockEnabled: (enabled: boolean) => void;
+
+  // Search execution mode
+  searchExecutionMode: SearchExecutionMode;
+  setSearchExecutionMode: (mode: SearchExecutionMode) => void;
   
   // Raw target seed input
   targetSeedInput: string;
@@ -121,8 +127,21 @@ const defaultSearchProgress: SearchProgress = {
   isPaused: false,
 };
 
+const detectedHardwareConcurrency = typeof navigator !== 'undefined'
+  ? navigator.hardwareConcurrency || 1
+  : 1;
+
+const isWebGpuAvailable = typeof navigator !== 'undefined'
+  && typeof (navigator as Navigator & { gpu?: unknown }).gpu !== 'undefined';
+
+const defaultSearchExecutionMode: SearchExecutionMode = isWebGpuAvailable
+  ? 'gpu'
+  : detectedHardwareConcurrency > 1
+    ? 'cpu-parallel'
+    : 'cpu-single';
+
 const defaultParallelSearchSettings: ParallelSearchSettings = {
-  enabled: true,
+  enabled: defaultSearchExecutionMode === 'cpu-parallel',
   maxWorkers: navigator.hardwareConcurrency || 4,
   chunkStrategy: 'time-based',
 };
@@ -287,9 +306,17 @@ export const useAppStore = create<AppStore>()(
       // Parallel search settings
       parallelSearchSettings: defaultParallelSearchSettings,
       setParallelSearchEnabled: (enabled) =>
-        set((state) => ({
-          parallelSearchSettings: { ...state.parallelSearchSettings, enabled },
-        })),
+        set((state) => {
+          const nextMode: SearchExecutionMode = enabled
+            ? 'cpu-parallel'
+            : state.searchExecutionMode === 'cpu-parallel'
+              ? 'cpu-single'
+              : state.searchExecutionMode;
+          return {
+            parallelSearchSettings: { ...state.parallelSearchSettings, enabled },
+            searchExecutionMode: nextMode,
+          };
+        }),
       setMaxWorkers: (count) =>
         set((state) => ({
           parallelSearchSettings: { ...state.parallelSearchSettings, maxWorkers: count },
@@ -310,6 +337,17 @@ export const useAppStore = create<AppStore>()(
       // Wake Lock settings for preventing screen sleep on mobile devices
       wakeLockEnabled: false,
       setWakeLockEnabled: (enabled) => set({ wakeLockEnabled: enabled }),
+
+      // Search execution mode
+      searchExecutionMode: defaultSearchExecutionMode,
+      setSearchExecutionMode: (mode) =>
+        set((state) => ({
+          searchExecutionMode: mode,
+          parallelSearchSettings: {
+            ...state.parallelSearchSettings,
+            enabled: mode === 'cpu-parallel',
+          },
+        })),
       
       // Raw target seed input
       targetSeedInput: DEMO_TARGET_SEEDS.map(s => '0x' + s.toString(16).padStart(8, '0')).join('\n'),
@@ -388,6 +426,7 @@ export const useAppStore = create<AppStore>()(
         searchConditions: state.searchConditions,
         targetSeeds: state.targetSeeds,
         parallelSearchSettings: state.parallelSearchSettings,
+    searchExecutionMode: state.searchExecutionMode,
         activeTab: state.activeTab,
         wakeLockEnabled: state.wakeLockEnabled,
         targetSeedInput: state.targetSeedInput,

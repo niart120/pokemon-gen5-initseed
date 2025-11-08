@@ -23,16 +23,20 @@ describe('Phase 4: 並列検索UI統合テスト', () => {
     it('並列検索の有効/無効を切り替えできる', () => {
       const store = useAppStore.getState();
       
-      // 初期状態は有効
-      expect(store.parallelSearchSettings.enabled).toBe(true);
-      
-      // 無効化
-      store.setParallelSearchEnabled(false);
-      expect(useAppStore.getState().parallelSearchSettings.enabled).toBe(false);
+      // 明示的にシングルモードへ
+      store.setSearchExecutionMode('cpu-single');
 
-      // 再度有効化
+      // 有効化すると並列モードへ遷移
       store.setParallelSearchEnabled(true);
-      expect(useAppStore.getState().parallelSearchSettings.enabled).toBe(true);
+      const enabledState = useAppStore.getState();
+      expect(enabledState.parallelSearchSettings.enabled).toBe(true);
+      expect(enabledState.searchExecutionMode).toBe('cpu-parallel');
+
+      // 無効化すると単一CPUモードへ戻る
+      store.setParallelSearchEnabled(false);
+      const disabledState = useAppStore.getState();
+      expect(disabledState.parallelSearchSettings.enabled).toBe(false);
+      expect(disabledState.searchExecutionMode).toBe('cpu-single');
     });
 
     it('Worker数を適切に設定できる', () => {
@@ -63,6 +67,7 @@ describe('Phase 4: 並列検索UI統合テスト', () => {
       const state = useAppStore.getState();
       expect(state.parallelSearchSettings.enabled).toBe(true);
       expect(state.parallelSearchSettings.maxWorkers).toBe(4);
+      expect(state.searchExecutionMode).toBe('cpu-parallel');
     });
   });
 

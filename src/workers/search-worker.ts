@@ -28,6 +28,7 @@ export interface WorkerResponse {
   progress?: WorkerProgressMessage;
   result?: InitialSeedResult;
   error?: string;
+  errorCode?: string;
   message?: string;
 }
 

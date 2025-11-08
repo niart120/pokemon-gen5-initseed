@@ -7,11 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import { Play, Pause, Square } from '@phosphor-icons/react';
-import { useAppStore } from '../../../store/app-store';
+import { useAppStore } from '@/store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { getSearchWorkerManager, resetSearchWorkerManager } from '../../../lib/search/search-worker-manager';
+import { isWebGpuSupported } from '@/lib/search/search-mode';
 import { isWakeLockSupported, requestWakeLock, releaseWakeLock, setupAutoWakeLockManagement } from '@/lib/utils/wake-lock';
 import type { InitialSeedResult } from '../../../types/search';
+import type { SearchExecutionMode } from '@/store/app-store';
 
 export function SearchControlCard() {
   const { isStack } = useResponsiveLayout();
@@ -26,11 +29,12 @@ export function SearchControlCard() {
     addSearchResult,
     clearSearchResults,
     parallelSearchSettings,
-    setParallelSearchEnabled,
     setMaxWorkers,
     setParallelProgress,
     wakeLockEnabled,
     setWakeLockEnabled,
+    searchExecutionMode,
+    setSearchExecutionMode,
   } = useAppStore();
 
   // ワーカー数設定を初期化時に同期
@@ -98,7 +102,7 @@ export function SearchControlCard() {
       const workerManager = getSearchWorkerManager();
       
       // Set parallel mode based on settings
-      workerManager.setParallelMode(parallelSearchSettings.enabled);
+  workerManager.setParallelMode(searchExecutionMode === 'cpu-parallel');
       
       // Start search with worker
       await workerManager.startSearch(
@@ -181,19 +185,6 @@ export function SearchControlCard() {
     }
   };
 
-  // 並列検索設定の変更
-  const handleParallelModeChange = (enabled: boolean) => {
-    if (searchProgress.isRunning) {
-      alert('Cannot change parallel mode while search is running.');
-      return;
-    }
-    setParallelSearchEnabled(enabled);
-    
-    // SearchWorkerManagerにも反映
-    const workerManager = getSearchWorkerManager();
-    workerManager.setParallelMode(enabled);
-  };
-
   const handleMaxWorkersChange = (values: number[]) => {
     if (searchProgress.isRunning) {
       return;
@@ -209,6 +200,62 @@ export function SearchControlCard() {
   const maxCpuCores = navigator.hardwareConcurrency || 4;
   const isParallelAvailable = getSearchWorkerManager().isParallelSearchAvailable();
   const isWakeLockAvailable = isWakeLockSupported();
+  const isWebGpuAvailable = isWebGpuSupported();
+
+  const executionModeOptions: Array<{
+    value: SearchExecutionMode;
+    label: string;
+    disabled: boolean;
+    hint?: string;
+  }> = [
+    {
+      value: 'cpu-parallel',
+      label: 'CPU Parallel',
+      disabled: !isParallelAvailable,
+      hint: !isParallelAvailable ? 'Parallel workers are not available on this device' : undefined,
+    },
+    {
+      value: 'cpu-single',
+      label: 'CPU Single',
+      disabled: false,
+    },
+    {
+      value: 'gpu',
+      label: 'GPU',
+      disabled: !isWebGpuAvailable,
+      hint: !isWebGpuAvailable ? 'WebGPU is not available in this browser' : undefined,
+    },
+  ];
+
+  const handleExecutionModeChange = (value: string) => {
+    if (searchProgress.isRunning) {
+      alert('Cannot change execution mode while search is running.');
+      return;
+    }
+
+    const nextMode = value as SearchExecutionMode;
+
+    if (nextMode === 'gpu' && !isWebGpuAvailable) {
+      return;
+    }
+
+    if (nextMode === 'cpu-parallel' && !isParallelAvailable) {
+      return;
+    }
+
+    setSearchExecutionMode(nextMode);
+  };
+
+  useEffect(() => {
+    if (!isWebGpuAvailable && searchExecutionMode === 'gpu') {
+      setSearchExecutionMode(isParallelAvailable ? 'cpu-parallel' : 'cpu-single');
+      return;
+    }
+
+    if (!isParallelAvailable && searchExecutionMode === 'cpu-parallel') {
+      setSearchExecutionMode('cpu-single');
+    }
+  }, [isWebGpuAvailable, isParallelAvailable, searchExecutionMode, setSearchExecutionMode]);
 
   // Wake Lock設定の変更
   const handleWakeLockChange = (enabled: boolean) => {
@@ -273,41 +320,53 @@ export function SearchControlCard() {
               )}
             </div>
 
-            {/* 設定チェックボックス */}
-            <div className="flex gap-3 items-center">
-              {/* 並列検索設定 */}
-              {isParallelAvailable && (
-                <div className="flex items-center space-x-1">
-                  <Checkbox
-                    id="parallel-search-inline"
-                    checked={parallelSearchSettings.enabled}
-                    onCheckedChange={handleParallelModeChange}
-                    disabled={searchProgress.isRunning}
-                  />
-                  <Label htmlFor="parallel-search-inline" className="text-xs whitespace-nowrap">
-                    Parallel
-                  </Label>
-                </div>
-              )}
+            {/* Wake Lock設定 */}
+            {isWakeLockAvailable && (
+              <div className="flex items-center space-x-1">
+                <Checkbox
+                  id="wake-lock-inline"
+                  checked={wakeLockEnabled}
+                  onCheckedChange={handleWakeLockChange}
+                />
+                <Label htmlFor="wake-lock-inline" className="text-xs whitespace-nowrap">
+                  Keep Screen On
+                </Label>
+              </div>
+            )}
+          </div>
 
-              {/* Wake Lock設定 */}
-              {isWakeLockAvailable && (
-                <div className="flex items-center space-x-1">
-                  <Checkbox
-                    id="wake-lock-inline"
-                    checked={wakeLockEnabled}
-                    onCheckedChange={handleWakeLockChange}
-                  />
-                  <Label htmlFor="wake-lock-inline" className="text-xs whitespace-nowrap">
-                    Keep Screen On
-                  </Label>
-                </div>
-              )}
-            </div>
+          {/* 実行モード切り替え */}
+          <div className="flex flex-wrap items-center gap-3">
+            <RadioGroup
+              className="flex w-full flex-wrap items-center gap-3"
+              value={searchExecutionMode}
+              onValueChange={handleExecutionModeChange}
+              aria-label="Search execution mode"
+            >
+              {executionModeOptions.map((option) => {
+                const id = `execution-mode-${option.value}`;
+                return (
+                  <div key={option.value} className="flex items-center space-x-1">
+                    <RadioGroupItem
+                      id={id}
+                      value={option.value}
+                      disabled={option.disabled || searchProgress.isRunning}
+                    />
+                    <Label
+                      htmlFor={id}
+                      className="text-xs whitespace-nowrap"
+                      title={option.hint}
+                    >
+                      {option.label}
+                    </Label>
+                  </div>
+                );
+              })}
+            </RadioGroup>
           </div>
 
           {/* 並列検索詳細設定 */}
-          {isParallelAvailable && parallelSearchSettings.enabled && (
+          {isParallelAvailable && searchExecutionMode === 'cpu-parallel' && (
             <>
               <Separator />
               <div className="space-y-2">
@@ -324,7 +383,7 @@ export function SearchControlCard() {
                   min={1}
                   max={Math.max(maxCpuCores, 8)}
                   step={1}
-                  disabled={searchProgress.isRunning}
+                  disabled={searchProgress.isRunning || searchExecutionMode !== 'cpu-parallel'}
                   className="flex-1"
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">

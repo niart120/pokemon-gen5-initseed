@@ -9,6 +9,9 @@ import type { AggregatedProgress } from '../../types/parallel';
 import type { WorkerRequest, WorkerResponse } from '../../workers/search-worker';
 import { MultiWorkerSearchManager } from './multi-worker-manager';
 import type { SingleWorkerSearchCallbacks } from '../../types/callbacks';
+import { shouldUseWebGpuSearch } from './search-mode';
+import { useAppStore } from '@/store/app-store';
+import type { SearchExecutionMode } from '@/store/app-store';
 
 export type SearchCallbacks = SingleWorkerSearchCallbacks<InitialSeedResult> & {
   onParallelProgress?: (progress: AggregatedProgress | null) => void;
@@ -16,9 +19,12 @@ export type SearchCallbacks = SingleWorkerSearchCallbacks<InitialSeedResult> & {
 
 export class SearchWorkerManager {
   private worker: Worker | null = null;
+  private gpuWorker: Worker | null = null;
   private callbacks: SearchCallbacks | null = null;
   private singleWorkerMode: boolean = true;
   private multiWorkerManager: MultiWorkerSearchManager | null = null;
+  private activeMode: 'cpu-single' | 'cpu-parallel' | 'gpu' = 'cpu-single';
+  private lastRequest: { conditions: SearchConditions; targetSeeds: number[] } | null = null;
 
   constructor() {
     this.initializeWorker();
@@ -33,7 +39,7 @@ export class SearchWorkerManager {
       );
 
       this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-        this.handleWorkerMessage(event.data);
+        this.processWorkerResponse(event.data, 'cpu');
       };
 
       this.worker.onerror = (error) => {
@@ -47,7 +53,32 @@ export class SearchWorkerManager {
     }
   }
 
-  private handleWorkerMessage(response: WorkerResponse) {
+  private initializeGpuWorker(): void {
+    if (this.gpuWorker) {
+      return;
+    }
+
+    try {
+      this.gpuWorker = new Worker(
+        new URL('../../workers/search-worker-webgpu.ts', import.meta.url),
+        { type: 'module' }
+      );
+
+      this.gpuWorker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+        this.processWorkerResponse(event.data, 'gpu');
+      };
+
+      this.gpuWorker.onerror = (error) => {
+        console.error('WebGPU worker error:', error);
+        this.handleGpuFailure('WebGPU worker error');
+      };
+    } catch (error) {
+      console.error('Failed to initialize WebGPU worker:', error);
+      this.gpuWorker = null;
+    }
+  }
+
+  private processWorkerResponse(response: WorkerResponse, origin: 'cpu' | 'gpu'): void {
     if (!this.callbacks) return;
 
     switch (response.type) {
@@ -58,15 +89,15 @@ export class SearchWorkerManager {
         if (response.progress) {
           this.callbacks.onProgress({
             ...response.progress,
-            currentDateTime: response.progress.currentDateTime ? 
-              new Date(response.progress.currentDateTime) : undefined
+            currentDateTime: response.progress.currentDateTime
+              ? new Date(response.progress.currentDateTime)
+              : undefined
           });
         }
         break;
 
       case 'RESULT':
         if (response.result) {
-          // Convert ISO string back to Date object
           const result: InitialSeedResult = {
             ...response.result,
             datetime: new Date(response.result.datetime)
@@ -80,6 +111,10 @@ export class SearchWorkerManager {
         break;
 
       case 'ERROR':
+        if (origin === 'gpu') {
+          this.handleGpuFailure(response.error || 'WebGPU search failed', response.errorCode);
+          return;
+        }
         this.callbacks.onError(response.error || 'Unknown error');
         break;
 
@@ -100,19 +135,59 @@ export class SearchWorkerManager {
     }
   }
 
-  public startSearch(
-    conditions: SearchConditions, 
-    targetSeeds: number[], 
+  private handleGpuFailure(errorMessage: string, errorCode?: string): void {
+    console.warn('WebGPU worker reported an error. Falling back to CPU search.', {
+      errorMessage,
+      errorCode
+    });
+
+    if (!this.callbacks) {
+      return;
+    }
+
+    if (this.gpuWorker) {
+      this.gpuWorker.terminate();
+      this.gpuWorker = null;
+    }
+
+    try {
+      const store = useAppStore.getState();
+      const fallbackMode: SearchExecutionMode = this.isParallelSearchAvailable() ? 'cpu-parallel' : 'cpu-single';
+      store.setSearchExecutionMode(fallbackMode);
+    } catch (storeError) {
+      console.warn('Failed to update execution mode after WebGPU failure:', storeError);
+    }
+
+    const request = this.lastRequest;
+    if (!request) {
+      this.callbacks.onError(errorMessage);
+      return;
+    }
+
+    const fallbackStarted = this.startCpuSearchInternal(request.conditions, request.targetSeeds, this.callbacks);
+
+    if (!fallbackStarted) {
+      this.callbacks.onError(errorMessage);
+      return;
+    }
+
+    console.warn('CPU search fallback activated after WebGPU failure.');
+  }
+
+  private startCpuSearchInternal(
+    conditions: SearchConditions,
+    targetSeeds: number[],
     callbacks: SearchCallbacks
   ): boolean {
-    this.callbacks = callbacks;
-
-    // 並列検索モードの場合
     if (!this.singleWorkerMode) {
+      this.activeMode = 'cpu-parallel';
       return this.startParallelSearch(conditions, targetSeeds, callbacks);
     }
 
-    // 従来の単一Workerモード
+    if (!this.worker) {
+      this.initializeWorker();
+    }
+
     if (!this.worker) {
       callbacks.onError('Worker not available. Falling back to main thread.');
       return false;
@@ -124,8 +199,63 @@ export class SearchWorkerManager {
       targetSeeds
     };
 
-    this.worker.postMessage(request);
-    return true;
+    try {
+      this.worker.postMessage(request);
+      this.activeMode = 'cpu-single';
+      return true;
+    } catch (error) {
+      console.error('Failed to start CPU search worker:', error);
+      callbacks.onError('Failed to start CPU search worker');
+      return false;
+    }
+  }
+
+  private tryStartGpuSearch(
+    conditions: SearchConditions,
+    targetSeeds: number[]
+  ): boolean {
+    this.initializeGpuWorker();
+
+    if (!this.gpuWorker) {
+      return false;
+    }
+
+    const request: WorkerRequest = {
+      type: 'START_SEARCH',
+      conditions,
+      targetSeeds
+    };
+
+    try {
+      this.gpuWorker.postMessage(request);
+      this.activeMode = 'gpu';
+      return true;
+    } catch (error) {
+      console.error('Failed to start WebGPU search worker:', error);
+      return false;
+    }
+  }
+
+  public startSearch(
+    conditions: SearchConditions,
+    targetSeeds: number[],
+    callbacks: SearchCallbacks
+  ): boolean {
+    this.callbacks = callbacks;
+    this.lastRequest = {
+      conditions,
+      targetSeeds: [...targetSeeds],
+    };
+
+    if (shouldUseWebGpuSearch()) {
+      const gpuStarted = this.tryStartGpuSearch(conditions, targetSeeds);
+      if (gpuStarted) {
+        return true;
+      }
+      console.warn('WebGPU search could not be started. Falling back to CPU mode.');
+    }
+
+    return this.startCpuSearchInternal(conditions, targetSeeds, callbacks);
   }
 
   /**
@@ -187,6 +317,7 @@ export class SearchWorkerManager {
       };
 
       this.multiWorkerManager.startParallelSearch(conditions, targetSeeds, parallelCallbacks);
+      this.activeMode = 'cpu-parallel';
       return true;
 
     } catch (error) {
@@ -195,11 +326,17 @@ export class SearchWorkerManager {
       
       // フォールバック: 単一Workerモードに切り替え
       this.singleWorkerMode = true;
-      return this.startSearch(conditions, targetSeeds, callbacks);
+      return this.startCpuSearchInternal(conditions, targetSeeds, callbacks);
     }
   }
 
   public pauseSearch() {
+    if (this.activeMode === 'gpu' && this.gpuWorker) {
+      const request: WorkerRequest = { type: 'PAUSE_SEARCH' };
+      this.gpuWorker.postMessage(request);
+      return;
+    }
+
     if (!this.singleWorkerMode && this.multiWorkerManager) {
       this.multiWorkerManager.pauseAll();
     } else if (this.worker) {
@@ -209,6 +346,12 @@ export class SearchWorkerManager {
   }
 
   public resumeSearch() {
+    if (this.activeMode === 'gpu' && this.gpuWorker) {
+      const request: WorkerRequest = { type: 'RESUME_SEARCH' };
+      this.gpuWorker.postMessage(request);
+      return;
+    }
+
     if (!this.singleWorkerMode && this.multiWorkerManager) {
       this.multiWorkerManager.resumeAll();
     } else if (this.worker) {
@@ -218,6 +361,12 @@ export class SearchWorkerManager {
   }
 
   public stopSearch() {
+    if (this.activeMode === 'gpu' && this.gpuWorker) {
+      const request: WorkerRequest = { type: 'STOP_SEARCH' };
+      this.gpuWorker.postMessage(request);
+      return;
+    }
+
     if (!this.singleWorkerMode && this.multiWorkerManager) {
       this.multiWorkerManager.terminateAll();
     } else if (this.worker) {
@@ -277,15 +426,22 @@ export class SearchWorkerManager {
       this.multiWorkerManager = null;
     }
     
+    if (this.gpuWorker) {
+      this.gpuWorker.terminate();
+      this.gpuWorker = null;
+    }
+
     if (this.worker) {
       this.worker.terminate();
       this.worker = null;
     }
     this.callbacks = null;
+    this.activeMode = 'cpu-single';
+    this.lastRequest = null;
   }
 
   public isWorkerAvailable(): boolean {
-    return this.worker !== null;
+    return this.worker !== null || this.gpuWorker !== null;
   }
 }
 

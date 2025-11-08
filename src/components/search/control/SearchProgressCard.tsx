@@ -17,12 +17,12 @@ import {
 import { TimeDisplay } from './TimeDisplay';
 
 export function SearchProgressCard() {
-  const { searchProgress, parallelProgress, parallelSearchSettings } = useAppStore();
+  const { searchProgress, parallelProgress, searchExecutionMode } = useAppStore();
   const [isWorkerDetailsExpanded, setIsWorkerDetailsExpanded] = useState(true);
   const { isStack: isMobile } = useResponsiveLayout();
   // const sizes = getResponsiveSizes(uiScale);
 
-  const isParallelMode = parallelSearchSettings.enabled;
+  const isParallelMode = searchExecutionMode === 'cpu-parallel';
   const isRunning = searchProgress.isRunning;
   
   // 起動したワーカー総数を基準にする（停止・完了含む）
