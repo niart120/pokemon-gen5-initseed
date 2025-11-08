@@ -13,7 +13,10 @@ export default defineConfig({
     // WebAssemblyロジックは node 環境でも動作するが、Reactコンポーネント（Testing Library）にはDOMが必要。
     // happy-dom を統一利用。純Rustテストに影響する場合は、将来ファイルパターンで分離可能。
     environment: 'happy-dom',
-    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    include: [
+      'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+      'test/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+    ],
     exclude: ['node_modules', 'dist', '.git', '.cache'],
     setupFiles: ['./src/test/setup.ts'],
     testTimeout: 10000,

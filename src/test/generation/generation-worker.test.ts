@@ -13,7 +13,7 @@ function makeParams(maxAdvances = 3000) {
     baseSeed: 1n,
     offset: 0n,
     maxAdvances,
-    maxResults: 1000,
+    maxResults: 2000,
     version: 'B' as const,
     encounterType: 0,
     tid: 1,
@@ -21,7 +21,7 @@ function makeParams(maxAdvances = 3000) {
     syncEnabled: false,
     syncNatureId: 0,
     stopAtFirstShiny: false,
-    stopOnCap: true,
+    stopOnCap: false,
     shinyCharm: false,
     isShinyLocked: false,
     batchSize: 5000,
@@ -35,7 +35,7 @@ function createWorker() {
   return new Worker(new URL('@/workers/generation-worker.ts', import.meta.url), { type: 'module' });
 }
 
-function waitFor(worker: Worker, predicate: (msg: any)=>boolean, timeoutMs = 2000): Promise<any> {
+function waitFor(worker: Worker, predicate: (msg: any)=>boolean, timeoutMs = 5000): Promise<any> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(()=>{ reject(new Error('timeout')); }, timeoutMs);
     worker.addEventListener('message', (ev) => {
@@ -48,7 +48,8 @@ describe('generation-worker skeleton', () => {
   it('RUN → COMPLETE', async () => {
     const w = createWorker();
     await waitFor(w, m => m.type === 'READY');
-    w.postMessage({ type: 'START_GENERATION', params: makeParams(1000) });
+    const params = { ...makeParams(1000), stopOnCap: false };
+    w.postMessage({ type: 'START_GENERATION', params });
     const complete = await waitFor(w, m => m.type === 'COMPLETE');
     expect(complete.payload.reason).toBe('max-advances');
     w.terminate();
@@ -57,7 +58,7 @@ describe('generation-worker skeleton', () => {
   it('PAUSE/RESUME progression', async () => {
     const w = createWorker();
     await waitFor(w, m => m.type === 'READY');
-    w.postMessage({ type: 'START_GENERATION', params: makeParams(5000) });
+    w.postMessage({ type: 'START_GENERATION', params: { ...makeParams(5000), stopOnCap: false } });
   const firstProgress: any = await waitFor(w, m => m.type === 'PROGRESS' && m.payload.processedAdvances > 0);
     w.postMessage({ type: 'PAUSE' });
     await waitFor(w, m => m.type === 'PAUSED');

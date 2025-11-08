@@ -21,6 +21,8 @@
         "test": "vitest run",
         "test:watch": "vitest",
         "test:ui": "vitest --ui",
+    "test:webgpu": "vitest run --config vitest.browser.config.ts",
+    "test:browser:workers": "vitest run --config vitest.browser.workers.config.ts",
         "test:rust": "cd wasm-pkg && cargo test",
         "test:rust:browser": "cd wasm-pkg && wasm-pack test --chrome --headless",
         "test:all": "npm run test:rust && npm run test:rust:browser && npm run test",
@@ -104,7 +106,10 @@
         "@types/react-dom": "^19.0.4",
         "@vitejs/plugin-react": "^5.1.0",
         "@vitejs/plugin-react-swc": "^4.0.0",
-        "@vitest/ui": "^3.2.4",
+    "@vitest/browser": "^4.0.8",
+    "@vitest/browser-playwright": "^4.0.8",
+    "@vitest/ui": "^4.0.8",
+        "@webgpu/types": "^0.1.66",
         "cheerio": "^1.0.0-rc.12",
         "copyfiles": "^2.4.1",
         "cross-env": "^10.1.0",
@@ -115,14 +120,15 @@
         "happy-dom": "^18.0.1",
         "jest-axe": "^9.0.0",
         "node-fetch": "^3.3.2",
-        "rimraf": "^6.0.1",
+    "playwright": "^1.48.2",
+    "rimraf": "^6.0.1",
         "tailwindcss": "^4.0.17",
         "typescript": "~5.7.2",
         "typescript-eslint": "^8.39.0",
         "vite": "^7.1.12",
         "vite-plugin-top-level-await": "^1.6.0",
         "vite-plugin-wasm": "^3.5.0",
-        "vitest": "^3.2.4"
+    "vitest": "^4.0.8"
     },
     "workspaces": {
         "packages": [

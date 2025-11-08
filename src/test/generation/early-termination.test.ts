@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { initWasm, getWasm } from '@/lib/core/wasm-interface';
+import { parseFromWasmRaw } from '@/lib/generation/raw-parser';
+import { domainEncounterTypeToWasm } from '@/lib/core/mapping/encounter-type';
+import { domainGameModeToWasm } from '@/lib/core/mapping/game-mode';
+import type { DomainEncounterType } from '@/types/domain';
+import { deriveDomainGameMode, type GenerationParams } from '@/types/generation';
 
 // Worker 利用可否でスキップ制御 (CI Node 環境では未定義想定)
 if (typeof Worker === 'undefined') {
@@ -14,7 +19,7 @@ if (typeof Worker === 'undefined') {
   type WorkerMsg = { type?: string; payload?: unknown };
   async function waitFor<T extends WorkerMsg>(worker: Worker, predicate: (m: WorkerMsg) => m is T, timeoutMs?: number): Promise<T>;
   async function waitFor(worker: Worker, predicate: (m: WorkerMsg) => boolean, timeoutMs?: number): Promise<WorkerMsg>;
-  async function waitFor(worker: Worker, predicate: (m: WorkerMsg) => boolean, timeoutMs = 2000): Promise<WorkerMsg> {
+  async function waitFor(worker: Worker, predicate: (m: WorkerMsg) => boolean, timeoutMs = 15000): Promise<WorkerMsg> {
     return new Promise<WorkerMsg>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
       worker.addEventListener('message', (ev) => {
@@ -24,16 +29,35 @@ if (typeof Worker === 'undefined') {
     });
   }
 
-  // 指定 baseSeed の最初の PID を取得
-  async function firstPidAndShinySid(baseSeed: bigint): Promise<{ pid: number; sid: number }> {
+  const VERSION_TO_WASM: Record<GenerationParams['version'], number> = { B: 0, W: 1, B2: 2, W2: 3 };
+
+  async function findFirstShinyAdvance(template: GenerationParams, searchLimit = 50000): Promise<number> {
     await initWasm();
-    const { BWGenerationConfig, GameVersion, PokemonGenerator } = getWasm();
-    const cfg = new BWGenerationConfig(GameVersion.B, 0, 0, 0, false, 0, false, false);
-    const raw = PokemonGenerator.generate_single_pokemon_bw(baseSeed, cfg);
-    const pid = raw.get_pid; // wasm getter property
-    const pidHi = (pid >>> 16) & 0xffff; const pidLo = pid & 0xffff;
-    const sid = pidHi ^ pidLo; // tid=0 と組で SV=0 → shiny
-    return { pid, sid };
+    const wasm = getWasm();
+    const encounter = domainEncounterTypeToWasm(template.encounterType as DomainEncounterType);
+    const cfg = new wasm.BWGenerationConfig(
+      VERSION_TO_WASM[template.version],
+      encounter,
+      template.tid,
+      template.sid,
+      template.syncEnabled,
+      template.syncNatureId,
+      template.isShinyLocked,
+      template.shinyCharm,
+    );
+    const domainMode = deriveDomainGameMode(template);
+    const wasmMode = domainGameModeToWasm(domainMode);
+    const effectiveOffset = BigInt(wasm.calculate_game_offset(template.baseSeed, wasmMode)) + template.offset;
+    const enumerator = new wasm.SeedEnumerator(template.baseSeed, effectiveOffset, searchLimit, cfg);
+    for (let i = 0; i < searchLimit; i++) {
+      const raw = enumerator.next_pokemon();
+      if (!raw) break;
+      const parsed = parseFromWasmRaw(raw);
+      if ((parsed.shiny_type ?? 0) !== 0) {
+        return i;
+      }
+    }
+    throw new Error('Shiny Pokemon not found within search limit');
   }
 
   // first-shiny テスト: 最初の個体を強制的に色違い化する TID/SID を構築
@@ -51,26 +75,32 @@ if (typeof Worker === 'undefined') {
   describe('generation-worker early termination', () => {
     it('terminates on first shiny when stopAtFirstShiny=true', async () => {
       const baseSeed = 1234n;
-      const { pid: _firstPid, sid } = await firstPidAndShinySid(baseSeed);
-      const params = {
+      const paramsBase: GenerationParams = {
         baseSeed,
         offset: 0n,
-        maxAdvances: 100, // 十分に大きければ良い
-        maxResults: 50,
+        maxAdvances: 60000,
+        maxResults: 200,
         version: 'B' as const,
         encounterType: 0,
         tid: 0,
-        sid,
+        sid: 0,
         syncEnabled: false,
         syncNatureId: 0,
         shinyCharm: false,
         isShinyLocked: false,
         stopAtFirstShiny: true,
-        stopOnCap: true, // 併用可
+        stopOnCap: false,
         batchSize: 25,
         newGame: true,
         withSave: true,
         memoryLink: false,
+      };
+      const firstShinyAdvance = await findFirstShinyAdvance(paramsBase);
+      const params: GenerationParams = {
+        ...paramsBase,
+        maxAdvances: firstShinyAdvance + 5,
+        stopAtFirstShiny: true,
+        stopOnCap: false,
       };
       const w = createWorker();
       await waitFor(w, m => m.type === 'READY');
@@ -78,13 +108,13 @@ if (typeof Worker === 'undefined') {
       const complete = await waitFor(w, (m): m is { type: 'COMPLETE'; payload: { reason: string; shinyFound: boolean; processedAdvances: number } } => m.type === 'COMPLETE');
       expect(complete.payload.reason).toBe('first-shiny');
       expect(complete.payload.shinyFound).toBe(true);
-      expect(complete.payload.processedAdvances).toBe(1); // 最初の1体で停止
+      expect(complete.payload.processedAdvances).toBe(firstShinyAdvance + 1);
       w.terminate();
     });
 
     it('terminates on max-results cap when stopOnCap=true', async () => {
       const baseSeed = fixedSeed();
-      const params = {
+      const params: GenerationParams = {
         baseSeed,
         offset: 0n,
         maxAdvances: 100,

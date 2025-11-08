@@ -9,19 +9,37 @@ import { ChunkCalculator } from '../lib/search/chunk-calculator';
 import type { SearchConditions } from '../types/search';
 import { initWasmForTesting } from './wasm-loader';
 
+type MockWorker = {
+  postMessage: ReturnType<typeof vi.fn>;
+  terminate: ReturnType<typeof vi.fn>;
+  onmessage: ((event: MessageEvent) => void) | null;
+  onerror: ((error: ErrorEvent | Error) => void) | null;
+};
+
+const createMockWorker = (): MockWorker => ({
+  postMessage: vi.fn(),
+  terminate: vi.fn(),
+  onmessage: null,
+  onerror: null,
+});
+
+let workerInstances: MockWorker[] = [];
+let workerConstructor: ReturnType<typeof vi.fn> | null = null;
+
 describe('Phase 5: 並列処理テスト', () => {
   beforeEach(async () => {
     // WebAssembly初期化
     await initWasmForTesting();
     
     // Worker mock setup
-    const mockWorker = {
-      postMessage: vi.fn(),
-      terminate: vi.fn(),
-      onmessage: null as any,
-      onerror: null as any
-    };
-    vi.stubGlobal('Worker', vi.fn(() => mockWorker));
+    workerInstances = [];
+    workerConstructor = vi.fn(function WorkerMock(this: unknown): Worker {
+      const instance = createMockWorker();
+      workerInstances.push(instance);
+      return instance as unknown as Worker;
+    });
+    vi.stubGlobal('Worker', workerConstructor as unknown as typeof Worker);
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -94,14 +112,18 @@ describe('Phase 5: 並列処理テスト', () => {
   describe('Task 5.1: エラー処理テスト', () => {
     it('Worker初期化エラーを適切に処理する', async () => {
       // メッセージ送信エラーをシミュレート
-      const mockWorker = {
-        postMessage: vi.fn(() => { throw new Error('Message send failed'); }),
-        terminate: vi.fn(),
-        onmessage: null as any,
-        onerror: null as any
-      };
-      
-      vi.stubGlobal('Worker', vi.fn(() => mockWorker));
+      workerInstances = [];
+      const errorWorkerConstructor = vi.fn(function WorkerErrorMock(this: unknown): Worker {
+        const instance: MockWorker = {
+          postMessage: vi.fn(() => { throw new Error('Message send failed'); }),
+          terminate: vi.fn(),
+          onmessage: null,
+          onerror: null,
+        };
+        workerInstances.push(instance);
+        return instance as unknown as Worker;
+      });
+      vi.stubGlobal('Worker', errorWorkerConstructor as unknown as typeof Worker);
       
       const manager = new MultiWorkerSearchManager(4);
       const conditions = createTestConditions({ hours: 1 });
@@ -155,9 +177,9 @@ describe('Phase 5: 並列処理テスト', () => {
       
       // Worker障害をシミュレート
       setTimeout(() => {
-        const mockWorker = (Worker as any).mock.results[0]?.value;
-        if (mockWorker && mockWorker.onerror) {
-          mockWorker.onerror(new Error('Worker crashed'));
+        const firstWorker = workerInstances[0];
+        if (firstWorker && firstWorker.onerror) {
+          firstWorker.onerror(new Error('Worker crashed'));
         } else {
           // フォールバック: 直接エラーコールバックを呼び出し
           callbacks.onError('Worker error: Worker crashed');

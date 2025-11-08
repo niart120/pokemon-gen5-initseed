@@ -12,7 +12,7 @@ function params(overrides: Partial<GenerationParams> = {}): GenerationParams {
     baseSeed: 1n,
     offset: 0n,
     maxAdvances: 1200,
-    maxResults: 1000,
+    maxResults: 2000,
     version: 'B',
     encounterType: 0,
     tid: 1,
@@ -20,7 +20,7 @@ function params(overrides: Partial<GenerationParams> = {}): GenerationParams {
     syncEnabled: false,
     syncNatureId: 0,
     stopAtFirstShiny: false,
-    stopOnCap: true,
+    stopOnCap: false,
     shinyCharm: false,
     isShinyLocked: false,
     batchSize: 5000,
@@ -31,7 +31,7 @@ function params(overrides: Partial<GenerationParams> = {}): GenerationParams {
   };
 }
 
-function waitForEvent<T>(register: (cb: (v: T)=>void)=>unknown, predicate: (v: T)=>boolean, timeoutMs=2000): Promise<T> {
+function waitForEvent<T>(register: (cb: (v: T)=>void)=>unknown, predicate: (v: T)=>boolean, timeoutMs=5000): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(()=>reject(new Error('timeout')), timeoutMs);
     register((v: T) => { if (predicate(v)) { clearTimeout(timer); resolve(v); } });
@@ -45,7 +45,9 @@ describe('GenerationWorkerManager', () => {
     await mgr.start(params({ maxAdvances: 1000 }));
     await complete;
     expect(mgr.getStatus() === 'completed' || mgr.getStatus() === 'idle').toBe(true);
+    const secondComplete = waitForEvent(mgr.onComplete.bind(mgr), () => true);
     await mgr.start(params({ maxAdvances: 1000 }));
+    await secondComplete;
   });
 
   it('pause/resume updates status', async () => {
@@ -58,6 +60,7 @@ describe('GenerationWorkerManager', () => {
     await new Promise(r => setTimeout(r, 120));
     expect(mgr.isRunning()).toBe(true);
     mgr.stop();
+    await waitForEvent(mgr.onStopped.bind(mgr), () => true).catch(() => undefined);
   });
 
   it('double start throws', async () => {

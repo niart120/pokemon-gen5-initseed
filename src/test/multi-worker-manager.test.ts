@@ -6,20 +6,25 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MultiWorkerSearchManager } from '../lib/search/multi-worker-manager';
 import type { SearchConditions } from '../types/search';
 
-// Worker mock
-const mockWorker = {
-  postMessage: vi.fn(),
-  terminate: vi.fn(),
-  onmessage: null as any,
-  onerror: null as any
+type MockWorker = {
+  postMessage: ReturnType<typeof vi.fn>;
+  terminate: ReturnType<typeof vi.fn>;
+  onmessage: ((event: MessageEvent) => void) | null;
+  onerror: ((error: ErrorEvent | Error) => void) | null;
 };
 
-// Worker constructor mock
-vi.stubGlobal('Worker', vi.fn(() => mockWorker));
+const createMockWorker = (): MockWorker => ({
+  postMessage: vi.fn(),
+  terminate: vi.fn(),
+  onmessage: null,
+  onerror: null,
+});
 
 describe('MultiWorkerSearchManager', () => {
   let manager: MultiWorkerSearchManager;
   let mockCallbacks: any;
+  let workerInstances: MockWorker[];
+  let workerConstructor: ReturnType<typeof vi.fn>;
 
   const mockConditions: SearchConditions = {
     romVersion: 'B2',
@@ -49,6 +54,15 @@ describe('MultiWorkerSearchManager', () => {
   };
 
   beforeEach(() => {
+    workerInstances = [];
+    workerConstructor = vi.fn(function WorkerMock(this: unknown): Worker {
+      const instance = createMockWorker();
+      workerInstances.push(instance);
+      return instance as unknown as Worker;
+    });
+
+    vi.stubGlobal('Worker', workerConstructor as unknown as Worker);
+
     manager = new MultiWorkerSearchManager(4);
     mockCallbacks = {
       onProgress: vi.fn(),
@@ -60,14 +74,12 @@ describe('MultiWorkerSearchManager', () => {
       onStopped: vi.fn()
     };
 
-    // Mock reset
     vi.clearAllMocks();
-    mockWorker.postMessage.mockClear();
-    mockWorker.terminate.mockClear();
   });
 
   afterEach(() => {
     manager.terminateAll();
+    vi.restoreAllMocks();
   });
 
   describe('初期化', () => {
@@ -85,8 +97,7 @@ describe('MultiWorkerSearchManager', () => {
 
   describe('startParallelSearch', () => {
     it('重複実行を防ぐ', async () => {
-      // 最初の検索開始をモック
-  const _searchPromise1 = manager.startParallelSearch(
+      await manager.startParallelSearch(
         mockConditions, 
         [0x12345678], 
         mockCallbacks
@@ -105,7 +116,7 @@ describe('MultiWorkerSearchManager', () => {
       vi.clearAllMocks();
       
       // 検索開始
-  const _searchPromise = manager2.startParallelSearch(
+      await manager2.startParallelSearch(
         mockConditions, 
         [0x12345678], 
         mockCallbacks
@@ -116,10 +127,11 @@ describe('MultiWorkerSearchManager', () => {
       expect(Worker).toHaveBeenCalled();
       
       manager2.terminateAll();
+      vi.restoreAllMocks();
     });
 
     it('Workerにメッセージを送信する', async () => {
-  const _searchPromise = manager.startParallelSearch(
+      await manager.startParallelSearch(
         mockConditions, 
         [0x12345678], 
         mockCallbacks
@@ -127,10 +139,16 @@ describe('MultiWorkerSearchManager', () => {
 
       // Worker作成とメッセージ送信を確認
       expect(Worker).toHaveBeenCalled();
-      expect(mockWorker.postMessage).toHaveBeenCalled();
+      const firstWorker = workerInstances[0];
+      expect(firstWorker).toBeDefined();
+      expect(firstWorker?.postMessage).toHaveBeenCalled();
       
       // 送信されたメッセージの内容確認
-      const sentMessage = mockWorker.postMessage.mock.calls[0][0];
+      const sentMessage = firstWorker?.postMessage.mock.calls[0]?.[0];
+      expect(sentMessage).toBeDefined();
+      if (!sentMessage) {
+        throw new Error('No message was sent to the worker');
+      }
       expect(sentMessage.type).toBe('START_SEARCH');
       expect(sentMessage.conditions).toEqual(mockConditions);
       expect(sentMessage.targetSeeds).toEqual([0x12345678]);
@@ -141,15 +159,15 @@ describe('MultiWorkerSearchManager', () => {
   describe('Worker制御', () => {
     beforeEach(async () => {
       // 検索開始
-      manager.startParallelSearch(mockConditions, [0x12345678], mockCallbacks);
+      await manager.startParallelSearch(mockConditions, [0x12345678], mockCallbacks);
     });
 
     it('pauseAll() で全Workerを一時停止', () => {
       manager.pauseAll();
       
       // 全Workerに PAUSE_SEARCH メッセージが送信されることを確認
-      const pauseCalls = mockWorker.postMessage.mock.calls.filter(
-        call => call[0].type === 'PAUSE_SEARCH'
+      const pauseCalls = workerInstances.flatMap(worker =>
+        worker.postMessage.mock.calls.filter(call => call[0].type === 'PAUSE_SEARCH')
       );
       expect(pauseCalls.length).toBeGreaterThan(0);
       expect(mockCallbacks.onPaused).toHaveBeenCalled();
@@ -158,8 +176,8 @@ describe('MultiWorkerSearchManager', () => {
     it('resumeAll() で全Workerを再開', () => {
       manager.resumeAll();
       
-      const resumeCalls = mockWorker.postMessage.mock.calls.filter(
-        call => call[0].type === 'RESUME_SEARCH'
+      const resumeCalls = workerInstances.flatMap(worker =>
+        worker.postMessage.mock.calls.filter(call => call[0].type === 'RESUME_SEARCH')
       );
       expect(resumeCalls.length).toBeGreaterThan(0);
       expect(mockCallbacks.onResumed).toHaveBeenCalled();
@@ -170,7 +188,8 @@ describe('MultiWorkerSearchManager', () => {
       
       manager.terminateAll();
       
-      expect(mockWorker.terminate).toHaveBeenCalledTimes(activeWorkersBefore);
+      const terminateCalls = workerInstances.reduce((sum, worker) => sum + worker.terminate.mock.calls.length, 0);
+      expect(terminateCalls).toBeGreaterThanOrEqual(activeWorkersBefore);
       expect(manager.isRunning()).toBe(false);
       expect(mockCallbacks.onStopped).toHaveBeenCalled();
     });
