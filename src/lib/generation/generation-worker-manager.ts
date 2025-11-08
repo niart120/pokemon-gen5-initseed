@@ -35,7 +35,10 @@ export class GenerationWorkerManager {
   private terminated = false;
   private currentRequestId: string | null = null;
 
-  constructor(private readonly workerScript: string = new URL('@/workers/generation-worker.ts', import.meta.url).href) {}
+  constructor(
+    private readonly createWorker: () => Worker = () =>
+      new Worker(new URL('@/workers/generation-worker.ts', import.meta.url), { type: 'module' }),
+  ) {}
 
   // --- Public API ---
   start(params: GenerationParams): Promise<void> {
@@ -50,7 +53,7 @@ export class GenerationWorkerManager {
     if (validation.length) {
       return Promise.reject(new Error(validation.join(', ')));
     }
-    this.ensureWorker();
+  this.ensureWorker();
     this.running = true;
     this.paused = false;
     const rid = this.generateRequestId();
@@ -106,7 +109,7 @@ export class GenerationWorkerManager {
   // --- Internal ---
   private ensureWorker() {
     if (this.worker) return;
-    this.worker = new Worker(this.workerScript, { type: 'module' });
+    this.worker = this.createWorker();
     this.worker.onmessage = (ev: MessageEvent) => this.handleMessage(ev.data);
     this.worker.onerror = () => {
       this.emitError('Worker error event', 'RUNTIME', true);
