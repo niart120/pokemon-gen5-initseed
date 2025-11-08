@@ -5,6 +5,10 @@
  */
 export function calculate_game_offset(initial_seed: bigint, mode: GameMode): number;
 /**
+ * SHA-1ハッシュをバッチ処理
+ */
+export function sha1_hash_batch(messages: Uint32Array): Uint32Array;
+/**
  * TID/SID決定処理統合API（仕様書準拠）
  */
 export function calculate_tid_sid_from_seed(initial_seed: bigint, mode: GameMode): TidSidResult;

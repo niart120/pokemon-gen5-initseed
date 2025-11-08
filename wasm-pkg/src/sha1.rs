@@ -1,3 +1,5 @@
+use wasm_bindgen::prelude::*;
+
 /// ポケモンBW/BW2特化SHA-1実装
 /// 高速なシード計算のためにカスタム最適化されたSHA-1関数
 
@@ -85,6 +87,27 @@ pub fn calculate_pokemon_seed_from_hash(h0: u32, h1: u32) -> u32 {
 
     // 上位32bitを取得
     ((seed >> 32) & 0xFFFFFFFF) as u32
+}
+
+/// WebAssembly向けバッチSHA-1計算エントリポイント
+/// `messages` は 16 ワード単位（512bit）で並ぶフラットな配列である必要がある
+#[wasm_bindgen]
+pub fn sha1_hash_batch(messages: &[u32]) -> Vec<u32> {
+    if messages.len() % 16 != 0 {
+        wasm_bindgen::throw_str("sha1_hash_batch expects messages.len() % 16 == 0");
+    }
+
+    let message_count = messages.len() / 16;
+    let mut output = Vec::with_capacity(message_count * 5);
+
+    for chunk in messages.chunks_exact(16) {
+        let mut block = [0u32; 16];
+        block.copy_from_slice(chunk);
+        let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(&block);
+        output.extend_from_slice(&[h0, h1, h2, h3, h4]);
+    }
+
+    output
 }
 
 /// SHA-1補助関数: Choice function

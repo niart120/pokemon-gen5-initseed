@@ -46,5 +46,6 @@
 - [ ] Encounter JSON スキーマを `displayNameKey` + 翻訳辞書方式へ更新し、関連型/ローダー/スクリプトを整備する。
 - [ ] 翻訳辞書 (location/static) の初期データを用意し、UI 側でロケールに応じて displayName を解決する仕組みを追加する。
 - [ ] データ生成スクリプトとテストを新スキーマに対応させ、既存 JSON を安全に移行する。
+- [ ] `src/workers/search-worker.ts` の統合検索で timer0/vcount をまとめて渡し、WASM SIMD のバッチ効率を単一ワーカーでも引き出す。
 
 更新日時: 2025-08-12 (Revised)

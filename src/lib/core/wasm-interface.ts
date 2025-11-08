@@ -56,6 +56,7 @@ export interface WasmModule {
   GameMode: typeof WasmGameMode;
 
   calculate_game_offset(initial_seed: bigint, mode: number): number;
+  sha1_hash_batch(messages: Uint32Array): Uint32Array;
 }
 
 let wasmModule: WasmModule | null = null;
@@ -104,6 +105,7 @@ export async function initWasm(): Promise<WasmModule> {
         GameVersion: module.GameVersion,
         GameMode: module.GameMode,
         calculate_game_offset: module.calculate_game_offset,
+        sha1_hash_batch: module.sha1_hash_batch,
       } as unknown as WasmModule;
       
       return wasmModule;

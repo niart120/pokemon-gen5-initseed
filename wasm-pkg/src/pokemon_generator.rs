@@ -246,12 +246,9 @@ impl PokemonGenerator {
 
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = Self::finalize_pid_with_shiny_rules(
-            &mut rng,
-            config,
-            pid_base,
-            |base| PIDCalculator::generate_static_pid(base, config.tid, config.sid),
-        );
+        let pid = Self::finalize_pid_with_shiny_rules(&mut rng, config, pid_base, |base| {
+            PIDCalculator::generate_static_pid(base, config.tid, config.sid)
+        });
 
         // 性格生成・シンクロ適用
         let (sync_applied, nature_id) = Self::generate_nature_with_sync(
@@ -284,12 +281,9 @@ impl PokemonGenerator {
 
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = Self::finalize_pid_with_shiny_rules(
-            &mut rng,
-            config,
-            pid_base,
-            |base| PIDCalculator::generate_roaming_pid(base, config.tid, config.sid),
-        );
+        let pid = Self::finalize_pid_with_shiny_rules(&mut rng, config, pid_base, |base| {
+            PIDCalculator::generate_roaming_pid(base, config.tid, config.sid)
+        });
 
         // 性格生成（徘徊はシンクロ無効なので通常性格のみ）
         let nature_id = Self::nature_roll(&mut rng);
@@ -310,12 +304,9 @@ impl PokemonGenerator {
 
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000、ただしID補正なし）
         let pid_base = rng.next();
-        let pid = Self::finalize_pid_with_shiny_rules(
-            &mut rng,
-            config,
-            pid_base,
-            |base| PIDCalculator::generate_event_pid(base),
-        );
+        let pid = Self::finalize_pid_with_shiny_rules(&mut rng, config, pid_base, |base| {
+            PIDCalculator::generate_event_pid(base)
+        });
 
         // 性格生成（イベント系はシンクロ無効なので通常性格のみ）
         let nature_id = Self::nature_roll(&mut rng);
@@ -348,12 +339,9 @@ impl PokemonGenerator {
 
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = Self::finalize_pid_with_shiny_rules(
-            &mut rng,
-            config,
-            pid_base,
-            |base| PIDCalculator::generate_wild_pid(base, config.tid, config.sid),
-        );
+        let pid = Self::finalize_pid_with_shiny_rules(&mut rng, config, pid_base, |base| {
+            PIDCalculator::generate_wild_pid(base, config.tid, config.sid)
+        });
 
         // 性格生成・シンクロ適用
         let (sync_applied, nature_id) = Self::generate_nature_with_sync(
@@ -400,12 +388,9 @@ impl PokemonGenerator {
 
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = Self::finalize_pid_with_shiny_rules(
-            &mut rng,
-            config,
-            pid_base,
-            |base| PIDCalculator::generate_wild_pid(base, config.tid, config.sid),
-        );
+        let pid = Self::finalize_pid_with_shiny_rules(&mut rng, config, pid_base, |base| {
+            PIDCalculator::generate_wild_pid(base, config.tid, config.sid)
+        });
 
         // 性格生成・シンクロ適用
         let (sync_applied, nature_id) = Self::generate_nature_with_sync(
@@ -453,12 +438,9 @@ impl PokemonGenerator {
 
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
-        let pid = Self::finalize_pid_with_shiny_rules(
-            &mut rng,
-            config,
-            pid_base,
-            |base| PIDCalculator::generate_wild_pid(base, config.tid, config.sid),
-        );
+        let pid = Self::finalize_pid_with_shiny_rules(&mut rng, config, pid_base, |base| {
+            PIDCalculator::generate_wild_pid(base, config.tid, config.sid)
+        });
 
         // 性格生成・シンクロ適用
         let (sync_applied, nature_id) = Self::generate_nature_with_sync(
@@ -827,15 +809,10 @@ mod tests {
         config.has_shiny_charm = false;
 
         let sequence = RefCell::new(VecDeque::from(vec![0x00010000]));
-        let pid = PokemonGenerator::finalize_pid_with_shiny_rules(
-            &mut rng,
-            &config,
-            0,
-            |base| {
-                let mut seq = sequence.borrow_mut();
-                seq.pop_front().unwrap_or(base)
-            },
-        );
+        let pid = PokemonGenerator::finalize_pid_with_shiny_rules(&mut rng, &config, 0, |base| {
+            let mut seq = sequence.borrow_mut();
+            seq.pop_front().unwrap_or(base)
+        });
 
         assert_eq!(pid, 0x00010000 ^ 0x10000000);
         assert!(!ShinyChecker::is_shiny(config.tid, config.sid, pid));
@@ -857,15 +834,10 @@ mod tests {
             0x00010000, // shiny
         ]));
 
-        let pid = PokemonGenerator::finalize_pid_with_shiny_rules(
-            &mut rng,
-            &config,
-            0,
-            |base| {
-                let mut seq = sequence.borrow_mut();
-                seq.pop_front().unwrap_or(base)
-            },
-        );
+        let pid = PokemonGenerator::finalize_pid_with_shiny_rules(&mut rng, &config, 0, |base| {
+            let mut seq = sequence.borrow_mut();
+            seq.pop_front().unwrap_or(base)
+        });
 
         assert_eq!(pid, 0x00010000);
         assert!(ShinyChecker::is_shiny(config.tid, config.sid, pid));
@@ -881,21 +853,12 @@ mod tests {
         config.is_shiny_locked = false;
         config.has_shiny_charm = true;
 
-        let sequence = RefCell::new(VecDeque::from(vec![
-            0x00080000,
-            0x00100000,
-            0x00180000,
-        ]));
+        let sequence = RefCell::new(VecDeque::from(vec![0x00080000, 0x00100000, 0x00180000]));
 
-        let pid = PokemonGenerator::finalize_pid_with_shiny_rules(
-            &mut rng,
-            &config,
-            0,
-            |base| {
-                let mut seq = sequence.borrow_mut();
-                seq.pop_front().unwrap_or(base)
-            },
-        );
+        let pid = PokemonGenerator::finalize_pid_with_shiny_rules(&mut rng, &config, 0, |base| {
+            let mut seq = sequence.borrow_mut();
+            seq.pop_front().unwrap_or(base)
+        });
 
         assert_eq!(pid, 0x00180000);
         assert!(!ShinyChecker::is_shiny(config.tid, config.sid, pid));
