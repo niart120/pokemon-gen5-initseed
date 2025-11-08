@@ -53,7 +53,7 @@ export class GenerationWorkerManager {
     if (validation.length) {
       return Promise.reject(new Error(validation.join(', ')));
     }
-  this.ensureWorker();
+    this.ensureWorker();
     this.running = true;
     this.paused = false;
     const rid = this.generateRequestId();
