@@ -12,6 +12,7 @@ export interface WebGpuBatchPlannerOptions {
   bufferSetCount?: number;
   workgroupSize?: number;
   maxMessagesOverride?: number | null;
+  hostMemoryLimitPerSlot?: number;
 }
 
 export interface WebGpuBatchPlanner {
@@ -24,6 +25,14 @@ export function createWebGpuBatchPlanner(
 ): WebGpuBatchPlanner {
   const hostMemoryLimitBytes = options?.hostMemoryLimitBytes ?? DEFAULT_HOST_MEMORY_LIMIT_BYTES;
   const bufferSetCount = options?.bufferSetCount ?? DOUBLE_BUFFER_SET_COUNT;
+  const hostMemoryLimitPerSlot = (() => {
+    const provided = options?.hostMemoryLimitPerSlot;
+    if (typeof provided === 'number' && Number.isFinite(provided) && provided > 0) {
+      return provided;
+    }
+    const calculated = Math.floor(hostMemoryLimitBytes / bufferSetCount);
+    return Math.max(1, calculated);
+  })();
   const workgroupSize = options?.workgroupSize ?? DEFAULT_WORKGROUP_SIZE;
   const maxMessagesOverride = typeof options?.maxMessagesOverride === 'number'
     ? Math.max(1, Math.floor(options.maxMessagesOverride))
@@ -49,7 +58,7 @@ export function createWebGpuBatchPlanner(
 
     const maxByHost = Math.max(
       1,
-      Math.floor(hostMemoryLimitBytes / (MATCH_RECORD_BYTES * bufferSetCount))
+      Math.floor(hostMemoryLimitPerSlot / MATCH_RECORD_BYTES)
     );
 
     const supportedWorkgroupSize = context.getSupportedWorkgroupSize(workgroupSize);
