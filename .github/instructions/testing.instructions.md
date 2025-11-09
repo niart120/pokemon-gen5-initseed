@@ -7,13 +7,7 @@ applyTo: "**/*.test.{ts,js}"
 ## 新テストアーキテクチャ
 
 ### 開発テスト環境
-- **開発テストページ**: `public/test-development.html`
-  - ProductionPerformanceMonitor テスト
-  - DevelopmentPerformanceAnalyzer テスト
-  - WebAssembly統合テスト
-  - メッセージ生成プロファイリング
-  - スケーラビリティ分析
-  - ボトルネック分析
+> `public/test-development.html` は廃止済みです。
 
 ### 統合テスト環境
 - **統合テストページ**: `public/test-integration.html`
@@ -34,7 +28,7 @@ applyTo: "**/*.test.{ts,js}"
 2. **Rust側Browser Test**: `npm run test:rust:browser` (または `wasm-pack test --chrome --headless`)
 3. **TypeScript側Unit Test**: `npm run test`
 4. **WebAssembly統合テスト**: `wasm-node.test.ts`
-5. **開発環境テスト**: `http://localhost:5173/test-development.html`
+5. **開発環境テスト**: 廃止済み（利用不可）
 6. **統合テスト**: `http://localhost:5173/test-integration.html`
 7. **SIMDテスト**: `http://localhost:5173/test-simd.html`
 8. **E2Eテスト**: mcp-playwright使用可能
@@ -42,10 +36,8 @@ applyTo: "**/*.test.{ts,js}"
 
 ## パフォーマンス監視システム
 
-### 本番用監視 (`src/lib/core/performance-monitor.ts`)
-- リアルタイム測定機能
-- 基本メトリクス (計算速度、進捗)
-- 軽量設計・本番環境最適化
+### 本番用監視
+> `src/lib/core/performance-monitor.ts` は廃止済みです。
 
 ### 開発用分析 (`src/test-utils/profiling/development-analyzer.ts`)
 - 詳細パフォーマンス分析

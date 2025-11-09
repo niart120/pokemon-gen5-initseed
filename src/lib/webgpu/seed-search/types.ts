@@ -71,3 +71,21 @@ export interface WebGpuRunRequest {
   callbacks: WebGpuRunnerCallbacks;
   signal?: AbortSignal;
 }
+
+export type WebGpuRunnerSpanKind =
+  | 'planner.computePlan'
+  | 'dispatch'
+  | 'dispatch.submit'
+  | 'dispatch.mapMatchCount'
+  | 'dispatch.copyResults'
+  | 'dispatch.mapResults'
+  | 'dispatch.processMatches';
+
+export interface WebGpuRunnerSpanContext {
+  kind: WebGpuRunnerSpanKind;
+  metadata: Record<string, unknown>;
+}
+
+export interface WebGpuRunnerInstrumentation {
+  trace<T>(context: WebGpuRunnerSpanContext, operation: () => Promise<T>): Promise<T>;
+}

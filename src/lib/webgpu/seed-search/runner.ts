@@ -18,6 +18,8 @@ import type {
   WebGpuRunRequest,
   WebGpuRunnerCallbacks,
   WebGpuRunnerProgress,
+  WebGpuRunnerInstrumentation,
+  WebGpuRunnerSpanKind,
   WebGpuSearchContext,
   WebGpuSegment,
 } from './types';
@@ -76,7 +78,13 @@ export interface WebGpuSeedSearchRunner {
 
 export const isWebGpuSeedSearchSupported = isDeviceWebGpuSupported;
 
-export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number }): WebGpuSeedSearchRunner {
+export interface WebGpuSeedSearchRunnerOptions {
+  workgroupSize?: number;
+  maxMessagesPerDispatch?: number;
+  instrumentation?: WebGpuRunnerInstrumentation;
+}
+
+export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOptions): WebGpuSeedSearchRunner {
   const state: RunnerState = {
     workgroupSize: options?.workgroupSize ?? DEFAULT_WORKGROUP_SIZE,
     deviceContext: null,
@@ -98,6 +106,20 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
       segmentStartTime: 0,
       isPaused: false,
     },
+  };
+
+  const instrumentation = options?.instrumentation ?? null;
+
+  const runWithTrace = async <T>(
+    kind: WebGpuRunnerSpanKind,
+    metadata: Record<string, unknown>,
+    operation: () => Promise<T> | T
+  ): Promise<T> => {
+    const execute = async () => await Promise.resolve(operation());
+    if (!instrumentation?.trace) {
+      return execute();
+    }
+    return instrumentation.trace({ kind, metadata }, execute);
   };
 
   const init = async (): Promise<void> => {
@@ -126,6 +148,7 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
     const planner = createWebGpuBatchPlanner(context, {
       workgroupSize: resolvedWorkgroupSize,
       bufferSetCount: DOUBLE_BUFFER_SET_COUNT,
+      maxMessagesOverride: options?.maxMessagesPerDispatch ?? null,
     });
 
   state.deviceContext = context;
@@ -328,7 +351,14 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
         break;
       }
 
-      const plan = state.planner.computePlan(segment.totalMessages);
+      const plan = await runWithTrace(
+        'planner.computePlan',
+        {
+          segmentIndex: segment.index,
+          totalMessages: segment.totalMessages,
+        },
+        () => Promise.resolve(state.planner!.computePlan(segment.totalMessages))
+      );
 
       for (const dispatch of plan.dispatches) {
         if (state.shouldStop) {
@@ -386,118 +416,191 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
       throw new Error('WebGPU runner is not ready');
     }
 
-    const device = state.deviceContext.getDevice();
-  const slot = state.bufferPool.acquire(dispatchContext.slotIndex, dispatchContext.messageCount);
+  const device = state.deviceContext.getDevice();
+  const configBuffer = state.configBuffer!;
+  const configData = state.configData!;
+  const bindGroupLayouts = state.bindGroupLayouts!;
+  const pipelines = state.pipelines!;
+  const targetBuffer = state.targetBuffer!;
+    const slot = state.bufferPool.acquire(dispatchContext.slotIndex, dispatchContext.messageCount);
     const workgroupCount = Math.ceil(dispatchContext.messageCount / state.workgroupSize);
-  const scatterWorkgroupCount = Math.max(1, Math.ceil(slot.candidateCapacity / state.workgroupSize));
+    const scatterWorkgroupCount = Math.max(1, Math.ceil(slot.candidateCapacity / state.workgroupSize));
     const headerCopySize = alignSize(MATCH_OUTPUT_HEADER_WORDS * Uint32Array.BYTES_PER_ELEMENT);
 
-    queue.writeBuffer(slot.output, 0, ZERO_MATCH_HEADER.buffer, ZERO_MATCH_HEADER.byteOffset, ZERO_MATCH_HEADER.byteLength);
-
-    writeConfigBuffer(
-      dispatchContext.segment,
+    const baseDispatchMetadata = {
+      dispatchIndex: dispatchContext.dispatchIndex,
+      messageCount: dispatchContext.messageCount,
+      slotIndex: dispatchContext.slotIndex,
+      workgroupCount,
+      scatterWorkgroupCount,
+      candidateCapacity: slot.candidateCapacity,
+      groupCount: slot.groupCount,
+      segmentIndex: dispatchContext.segment.index,
       segmentBaseOffset,
-      dispatchContext.messageCount,
-      slot.groupCount,
-      slot.candidateCapacity
-    );
-    queue.writeBuffer(state.configBuffer, 0, state.configData.buffer, state.configData.byteOffset, state.configData.byteLength);
+    } satisfies Record<string, unknown>;
 
-    const generateBindGroup = device.createBindGroup({
-      label: `gpu-seed-generate-group-${dispatchContext.dispatchIndex}`,
-      layout: state.bindGroupLayouts.generate,
-      entries: [
-        { binding: 0, resource: { buffer: state.configBuffer } },
-        { binding: 1, resource: { buffer: state.targetBuffer } },
-        { binding: 2, resource: { buffer: slot.candidate } },
-        { binding: 3, resource: { buffer: slot.groupCounts } },
-      ],
+    await runWithTrace('dispatch', baseDispatchMetadata, async () => {
+      queue.writeBuffer(
+        slot.output,
+        0,
+        ZERO_MATCH_HEADER.buffer,
+        ZERO_MATCH_HEADER.byteOffset,
+        ZERO_MATCH_HEADER.byteLength
+      );
+
+      writeConfigBuffer(
+        dispatchContext.segment,
+        segmentBaseOffset,
+        dispatchContext.messageCount,
+        slot.groupCount,
+        slot.candidateCapacity
+      );
+      queue.writeBuffer(
+        configBuffer,
+        0,
+        configData.buffer,
+        configData.byteOffset,
+        configData.byteLength
+      );
+
+      const generateBindGroup = device.createBindGroup({
+        label: `gpu-seed-generate-group-${dispatchContext.dispatchIndex}`,
+        layout: bindGroupLayouts.generate,
+        entries: [
+          { binding: 0, resource: { buffer: configBuffer } },
+          { binding: 1, resource: { buffer: targetBuffer } },
+          { binding: 2, resource: { buffer: slot.candidate } },
+          { binding: 3, resource: { buffer: slot.groupCounts } },
+        ],
+      });
+
+      const scanBindGroup = device.createBindGroup({
+        label: `gpu-seed-scan-group-${dispatchContext.dispatchIndex}`,
+        layout: bindGroupLayouts.scan,
+        entries: [
+          { binding: 0, resource: { buffer: configBuffer } },
+          { binding: 3, resource: { buffer: slot.groupCounts } },
+          { binding: 4, resource: { buffer: slot.groupOffsets } },
+          { binding: 5, resource: { buffer: slot.output } },
+        ],
+      });
+
+      const scatterBindGroup = device.createBindGroup({
+        label: `gpu-seed-scatter-group-${dispatchContext.dispatchIndex}`,
+        layout: bindGroupLayouts.scatter,
+        entries: [
+          { binding: 0, resource: { buffer: configBuffer } },
+          { binding: 2, resource: { buffer: slot.candidate } },
+          { binding: 3, resource: { buffer: slot.groupCounts } },
+          { binding: 4, resource: { buffer: slot.groupOffsets } },
+          { binding: 5, resource: { buffer: slot.output } },
+        ],
+      });
+
+      const computeEncoder = device.createCommandEncoder({
+        label: `gpu-seed-compute-${dispatchContext.dispatchIndex}`,
+      });
+      const generatePass = computeEncoder.beginComputePass({
+        label: `gpu-seed-generate-pass-${dispatchContext.dispatchIndex}`,
+      });
+  generatePass.setPipeline(pipelines.generate);
+      generatePass.setBindGroup(0, generateBindGroup);
+      generatePass.dispatchWorkgroups(workgroupCount);
+      generatePass.end();
+
+      const scanPass = computeEncoder.beginComputePass({
+        label: `gpu-seed-scan-pass-${dispatchContext.dispatchIndex}`,
+      });
+  scanPass.setPipeline(pipelines.scan);
+      scanPass.setBindGroup(0, scanBindGroup);
+      scanPass.dispatchWorkgroups(1);
+      scanPass.end();
+
+      const scatterPass = computeEncoder.beginComputePass({
+        label: `gpu-seed-scatter-pass-${dispatchContext.dispatchIndex}`,
+      });
+  scatterPass.setPipeline(pipelines.scatter);
+      scatterPass.setBindGroup(0, scatterBindGroup);
+      scatterPass.dispatchWorkgroups(scatterWorkgroupCount);
+      scatterPass.end();
+
+      computeEncoder.copyBufferToBuffer(slot.output, 0, slot.matchCount, 0, headerCopySize);
+
+      await runWithTrace('dispatch.submit', { ...baseDispatchMetadata }, async () => {
+        queue.submit([computeEncoder.finish()]);
+        await queue.onSubmittedWorkDone();
+      });
+
+      const rawMatchCount = await runWithTrace(
+        'dispatch.mapMatchCount',
+        { ...baseDispatchMetadata, headerCopyBytes: headerCopySize },
+        async () => {
+          await slot.matchCount.mapAsync(GPUMapMode.READ, 0, headerCopySize);
+          const headerView = new Uint32Array(slot.matchCount.getMappedRange(0, headerCopySize));
+          const count = headerView[0] ?? 0;
+          slot.matchCount.unmap();
+          return count;
+        }
+      );
+
+      const clampedPlannedMatchCount = Math.min(rawMatchCount, slot.maxRecords);
+      const recordsBytes = clampedPlannedMatchCount * MATCH_RECORD_WORDS * Uint32Array.BYTES_PER_ELEMENT;
+      const totalCopyBytes = alignSize(
+        MATCH_OUTPUT_HEADER_WORDS * Uint32Array.BYTES_PER_ELEMENT + recordsBytes
+      );
+
+      await runWithTrace(
+        'dispatch.copyResults',
+        { ...baseDispatchMetadata, totalCopyBytes },
+        async () => {
+          const copyEncoder = device.createCommandEncoder({
+            label: `gpu-seed-copy-${dispatchContext.dispatchIndex}`,
+          });
+          copyEncoder.copyBufferToBuffer(slot.output, 0, slot.readback, 0, totalCopyBytes);
+          queue.submit([copyEncoder.finish()]);
+          await queue.onSubmittedWorkDone();
+        }
+      );
+
+      const { results, clampedMatchCount } = await runWithTrace(
+        'dispatch.mapResults',
+        { ...baseDispatchMetadata, totalCopyBytes },
+        async () => {
+          await slot.readback.mapAsync(GPUMapMode.READ, 0, totalCopyBytes);
+          const mappedRange = slot.readback.getMappedRange(0, totalCopyBytes);
+          const mappedWords = new Uint32Array(mappedRange);
+          const finalRawMatchCount = mappedWords[0] ?? 0;
+          const availableRecords = Math.max(
+            0,
+            Math.floor((mappedWords.length - MATCH_OUTPUT_HEADER_WORDS) / MATCH_RECORD_WORDS)
+          );
+          const clampedMatchCountInner = Math.min(finalRawMatchCount, slot.maxRecords, availableRecords);
+          const wordsToCopy = MATCH_OUTPUT_HEADER_WORDS + clampedMatchCountInner * MATCH_RECORD_WORDS;
+          const resultsArray = new Uint32Array(wordsToCopy);
+          resultsArray.set(mappedWords.subarray(0, wordsToCopy));
+          slot.readback.unmap();
+          return {
+            results: resultsArray,
+            clampedMatchCount: clampedMatchCountInner,
+          };
+        }
+      );
+
+      await runWithTrace(
+        'dispatch.processMatches',
+        { ...baseDispatchMetadata, matchCount: clampedMatchCount },
+        () =>
+          processMatchRecords(
+            results,
+            clampedMatchCount,
+            dispatchContext,
+            segmentBaseOffset,
+            context,
+            progress,
+            callbacks
+          )
+      );
     });
-
-    const scanBindGroup = device.createBindGroup({
-      label: `gpu-seed-scan-group-${dispatchContext.dispatchIndex}`,
-      layout: state.bindGroupLayouts.scan,
-      entries: [
-        { binding: 0, resource: { buffer: state.configBuffer } },
-        { binding: 3, resource: { buffer: slot.groupCounts } },
-        { binding: 4, resource: { buffer: slot.groupOffsets } },
-        { binding: 5, resource: { buffer: slot.output } },
-      ],
-    });
-
-    const scatterBindGroup = device.createBindGroup({
-      label: `gpu-seed-scatter-group-${dispatchContext.dispatchIndex}`,
-      layout: state.bindGroupLayouts.scatter,
-      entries: [
-        { binding: 0, resource: { buffer: state.configBuffer } },
-        { binding: 2, resource: { buffer: slot.candidate } },
-        { binding: 3, resource: { buffer: slot.groupCounts } },
-        { binding: 4, resource: { buffer: slot.groupOffsets } },
-        { binding: 5, resource: { buffer: slot.output } },
-      ],
-    });
-
-    const computeEncoder = device.createCommandEncoder({ label: `gpu-seed-compute-${dispatchContext.dispatchIndex}` });
-    const generatePass = computeEncoder.beginComputePass({ label: `gpu-seed-generate-pass-${dispatchContext.dispatchIndex}` });
-    generatePass.setPipeline(state.pipelines.generate);
-    generatePass.setBindGroup(0, generateBindGroup);
-    generatePass.dispatchWorkgroups(workgroupCount);
-    generatePass.end();
-
-    const scanPass = computeEncoder.beginComputePass({ label: `gpu-seed-scan-pass-${dispatchContext.dispatchIndex}` });
-    scanPass.setPipeline(state.pipelines.scan);
-    scanPass.setBindGroup(0, scanBindGroup);
-    scanPass.dispatchWorkgroups(1);
-    scanPass.end();
-
-    const scatterPass = computeEncoder.beginComputePass({ label: `gpu-seed-scatter-pass-${dispatchContext.dispatchIndex}` });
-    scatterPass.setPipeline(state.pipelines.scatter);
-    scatterPass.setBindGroup(0, scatterBindGroup);
-    scatterPass.dispatchWorkgroups(scatterWorkgroupCount);
-    scatterPass.end();
-
-    computeEncoder.copyBufferToBuffer(slot.output, 0, slot.matchCount, 0, headerCopySize);
-
-    queue.submit([computeEncoder.finish()]);
-    await queue.onSubmittedWorkDone();
-
-    await slot.matchCount.mapAsync(GPUMapMode.READ, 0, headerCopySize);
-    const headerView = new Uint32Array(slot.matchCount.getMappedRange(0, headerCopySize));
-    const rawMatchCount = headerView[0] ?? 0;
-    slot.matchCount.unmap();
-
-    const clampedPlannedMatchCount = Math.min(rawMatchCount, slot.maxRecords);
-    const recordsBytes = clampedPlannedMatchCount * MATCH_RECORD_WORDS * Uint32Array.BYTES_PER_ELEMENT;
-    const totalCopyBytes = alignSize(MATCH_OUTPUT_HEADER_WORDS * Uint32Array.BYTES_PER_ELEMENT + recordsBytes);
-
-    const copyEncoder = device.createCommandEncoder({ label: `gpu-seed-copy-${dispatchContext.dispatchIndex}` });
-    copyEncoder.copyBufferToBuffer(slot.output, 0, slot.readback, 0, totalCopyBytes);
-    queue.submit([copyEncoder.finish()]);
-    await queue.onSubmittedWorkDone();
-
-    await slot.readback.mapAsync(GPUMapMode.READ, 0, totalCopyBytes);
-    const mappedRange = slot.readback.getMappedRange(0, totalCopyBytes);
-    const mappedWords = new Uint32Array(mappedRange);
-    const finalRawMatchCount = mappedWords[0] ?? 0;
-    const availableRecords = Math.max(
-      0,
-      Math.floor((mappedWords.length - MATCH_OUTPUT_HEADER_WORDS) / MATCH_RECORD_WORDS)
-    );
-    const clampedMatchCount = Math.min(finalRawMatchCount, slot.maxRecords, availableRecords);
-    const wordsToCopy = MATCH_OUTPUT_HEADER_WORDS + clampedMatchCount * MATCH_RECORD_WORDS;
-    const results = new Uint32Array(wordsToCopy);
-    results.set(mappedWords.subarray(0, wordsToCopy));
-    slot.readback.unmap();
-
-    await processMatchRecords(
-      results,
-      clampedMatchCount,
-      dispatchContext,
-      segmentBaseOffset,
-      context,
-      progress,
-      callbacks
-    );
   };
 
   const processMatchRecords = async (

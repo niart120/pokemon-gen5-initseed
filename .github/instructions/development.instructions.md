@@ -12,11 +12,6 @@ applyTo: "src/**/*.{ts,tsx}"
 import { SeedCalculator } from '@/lib/core/seed-calculator';
 import { useAppStore } from '@/store/app-store';
 
-// ✅ 本番用パフォーマンス監視
-import { ProductionPerformanceMonitor } from '@/lib/core/performance-monitor';
-
-// ✅ 開発用詳細分析（開発環境のみ）
-import { DevelopmentPerformanceAnalyzer } from '@/test-utils/profiling/development-analyzer';
 ```
 
 ### アーキテクチャ分離の原則

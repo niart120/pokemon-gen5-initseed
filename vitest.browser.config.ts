@@ -11,7 +11,7 @@ export default defineConfig({
   plugins: [wasm(), topLevelAwait()],
   test: {
     globals: true,
-  include: ['test/performance/*webgpu*.test.ts'],
+    include: ['test/performance/*webgpu*.test.ts', 'src/test/webgpu/**/*.test.ts'],
     exclude: ['node_modules', 'dist', '.git', '.cache'],
     setupFiles: ['./src/test/setup-browser.ts'],
     testTimeout: 15000,

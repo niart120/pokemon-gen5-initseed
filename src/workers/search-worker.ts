@@ -5,7 +5,6 @@
 
 import { SeedCalculator } from '../lib/core/seed-calculator';
 import { toMacUint8Array } from '@/lib/utils/mac-address';
-// import { ProductionPerformanceMonitor } from '../lib/core/performance-monitor';
 import type { SearchConditions } from '../types/search';
 import type { InitialSeedResult } from '../types/search';
 import type { TimerState, WorkerProgressMessage } from '../types/callbacks';

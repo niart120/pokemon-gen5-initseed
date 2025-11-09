@@ -18,7 +18,6 @@
 - `/wasm-pkg`: Rust WebAssembly implementation with SIMD optimization
 - `/public`: Static assets and test pages
   - `/public/wasm`: WebAssembly modules for distribution
-  - `/public/test-development.html`: 開発・パフォーマンステスト
   - `/public/test-integration.html`: 統合テスト
   - `/public/test-simd.html`: SIMD機能テスト
 - `/scripts`: Build automation scripts
@@ -44,22 +43,15 @@
 - 技術文書は事実ベース・簡潔に記述
 
 ## パフォーマンス監視アーキテクチャ
-### 本番用 (`src/lib/core/performance-monitor.ts`)
-- 軽量・高速な設計
-- 基本メトリクス (計算速度、メモリ、進捗)
-- リアルタイム測定機能
+### 本番用
+> 旧 `src/lib/core/performance-monitor.ts` は廃止済みです。
 
-### 開発用 (`src/test-utils/profiling/development-analyzer.ts`)
-- 詳細なパフォーマンス分析
-- メッセージ生成プロファイリング
-- スケーラビリティ測定
-- ボトルネック分析と推奨事項生成
+### 開発用
+> 旧 `DevelopmentPerformanceAnalyzer` は廃止済みです。
 
 ## テストシステム
-### 開発テスト (`public/test-development.html`)
-- 個別機能テスト
-- パフォーマンステスト
-- WebAssembly統合テスト
+### 開発テスト
+> `public/test-development.html` は廃止済みです。
 
 ### 統合テスト (`public/test-integration.html`)
 - システム全体の統合テスト

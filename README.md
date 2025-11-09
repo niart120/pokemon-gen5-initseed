@@ -30,7 +30,6 @@ npm run dev               # http://localhost:5173 で開発
 ```
 
 検証ページ（開発サーバー上）
-- http://localhost:5173/test-development.html — 個別機能・性能検証
 - http://localhost:5173/test-integration.html — 主要フロー統合テスト
 
 ビルド / デプロイ

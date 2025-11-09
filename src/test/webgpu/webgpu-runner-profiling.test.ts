@@ -1,0 +1,303 @@
+/// <reference types="@webgpu/types" />
+
+import { describe, expect, it } from 'vitest';
+import { SeedCalculator } from '@/lib/core/seed-calculator';
+import { buildSearchContext } from '@/lib/webgpu/seed-search/message-encoder';
+import {
+  createWebGpuSeedSearchRunner,
+  isWebGpuSeedSearchSupported,
+  type WebGpuSeedSearchRunnerOptions,
+} from '@/lib/webgpu/seed-search/runner';
+import type {
+  WebGpuRunnerInstrumentation,
+  WebGpuRunnerSpanContext,
+  WebGpuRunnerSpanKind,
+  WebGpuSearchContext,
+} from '@/lib/webgpu/seed-search/types';
+import type { InitialSeedResult, SearchConditions } from '@/types/search';
+
+const hasWebGpu = isWebGpuSeedSearchSupported();
+const describeWebGpu = hasWebGpu ? describe : describe.skip;
+
+interface SpanRecord {
+  kind: WebGpuRunnerSpanKind;
+  metadata: Record<string, unknown>;
+  durationMs: number;
+}
+
+class CollectingInstrumentation implements WebGpuRunnerInstrumentation {
+  public readonly spans: SpanRecord[] = [];
+
+  async trace<T>(context: WebGpuRunnerSpanContext, operation: () => Promise<T>): Promise<T> {
+    const start = performance.now();
+    try {
+      return await operation();
+    } finally {
+      const duration = performance.now() - start;
+      this.spans.push({
+        kind: context.kind,
+        metadata: { ...context.metadata },
+        durationMs: duration,
+      });
+    }
+  }
+}
+
+const sampleSeedCalculator = new SeedCalculator();
+
+function computeSampleSeeds(
+  conditions: SearchConditions,
+  context: WebGpuSearchContext,
+  sampleCount: number
+): number[] {
+  if (sampleCount <= 0) {
+    return [];
+  }
+
+  const seeds: number[] = [];
+
+  outer: for (const segment of context.segments) {
+    const rangeSeconds = Math.max(1, segment.rangeSeconds);
+    for (let timer0 = segment.timer0Min; timer0 <= segment.timer0Max; timer0 += 1) {
+      for (let offset = 0; offset < rangeSeconds; offset += 1) {
+        const datetime = new Date(context.startTimestampMs + offset * 1000);
+        const message = sampleSeedCalculator.generateMessage(conditions, timer0, segment.vcount, datetime);
+        const { seed } = sampleSeedCalculator.calculateSeed(message);
+        seeds.push(seed);
+        if (seeds.length >= sampleCount) {
+          break outer;
+        }
+      }
+    }
+  }
+
+  return seeds;
+}
+
+function buildSearchConditions(rangeSeconds: number, timer0Range: { min: number; max: number }): SearchConditions {
+  const start = new Date(2012, 5, 12, 10, 15, 0);
+  const end = new Date(start.getTime() + Math.max(0, rangeSeconds - 1) * 1000);
+
+  return {
+    romVersion: 'W2',
+    romRegion: 'JPN',
+    hardware: 'DS',
+    keyInput: 0x0000,
+    macAddress: [0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e],
+    timer0VCountConfig: {
+      useAutoConfiguration: false,
+      timer0Range: { min: timer0Range.min, max: timer0Range.max },
+      vcountRange: { min: 0x60, max: 0x60 },
+    },
+    dateRange: {
+      startYear: start.getFullYear(),
+      endYear: end.getFullYear(),
+      startMonth: start.getMonth() + 1,
+      endMonth: end.getMonth() + 1,
+      startDay: start.getDate(),
+      endDay: end.getDate(),
+      startHour: start.getHours(),
+      endHour: end.getHours(),
+      startMinute: start.getMinutes(),
+      endMinute: end.getMinutes(),
+      startSecond: start.getSeconds(),
+      endSecond: end.getSeconds(),
+    },
+  };
+}
+
+function summarizeSpans(spans: SpanRecord[]) {
+  const byKind = (kind: WebGpuRunnerSpanKind): SpanRecord[] => spans.filter((span) => span.kind === kind);
+  const totalDuration = (kind: WebGpuRunnerSpanKind): number => byKind(kind).reduce((sum, span) => sum + span.durationMs, 0);
+
+  const dispatchSpans = byKind('dispatch');
+  const totalMessages = dispatchSpans.reduce((sum, span) => sum + Number(span.metadata.messageCount ?? 0), 0);
+  const batches = dispatchSpans.length;
+  const maxBatchMessages = dispatchSpans.reduce(
+    (max, span) => Math.max(max, Number(span.metadata.messageCount ?? 0)),
+    0
+  );
+  const dispatchMs = dispatchSpans.reduce((sum, span) => sum + span.durationMs, 0);
+  const throughputPerSecond = dispatchMs > 0 ? (totalMessages / dispatchMs) * 1000 : 0;
+  const avgPerMessageNs = totalMessages > 0 ? (dispatchMs / totalMessages) * 1_000_000 : 0;
+
+  return {
+    dispatch: {
+      batches,
+      totalMessages,
+      maxBatchMessages,
+      dispatchMs,
+      throughputPerSecond,
+      avgPerMessageNs,
+    },
+    stages: {
+      submitMs: totalDuration('dispatch.submit'),
+      mapCountMs: totalDuration('dispatch.mapMatchCount'),
+      copyMs: totalDuration('dispatch.copyResults'),
+      mapResultsMs: totalDuration('dispatch.mapResults'),
+      processMatchesMs: totalDuration('dispatch.processMatches'),
+    },
+  } as const;
+}
+
+function createRunner(options: WebGpuSeedSearchRunnerOptions) {
+  return createWebGpuSeedSearchRunner(options);
+}
+
+function buildCallbacks(results: InitialSeedResult[], progressSteps: number[]) {
+  return {
+    onProgress: (progress: { currentStep: number }) => {
+      progressSteps.push(progress.currentStep);
+    },
+    onResult: (result: InitialSeedResult) => {
+      results.push(result);
+    },
+    onComplete: () => {
+      // noop
+    },
+    onError: (message: string) => {
+      throw new Error(message);
+    },
+    onPaused: () => {
+      // noop
+    },
+    onResumed: () => {
+      // noop
+    },
+    onStopped: (message: string) => {
+      throw new Error(message);
+    },
+  };
+}
+
+const WORKGROUP_CONFIGS = [
+  { label: 'wg-64', workgroupSize: 64 },
+  { label: 'wg-128', workgroupSize: 128 },
+  { label: 'wg-256', workgroupSize: 256 },
+] as const;
+
+const DISPATCH_LIMITS = [
+  { label: 'auto', maxMessagesPerDispatch: null },
+  { label: 'limit-256', maxMessagesPerDispatch: 256 },
+  { label: 'limit-2048', maxMessagesPerDispatch: 2048 },
+] as const;
+
+type DispatchLimitLabel = (typeof DISPATCH_LIMITS)[number]['label'];
+
+interface ScenarioConfig {
+  label: string;
+  rangeSeconds: number;
+  timer0Range: { min: number; max: number };
+  targetSeeds?: readonly number[];
+  targetSampleCount?: number;
+  dispatchLimitLabels?: readonly DispatchLimitLabel[];
+}
+
+const SECONDS_IN_YEAR = 365 * 24 * 60 * 60;
+const SECONDS_IN_50_YEARS = SECONDS_IN_YEAR * 50;
+
+const SCENARIOS: readonly ScenarioConfig[] = [
+  {
+    label: 'baseline-600s',
+    rangeSeconds: 600,
+    timer0Range: { min: 0x10a0, max: 0x10a3 },
+    targetSampleCount: 6,
+  },
+  {
+    label: 'ultra-50years',
+    rangeSeconds: SECONDS_IN_50_YEARS,
+    timer0Range: { min: 0x10a0, max: 0x10a0 },
+    targetSampleCount: 8,
+    dispatchLimitLabels: ['auto'],
+  },
+];
+
+describeWebGpu('webgpu seed search profiling instrumentation', () => {
+  it(
+    'collects instrumentation spans from the production runner',
+    async () => {
+      for (const scenario of SCENARIOS) {
+        for (const workgroup of WORKGROUP_CONFIGS) {
+          for (const dispatch of DISPATCH_LIMITS) {
+            if (scenario.dispatchLimitLabels && !scenario.dispatchLimitLabels.includes(dispatch.label)) {
+              continue;
+            }
+
+            const conditions = buildSearchConditions(scenario.rangeSeconds, scenario.timer0Range);
+            const context = buildSearchContext(conditions);
+            const sampleSeeds =
+              scenario.targetSeeds !== undefined
+                ? Array.from(new Set(scenario.targetSeeds))
+                : computeSampleSeeds(conditions, context, scenario.targetSampleCount ?? 0);
+            const targetSeeds = sampleSeeds;
+            expect(targetSeeds.length).toBeGreaterThan(0);
+
+            const instrumentation = new CollectingInstrumentation();
+            const runnerOptions: WebGpuSeedSearchRunnerOptions = {
+              workgroupSize: workgroup.workgroupSize,
+              instrumentation,
+            };
+            if (dispatch.maxMessagesPerDispatch !== null) {
+              runnerOptions.maxMessagesPerDispatch = dispatch.maxMessagesPerDispatch;
+            }
+            const runner = createRunner(runnerOptions);
+
+            const results: InitialSeedResult[] = [];
+            const progressSteps: number[] = [];
+            const callbacks = buildCallbacks(results, progressSteps);
+
+            await runner.run({
+              context,
+              targetSeeds,
+              callbacks,
+            });
+            runner.dispose();
+
+            expect(results.length).toBeGreaterThanOrEqual(targetSeeds.length);
+            const resultSeedSet = new Set(results.map((result) => result.seed));
+            expect(resultSeedSet.size).toBe(targetSeeds.length);
+            for (const seed of targetSeeds) {
+              expect(resultSeedSet.has(seed)).toBe(true);
+            }
+
+            const summary = summarizeSpans(instrumentation.spans);
+            expect(summary.dispatch.batches).toBeGreaterThan(0);
+            expect(summary.dispatch.totalMessages).toBe(context.totalMessages);
+            if (dispatch.maxMessagesPerDispatch !== null) {
+              expect(summary.dispatch.maxBatchMessages).toBeLessThanOrEqual(dispatch.maxMessagesPerDispatch);
+            } else {
+              expect(summary.dispatch.maxBatchMessages).toBeGreaterThan(0);
+              expect(summary.dispatch.maxBatchMessages).toBeLessThanOrEqual(context.totalMessages);
+            }
+            expect(summary.dispatch.dispatchMs).toBeGreaterThan(0);
+            expect(summary.stages.submitMs).toBeGreaterThanOrEqual(0);
+            expect(summary.stages.mapResultsMs).toBeGreaterThanOrEqual(0);
+
+            console.info('[runner-profile] summary', {
+              scenario: scenario.label,
+              workgroup: workgroup.label,
+              dispatchLimit: dispatch.label,
+              dispatchLimitOverride: dispatch.maxMessagesPerDispatch,
+              targetSeedCount: targetSeeds.length,
+              batches: summary.dispatch.batches,
+              totalMessages: summary.dispatch.totalMessages,
+              maxBatchMessages: summary.dispatch.maxBatchMessages,
+              dispatchMs: Number(summary.dispatch.dispatchMs.toFixed(3)),
+              throughputPerSecond: Number(summary.dispatch.throughputPerSecond.toFixed(2)),
+              avgPerMessageNs: Number(summary.dispatch.avgPerMessageNs.toFixed(2)),
+              submitMs: Number(summary.stages.submitMs.toFixed(3)),
+              mapCountMs: Number(summary.stages.mapCountMs.toFixed(3)),
+              copyMs: Number(summary.stages.copyMs.toFixed(3)),
+              mapResultsMs: Number(summary.stages.mapResultsMs.toFixed(3)),
+              processMatchesMs: Number(summary.stages.processMatchesMs.toFixed(3)),
+            });
+
+            expect(progressSteps.length).toBeGreaterThan(0);
+            expect(progressSteps[progressSteps.length - 1]).toBe(context.totalMessages);
+          }
+        }
+      }
+    },
+    180_000
+  );
+});

@@ -11,15 +11,8 @@ applyTo: "**"
 
 ## 新テストシステムでのデバッグ
 
-### 開発テスト (`test-development.html`)
-```bash
-# Agent/E2Eテスト用軽量モード（詳細ログ無効化）
-npm run dev:agent
-
-# ブラウザで開発テスト実行
-# http://localhost:5173/test-development.html
-# → Individual test buttons で詳細確認
-```
+### 開発テスト
+> `test-development.html` は廃止済みです。
 
 ### 統合テスト (`test-integration.html`)  
 ```bash
@@ -38,20 +31,10 @@ npm run dev:agent
 ## パフォーマンス分析
 
 ### 本番パフォーマンス監視
-```typescript
-// 軽量監視 (本番環境)
-import { ProductionPerformanceMonitor } from '@/lib/core/performance-monitor';
-const monitor = new ProductionPerformanceMonitor();
-monitor.startMeasurement();
-```
+> 旧 `ProductionPerformanceMonitor` は廃止済みです。
 
 ### 開発詳細分析
-```typescript
-// 詳細分析 (開発環境)
-import { DevelopmentPerformanceAnalyzer } from '@/test-utils/profiling/development-analyzer';
-const analyzer = new DevelopmentPerformanceAnalyzer();
-await analyzer.measureBasicPerformance(10000);
-```
+> DevelopmentPerformanceAnalyzer は廃止済みです。
 
 ## Agent/E2Eテスト専用デバッグ
 
@@ -88,9 +71,7 @@ npm run build
 5. `IntegratedSeedSearcher.search_seeds_integrated_simd`動作確認
 
 ### パフォーマンス劣化
-- `test-development.html`でパフォーマンステスト
 - `test-simd.html`でSIMD最適化効果確認
-- DevelopmentPerformanceAnalyzerでボトルネック分析
 - メモリリーク検査（Memory tab）
 
 ### UI表示・操作問題
