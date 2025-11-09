@@ -1,10 +1,11 @@
-import { ChevronDown, ChevronUp, Eye, Hash } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { useAppStore } from '../../../store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
+import { lcgSeedToHex } from '@/lib/utils/lcg-seed';
 import type { InitialSeedResult } from '../../../types/search';
 import type { SortField } from './ResultsControlCard';
 
@@ -46,7 +47,7 @@ export function ResultsCard({
     <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full min-h-96'}`}>
       <CardHeader className="pb-0 flex-shrink-0">
         <CardTitle className="flex items-center gap-2 flex-wrap">
-          <Hash size={20} className="flex-shrink-0 opacity-80" />
+          <Eye size={20} className="flex-shrink-0 opacity-80" />
           <span className="flex-shrink-0">Search Results</span>
           <Badge variant="secondary" className="flex-shrink-0">
             {filteredResultsCount} result{filteredResultsCount !== 1 ? 's' : ''}
@@ -71,14 +72,7 @@ export function ResultsCard({
             <Table className="table-auto min-w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead 
-                    className="cursor-pointer select-none whitespace-normal sm:whitespace-nowrap min-w-[80px]"
-                    onClick={() => handleSort('seed')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Seed Value {getSortIcon('seed')}
-                    </div>
-                  </TableHead>
+                  {/* モバイル表示では起動時刻とMT Seedと詳細アイコンのみ表示 */}
                   <TableHead 
                     className="cursor-pointer select-none whitespace-normal sm:whitespace-nowrap min-w-[100px]"
                     onClick={() => handleSort('datetime')}
@@ -88,46 +82,59 @@ export function ResultsCard({
                     </div>
                   </TableHead>
                   <TableHead 
-                    className="cursor-pointer select-none whitespace-normal sm:whitespace-nowrap min-w-[70px]"
+                    className="cursor-pointer select-none whitespace-normal sm:whitespace-nowrap min-w-[90px]"
+                    onClick={() => handleSort('seed')}
+                  >
+                    <div className="flex items-center gap-1">
+                      MT Seed {getSortIcon('seed')}
+                    </div>
+                  </TableHead>
+                  {/* デスクトップのみ表示 */}
+                  <TableHead 
+                    className="hidden md:table-cell whitespace-normal sm:whitespace-nowrap min-w-[120px]"
+                  >
+                    LCG Seed
+                  </TableHead>
+                  <TableHead 
+                    className="hidden md:table-cell cursor-pointer select-none whitespace-normal sm:whitespace-nowrap min-w-[70px]"
                     onClick={() => handleSort('timer0')}
                   >
                     <div className="flex items-center gap-1">
                       Timer0 {getSortIcon('timer0')}
                     </div>
                   </TableHead>
-                  <TableHead 
-                    className="cursor-pointer select-none whitespace-normal sm:whitespace-nowrap min-w-[70px]"
-                    onClick={() => handleSort('vcount')}
-                  >
-                    <div className="flex items-center gap-1">
-                      VCount {getSortIcon('vcount')}
-                    </div>
+                  <TableHead className="whitespace-normal sm:whitespace-nowrap min-w-[50px]">
+                    {/* Icon only column */}
                   </TableHead>
-                  <TableHead className="whitespace-normal sm:whitespace-nowrap min-w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredAndSortedResults.map((result, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-mono whitespace-normal sm:whitespace-nowrap break-all sm:break-normal min-w-[80px]">
-                      0x{result.seed.toString(16).toUpperCase().padStart(8, '0')}
-                    </TableCell>
                     <TableCell className="whitespace-normal sm:whitespace-nowrap min-w-[100px]">
                       <span className="font-mono text-sm break-all sm:break-normal">
                         {formatDateTime(result.datetime)}
                       </span>
                     </TableCell>
-                    <TableCell className="font-mono whitespace-normal sm:whitespace-nowrap break-all sm:break-normal min-w-[70px]">0x{result.timer0.toString(16).toUpperCase().padStart(4, '0')}</TableCell>
-                    <TableCell className="font-mono whitespace-normal sm:whitespace-nowrap break-all sm:break-normal min-w-[70px]">0x{result.vcount.toString(16).toUpperCase().padStart(2, '0')}</TableCell>
-                    <TableCell className="whitespace-normal sm:whitespace-nowrap min-w-[80px]">
+                    <TableCell className="font-mono whitespace-normal sm:whitespace-nowrap break-all sm:break-normal min-w-[90px]">
+                      0x{result.seed.toString(16).toUpperCase().padStart(8, '0')}
+                    </TableCell>
+                    {/* デスクトップのみ表示 */}
+                    <TableCell className="hidden md:table-cell font-mono text-xs whitespace-normal sm:whitespace-nowrap break-all sm:break-normal min-w-[120px]">
+                      {lcgSeedToHex(result.lcgSeed)}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell font-mono whitespace-normal sm:whitespace-nowrap break-all sm:break-normal min-w-[70px]">
+                      0x{result.timer0.toString(16).toUpperCase().padStart(4, '0')}
+                    </TableCell>
+                    <TableCell className="whitespace-normal sm:whitespace-nowrap min-w-[50px]">
                       <Button 
-                        variant="outline" 
+                        variant="ghost" 
                         size="sm"
                         onClick={() => onShowDetails(result)}
-                        className="text-xs px-2 py-1"
+                        className="h-8 w-8 p-0"
+                        title="View Details"
                       >
-                        <Eye size={14} className="mr-1" />
-                        Details
+                        <Eye size={16} />
                       </Button>
                     </TableCell>
                   </TableRow>

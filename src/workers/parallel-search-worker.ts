@@ -266,7 +266,7 @@ async function processChunkWithWasm(
         );
         
         const message = calculator.generateMessage(conditions, result.timer0, result.vcount, resultDate);
-        const { hash } = calculator.calculateSeed(message);
+        const { hash, lcgSeed } = calculator.calculateSeed(message);
 
         allResults.push({
           seed: result.seed,
@@ -276,6 +276,7 @@ async function processChunkWithWasm(
           conditions,
           message,
           sha1Hash: hash,
+          lcgSeed,
           isMatch: true,
         });
       }
@@ -343,7 +344,7 @@ async function processChunkWithTypeScript(
       try {
         // Seed計算
         const message = calculator.generateMessage(conditions, timer0, actualVCount, currentDateTime);
-        const { seed, hash } = calculator.calculateSeed(message);
+        const { seed, hash, lcgSeed } = calculator.calculateSeed(message);
 
         // マッチチェック
         if (targetSeedSet.has(seed)) {
@@ -355,6 +356,7 @@ async function processChunkWithTypeScript(
             conditions,
             message,
             sha1Hash: hash,
+            lcgSeed,
             isMatch: true,
           };
           

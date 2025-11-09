@@ -1,7 +1,10 @@
-import { Eye } from 'lucide-react';
+import { Eye, Copy } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { Label } from '../../ui/label';
+import { toast } from 'sonner';
+import { lcgSeedToHex } from '@/lib/utils/lcg-seed';
+import { useAppStore } from '@/store/app-store';
 import type { InitialSeedResult } from '../../../types/search';
 
 interface ResultDetailsDialogProps {
@@ -15,8 +18,23 @@ export function ResultDetailsDialog({
   isOpen,
   onOpenChange,
 }: ResultDetailsDialogProps) {
+  const { setDraftGenerationParams } = useAppStore();
+
   const formatDateTime = (date: Date): string => {
     return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+  };
+
+  const handleCopyLcgSeed = () => {
+    if (!result) return;
+    
+    const lcgSeedHex = lcgSeedToHex(result.lcgSeed);
+    
+    // Copy to Generation Panel
+    setDraftGenerationParams({
+      seed: lcgSeedHex,
+    });
+    
+    toast.success('LCG Seed copied to Generation Panel');
   };
 
   if (!result) return null;
@@ -31,7 +49,7 @@ export function ResultDetailsDialog({
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Initial Seed</Label>
+              <Label>MT Seed (Initial Seed)</Label>
               <div className="font-mono text-lg">
                 0x{result.seed.toString(16).toUpperCase().padStart(8, '0')}
               </div>
@@ -40,10 +58,26 @@ export function ResultDetailsDialog({
               </div>
             </div>
             <div>
-              <Label>Date/Time</Label>
-              <div className="font-mono">
-                {formatDateTime(result.datetime)}
+              <Label>LCG Seed</Label>
+              <div 
+                className="font-mono text-lg cursor-pointer hover:bg-accent p-2 rounded flex items-center gap-2 group"
+                onClick={handleCopyLcgSeed}
+                title="Click to copy to Generation Panel"
+              >
+                {lcgSeedToHex(result.lcgSeed)}
+                <Copy size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
+              <div className="text-xs text-muted-foreground">
+                Click to copy to Generation Panel
+              </div>
+            </div>
+          </div>
+
+          {/* Date/Time */}
+          <div>
+            <Label>Date/Time</Label>
+            <div className="font-mono">
+              {formatDateTime(result.datetime)}
             </div>
           </div>
 
