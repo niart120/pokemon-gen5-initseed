@@ -24,9 +24,26 @@ export function SearchProgressCard() {
 
   const isParallelMode = searchExecutionMode === 'cpu-parallel';
   const isRunning = searchProgress.isRunning;
+  const parallelData = parallelProgress ?? null;
+
+  const baseCurrentStep = isParallelMode ? parallelData?.totalCurrentStep ?? 0 : searchProgress.currentStep;
+  const baseTotalSteps = isParallelMode ? parallelData?.totalSteps ?? 0 : searchProgress.totalSteps;
+  const baseElapsedTime = isParallelMode ? parallelData?.totalElapsedTime ?? 0 : searchProgress.elapsedTime;
+  const baseEstimatedTimeRemaining = isParallelMode
+    ? parallelData?.totalEstimatedTimeRemaining ?? 0
+    : searchProgress.estimatedTimeRemaining;
+
+  const hasParallelProgress = isParallelMode && parallelData !== null;
+  const hasNonParallelProgress = !isParallelMode
+    && (searchProgress.totalSteps > 0 || searchProgress.currentStep > 0 || searchProgress.elapsedTime > 0);
+  const hasAnyProgress = hasParallelProgress || hasNonParallelProgress;
+  const showBaseProgress = isRunning || hasAnyProgress;
+  const showReadyState = !isRunning && !hasAnyProgress;
+
+  const progressPercent = baseTotalSteps > 0 ? Math.min(100, (baseCurrentStep / baseTotalSteps) * 100) : 0;
   
   // 起動したワーカー総数を基準にする（停止・完了含む）
-  const totalWorkerCount = parallelProgress?.workerProgresses?.size || 0;
+  const totalWorkerCount = parallelData?.workerProgresses?.size || 0;
 
   // ワーカー数に応じたレイアウト決定（モバイル考慮）
   const getWorkerLayout = (count: number) => {
@@ -57,7 +74,7 @@ export function SearchProgressCard() {
             <ChartBar size={20} className="opacity-80" />
             Search Progress
           </div>
-          {isParallelMode && parallelProgress && totalWorkerCount > 0 && (
+    {isParallelMode && parallelData && totalWorkerCount > 0 && (
             <Badge variant="outline" className="text-xs">
               {totalWorkerCount} Workers
             </Badge>
@@ -66,16 +83,16 @@ export function SearchProgressCard() {
       </CardHeader>
       <CardContent className="pt-0 flex-1 flex flex-col min-h-0 overflow-y-auto">
         {/* 基本進捗表示 - 実行中・完了後も表示 */}
-        {(isRunning || (isParallelMode && parallelProgress)) && (
+        {showBaseProgress && (
           <div className="space-y-2 flex-shrink-0">
-            <Progress value={(searchProgress.currentStep / searchProgress.totalSteps) * 100} />
+            <Progress value={progressPercent} />
             
             {/* 時間表示 - 直列・並列共通 */}
             <TimeDisplay
-              elapsedTime={isParallelMode ? parallelProgress?.totalElapsedTime || 0 : searchProgress.elapsedTime}
-              estimatedTimeRemaining={isParallelMode ? parallelProgress?.totalEstimatedTimeRemaining || 0 : searchProgress.estimatedTimeRemaining}
-              currentStep={isParallelMode ? parallelProgress?.totalCurrentStep || 0 : searchProgress.currentStep}
-              totalSteps={isParallelMode ? parallelProgress?.totalSteps : searchProgress.totalSteps}
+              elapsedTime={baseElapsedTime}
+              estimatedTimeRemaining={baseEstimatedTimeRemaining}
+              currentStep={baseCurrentStep}
+              totalSteps={baseTotalSteps}
             />
             
             {/* 進捗・マッチ情報 - 直列時のみ表示 */}
@@ -87,7 +104,9 @@ export function SearchProgressCard() {
                     {searchProgress.currentStep.toLocaleString()} / {searchProgress.totalSteps.toLocaleString()}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {((searchProgress.currentStep / searchProgress.totalSteps) * 100).toFixed(1)}%
+                    {searchProgress.totalSteps > 0
+                      ? ((searchProgress.currentStep / searchProgress.totalSteps) * 100).toFixed(1)
+                      : '0.0'}%
                   </div>
                 </div>
                 <div>
@@ -102,18 +121,18 @@ export function SearchProgressCard() {
         )}
 
         {/* 検索未実行時のメッセージ */}
-        {!isRunning && (!isParallelMode || !parallelProgress || totalWorkerCount === 0) && searchProgress.totalSteps === 0 && (
+        {showReadyState && (
           <div className="text-center py-4 text-muted-foreground text-sm flex-shrink-0">
             Ready to search
           </div>
         )}
 
         {/* 並列検索ワーカー情報 - 残りの領域を全て使用 */}
-        {isParallelMode && parallelProgress && totalWorkerCount > 0 && (
+        {isParallelMode && parallelData && totalWorkerCount > 0 && (
           <div className="flex-1 flex flex-col min-h-0">
             {/* ワーカー統計情報 */}
             <div className="text-xs text-muted-foreground flex justify-between flex-shrink-0">
-              <span>Workers: {parallelProgress.activeWorkers} active, {parallelProgress.completedWorkers} completed</span>
+              <span>Workers: {parallelData.activeWorkers} active, {parallelData.completedWorkers} completed</span>
               <span>Total: {totalWorkerCount}</span>
             </div>
             
@@ -148,7 +167,7 @@ export function SearchProgressCard() {
                               workerLayout.cols === 3 ? 'grid-cols-3' :
                               'grid-cols-4'
                         }`}>
-                          {Array.from(parallelProgress.workerProgresses.entries()).map(([workerId, progress]) => (
+                          {Array.from(parallelData.workerProgresses.entries()).map(([workerId, progress]) => (
                             <div
                               key={workerId}
                               className="p-2 rounded border bg-muted/20 space-y-1.5 min-h-[4rem] min-w-[80px] sm:min-w-[80px]"
@@ -194,9 +213,9 @@ export function SearchProgressCard() {
                         </div>
                       </div>
                       <div className="text-[10px] text-muted-foreground pt-1 border-t flex-shrink-0">
-                        Running: {Array.from(parallelProgress.workerProgresses.values()).filter(p => p.status === 'running').length}, 
-                        Completed: {Array.from(parallelProgress.workerProgresses.values()).filter(p => p.status === 'completed').length}, 
-                        Total Matches: {Array.from(parallelProgress.workerProgresses.values()).reduce((sum, p) => sum + p.matchesFound, 0)}
+                        Running: {Array.from(parallelData.workerProgresses.values()).filter(p => p.status === 'running').length}, 
+                        Completed: {Array.from(parallelData.workerProgresses.values()).filter(p => p.status === 'completed').length}, 
+                        Total Matches: {Array.from(parallelData.workerProgresses.values()).reduce((sum, p) => sum + p.matchesFound, 0)}
                       </div>
                     </div>
                   ) : (
@@ -204,12 +223,12 @@ export function SearchProgressCard() {
                     <div className="space-y-2 flex-shrink-0">
                       <div className="text-xs text-muted-foreground">Worker Overview ({totalWorkerCount} workers)</div>
                       <Progress 
-                        value={(parallelProgress.completedWorkers / totalWorkerCount) * 100} 
+                        value={(parallelData.completedWorkers / totalWorkerCount) * 100} 
                         className="h-2"
                       />
                       <div className="flex justify-between text-[10px] text-muted-foreground">
-                        <span>{parallelProgress.completedWorkers} / {totalWorkerCount} completed</span>
-                        <span>{Array.from(parallelProgress.workerProgresses.values()).reduce((sum, p) => sum + p.matchesFound, 0)} total matches</span>
+                        <span>{parallelData.completedWorkers} / {totalWorkerCount} completed</span>
+                        <span>{Array.from(parallelData.workerProgresses.values()).reduce((sum, p) => sum + p.matchesFound, 0)} total matches</span>
                       </div>
                     </div>
                   )}

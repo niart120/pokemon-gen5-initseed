@@ -1,6 +1,5 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { MagnifyingGlass, Info, Gear, Sparkle } from '@phosphor-icons/react';
 import { GenerationPanel } from './GenerationPanel';
 import { useAppStore } from '@/store/app-store';
@@ -10,7 +9,7 @@ import { OptionPanel } from './OptionPanel';
 import { HelpPanel } from './HelpPanel';
 
 export function MainContent() {
-  const { activeTab, setActiveTab, targetSeeds, searchResults } = useAppStore();
+  const { activeTab, setActiveTab } = useAppStore();
   const { isStack } = useResponsiveLayout();
 
   // レスポンシブに応じたoverflow設定とレイアウト
@@ -30,16 +29,6 @@ export function MainContent() {
           <TabsTrigger value="search" className="flex items-center gap-2">
             <MagnifyingGlass size={16} />
             Search
-            {targetSeeds.seeds.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
-                {targetSeeds.seeds.length}
-              </Badge>
-            )}
-            {searchResults.length > 0 && (
-              <Badge variant="default" className="ml-1">
-                {searchResults.length}
-              </Badge>
-            )}
           </TabsTrigger>
           <TabsTrigger value="generation" className="flex items-center gap-2">
             <Sparkle size={16} />

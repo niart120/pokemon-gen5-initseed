@@ -40,6 +40,7 @@ interface AppStore extends GenerationSlice {
   pauseSearch: () => void;
   resumeSearch: () => void;
   stopSearch: () => void;
+  completeSearch: () => void;
 
   // Last search duration
   lastSearchDuration: number | null;
@@ -296,6 +297,15 @@ export const useAppStore = create<AppStore>()(
           searchProgress: {
             ...defaultSearchProgress,
             matchesFound: state.searchProgress.matchesFound,
+          },
+        })),
+      completeSearch: () =>
+        set((state) => ({
+          searchProgress: {
+            ...state.searchProgress,
+            isRunning: false,
+            isPaused: false,
+            canPause: false,
           },
         })),
 

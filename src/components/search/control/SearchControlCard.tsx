@@ -24,7 +24,8 @@ export function SearchControlCard() {
     startSearch,
     pauseSearch,
     resumeSearch,
-    stopSearch,
+  stopSearch,
+  completeSearch,
     targetSeeds,
     addSearchResult,
     clearSearchResults,
@@ -136,7 +137,7 @@ export function SearchControlCard() {
             useAppStore.getState().setLastSearchDuration(finalElapsedTime);
             
             // 検索状態を停止
-            stopSearch();
+            completeSearch();
             
             // ワーカーマネージャーは次回検索開始時にリセット（統計情報を保持）
             // resetSearchWorkerManager(); ← 削除：統計表示を維持するため

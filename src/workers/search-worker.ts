@@ -112,6 +112,7 @@ async function processBatchIntegrated(
   vcountMin: number,
   vcountMax: number,
   targetSeedSet: Set<number>,
+  targetSeedArray: Uint32Array,
   onResult: (result: InitialSeedResult) => void
 ): Promise<void> {
   const wasmModule = calculator.getWasmModule();
@@ -139,7 +140,11 @@ async function processBatchIntegrated(
         frameValue
       );
 
-      const rangeSeconds = Math.floor((endTimestamp - startTimestamp) / 1000);
+      const rangeSeconds = Math.floor((endTimestamp - startTimestamp) / 1000) + 1;
+
+      if (rangeSeconds <= 0) {
+        return;
+      }
 
       // サブチャンク分割処理（15日単位、最大1296000秒）
       const subChunkSeconds = Math.min(1296000, rangeSeconds);
@@ -162,9 +167,9 @@ async function processBatchIntegrated(
           startTimestamp + (offset + subChunkSeconds) * 1000,
           endTimestamp + 1000
         ));
-        const subChunkRange = Math.floor((subChunkEnd.getTime() - subChunkStart.getTime()) / 1000);
+  const subChunkRange = Math.floor((subChunkEnd.getTime() - subChunkStart.getTime()) / 1000);
         
-        if (subChunkRange <= 0) break;
+  if (subChunkRange <= 0) break;
 
         // WebAssembly呼び出し前に非同期yield
         await new Promise(resolve => setTimeout(resolve, 0));
@@ -190,7 +195,7 @@ async function processBatchIntegrated(
           timer0Max,
           vcountMin,
           vcountMax,
-          new Uint32Array(Array.from(targetSeedSet))
+          targetSeedArray
         );
         
         // WebAssembly呼び出し後に非同期yield
@@ -228,7 +233,9 @@ async function processBatchIntegrated(
     [startTimestamp, endTimestamp],
     conditions,
     timer0Min,
+    timer0Max,
     vcountMin,
+    vcountMax,
     targetSeedSet,
     calculator,
     onResult
@@ -241,57 +248,68 @@ async function processBatchIntegrated(
 async function processBatchIndividual(
   timestampRange: number[],
   conditions: SearchConditions,
-  timer0: number,
-  actualVCount: number,
+  timer0Min: number,
+  timer0Max: number,
+  vcountMin: number,
+  vcountMax: number,
   targetSeedSet: Set<number>,
   calculator: SeedCalculator,
   onResult: (result: InitialSeedResult) => void
 ): Promise<void> {
   const [startTimestamp, endTimestamp] = timestampRange;
+  const params = calculator.getROMParameters(conditions.romVersion, conditions.romRegion);
+
+  if (!params) {
+    throw new Error(`No parameters found for ${conditions.romVersion} ${conditions.romRegion}`);
+  }
   
   let processedCount = 0;
   
-  for (let timestamp = startTimestamp; timestamp <= endTimestamp; timestamp += 1000) {
-    // 停止チェック
-    if (searchState.shouldStop) break;
-    
-    // 一時停止処理（1000操作ごと）
-    if (processedCount % 1000 === 0) {
-      while (searchState.isPaused && !searchState.shouldStop) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      // Event Loop yield
-      await new Promise(resolve => setTimeout(resolve, 0));
-    }
-    
-    if (searchState.shouldStop) break;
-    
-    const currentDateTime = new Date(timestamp);
-    
-    try {
-      // Generate message and calculate seed
-      const message = calculator.generateMessage(conditions, timer0, actualVCount, currentDateTime);
-      const { seed, hash } = calculator.calculateSeed(message);
+  for (let timer0 = timer0Min; timer0 <= timer0Max; timer0++) {
+    const actualVCount = calculator.getVCountForTimer0(params, timer0);
 
-      // Check if seed matches any target
-      if (targetSeedSet.has(seed)) {
-        const result: InitialSeedResult = {
-          seed,
-          datetime: currentDateTime,
-          timer0,
-          vcount: actualVCount,
-          conditions,
-          message,
-          sha1Hash: hash,
-          isMatch: true,
-        };
-        onResult(result);
+    for (let timestamp = startTimestamp; timestamp <= endTimestamp; timestamp += 1000) {
+      // 停止チェック
+      if (searchState.shouldStop) break;
+      
+      // 一時停止処理（1000操作ごと）
+      if (processedCount % 1000 === 0) {
+        while (searchState.isPaused && !searchState.shouldStop) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        // Event Loop yield
+        await new Promise(resolve => setTimeout(resolve, 0));
       }
-    } catch (error) {
-      console.error('Error calculating seed:', error);
+      
+      if (searchState.shouldStop) break;
+      
+      const currentDateTime = new Date(timestamp);
+      
+      try {
+        // Generate message and calculate seed
+        const message = calculator.generateMessage(conditions, timer0, actualVCount, currentDateTime);
+        const { seed, hash } = calculator.calculateSeed(message);
+
+        // Check if seed matches any target
+        if (targetSeedSet.has(seed)) {
+          const result: InitialSeedResult = {
+            seed,
+            datetime: currentDateTime,
+            timer0,
+            vcount: actualVCount,
+            conditions,
+            message,
+            sha1Hash: hash,
+            isMatch: true,
+          };
+          onResult(result);
+        }
+      } catch (error) {
+        console.error('Error calculating seed:', error);
+      }
+      
+      processedCount++;
     }
-    
-    processedCount++;
   }
 }
 
@@ -307,8 +325,21 @@ async function performSearch(conditions: SearchConditions, targetSeeds: number[]
     }
 
     // Calculate search space
-    const timer0Range = conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1;
-    // const vcountRange = conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1;
+    const timer0Min = conditions.timer0VCountConfig.timer0Range.min;
+    const timer0Max = conditions.timer0VCountConfig.timer0Range.max;
+    const vcountMin = conditions.timer0VCountConfig.vcountRange.min;
+    const vcountMax = conditions.timer0VCountConfig.vcountRange.max;
+
+    const timer0Count = timer0Max - timer0Min + 1;
+    const vcountCount = vcountMax - vcountMin + 1;
+
+    if (timer0Count <= 0) {
+      throw new Error('Timer0 range must be at least 1 value');
+    }
+
+    if (vcountCount <= 0) {
+      throw new Error('VCount range must be at least 1 value');
+    }
     
     const startDate = new Date(
       conditions.dateRange.startYear,
@@ -333,10 +364,16 @@ async function performSearch(conditions: SearchConditions, targetSeeds: number[]
     }
 
     const dateRange = Math.floor((endDate.getTime() - startDate.getTime()) / 1000) + 1;
-    const totalSteps = timer0Range * dateRange;
+
+    if (dateRange <= 0) {
+      throw new Error('Date range must include at least one second');
+    }
+
+    const totalSteps = timer0Count * vcountCount * dateRange;
 
     // Convert target seeds to Set for faster lookup
     const targetSeedSet = new Set(targetSeeds);
+    const targetSeedArray = new Uint32Array(targetSeedSet.size > 0 ? [...targetSeedSet] : []);
 
     let currentStep = 0;
     let matchesFound = 0;
@@ -346,93 +383,92 @@ async function performSearch(conditions: SearchConditions, targetSeeds: number[]
     let lastProgressUpdate = Date.now();
     const progressUpdateInterval = 500; // Update progress every 500ms
 
-    // Search using integrated approach
-    
-    // Search loop using integrated search
-    for (let timer0 = conditions.timer0VCountConfig.timer0Range.min; timer0 <= conditions.timer0VCountConfig.timer0Range.max; timer0++) {
-      if (searchState.shouldStop) break;
-      
-      // Get actual VCount value with offset handling for BW2
+    // Warn if auto-calculated VCount goes outside user-defined range
+    for (let timer0 = timer0Min; timer0 <= timer0Max; timer0++) {
       const actualVCount = calculator.getVCountForTimer0(params, timer0);
-      
-      // Note: User manual settings are respected even if outside ROM optimal ranges
-      if (actualVCount < conditions.timer0VCountConfig.vcountRange.min || actualVCount > conditions.timer0VCountConfig.vcountRange.max) {
-        console.warn(`[WORKER] Calculated VCount ${actualVCount} (0x${actualVCount.toString(16)}) is outside user range ${conditions.timer0VCountConfig.vcountRange.min}-${conditions.timer0VCountConfig.vcountRange.max}, but continuing search as requested.`);
+      if (actualVCount < vcountMin || actualVCount > vcountMax) {
+        console.warn(`[WORKER] Calculated VCount ${actualVCount} (0x${actualVCount.toString(16)}) is outside user range ${vcountMin}-${vcountMax}, but continuing search as requested.`);
       }
-      
-      // Process in time ranges using integrated search with optimized batch size
-      const timeRangeSize = Math.min(BATCH_SIZE_SECONDS, dateRange);
-      
-      for (let timeStart = 0; timeStart < dateRange; timeStart += timeRangeSize) {
-        if (searchState.shouldStop) break;
-        
-        // Handle pause with more frequent checking
-        while (searchState.isPaused && !searchState.shouldStop) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        if (searchState.shouldStop) break;
+    }
 
-        const timeEnd = Math.min(timeStart + timeRangeSize, dateRange);
-        const rangeStartTime = startDate.getTime() + timeStart * 1000;
-        const rangeEndTime = startDate.getTime() + (timeEnd - 1) * 1000;
-        
-        try {
-          // 非同期yield追加
-          await new Promise(resolve => setTimeout(resolve, 0));
-          
-          await processBatchIntegrated(
-            conditions,
-            rangeStartTime,
-            rangeEndTime,
-            timer0,
-            timer0,
-            actualVCount,
-            actualVCount,
-            targetSeedSet,
-            (result) => {
-              matchesFound++;
-              postMessage({ type: 'RESULT', result } as WorkerResponse);
-            }
-          );
+    // Search using integrated approach
+    const timeRangeSize = Math.min(BATCH_SIZE_SECONDS, dateRange);
 
-          currentStep += (timeEnd - timeStart);
+    for (let timeStart = 0; timeStart < dateRange; timeStart += timeRangeSize) {
+      if (searchState.shouldStop) break;
 
-          // Send progress update only at specified intervals or on completion
-          const now = Date.now();
-          const shouldUpdateProgress = 
-            (now - lastProgressUpdate >= progressUpdateInterval) || 
-            (currentStep >= totalSteps);
+      // Handle pause with more frequent checking
+      while (searchState.isPaused && !searchState.shouldStop) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
 
-          if (shouldUpdateProgress) {
-            lastProgressUpdate = now;
-            
-            const elapsedTime = getElapsedTime();
-            
-            // More accurate estimated time remaining calculation
-            let estimatedTimeRemaining = 0;
-            if (currentStep > 0 && currentStep < totalSteps) {
-              const avgTimePerStep = elapsedTime / currentStep;
-              const remainingSteps = totalSteps - currentStep;
-              estimatedTimeRemaining = Math.round(avgTimePerStep * remainingSteps);
-            }
+      if (searchState.shouldStop) break;
 
-            postMessage({
-              type: 'PROGRESS',
-              progress: {
-                currentStep,
-                totalSteps,
-                elapsedTime,
-                estimatedTimeRemaining,
-                matchesFound,
-                currentDateTime: new Date(rangeEndTime).toISOString()
-              }
-            } as WorkerResponse);
+      const timeEnd = Math.min(timeStart + timeRangeSize, dateRange);
+      const secondsProcessed = timeEnd - timeStart;
+      if (secondsProcessed <= 0) {
+        continue;
+      }
+
+      const rangeStartTime = startDate.getTime() + timeStart * 1000;
+      const rangeEndTime = startDate.getTime() + (timeEnd - 1) * 1000;
+
+      try {
+        // 非同期yield追加
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        await processBatchIntegrated(
+          conditions,
+          rangeStartTime,
+          rangeEndTime,
+          timer0Min,
+          timer0Max,
+          vcountMin,
+          vcountMax,
+          targetSeedSet,
+          targetSeedArray,
+          (result) => {
+            matchesFound++;
+            postMessage({ type: 'RESULT', result } as WorkerResponse);
+          }
+        );
+
+        currentStep += secondsProcessed * timer0Count * vcountCount;
+
+        // Send progress update only at specified intervals or on completion
+        const now = Date.now();
+        const shouldUpdateProgress =
+          (now - lastProgressUpdate >= progressUpdateInterval) ||
+          (currentStep >= totalSteps);
+
+        if (shouldUpdateProgress) {
+          lastProgressUpdate = now;
+
+          const elapsedTime = getElapsedTime();
+
+          // More accurate estimated time remaining calculation
+          let estimatedTimeRemaining = 0;
+          if (currentStep > 0 && currentStep < totalSteps) {
+            const avgTimePerStep = elapsedTime / currentStep;
+            const remainingSteps = totalSteps - currentStep;
+            estimatedTimeRemaining = Math.round(avgTimePerStep * remainingSteps);
           }
 
-        } catch (error) {
-          console.error('Search batch error:', error);
+          postMessage({
+            type: 'PROGRESS',
+            progress: {
+              currentStep: Math.min(currentStep, totalSteps),
+              totalSteps,
+              elapsedTime,
+              estimatedTimeRemaining,
+              matchesFound,
+              currentDateTime: new Date(rangeEndTime).toISOString()
+            }
+          } as WorkerResponse);
         }
+
+      } catch (error) {
+        console.error('Search batch error:', error);
       }
     }
 
