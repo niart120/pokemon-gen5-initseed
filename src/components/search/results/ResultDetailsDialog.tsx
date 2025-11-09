@@ -18,7 +18,7 @@ export function ResultDetailsDialog({
   isOpen,
   onOpenChange,
 }: ResultDetailsDialogProps) {
-  const { setDraftGenerationParams } = useAppStore();
+  const { setDraftParams } = useAppStore();
 
   const formatDateTime = (date: Date): string => {
     return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
@@ -30,8 +30,8 @@ export function ResultDetailsDialog({
     const lcgSeedHex = lcgSeedToHex(result.lcgSeed);
     
     // Copy to Generation Panel
-    setDraftGenerationParams({
-      seed: lcgSeedHex,
+    setDraftParams({
+      baseSeedHex: lcgSeedHex,
     });
     
     toast.success('LCG Seed copied to Generation Panel');
