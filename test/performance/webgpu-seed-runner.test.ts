@@ -92,15 +92,6 @@ function simulateGpuIndices(segment: WebGpuSegment, messageIndex: number): Simul
   };
 }
 
-function swap32(value: number): number {
-  return (
-    ((value & 0xff) << 24) |
-    (((value >>> 8) & 0xff) << 16) |
-    (((value >>> 16) & 0xff) << 8) |
-    ((value >>> 24) & 0xff)
-  ) >>> 0;
-}
-
 describeWebGpu('WebGPU seed search runner', () => {
   let runner: WebGpuSeedSearchRunner | null = null;
 
@@ -152,8 +143,8 @@ describeWebGpu('WebGPU seed search runner', () => {
       for (let index = 0; index < segment.totalMessages; index += 1) {
         const simulated = simulateGpuIndices(segment, index);
         const datetime = new Date(context.startTimestampMs + simulated.secondOffset * 1000);
-        const message = calculator.generateMessage(conditions, simulated.timer0, simulated.vcount, datetime);
-        const hash = sha1.calculateHash(message);
+  const message = calculator.generateMessage(conditions, simulated.timer0, simulated.vcount, datetime);
+  sha1.calculateHash(message);
         const seed = calculator.calculateSeed(message).seed;
         expected.push({ seed, timer0: simulated.timer0, vcount: simulated.vcount, iso: datetime.toISOString() });
       }

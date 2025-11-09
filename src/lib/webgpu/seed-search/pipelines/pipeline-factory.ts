@@ -24,7 +24,7 @@ export function createGeneratedPipeline(device: GPUDevice, workgroupSize: number
   });
   module.getCompilationInfo?.().then((info) => {
     if (info.messages.length > 0) {
-      console.debug('[pipeline-factory] compilation diagnostics', info.messages.map((msg) => ({
+      console.warn('[pipeline-factory] compilation diagnostics', info.messages.map((msg) => ({
         message: msg.message,
         line: msg.lineNum,
         column: msg.linePos,

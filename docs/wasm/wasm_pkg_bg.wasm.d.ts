@@ -104,6 +104,7 @@ export const pokemongenerator_calculate_generation_seed: (a: bigint, b: bigint) 
 export const pokemongenerator_generate_pokemon_batch_bw: (a: number, b: bigint, c: bigint, d: number, e: number) => void;
 export const seedenumerator_new: (a: bigint, b: bigint, c: number, d: number) => number;
 export const seedenumerator_next_pokemon: (a: number) => number;
+export const sha1_hash_batch: (a: number, b: number, c: number) => void;
 export const endianutils_swap_bytes_16: (a: number) => number;
 export const endianutils_swap_bytes_64: (a: bigint) => bigint;
 export const endianutils_be32_to_le: (a: number) => number;

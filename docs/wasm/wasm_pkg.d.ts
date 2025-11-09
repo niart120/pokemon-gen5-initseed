@@ -5,13 +5,14 @@
  */
 export function calculate_game_offset(initial_seed: bigint, mode: GameMode): number;
 /**
- * SHA-1ハッシュをバッチ処理
- */
-export function sha1_hash_batch(messages: Uint32Array): Uint32Array;
-/**
  * TID/SID決定処理統合API（仕様書準拠）
  */
 export function calculate_tid_sid_from_seed(initial_seed: bigint, mode: GameMode): TidSidResult;
+/**
+ * WebAssembly向けバッチSHA-1計算エントリポイント
+ * `messages` は 16 ワード単位（512bit）で並ぶフラットな配列である必要がある
+ */
+export function sha1_hash_batch(messages: Uint32Array): Uint32Array;
 /**
  * 砂煙出現内容の種類
  */
@@ -1154,6 +1155,7 @@ export interface InitOutput {
   readonly pokemongenerator_generate_pokemon_batch_bw: (a: number, b: bigint, c: bigint, d: number, e: number) => void;
   readonly seedenumerator_new: (a: bigint, b: bigint, c: number, d: number) => number;
   readonly seedenumerator_next_pokemon: (a: number) => number;
+  readonly sha1_hash_batch: (a: number, b: number, c: number) => void;
   readonly endianutils_swap_bytes_16: (a: number) => number;
   readonly endianutils_swap_bytes_64: (a: bigint) => bigint;
   readonly endianutils_be32_to_le: (a: number) => number;

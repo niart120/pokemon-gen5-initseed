@@ -177,6 +177,28 @@ function getArrayU32FromWasm0(ptr, len) {
     return getUint32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
 }
 /**
+ * WebAssembly向けバッチSHA-1計算エントリポイント
+ * `messages` は 16 ワード単位（512bit）で並ぶフラットな配列である必要がある
+ * @param {Uint32Array} messages
+ * @returns {Uint32Array}
+ */
+export function sha1_hash_batch(messages) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArray32ToWasm0(messages, wasm.__wbindgen_export_0);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.sha1_hash_batch(retptr, ptr0, len0);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var v2 = getArrayU32FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_export_2(r0, r1 * 4, 4);
+        return v2;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
  * 砂煙出現内容の種類
  * @enum {0 | 1 | 2}
  */
