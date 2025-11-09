@@ -10,13 +10,12 @@ applyTo: "src/**/*.{ts,tsx}"
 ```typescript
 // ✅ 推奨: 直接WebAssemblyまたはTypeScriptフォールバック
 import { SeedCalculator } from '@/lib/core/seed-calculator';
-import { useAppStore } from '@/store/app-store';
-
+import { createWebGpuSeedSearchRunner } from '@/lib/webgpu/seed-search/runner';
 ```
 
 ### アーキテクチャ分離の原則
 - **本番コード**: `src/lib/core/` - 軽量・高速・本番最適化
-- **開発ツール**: `src/test-utils/` - 詳細分析・デバッグ支援
+- **テストコード**: `src/test/**` - Vitestシナリオ・ブラウザ検証
 - **循環依存禁止**: 本番コードは開発ツールに依存させない
 
 ### ユーティリティの取り扱い
@@ -32,8 +31,7 @@ import { useAppStore } from '@/store/app-store';
 
 ### 禁止事項
 - コア計算処理の新規TypeScript実装（WebAssembly使用必須）
-- 既存の検証システムの無効化
-- 本番コードから`src/test-utils/`への依存
+- 廃止済みの検証・分析コード（旧`test-utils`等）の復活
 - テストコードから本番状態への影響
 
 ## 計算エンジン構造

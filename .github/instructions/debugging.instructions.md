@@ -6,7 +6,7 @@ applyTo: "**"
 
 ## 基本デバッグ手順
 1. ブラウザ開発者ツール (F12) でConsole/Networkタブ確認
-2. `search-verification.ts`の詳細ログ確認
+2. Workerログ（`search-worker.ts` / `parallel-search-worker.ts`）の進捗・エラー出力確認
 3. Rust側ログ (`console_log!`) 確認
 
 ## 新テストシステムでのデバッグ
@@ -64,13 +64,13 @@ npm run build
 ```
 
 ### 計算結果の不整合
-1. `verifySearchImplementation()`実行
-2. 参照実装との差分確認
-3. `npm run test:rust`でRust側確認
-4. `npm run test:rust:browser`でブラウザ環境確認
-5. `IntegratedSeedSearcher.search_seeds_integrated_simd`動作確認
+1. `npm run test` で TypeScript/Vitest を実行
+2. `npx vitest run --config vitest.browser.config.ts src/test/webgpu/webgpu-runner-integration.test.ts` で WebGPU 統合動作を確認
+3. `npm run test:rust` / `npm run test:rust:browser` で wasm 側の整合性を確認
+4. `IntegratedSeedSearcher.search_seeds_integrated_simd` の結果を既知ケースと比較
 
 ### パフォーマンス劣化
+- `npx vitest run --config vitest.browser.config.ts src/test/webgpu/webgpu-runner-profiling.test.ts` でワークロード別の測定を取得
 - `test-simd.html`でSIMD最適化効果確認
 - メモリリーク検査（Memory tab）
 
@@ -90,8 +90,6 @@ npm run clean && npm run build
 ```
 
 ## デバッグツール活用
-- **本番監視**: リアルタイム性能測定
-- **開発分析**: 詳細プロファイリング・推奨事項
-- **統合テスト**: システム全体の動作確認
-- **SIMD機能テスト**: SIMD最適化の性能検証
-- **ブラウザ自動化**: UI regression テスト
+- **WebGPUブラウザテスト**: `src/test/webgpu/*.test.ts`
+- **SIMD機能テスト**: `test-simd.html`
+- **ブラウザ自動化**: mcp-playwright による UI regression テスト

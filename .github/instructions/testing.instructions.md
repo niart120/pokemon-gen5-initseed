@@ -19,7 +19,8 @@ applyTo: "**/*.test.{ts,js}"
   - エンドツーエンドワークフローテスト
 
 ## テスト環境
-- Vitest使用
+- Vitest + happy-dom（ユニットテスト）
+- Vitest Browser + Playwright Chromium（WebGPUテスト）
 - WebAssemblyローダー: `initWasmForTesting`
 - Node.js環境での実行
 
@@ -34,22 +35,16 @@ applyTo: "**/*.test.{ts,js}"
 8. **E2Eテスト**: mcp-playwright使用可能
 9. **全テスト実行**: `npm run test:all`
 
-## パフォーマンス監視システム
-
-### 本番用監視
-> `src/lib/core/performance-monitor.ts` は廃止済みです。
-
-### 開発用分析 (`src/test-utils/profiling/development-analyzer.ts`)
-- 詳細パフォーマンス分析
-- メッセージ生成プロファイリング
-- スケーラビリティ測定
-- 推奨事項生成
+## パフォーマンス計測
+- `npx vitest run --config vitest.browser.config.ts src/test/webgpu/webgpu-runner-profiling.test.ts`
+- `http://localhost:5173/test-simd.html`
+- ブラウザの Performance / Memory ツール
 
 ## 品質維持
-- 変更後は必ず `verifySearchImplementation()` 実行
-- 新テストページでパフォーマンス確認
-- 計算精度の検証必須
-- 本番・開発コードの適切な分離確認
+- TypeScriptテストと WebGPU ブラウザテストを継続的に実行
+- Rust テスト（`npm run test:rust` / `npm run test:rust:browser`）で wasm 側の整合性を確認
+- パフォーマンス結果を既存ログと比較し回帰を検知
+- 本番コードとテストコードの依存関係を再点検
 
 ## E2Eテスト・ブラウザ自動化
 - **mcp-playwright**: ブラウザ操作・スクリーンショット・UI検証に利用可能
