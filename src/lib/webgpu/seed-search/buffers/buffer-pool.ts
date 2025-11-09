@@ -56,7 +56,7 @@ export function createWebGpuBufferPool(
 
     const slot = slots[slotIndex];
     const requiredRecords = messageCount;
-  const requiredBytes = alignSize(MATCH_OUTPUT_HEADER_BYTES + requiredRecords * MATCH_RECORD_BYTES);
+    const requiredBytes = alignSize(MATCH_OUTPUT_HEADER_BYTES + requiredRecords * MATCH_RECORD_BYTES);
 
     if (!slot.output || requiredBytes > slot.outputSize) {
       slot.output?.destroy();

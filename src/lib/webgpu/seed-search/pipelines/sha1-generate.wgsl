@@ -29,12 +29,6 @@ struct TargetSeedBuffer {
 struct MatchRecord {
   message_index : u32,
   seed : u32,
-  h0 : u32,
-  h1 : u32,
-  h2 : u32,
-  h3 : u32,
-  h4 : u32,
-  _padding : u32,
 };
 
 struct MatchOutputBuffer {
@@ -330,10 +324,5 @@ fn sha1_generate(@builtin(global_invocation_id) global_id : vec3<u32>) {
 
   output_buffer.records[record_index].message_index = message_index;
   output_buffer.records[record_index].seed = seed;
-  output_buffer.records[record_index].h0 = h0;
-  output_buffer.records[record_index].h1 = h1;
-  output_buffer.records[record_index].h2 = h2;
-  output_buffer.records[record_index].h3 = h3;
-  output_buffer.records[record_index].h4 = h4;
-  output_buffer.records[record_index]._padding = 0u;
+  // Hash components are omitted here and recomputed on the host when needed.
 }

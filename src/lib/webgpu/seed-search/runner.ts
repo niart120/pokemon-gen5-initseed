@@ -1,5 +1,4 @@
 import { SeedCalculator } from '@/lib/core/seed-calculator';
-import { SHA1 } from '@/lib/core/sha1';
 import type { InitialSeedResult } from '@/types/search';
 import {
   DEFAULT_WORKGROUP_SIZE,
@@ -15,7 +14,6 @@ import {
 import { createGeneratedPipeline } from './pipelines/pipeline-factory';
 import { createWebGpuBufferPool, type WebGpuBufferPool } from './buffers/buffer-pool';
 import { createWebGpuBatchPlanner, type WebGpuBatchPlanner } from './batch-planner';
-import { createWebGpuProfilingCollector, type WebGpuProfilingCollector } from './profiling';
 import type {
   WebGpuRunRequest,
   WebGpuRunnerCallbacks,
@@ -45,7 +43,6 @@ interface RunnerState {
   configData: Uint32Array | null;
   bufferPool: WebGpuBufferPool | null;
   planner: WebGpuBatchPlanner | null;
-  profilingCollector: WebGpuProfilingCollector | null;
   targetBuffer: GPUBuffer | null;
   targetBufferCapacity: number;
   readonly seedCalculator: SeedCalculator;
@@ -81,9 +78,8 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
     configData: null,
     bufferPool: null,
     planner: null,
-    profilingCollector: null,
-  targetBuffer: null,
-  targetBufferCapacity: 0,
+    targetBuffer: null,
+    targetBufferCapacity: 0,
     seedCalculator: new SeedCalculator(),
     isRunning: false,
     isPaused: false,
@@ -191,13 +187,12 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
       throw new Error('WebGPU runner missing bind group layout');
     }
 
-  ensureTargetBuffer(targetSeeds);
+    ensureTargetBuffer(targetSeeds);
 
     state.isRunning = true;
     state.isPaused = false;
     state.shouldStop = false;
     state.lastProgressUpdateMs = Date.now();
-    state.profilingCollector = createWebGpuProfilingCollector();
 
     const progress: WebGpuRunnerProgress = {
       currentStep: 0,
@@ -248,7 +243,6 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
       state.isPaused = false;
       state.shouldStop = false;
       pauseTimer();
-      state.profilingCollector = null;
       if (abortCleanup) {
         abortCleanup();
       }
@@ -388,10 +382,8 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
 
     queue.writeBuffer(slot.output, 0, ZERO_MATCH_HEADER.buffer, ZERO_MATCH_HEADER.byteOffset, ZERO_MATCH_HEADER.byteLength);
 
-    const uploadStart = performance.now();
     writeConfigBuffer(dispatchContext.segment, segmentBaseOffset, dispatchContext.messageCount);
     queue.writeBuffer(state.configBuffer, 0, state.configData.buffer, state.configData.byteOffset, state.configData.byteLength);
-    const afterUpload = performance.now();
 
     const bindGroup = device.createBindGroup({
       label: `gpu-seed-bind-group-${dispatchContext.dispatchIndex}`,
@@ -426,25 +418,23 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
     queue.submit([commandEncoder.finish()]);
 
     await queue.onSubmittedWorkDone();
-    const afterGpuDone = performance.now();
 
     await slot.readback.mapAsync(GPUMapMode.READ, 0, copySize);
-    const mapped = slot.readback.getMappedRange(0, copySize);
-    const results = new Uint32Array(mapped.slice(0));
+    const mappedRange = slot.readback.getMappedRange(0, copySize);
+    const mappedWords = new Uint32Array(mappedRange);
+    const rawMatchCount = mappedWords[0] ?? 0;
+    const wordsToCopy = Math.min(
+      mappedWords.length,
+      MATCH_OUTPUT_HEADER_WORDS + Math.min(rawMatchCount, slot.maxRecords) * MATCH_RECORD_WORDS
+    );
+    const results = new Uint32Array(wordsToCopy);
+    results.set(mappedWords.subarray(0, wordsToCopy));
     slot.readback.unmap();
-    const afterReadback = performance.now();
-
-    state.profilingCollector?.recordBatch({
-      uploadMs: afterUpload - uploadStart,
-      dispatchMs: afterGpuDone - afterUpload,
-      readbackMs: afterReadback - afterGpuDone,
-    });
 
     const availableRecords = Math.max(
       0,
       Math.floor((results.length - MATCH_OUTPUT_HEADER_WORDS) / MATCH_RECORD_WORDS)
     );
-    const rawMatchCount = results[0] ?? 0;
     const clampedMatchCount = Math.min(rawMatchCount, slot.maxRecords, availableRecords);
 
     await processMatchRecords(
@@ -488,11 +478,6 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
       const recordOffset = MATCH_OUTPUT_HEADER_WORDS + i * MATCH_RECORD_WORDS;
       const messageIndex = matchWords[recordOffset];
       const seed = matchWords[recordOffset + 1] >>> 0;
-      const h0 = matchWords[recordOffset + 2];
-      const h1 = matchWords[recordOffset + 3];
-      const h2 = matchWords[recordOffset + 4];
-      const h3 = matchWords[recordOffset + 5];
-      const h4 = matchWords[recordOffset + 6];
 
       const timer0Index = Math.floor(messageIndex / safeRangeSeconds);
       const secondOffset = messageIndex - timer0Index * safeRangeSeconds;
@@ -500,6 +485,14 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
       const timer0 = timer0Min + timer0Index;
       const datetime = new Date(context.startTimestampMs + secondOffset * 1000);
       const message = state.seedCalculator.generateMessage(context.conditions, timer0, vcount, datetime);
+      const { hash, seed: recalculatedSeed } = state.seedCalculator.calculateSeed(message);
+      if (recalculatedSeed !== seed) {
+        console.warn('GPU/CPU seed mismatch detected', {
+          gpuSeed: seed,
+          cpuSeed: recalculatedSeed,
+          messageIndex,
+        });
+      }
       const result: InitialSeedResult = {
         seed,
         datetime,
@@ -507,7 +500,7 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
         vcount,
         conditions: context.conditions,
         message,
-        sha1Hash: SHA1.hashToHex(h0, h1, h2, h3, h4),
+        sha1Hash: hash,
         isMatch: true,
       };
       callbacks.onResult(result);
