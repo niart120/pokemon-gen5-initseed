@@ -27,18 +27,21 @@
    - データ整合性チェック
    - ゲーム定数管理
 
-4. **[04-implementation-phases.md](./04-implementation-phases.md)** - 実装フェーズ
-   - Phase 1: WASM Core Engine（3週間）
-   - Phase 2: TypeScript Integration（2週間）
-   - Phase 3: UI Components（2週間）
-   - Phase 4: WebWorker & Performance（1週間）
-   - Phase 5: Polish & Validation（1週間）
+4. **[05-webgpu-seed-search.md](./05-webgpu-seed-search.md)** - WebGPU Seed 検索計画
+   - GPU ランナー構成
+   - Worker 連携戦略
+   - バッチ計画とフォールバック
+   - テスト計画と導入ステップ
 
 ## 関連ドキュメント
 
 - **[pokemon-generation-feature-spec.md](../pokemon-generation-feature-spec.md)** - 機能仕様書
 - **[pokemon-data-specification.md](../pokemon-data-specification.md)** - データ仕様書
-- **[pokemon-generation-ui-spec.md](../pokemon-generation-ui-spec.md)** - UI仕様書
+- **[algorithms/README.md](./algorithms/README.md)** - アルゴリズム詳細仕様の目次
+- **[phase2-api.md](./phase2-api.md)** - WASM統合 API 指針
+- **[ui-guidelines.md](./ui-guidelines.md)** - UI統一ガイドライン
+
+> 旧フェーズ計画や UI 案の履歴は `legacy-docs/spec/` に移動済みです。
 
 ## 実装時の注意事項
 

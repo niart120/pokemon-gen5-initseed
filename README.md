@@ -1,336 +1,68 @@
-# ポケモンBW/BW2 初期Seed探索webアプリ
+# ポケモンBW/BW2 初期Seed探索 Web アプリ
 
-第5世代ポケモン（ブラック・ホワイト/ブラック2・ホワイト2）の初期Seed値探索・検証を行うwebアプリケーションです。
+第5世代（ブラック・ホワイト/ブラック2・ホワイト2）向けの初期 Seed 探索と結果検証を行う Web アプリケーションです。Rust + WebAssembly による SIMD 最適化検索と、React 製 UI による検索条件管理・結果可視化を提供します。
 
-**🌐 アプリを使用する: https://niart120.github.io/pokemon-gen5-initseed/**
-
-## 概要
-
-このアプリケーションは、ポケモンBW/BW2における初期Seed値の効率的な探索を実現します。ROMバージョン、リージョン、ハードウェア、日時、キー入力といった条件から生成されるメッセージをSHA-1ハッシュ化し、その上位32bitを初期Seedとして算出します。
+## Live
+- https://niart120.github.io/pokemon-gen5-initseed/
 
 ## 主な機能
+- Rust WebAssembly コアによる高速 SHA-1 初期 Seed 探索（SIMD128 対応）
+- Web Worker ベースの検索・世代引き離し処理と進捗監視
+- Encounter/Species データを利用した Generation 結果解析（シードから連続乱数の列挙）
+- Generation 結果のフィルタリング・ソート・エクスポート（CSV / JSON / TXT）
+- WebGPU ベースの検索ランナー（対応ブラウザでの実験的パス）
+- Vitest / wasm-pack / Playwright MCP を組み合わせた多層テスト
 
-- **全28バージョン対応**: BW/BW2の全バージョン・リージョン組み合わせをサポート
-- **超高速探索**: WebAssembly SIMD128 + Rust による最適化で2.7億回/秒を実現
-- **並列処理**: CPU数に応じたWebWorker並列化による高速化（実験的機能）
-- **リアルタイム進捗**: 探索状況の詳細表示と中断・再開機能
-- **結果管理**: ソート・フィルタリング・詳細表示機能
-- **エクスポート**: CSV/JSON/テキスト形式での結果出力
-- **包括的テスト環境**: Playwright-MCP によるE2Eテスト自動化、開発・統合テストページによる品質保証
+## アーキテクチャ概要
+| レイヤ | 主なモジュール | 概要 |
+| --- | --- | --- |
+| UI (React + Zustand) | `src/components`, `src/store` | 検索条件・結果 UI、Zustand ストア |
+| 検索コア | `src/lib/core`, `src/workers/search-worker*.ts` | wasm-bindgen 経由で `IntegratedSeedSearcher` を実行 |
+| Generation | `src/lib/generation`, `src/workers/generation-worker.ts` | シード列挙・Pokemon Resolver |
+| データ管理 | `src/data/encounters`, `src/data/species` | Encounter テーブル・種族データのローダ |
+| Rust / wasm | `wasm-pkg/src/*.rs` | SHA-1 SIMD、Encounter 計算、Pokemon Generator 等 |
 
-### アクセシビリティ
-
-Generation/Search パネルの主要カードは aria 属性整備 + 自動検査 (jest-axe) により回帰検出を行う。
-
-- ガイド: `docs/ACCESSIBILITY_GUIDE.md`
-- ローカル検査 (対象カード a11y):
-    ```bash
-    npm run test -- --runTestsByPath src/test/generation/a11y-generation-cards.test.tsx
-    ```
-    0違反を維持すること。
-
-## Generation 機能概要 (Phase3-4 MVP)
-
-初期Seedから連続する乱数列を列挙し、ポケモン生成コア属性 (PID, 性格, 特性スロット, 色違い種別, スロット値, 同期適用) を WebWorker + WASM でストリーミング取得します。Search (SHA-1 初期Seed探索) と独立したタブ/ストア領域を持ち、相互に干渉しません。
-
-### 主API / 主要構成
-- GenerationWorkerManager: WebWorker ライフサイクル管理 (開始/停止/進捗/結果バッチ)
-- generation-worker: WASM PokemonGenerator / SeedEnumerator 呼び出し
-- Store Slice: processedAdvances, resultsCount, throughputRaw, throughputEma, etaMs, shinyCount を保持
-- Exporter: CSV / JSON / TXT (BigInt は hex + decimal 併記 or 文字列化)
-
-### 主パラメータ (GenerationParams 抜粋)
-| Param | 説明 | 制約 |
-|-------|------|------|
-| baseSeed | 初期Seed bigint | 0 ≤ < 2^64 |
-| offset | 開始オフセット | 0..maxAdvances |
-| maxAdvances | 消費上限 | 1..1,000,000 |
-| maxResults | 収集上限 | 1..100,000 且つ ≤ maxAdvances |
-| tid / sid | 表/裏ID | 0..65535 |
-| syncEnabled + syncNatureId | シンクロ設定 | natureId 0..24 |
-| stopAtFirstShiny | 最初の色違いで停止 | boolean |
-| stopOnCap | maxResults 到達停止 | default true |
-| batchSize | バッチ生成数 | 1..10,000 |
-| progressIntervalMs | 進捗間隔 | default 250ms |
-
-### 完了理由 (reason)
-- max-advances: 上限消費到達
-- max-results: 収集上限 + stopOnCap
-- first-shiny: 最初の色違い検出 + stopAtFirstShiny
-- stopped: ユーザー停止
-- error: 例外 / 検証失敗
-
-### 進捗/性能指標
-- throughputRaw = processedAdvances / 実行秒
-- throughputEma = EMA(α=0.2) 平滑化
-- etaMs = (remainingAdvances / basis) * 1000 (basis=Ema>0?Ema:Raw)
-
-### Search との違い
-| 項目 | Search | Generation |
-|------|--------|------------|
-| 目的 | 初期Seed探索(SHA-1) | Seed から遭遇結果列挙 |
-| 計算単位 | メッセージ -> ハッシュ | RNG advance -> Pokemon Raw |
-| 早期終了 | 条件Seed発見 | max / shiny / results / stop |
-| 出力 | 初期Seed候補 | Pokemon Raw 属性列 |
-| 性能指標 | Hash/s (SIMD) | Advances/s (EMA) |
-
-詳細仕様: docs/GENERATION_PHASE3_4_PLAN.md, spec/pokemon-generation-feature-spec.md を参照。
-
-## 技術スタック
-
-- **フロントエンド**: React 18 + TypeScript + Vite
-- **UI**: Radix UI (shadcn/ui) + TailwindCSS
-- **計算エンジン**: Rust + WebAssembly (wasm-pack) + SIMD128最適化
-- **状態管理**: Zustand
-- **バックグラウンド処理**: Web Workers + 並列処理対応
-- **パフォーマンス監視**: 本番用軽量監視 + 開発用詳細分析
-
-### WebAssembly計算エンジン
-
-本アプリケーションの計算処理は以下のRust WebAssemblyモジュールで実装されています：
-
-- **IntegratedSeedSearcher**: 統合シード探索API（メイン検索エンジン）
-- **PersonalityRNG**: BW/BW2仕様64bit線形合同法乱数生成器
-- **EncounterCalculator**: 遭遇スロット計算エンジン（BW/BW2別対応）
-- **OffsetCalculator**: ゲーム初期化処理とオフセット計算
-- **PIDCalculator & ShinyChecker**: PID生成と色違い判定
-- **PokemonGenerator**: 統合ポケモン生成エンジン
-
-
-
-## 開発・ビルド・テスト
-
-### 基本コマンド
-
+## セットアップ & 開発
 ```bash
-# 依存関係のインストール
 npm install
-
-# 開発サーバー起動
-npm run dev
-
-# 開発サーバー起動（軽量モード・E2Eテスト用）
-npm run dev:agent
-
-# WebAssemblyビルド
-npm run build:wasm
-
-# プロダクションビルド
-npm run build
-
-# GitHub Pagesデプロイ
-npm run deploy
+npm run build:wasm        # 初回のみ wasm-pkg をビルド
+npm run dev               # http://localhost:5173 で開発
 ```
 
-### テスト・検証手順
+検証ページ（開発サーバー上）
+- http://localhost:5173/test-development.html — 個別機能・性能検証
+- http://localhost:5173/test-integration.html — 主要フロー統合テスト
 
-#### 基本テスト実行
-
+ビルド / デプロイ
 ```bash
-# TypeScriptテスト実行
-npm run test
-
-# Rustテスト実行（WASM単体）
-npm run test:rust
-
-# Rustブラウザテスト実行（WASM統合）
-npm run test:rust:browser
-
-# 全テスト実行（推奨）
-npm run test:all
+npm run build             # wasm + TypeScript をビルド
+npm run deploy            # dist → docs へコピー（GitHub Pages 用）
 ```
 
-#### 開発・検証用テストページ
+## テスト
+| コマンド | 内容 |
+| --- | --- |
+| `npm run test` | Vitest (Node + happy-dom) |
+| `npm run test:rust` | `wasm-pkg` の Cargo テスト |
+| `npm run test:rust:browser` | wasm-pack によるブラウザ統合テスト |
+| `npm run test:webgpu` | WebGPU モードのブラウザテスト (Vitest Browser) |
+| `npm run test:e2e` | Playwright MCP を用いた一貫性チェック |
+| `npm run test:all` | Rust → Browser → TypeScript の順に実行 |
 
-テストページでの詳細な動作確認・パフォーマンス測定：
+## ドキュメント
+- 設計・仕様: `spec/` 配下
+  - `spec/pokemon-generation-feature-spec.md`
+  - `spec/pokemon-data-specification.md`
+  - `spec/pokemon-generation-ui-spec.md`
+- テストガイド: `src/test/README.md`
+- アーカイブ済み資料: `legacy-docs/` (`PRD.md`, `IMPLEMENTATION_STATUS.md`, `ENCOUNTER_IMPLEMENTATION.md`)
 
-```bash
-# 開発サーバー起動後、ブラウザで以下にアクセス
+> `docs/` ディレクトリは GitHub Pages 配信用のビルド成果物です。ドキュメントは格納しないでください。
 
-# 開発テスト（個別機能・パフォーマンステスト）
-http://localhost:5173/test-development.html
-
-# 統合テスト（システム全体・ワークフローテスト）  
-http://localhost:5173/test-integration.html
-
-# SIMD機能テスト（SIMD最適化・パフォーマンス比較）
-http://localhost:5173/test-simd.html
-```
-
-### 品質保証
-
-本プロジェクトは包括的なテスト環境により品質を保証しています：
-
-- **WASM単体テスト**: Rust Cargoテスト（95テスト以上）
-- **TypeScript単体テスト**: Vitestベース
-- **統合テスト**: WebAssembly-TypeScript連携テスト
-- **ブラウザテスト**: wasm-packによる実環境テスト
-- **E2Eテスト**: Playwright-MCPによる自動化テスト
-
-## テスト環境
-
-### 開発テスト
-```bash
-npm run dev
-# → http://localhost:5173/test-development.html
-```
-- 個別機能のパフォーマンステスト
-- WebAssembly統合テスト
-- 詳細プロファイリング分析
-
-### 統合テスト
-```bash
-npm run dev
-# → http://localhost:5173/test-integration.html
-```
-- システム全体の統合テスト
-- エンドツーエンドワークフローテスト
-- ストレステスト・ベンチマーク
-
-### 並列処理テスト
-```bash
-npm run dev
-# → http://localhost:5173/test-parallel.html
-```
-- WebAssembly-Worker統合テスト
-- 実環境並列処理検証
-- メモリ管理・パフォーマンス測定
-
-## 開発者向けメモ
-- ユーティリティは `src/lib/utils/<module>` を明示的にインポート（バレル禁止）
-    - 例: `import { toMacUint8Array } from '@/lib/utils/mac-address'`
-- wasm-bindgen 生成物の直接参照は禁止。必ず `src/lib/core/wasm-interface.ts` を経由
-- enum 変換の専用モジュールは廃止。必要な最小限の変換は各境界（Worker/Resolver）でローカル実装
-
-## GitHub Copilot対応
-
-このプロジェクトはGitHub Copilotの最適化された設定を含んでいます：
-
-- `.github/copilot-instructions.md`: 基本的なプロジェクト情報
-- `.github/instructions/`: ファイル固有の開発指示
-- `.github/prompts/`: 再利用可能なプロンプト（実験的機能）
-- `.github/copilot-meta.md`: AI Agent向けメンテナンス情報
-
-### Copilot設定の構造
-```
-.github/
-├── copilot-instructions.md        # リポジトリ全体の基本指示
-├── instructions/                   # ファイル固有の指示（自動適用）
-│   ├── development.instructions.md
-│   ├── testing.instructions.md
-│   └── debugging.instructions.md
-└── prompts/                       # 手動選択可能なプロンプト
-    └── *.prompt.md
-```
-
-## パフォーマンス詳細
-
-### SIMD最適化による高速化
-WebAssembly SIMD128命令を活用した4並列SHA-1処理により大幅な性能向上を実現：
-
-- **統合探索（SIMD版）**: 約2.7億回/秒
-- **従来版比較**: 約2.7倍の性能向上
-- **並列処理との組み合わせ**: CPUコア数に応じてさらなる高速化
-
-### ベンチマーク環境
-- **CPU**: AMD Ryzen 9 9950X3D 16-Core Processor (16コア/32スレッド, 最大4.3GHz)
-- **メモリ**: 64GB RAM
-- **OS**: Windows 11 Pro
-- **アーキテクチャ**: x64 (AMD64)
-- **ブラウザ**: Chrome/Edge (WebAssembly SIMD128対応)
-
-### 技術的特徴
-- 4-way並列SHA-1ハッシュ計算
-- WebAssembly SIMD128ベクトル命令最適化
-- 効率的なバッチ処理アルゴリズム
-- メモリ使用量の最適化
-
-## 使用方法
-
-1. ROMバージョン・リージョン・ハードウェアを選択
-2. MACアドレスとキー入力を設定
-3. 探索日時範囲を指定
-4. 目標Seedリストを入力
-5. 探索開始で高速検索を実行
-
-## APIドキュメント
-
-詳細なAPI仕様や使用例は以下を参照してください。
-
- - spec/implementation/phase2-api.md
-
-## 型の境界と単一ソース
-
-- Enumなどのドメイン概念は `src/types/domain.ts` を単一ソースとして利用します。
-- 境界の生データ型は `src/types/pokemon-raw.ts`（snake_case）。ラベル付け等は `src/lib/generation/pokemon-resolver.ts` の `toUiReadyPokemon()` を利用します。
-- 性格名（Nature）は `DomainNatureNames`（英語名）に集約しています。
-
-## E2Eテスト
-
-包括的なブラウザ自動化テストをPlaywright-MCPで実行できます：
-
-```bash
-# 開発サーバー起動
-npm run dev
-
-# E2Eテスト実行
-# Playwright-MCPのコマンドを使用
-```
-
-詳細は以下のドキュメントを参照：
-- [E2Eテスト実行手順](docs/E2E_TESTING_WITH_PLAYWRIGHT_MCP.md)
-- [Playwright-MCPスクリプト集](docs/PLAYWRIGHT_MCP_SCRIPTS.md)
-
-## データ出典とクレジット
-
-### 技術資料
+## データソース・参考
 - ポケモン第5世代乱数調整: https://rusted-coil.sakura.ne.jp/pokemon/ran/ran_5.htm
-- BW なみのり・つり・大量発生 野生乱数: https://xxsakixx.com/archives/53402929.html
-- BW 出現スロットの閾値: https://xxsakixx.com/archives/53962575.html
-
-### データソース
-- ポケモン攻略DE.com: http://blog.game-de.com/pokedata/pokemon-data/ （種族データ）
-- ポケモンの友 (Black): https://pokebook.jp/data/sp5/enc_b （遭遇テーブル）
-- ポケモンの友 (White): https://pokebook.jp/data/sp5/enc_w （遭遇テーブル）
-- ポケモンの友 (Black 2): https://pokebook.jp/data/sp5/enc_b2 （遭遇テーブル）
-- ポケモンの友 (White 2): https://pokebook.jp/data/sp5/enc_w2 （遭遇テーブル）
-
-- 本ツールは非公式であり、いかなる保証も行いません。データには誤りが含まれる可能性があります。ゲーム内結果での検証を推奨します。
+- 遭遇テーブル: https://pokebook.jp/
+- 補助資料: https://xxsakixx.com/
 
 ## ライセンス
-
-MIT License - 詳細は [LICENSE](LICENSE) ファイルを参照
-
-## Generation Results Export 仕様
-
-Generation タブで取得した結果は CSV / JSON / TXT 形式でエクスポートできます。各形式の共通フィールドは以下です:
-
-| 列名 | 説明 |
-|------|------|
-| Advance | その結果が得られた RNG advance (1-based) |
-| SeedHex | 基底シード (16桁, 0x接頭辞, 小文字) |
-| SeedDec | 基底シード 10進 (BigInt 文字列) |
-| PIDHex | PID (8桁, 0x接頭辞, 小文字) |
-| PIDDec | PID 10進 |
-| NatureId | 性格 ID (0-24) |
-| NatureName | 性格名 (英語, DomainNatureNames) |
-| ShinyType | 色違い種別コード (0:Normal 1:Square 2:Star) |
-| ShinyLabel | ShinyType ラベル (No / Square / Star / Unknown) |
-| AbilitySlot | 特性スロット値 |
-| EncounterType | 遭遇タイプ (内部コード) |
-| EncounterSlotValue | スロット決定用数値 |
-| SyncApplied | シンクロ適用有無 |
-| GenderValue | 性別判定用値 (0-255) |
-| LevelRandHex | レベル用乱数 (0x...16桁) |
-| LevelRandDec | レベル用乱数 10進 |
-
-### 変更履歴
-- 2025-08: NatureName 列を追加し、人が読みやすい性格名を直接含めるよう改善。
-
-### 形式別補足
-- CSV: 1行目に上記ヘッダ。値はカンマ区切り / 文字列クォート無し (内部にカンマを含まないため)。
-- JSON: メタデータ (exportDate, format, totalResults) と results 配列。
-- TXT: 人間可読なブロック列挙。スクリプト処理用途には CSV/JSON を推奨。
-
-### 互換性
-以前バージョンのエクスポートとの互換性: 既存列の順序は維持し NatureName を NatureId の直後に挿入。旧ツールで列数固定パースをしている場合は更新が必要です。
+MIT © 2025 niart120
