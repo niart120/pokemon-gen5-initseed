@@ -107,35 +107,69 @@ function buildSearchConditions(rangeSeconds: number, timer0Range: { min: number;
 }
 
 function summarizeSpans(spans: SpanRecord[]) {
-  const byKind = (kind: WebGpuRunnerSpanKind): SpanRecord[] => spans.filter((span) => span.kind === kind);
-  const totalDuration = (kind: WebGpuRunnerSpanKind): number => byKind(kind).reduce((sum, span) => sum + span.durationMs, 0);
+  const byKind = (kind: SpanRecord['kind']): SpanRecord[] => spans.filter((span) => span.kind === kind);
+  const totalDuration = (kind: SpanRecord['kind']): number => byKind(kind).reduce((sum, span) => sum + span.durationMs, 0);
+  const sumMetadata = (targetSpans: SpanRecord[], key: string): number =>
+    targetSpans.reduce((sum, span) => sum + Number(span.metadata[key] ?? 0), 0);
+  const maxMetadata = (targetSpans: SpanRecord[], key: string): number =>
+    targetSpans.reduce((max, span) => Math.max(max, Number(span.metadata[key] ?? 0)), 0);
+  const averageOf = (values: number[]): number => {
+    if (values.length === 0) {
+      return 0;
+    }
+    const total = values.reduce((sum, value) => sum + value, 0);
+    return total / values.length;
+  };
 
   const dispatchSpans = byKind('dispatch');
-  const totalMessages = dispatchSpans.reduce((sum, span) => sum + Number(span.metadata.messageCount ?? 0), 0);
+  const totalMessages = sumMetadata(dispatchSpans, 'messageCount');
   const batches = dispatchSpans.length;
-  const maxBatchMessages = dispatchSpans.reduce(
-    (max, span) => Math.max(max, Number(span.metadata.messageCount ?? 0)),
-    0
-  );
+  const maxBatchMessages = maxMetadata(dispatchSpans, 'messageCount');
+  const avgBatchMessages = batches > 0 ? totalMessages / batches : 0;
+  const maxCandidateCapacity = maxMetadata(dispatchSpans, 'candidateCapacity');
+  const avgCandidateCapacity = averageOf(dispatchSpans.map((span) => Number(span.metadata.candidateCapacity ?? 0)));
+  const maxWorkgroupCount = maxMetadata(dispatchSpans, 'workgroupCount');
+  const avgWorkgroupCount = averageOf(dispatchSpans.map((span) => Number(span.metadata.workgroupCount ?? 0)));
+  const maxScatterWorkgroupCount = maxMetadata(dispatchSpans, 'scatterWorkgroupCount');
+
   const dispatchMs = dispatchSpans.reduce((sum, span) => sum + span.durationMs, 0);
   const throughputPerSecond = dispatchMs > 0 ? (totalMessages / dispatchMs) * 1000 : 0;
   const avgPerMessageNs = totalMessages > 0 ? (dispatchMs / totalMessages) * 1_000_000 : 0;
+
+  const copySpans = byKind('dispatch.copyResults');
+  const totalCopyBytes = sumMetadata(copySpans, 'totalCopyBytes');
+  const maxCopyBytes = maxMetadata(copySpans, 'totalCopyBytes');
 
   return {
     dispatch: {
       batches,
       totalMessages,
       maxBatchMessages,
+      avgBatchMessages,
+      maxCandidateCapacity,
+      avgCandidateCapacity,
+      maxWorkgroupCount,
+      avgWorkgroupCount,
+      maxScatterWorkgroupCount,
       dispatchMs,
       throughputPerSecond,
       avgPerMessageNs,
     },
     stages: {
       submitMs: totalDuration('dispatch.submit'),
+      submitEncodeMs: totalDuration('dispatch.submit.encode'),
+      submitWaitMs: totalDuration('dispatch.submit.wait'),
       mapCountMs: totalDuration('dispatch.mapMatchCount'),
       copyMs: totalDuration('dispatch.copyResults'),
+      copyEncodeMs: totalDuration('dispatch.copyResults.encode'),
+      copyWaitMs: totalDuration('dispatch.copyResults.wait'),
       mapResultsMs: totalDuration('dispatch.mapResults'),
       processMatchesMs: totalDuration('dispatch.processMatches'),
+    },
+    copyBytes: {
+      totalBytes: totalCopyBytes,
+      maxBytesPerDispatch: maxCopyBytes,
+      avgBytesPerDispatch: copySpans.length > 0 ? totalCopyBytes / copySpans.length : 0,
     },
   } as const;
 }
@@ -282,14 +316,27 @@ describeWebGpu('webgpu seed search profiling instrumentation', () => {
               batches: summary.dispatch.batches,
               totalMessages: summary.dispatch.totalMessages,
               maxBatchMessages: summary.dispatch.maxBatchMessages,
+              avgBatchMessages: Number(summary.dispatch.avgBatchMessages.toFixed(2)),
+              maxCandidateCapacity: summary.dispatch.maxCandidateCapacity,
+              avgCandidateCapacity: Number(summary.dispatch.avgCandidateCapacity.toFixed(2)),
+              maxWorkgroupCount: summary.dispatch.maxWorkgroupCount,
+              avgWorkgroupCount: Number(summary.dispatch.avgWorkgroupCount.toFixed(2)),
+              maxScatterWorkgroupCount: summary.dispatch.maxScatterWorkgroupCount,
               dispatchMs: Number(summary.dispatch.dispatchMs.toFixed(3)),
               throughputPerSecond: Number(summary.dispatch.throughputPerSecond.toFixed(2)),
               avgPerMessageNs: Number(summary.dispatch.avgPerMessageNs.toFixed(2)),
               submitMs: Number(summary.stages.submitMs.toFixed(3)),
+              submitEncodeMs: Number(summary.stages.submitEncodeMs.toFixed(3)),
+              submitWaitMs: Number(summary.stages.submitWaitMs.toFixed(3)),
               mapCountMs: Number(summary.stages.mapCountMs.toFixed(3)),
               copyMs: Number(summary.stages.copyMs.toFixed(3)),
+              copyEncodeMs: Number(summary.stages.copyEncodeMs.toFixed(3)),
+              copyWaitMs: Number(summary.stages.copyWaitMs.toFixed(3)),
               mapResultsMs: Number(summary.stages.mapResultsMs.toFixed(3)),
               processMatchesMs: Number(summary.stages.processMatchesMs.toFixed(3)),
+              copyTotalBytes: summary.copyBytes.totalBytes,
+              copyMaxBytes: summary.copyBytes.maxBytesPerDispatch,
+              copyAvgBytes: Number(summary.copyBytes.avgBytesPerDispatch.toFixed(2)),
             });
 
             expect(progressSteps.length).toBeGreaterThan(0);

@@ -127,10 +127,10 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
       return;
     }
 
-  const context = await createWebGpuDeviceContext();
-  const device = context.getDevice();
-  const resolvedWorkgroupSize = context.getSupportedWorkgroupSize(state.workgroupSize);
-  const { pipelines, layouts } = createGeneratedPipeline(device, resolvedWorkgroupSize);
+    const context = await createWebGpuDeviceContext();
+    const device = context.getDevice();
+    const resolvedWorkgroupSize = context.getSupportedWorkgroupSize(state.workgroupSize);
+    const { pipelines, layouts } = createGeneratedPipeline(device, resolvedWorkgroupSize);
 
     const configData = new Uint32Array(CONFIG_WORD_COUNT);
     const configSize = alignSize(configData.byteLength);
@@ -151,9 +151,9 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
       maxMessagesOverride: options?.maxMessagesPerDispatch ?? null,
     });
 
-  state.deviceContext = context;
-  state.pipelines = pipelines;
-  state.bindGroupLayouts = layouts;
+    state.deviceContext = context;
+    state.pipelines = pipelines;
+    state.bindGroupLayouts = layouts;
     state.configBuffer = configBuffer;
     state.configData = configData;
     state.bufferPool = bufferPool;
@@ -526,9 +526,12 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
 
       computeEncoder.copyBufferToBuffer(slot.output, 0, slot.matchCount, 0, headerCopySize);
 
+      const computeCommands = computeEncoder.finish();
+
       await runWithTrace('dispatch.submit', { ...baseDispatchMetadata }, async () => {
-        queue.submit([computeEncoder.finish()]);
-        await queue.onSubmittedWorkDone();
+        await runWithTrace('dispatch.submit.encode', { ...baseDispatchMetadata }, async () => {
+          queue.submit([computeCommands]);
+        });
       });
 
       const rawMatchCount = await runWithTrace(
@@ -557,8 +560,10 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
             label: `gpu-seed-copy-${dispatchContext.dispatchIndex}`,
           });
           copyEncoder.copyBufferToBuffer(slot.output, 0, slot.readback, 0, totalCopyBytes);
-          queue.submit([copyEncoder.finish()]);
-          await queue.onSubmittedWorkDone();
+          const copyCommands = copyEncoder.finish();
+          await runWithTrace('dispatch.copyResults.encode', { ...baseDispatchMetadata, totalCopyBytes }, async () => {
+            queue.submit([copyCommands]);
+          });
         }
       );
 

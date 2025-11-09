@@ -76,8 +76,12 @@ export type WebGpuRunnerSpanKind =
   | 'planner.computePlan'
   | 'dispatch'
   | 'dispatch.submit'
+  | 'dispatch.submit.encode'
+  | 'dispatch.submit.wait'
   | 'dispatch.mapMatchCount'
   | 'dispatch.copyResults'
+  | 'dispatch.copyResults.encode'
+  | 'dispatch.copyResults.wait'
   | 'dispatch.mapResults'
   | 'dispatch.processMatches';
 
