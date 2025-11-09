@@ -202,4 +202,196 @@ describeWebGpu('WebGPU seed search runner', () => {
 
     expect(sortedCollected).toEqual(sortedExpected);
   });
+
+  it('filters GPU matches using the target seed buffer', async () => {
+    const calculator = new SeedCalculator();
+    const sha1 = new SHA1();
+
+    const conditions: SearchConditions = {
+      romVersion: 'W2',
+      romRegion: 'JPN',
+      hardware: 'DS',
+      keyInput: 0x0000,
+      macAddress: [0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e],
+      timer0VCountConfig: {
+        useAutoConfiguration: false,
+        timer0Range: { min: 0x10f5, max: 0x10f7 },
+        vcountRange: { min: 0x82, max: 0x83 },
+      },
+      dateRange: {
+        startYear: 2012,
+        endYear: 2012,
+        startMonth: 6,
+        endMonth: 6,
+        startDay: 12,
+        endDay: 12,
+        startHour: 10,
+        endHour: 10,
+        startMinute: 15,
+        endMinute: 16,
+        startSecond: 0,
+        endSecond: 20,
+      },
+    };
+
+    const context = buildSearchContext(conditions);
+    const allResults: Array<{ seed: number; timer0: number; vcount: number; iso: string }> = [];
+
+    for (const segment of context.segments) {
+      for (let index = 0; index < segment.totalMessages; index += 1) {
+        const simulated = simulateGpuIndices(segment, index);
+        const datetime = new Date(context.startTimestampMs + simulated.secondOffset * 1000);
+        const message = calculator.generateMessage(conditions, simulated.timer0, simulated.vcount, datetime);
+        sha1.calculateHash(message);
+        const seed = calculator.calculateSeed(message).seed >>> 0;
+        allResults.push({ seed, timer0: simulated.timer0, vcount: simulated.vcount, iso: datetime.toISOString() });
+      }
+    }
+
+    const targetSeeds = Array.from(new Set(allResults.slice(0, 16).map((entry) => entry.seed)));
+    const expected = allResults.filter((entry) => targetSeeds.includes(entry.seed));
+
+    const collected: Array<{ seed: number; timer0: number; vcount: number; iso: string }> = [];
+    let error: Error | null = null;
+    let completed = false;
+
+    await runner!.run({
+      context,
+      targetSeeds,
+      callbacks: {
+        onProgress: () => {},
+        onResult: (result) => {
+          collected.push({
+            seed: result.seed >>> 0,
+            timer0: result.timer0,
+            vcount: result.vcount,
+            iso: result.datetime.toISOString(),
+          });
+        },
+        onComplete: () => {
+          completed = true;
+        },
+        onError: (message) => {
+          error = new Error(message);
+        },
+        onPaused: () => {},
+        onResumed: () => {},
+        onStopped: () => {},
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    expect(completed).toBe(true);
+
+    const sortBySeed = (entries: typeof expected) =>
+      entries
+        .map((entry) => ({ ...entry, seed: entry.seed >>> 0 }))
+        .sort((a, b) => a.seed - b.seed || a.timer0 - b.timer0 || a.vcount - b.vcount || a.iso.localeCompare(b.iso));
+
+    expect(sortBySeed(collected)).toEqual(sortBySeed(expected));
+  });
+
+  it('matches CPU results for ROM B2 across a wide timer0 range with target seeds', async () => {
+    const calculator = new SeedCalculator();
+    const sha1 = new SHA1();
+
+    const conditions: SearchConditions = {
+      romVersion: 'B2',
+      romRegion: 'JPN',
+      hardware: 'DS',
+      keyInput: 0x0000,
+      macAddress: [0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e],
+      timer0VCountConfig: {
+        useAutoConfiguration: false,
+        timer0Range: { min: 0x1102, max: 0x1108 },
+        vcountRange: { min: 0x82, max: 0x82 },
+      },
+      dateRange: {
+        startYear: 2011,
+        endYear: 2011,
+        startMonth: 7,
+        endMonth: 7,
+        startDay: 14,
+        endDay: 14,
+        startHour: 9,
+        endHour: 9,
+        startMinute: 0,
+        endMinute: 0,
+        startSecond: 0,
+        endSecond: 180,
+      },
+    };
+
+    const context = buildSearchContext(conditions);
+    const allResults: Array<{ seed: number; timer0: number; vcount: number; iso: string }> = [];
+    const seedsForTimer0 = new Map<number, number>();
+
+    for (const segment of context.segments) {
+      for (let index = 0; index < segment.totalMessages; index += 1) {
+        const simulated = simulateGpuIndices(segment, index);
+        const datetime = new Date(context.startTimestampMs + simulated.secondOffset * 1000);
+        const message = calculator.generateMessage(conditions, simulated.timer0, simulated.vcount, datetime);
+        sha1.calculateHash(message);
+        const seed = calculator.calculateSeed(message).seed >>> 0;
+        if (!seedsForTimer0.has(simulated.timer0)) {
+          seedsForTimer0.set(simulated.timer0, seed);
+        }
+        allResults.push({ seed, timer0: simulated.timer0, vcount: simulated.vcount, iso: datetime.toISOString() });
+      }
+    }
+
+    const timer0Values = Array.from(seedsForTimer0.keys()).sort((a, b) => a - b);
+    expect(timer0Values).toEqual([0x1102, 0x1103, 0x1104, 0x1105, 0x1106, 0x1107, 0x1108]);
+
+    const targetSeeds = Array.from(new Set(seedsForTimer0.values()));
+    const targetSeedSet = new Set(targetSeeds);
+    const expected = allResults.filter((entry) => targetSeedSet.has(entry.seed));
+
+    expect(new Set(expected.map((entry) => entry.timer0))).toEqual(new Set(timer0Values));
+
+    const collected: Array<{ seed: number; timer0: number; vcount: number; iso: string }> = [];
+    let error: Error | null = null;
+    let completed = false;
+
+    await runner!.run({
+      context,
+      targetSeeds,
+      callbacks: {
+        onProgress: () => {},
+        onResult: (result) => {
+          collected.push({
+            seed: result.seed >>> 0,
+            timer0: result.timer0,
+            vcount: result.vcount,
+            iso: result.datetime.toISOString(),
+          });
+        },
+        onComplete: () => {
+          completed = true;
+        },
+        onError: (message) => {
+          error = new Error(message);
+        },
+        onPaused: () => {},
+        onResumed: () => {},
+        onStopped: () => {},
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    expect(completed).toBe(true);
+
+    const sortBySeed = (entries: typeof expected) =>
+      entries
+        .map((entry) => ({ ...entry, seed: entry.seed >>> 0 }))
+        .sort((a, b) => a.seed - b.seed || a.timer0 - b.timer0 || a.vcount - b.vcount || a.iso.localeCompare(b.iso));
+
+    expect(sortBySeed(collected)).toEqual(sortBySeed(expected));
+  });
 });
