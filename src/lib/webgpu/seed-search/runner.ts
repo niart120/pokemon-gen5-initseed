@@ -29,7 +29,7 @@ interface DispatchContext {
   slotIndex: number;
 }
 
-const CONFIG_WORD_COUNT = 20;
+const CONFIG_WORD_COUNT = 25;
 const PROGRESS_INTERVAL_MS = 500;
 const YIELD_INTERVAL = 1024;
 const ZERO_MATCH_HEADER = new Uint32Array([0]);
@@ -37,8 +37,16 @@ const ZERO_MATCH_HEADER = new Uint32Array([0]);
 interface RunnerState {
   workgroupSize: number;
   deviceContext: WebGpuDeviceContext | null;
-  pipeline: GPUComputePipeline | null;
-  bindGroupLayout: GPUBindGroupLayout | null;
+  pipelines: {
+    generate: GPUComputePipeline;
+    scan: GPUComputePipeline;
+    scatter: GPUComputePipeline;
+  } | null;
+  bindGroupLayouts: {
+    generate: GPUBindGroupLayout;
+    scan: GPUBindGroupLayout;
+    scatter: GPUBindGroupLayout;
+  } | null;
   configBuffer: GPUBuffer | null;
   configData: Uint32Array | null;
   bufferPool: WebGpuBufferPool | null;
@@ -72,8 +80,8 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
   const state: RunnerState = {
     workgroupSize: options?.workgroupSize ?? DEFAULT_WORKGROUP_SIZE,
     deviceContext: null,
-    pipeline: null,
-    bindGroupLayout: null,
+    pipelines: null,
+    bindGroupLayouts: null,
     configBuffer: null,
     configData: null,
     bufferPool: null,
@@ -93,14 +101,14 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
   };
 
   const init = async (): Promise<void> => {
-    if (state.pipeline && state.bufferPool && state.planner && state.deviceContext) {
+    if (state.pipelines && state.bufferPool && state.planner && state.deviceContext) {
       return;
     }
 
-    const context = await createWebGpuDeviceContext();
-    const device = context.getDevice();
-    const resolvedWorkgroupSize = context.getSupportedWorkgroupSize(state.workgroupSize);
-    const { pipeline, bindGroupLayout } = createGeneratedPipeline(device, resolvedWorkgroupSize);
+  const context = await createWebGpuDeviceContext();
+  const device = context.getDevice();
+  const resolvedWorkgroupSize = context.getSupportedWorkgroupSize(state.workgroupSize);
+  const { pipelines, layouts } = createGeneratedPipeline(device, resolvedWorkgroupSize);
 
     const configData = new Uint32Array(CONFIG_WORD_COUNT);
     const configSize = alignSize(configData.byteLength);
@@ -112,6 +120,7 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
 
     const bufferPool = createWebGpuBufferPool(device, {
       slots: DOUBLE_BUFFER_SET_COUNT,
+      workgroupSize: resolvedWorkgroupSize,
     });
 
     const planner = createWebGpuBatchPlanner(context, {
@@ -119,9 +128,9 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
       bufferSetCount: DOUBLE_BUFFER_SET_COUNT,
     });
 
-    state.deviceContext = context;
-    state.pipeline = pipeline;
-    state.bindGroupLayout = bindGroupLayout;
+  state.deviceContext = context;
+  state.pipelines = pipelines;
+  state.bindGroupLayouts = layouts;
     state.configBuffer = configBuffer;
     state.configData = configData;
     state.bufferPool = bufferPool;
@@ -168,11 +177,11 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
       throw new Error('WebGPU search is already running');
     }
 
-    if (!state.pipeline || !state.bufferPool || !state.configBuffer || !state.configData || !state.planner || !state.deviceContext) {
+    if (!state.pipelines || !state.bufferPool || !state.configBuffer || !state.configData || !state.planner || !state.deviceContext) {
       await init();
     }
 
-    if (!state.pipeline || !state.bufferPool || !state.configBuffer || !state.configData || !state.planner || !state.deviceContext) {
+    if (!state.pipelines || !state.bufferPool || !state.configBuffer || !state.configData || !state.planner || !state.deviceContext) {
       throw new Error('WebGPU runner failed to initialize');
     }
 
@@ -183,7 +192,7 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
       return;
     }
 
-    if (!state.bindGroupLayout) {
+    if (!state.bindGroupLayouts) {
       throw new Error('WebGPU runner missing bind group layout');
     }
 
@@ -279,8 +288,8 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
     state.configBuffer?.destroy();
     state.configBuffer = null;
     state.configData = null;
-    state.pipeline = null;
-    state.bindGroupLayout = null;
+    state.pipelines = null;
+    state.bindGroupLayouts = null;
     state.bufferPool = null;
     state.planner = null;
     state.deviceContext = null;
@@ -296,13 +305,13 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
   ): Promise<void> => {
     if (
       !state.deviceContext ||
-      !state.pipeline ||
+      !state.pipelines ||
       !state.bufferPool ||
       !state.configBuffer ||
       !state.configData ||
       !state.planner ||
       !state.targetBuffer ||
-      !state.bindGroupLayout
+      !state.bindGroupLayouts
     ) {
       throw new Error('WebGPU runner is not ready');
     }
@@ -367,75 +376,118 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
   ): Promise<void> => {
     if (
       !state.deviceContext ||
-      !state.pipeline ||
+      !state.pipelines ||
       !state.bufferPool ||
       !state.configBuffer ||
       !state.configData ||
       !state.targetBuffer ||
-      !state.bindGroupLayout
+      !state.bindGroupLayouts
     ) {
       throw new Error('WebGPU runner is not ready');
     }
 
     const device = state.deviceContext.getDevice();
-    const slot = state.bufferPool.acquire(dispatchContext.slotIndex, dispatchContext.messageCount);
+  const slot = state.bufferPool.acquire(dispatchContext.slotIndex, dispatchContext.messageCount);
+    const workgroupCount = Math.ceil(dispatchContext.messageCount / state.workgroupSize);
+  const scatterWorkgroupCount = Math.max(1, Math.ceil(slot.candidateCapacity / state.workgroupSize));
+    const headerCopySize = alignSize(MATCH_OUTPUT_HEADER_WORDS * Uint32Array.BYTES_PER_ELEMENT);
 
     queue.writeBuffer(slot.output, 0, ZERO_MATCH_HEADER.buffer, ZERO_MATCH_HEADER.byteOffset, ZERO_MATCH_HEADER.byteLength);
 
-    writeConfigBuffer(dispatchContext.segment, segmentBaseOffset, dispatchContext.messageCount);
+    writeConfigBuffer(
+      dispatchContext.segment,
+      segmentBaseOffset,
+      dispatchContext.messageCount,
+      slot.groupCount,
+      slot.candidateCapacity
+    );
     queue.writeBuffer(state.configBuffer, 0, state.configData.buffer, state.configData.byteOffset, state.configData.byteLength);
 
-    const bindGroup = device.createBindGroup({
-      label: `gpu-seed-bind-group-${dispatchContext.dispatchIndex}`,
-      layout: state.bindGroupLayout,
+    const generateBindGroup = device.createBindGroup({
+      label: `gpu-seed-generate-group-${dispatchContext.dispatchIndex}`,
+      layout: state.bindGroupLayouts.generate,
       entries: [
-        {
-          binding: 0,
-          resource: { buffer: state.configBuffer },
-        },
-        {
-          binding: 1,
-          resource: { buffer: state.targetBuffer },
-        },
-        {
-          binding: 2,
-          resource: { buffer: slot.output },
-        },
+        { binding: 0, resource: { buffer: state.configBuffer } },
+        { binding: 1, resource: { buffer: state.targetBuffer } },
+        { binding: 2, resource: { buffer: slot.candidate } },
+        { binding: 3, resource: { buffer: slot.groupCounts } },
       ],
     });
 
-    const commandEncoder = device.createCommandEncoder({ label: `gpu-seed-encoder-${dispatchContext.dispatchIndex}` });
-    const pass = commandEncoder.beginComputePass();
-    pass.setPipeline(state.pipeline);
-    pass.setBindGroup(0, bindGroup);
-    const workgroupCount = Math.ceil(dispatchContext.messageCount / state.workgroupSize);
-    pass.dispatchWorkgroups(workgroupCount);
-    pass.end();
+    const scanBindGroup = device.createBindGroup({
+      label: `gpu-seed-scan-group-${dispatchContext.dispatchIndex}`,
+      layout: state.bindGroupLayouts.scan,
+      entries: [
+        { binding: 0, resource: { buffer: state.configBuffer } },
+        { binding: 3, resource: { buffer: slot.groupCounts } },
+        { binding: 4, resource: { buffer: slot.groupOffsets } },
+        { binding: 5, resource: { buffer: slot.output } },
+      ],
+    });
 
-    const copySize = slot.outputSize;
-    commandEncoder.copyBufferToBuffer(slot.output, 0, slot.readback, 0, copySize);
+    const scatterBindGroup = device.createBindGroup({
+      label: `gpu-seed-scatter-group-${dispatchContext.dispatchIndex}`,
+      layout: state.bindGroupLayouts.scatter,
+      entries: [
+        { binding: 0, resource: { buffer: state.configBuffer } },
+        { binding: 2, resource: { buffer: slot.candidate } },
+        { binding: 3, resource: { buffer: slot.groupCounts } },
+        { binding: 4, resource: { buffer: slot.groupOffsets } },
+        { binding: 5, resource: { buffer: slot.output } },
+      ],
+    });
 
-    queue.submit([commandEncoder.finish()]);
+    const computeEncoder = device.createCommandEncoder({ label: `gpu-seed-compute-${dispatchContext.dispatchIndex}` });
+    const generatePass = computeEncoder.beginComputePass({ label: `gpu-seed-generate-pass-${dispatchContext.dispatchIndex}` });
+    generatePass.setPipeline(state.pipelines.generate);
+    generatePass.setBindGroup(0, generateBindGroup);
+    generatePass.dispatchWorkgroups(workgroupCount);
+    generatePass.end();
 
+    const scanPass = computeEncoder.beginComputePass({ label: `gpu-seed-scan-pass-${dispatchContext.dispatchIndex}` });
+    scanPass.setPipeline(state.pipelines.scan);
+    scanPass.setBindGroup(0, scanBindGroup);
+    scanPass.dispatchWorkgroups(1);
+    scanPass.end();
+
+    const scatterPass = computeEncoder.beginComputePass({ label: `gpu-seed-scatter-pass-${dispatchContext.dispatchIndex}` });
+    scatterPass.setPipeline(state.pipelines.scatter);
+    scatterPass.setBindGroup(0, scatterBindGroup);
+    scatterPass.dispatchWorkgroups(scatterWorkgroupCount);
+    scatterPass.end();
+
+    computeEncoder.copyBufferToBuffer(slot.output, 0, slot.matchCount, 0, headerCopySize);
+
+    queue.submit([computeEncoder.finish()]);
     await queue.onSubmittedWorkDone();
 
-    await slot.readback.mapAsync(GPUMapMode.READ, 0, copySize);
-    const mappedRange = slot.readback.getMappedRange(0, copySize);
+    await slot.matchCount.mapAsync(GPUMapMode.READ, 0, headerCopySize);
+    const headerView = new Uint32Array(slot.matchCount.getMappedRange(0, headerCopySize));
+    const rawMatchCount = headerView[0] ?? 0;
+    slot.matchCount.unmap();
+
+    const clampedPlannedMatchCount = Math.min(rawMatchCount, slot.maxRecords);
+    const recordsBytes = clampedPlannedMatchCount * MATCH_RECORD_WORDS * Uint32Array.BYTES_PER_ELEMENT;
+    const totalCopyBytes = alignSize(MATCH_OUTPUT_HEADER_WORDS * Uint32Array.BYTES_PER_ELEMENT + recordsBytes);
+
+    const copyEncoder = device.createCommandEncoder({ label: `gpu-seed-copy-${dispatchContext.dispatchIndex}` });
+    copyEncoder.copyBufferToBuffer(slot.output, 0, slot.readback, 0, totalCopyBytes);
+    queue.submit([copyEncoder.finish()]);
+    await queue.onSubmittedWorkDone();
+
+    await slot.readback.mapAsync(GPUMapMode.READ, 0, totalCopyBytes);
+    const mappedRange = slot.readback.getMappedRange(0, totalCopyBytes);
     const mappedWords = new Uint32Array(mappedRange);
-    const rawMatchCount = mappedWords[0] ?? 0;
-    const wordsToCopy = Math.min(
-      mappedWords.length,
-      MATCH_OUTPUT_HEADER_WORDS + Math.min(rawMatchCount, slot.maxRecords) * MATCH_RECORD_WORDS
+    const finalRawMatchCount = mappedWords[0] ?? 0;
+    const availableRecords = Math.max(
+      0,
+      Math.floor((mappedWords.length - MATCH_OUTPUT_HEADER_WORDS) / MATCH_RECORD_WORDS)
     );
+    const clampedMatchCount = Math.min(finalRawMatchCount, slot.maxRecords, availableRecords);
+    const wordsToCopy = MATCH_OUTPUT_HEADER_WORDS + clampedMatchCount * MATCH_RECORD_WORDS;
     const results = new Uint32Array(wordsToCopy);
     results.set(mappedWords.subarray(0, wordsToCopy));
     slot.readback.unmap();
-
-    const availableRecords = Math.max(
-      0,
-      Math.floor((results.length - MATCH_OUTPUT_HEADER_WORDS) / MATCH_RECORD_WORDS)
-    );
-    const clampedMatchCount = Math.min(rawMatchCount, slot.maxRecords, availableRecords);
 
     await processMatchRecords(
       results,
@@ -460,8 +512,12 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
     const segment = dispatchContext.segment;
     const rangeSeconds = segment.rangeSeconds;
     const safeRangeSeconds = Math.max(rangeSeconds, 1);
+    const safeVcountCount = Math.max(segment.config.vcountCount, 1);
+    const messagesPerVcount = safeRangeSeconds;
+    const messagesPerTimer0 = messagesPerVcount * safeVcountCount;
     const timer0Min = segment.config.timer0Min;
-    const vcount = segment.vcount;
+    const vcountMin = segment.config.vcountMin;
+    const dispatchBaseOffset = segmentBaseOffset;
 
     for (let i = 0; i < matchCount; i += 1) {
       if (state.shouldStop) {
@@ -475,16 +531,20 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
         }
       }
 
-      const recordOffset = MATCH_OUTPUT_HEADER_WORDS + i * MATCH_RECORD_WORDS;
-      const messageIndex = matchWords[recordOffset];
+    const recordOffset = MATCH_OUTPUT_HEADER_WORDS + i * MATCH_RECORD_WORDS;
+    const localMessageIndex = matchWords[recordOffset];
+    const messageIndex = dispatchBaseOffset + localMessageIndex;
       const seed = matchWords[recordOffset + 1] >>> 0;
 
-      const timer0Index = Math.floor(messageIndex / safeRangeSeconds);
-      const secondOffset = messageIndex - timer0Index * safeRangeSeconds;
+    const timer0Index = Math.floor(messageIndex / messagesPerTimer0);
+    const remainderAfterTimer0 = messageIndex - timer0Index * messagesPerTimer0;
+    const vcountIndex = Math.floor(remainderAfterTimer0 / messagesPerVcount);
+    const secondOffset = remainderAfterTimer0 - vcountIndex * messagesPerVcount;
 
       const timer0 = timer0Min + timer0Index;
-      const datetime = new Date(context.startTimestampMs + secondOffset * 1000);
-      const message = state.seedCalculator.generateMessage(context.conditions, timer0, vcount, datetime);
+    const vcount = vcountMin + vcountIndex;
+    const datetime = new Date(context.startTimestampMs + secondOffset * 1000);
+    const message = state.seedCalculator.generateMessage(context.conditions, timer0, vcount, datetime);
       const { hash, seed: recalculatedSeed } = state.seedCalculator.calculateSeed(message);
       if (recalculatedSeed !== seed) {
         console.warn('GPU/CPU seed mismatch detected', {
@@ -508,9 +568,12 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
     }
 
     if (dispatchContext.messageCount > 0) {
-      const finalIndex = segmentBaseOffset + dispatchContext.messageCount - 1;
-      const finalTimer0Index = Math.floor(finalIndex / safeRangeSeconds);
-      const finalSecondOffset = finalIndex - finalTimer0Index * safeRangeSeconds;
+      const finalLocalIndex = dispatchContext.messageCount - 1;
+      const finalMessageIndex = dispatchBaseOffset + finalLocalIndex;
+      const finalTimer0Index = Math.floor(finalMessageIndex / messagesPerTimer0);
+      const finalRemainderAfterTimer0 = finalMessageIndex - finalTimer0Index * messagesPerTimer0;
+      const finalVcountIndex = Math.floor(finalRemainderAfterTimer0 / messagesPerVcount);
+      const finalSecondOffset = finalRemainderAfterTimer0 - finalVcountIndex * messagesPerVcount;
       const lastDateTimeIso = new Date(context.startTimestampMs + finalSecondOffset * 1000).toISOString();
       progress.currentDateTime = lastDateTimeIso;
     }
@@ -549,30 +612,51 @@ export function createWebGpuSeedSearchRunner(options?: { workgroupSize?: number 
     return Math.round(avgTimePerStep * remainingSteps);
   };
 
-  const writeConfigBuffer = (segment: WebGpuSegment, baseOffset: number, messageCount: number): void => {
+  const writeConfigBuffer = (
+    segment: WebGpuSegment,
+    baseOffset: number,
+    messageCount: number,
+    groupCount: number,
+    candidateCapacity: number
+  ): void => {
     if (!state.configData) {
       throw new Error('config buffer not prepared');
     }
 
+    const safeRangeSeconds = Math.max(segment.config.rangeSeconds, 1);
+    const safeVcountCount = Math.max(segment.config.vcountCount, 1);
+    const messagesPerVcount = safeRangeSeconds;
+    const messagesPerTimer0 = messagesPerVcount * safeVcountCount;
+
+    const baseTimer0Index = Math.floor(baseOffset / messagesPerTimer0);
+    const remainderAfterTimer0 = baseOffset - baseTimer0Index * messagesPerTimer0;
+    const baseVcountIndex = Math.floor(remainderAfterTimer0 / messagesPerVcount);
+    const baseSecondOffset = remainderAfterTimer0 - baseVcountIndex * messagesPerVcount;
+
     const data = state.configData;
     data[0] = messageCount >>> 0;
-    data[1] = baseOffset >>> 0;
-    data[2] = segment.config.rangeSeconds >>> 0;
-    data[3] = segment.config.timer0Min >>> 0;
-    data[4] = segment.config.timer0Count >>> 0;
-    data[5] = segment.config.vcountMin >>> 0;
-    data[6] = segment.config.vcountCount >>> 0;
-    data[7] = segment.config.startSecondOfDay >>> 0;
-    data[8] = segment.config.startDayOfWeek >>> 0;
-    data[9] = segment.config.macLower >>> 0;
-    data[10] = segment.config.data7Swapped >>> 0;
-    data[11] = segment.config.keyInputSwapped >>> 0;
-    data[12] = segment.config.hardwareType >>> 0;
+    data[1] = baseTimer0Index >>> 0;
+    data[2] = baseVcountIndex >>> 0;
+    data[3] = baseSecondOffset >>> 0;
+    data[4] = segment.config.rangeSeconds >>> 0;
+    data[5] = segment.config.timer0Min >>> 0;
+    data[6] = segment.config.timer0Count >>> 0;
+    data[7] = segment.config.vcountMin >>> 0;
+    data[8] = segment.config.vcountCount >>> 0;
+    data[9] = segment.config.startSecondOfDay >>> 0;
+    data[10] = segment.config.startDayOfWeek >>> 0;
+    data[11] = segment.config.macLower >>> 0;
+    data[12] = segment.config.data7Swapped >>> 0;
+    data[13] = segment.config.keyInputSwapped >>> 0;
+    data[14] = segment.config.hardwareType >>> 0;
     for (let i = 0; i < segment.config.nazoSwapped.length; i += 1) {
-      data[13 + i] = segment.config.nazoSwapped[i] >>> 0;
+      data[15 + i] = segment.config.nazoSwapped[i] >>> 0;
     }
-    data[18] = segment.config.startYear >>> 0;
-    data[19] = segment.config.startDayOfYear >>> 0;
+    data[20] = segment.config.startYear >>> 0;
+    data[21] = segment.config.startDayOfYear >>> 0;
+    data[22] = groupCount >>> 0;
+    data[23] = state.workgroupSize >>> 0;
+    data[24] = candidateCapacity >>> 0;
   };
 
   const startTimer = (): void => {
