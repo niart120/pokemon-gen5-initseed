@@ -193,7 +193,7 @@ export class SeedCalculator {
    * Calculate initial seed from message
    * Uses TypeScript SHA-1 implementation
    */
-  public calculateSeed(message: number[]): { seed: number; hash: string } {
+  public calculateSeed(message: number[]): { seed: number; hash: string; lcgSeed: bigint } {
     // TypeScript implementation
     const result = this.sha1.calculateHash(message);
 
@@ -211,7 +211,11 @@ export class SeedCalculator {
     const seed = lcgSeed * multiplier + addValue;
     
     // 上位32bitを取得
-    return {seed: Number((seed >> 32n) & 0xFFFFFFFFn), hash: SHA1.hashToHex(result.h0, result.h1, result.h2, result.h3, result.h4)};
+    return {
+      seed: Number((seed >> 32n) & 0xFFFFFFFFn),
+      hash: SHA1.hashToHex(result.h0, result.h1, result.h2, result.h3, result.h4),
+      lcgSeed
+    };
   }
 
   /**

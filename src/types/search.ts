@@ -48,6 +48,7 @@ export interface InitialSeedResult {
   conditions: SearchConditions;
   message: number[];
   sha1Hash: string;
+  lcgSeed: bigint;
   isMatch: boolean;
 }
 

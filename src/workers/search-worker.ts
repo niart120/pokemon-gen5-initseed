@@ -204,7 +204,7 @@ async function processBatchIntegrated(
         for (const result of results) {
           const resultDate = new Date(result.year, result.month - 1, result.date, result.hour, result.minute, result.second);
           const message = calculator.generateMessage(conditions, result.timer0, result.vcount, resultDate);
-          const { hash } = calculator.calculateSeed(message);
+          const { hash, lcgSeed } = calculator.calculateSeed(message);
 
           const searchResult: InitialSeedResult = {
             seed: result.seed,
@@ -214,6 +214,7 @@ async function processBatchIntegrated(
             conditions,
             message,
             sha1Hash: hash,
+            lcgSeed,
             isMatch: true,
           };
           onResult(searchResult);
@@ -287,7 +288,7 @@ async function processBatchIndividual(
       try {
         // Generate message and calculate seed
         const message = calculator.generateMessage(conditions, timer0, actualVCount, currentDateTime);
-        const { seed, hash } = calculator.calculateSeed(message);
+        const { seed, hash, lcgSeed } = calculator.calculateSeed(message);
 
         // Check if seed matches any target
         if (targetSeedSet.has(seed)) {
@@ -299,6 +300,7 @@ async function processBatchIndividual(
             conditions,
             message,
             sha1Hash: hash,
+            lcgSeed,
             isMatch: true,
           };
           onResult(result);
