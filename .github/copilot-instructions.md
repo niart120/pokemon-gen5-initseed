@@ -23,13 +23,7 @@
 - `/scripts`: Build automation scripts
 - `/docs`: GitHub Pages deployment files
 - `/spec`: プロジェクト仕様書と設計ドキュメント
-  - `/spec/agent`: GitHub Copilot Agent専用ドキュメント配置先
-
-## t_wada Principle
-- Code      → How
-- Tests     → What
-- Commits   → Why
-- Comments  → Why not
+  - `/spec/agent`: GitHub Copilot Agent生成ドキュメント配置先
 
 ## アーキテクチャ原則
 - **本番・開発コードの分離**: 本番環境に不要なコードを含めない
@@ -44,6 +38,11 @@
 - IntegratedSeedSearcher による統合検索API使用 (個別WASM関数は廃止)
 - ESLint/Prettier設定に準拠
 - 技術文書は事実ベース・簡潔に記述
+- t_wada氏が推奨するテスト駆動開発(TDD)指針/コーディング指針を遵守
+  - Code      → How
+  - Tests     → What
+  - Commits   → Why
+  - Comments  → Why not
 
 ## ドキュメンテーション
 - `/spec` フォルダに仕様書・設計ドキュメントを配置する
