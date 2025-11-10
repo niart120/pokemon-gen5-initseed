@@ -91,40 +91,45 @@ export function TargetSeedsCard() {
   return (
     <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full min-h-64'}`}>
       <CardHeader className="pb-0 flex-shrink-0">
-        <CardTitle className="flex items-center justify-between text-base">
-          <div className="flex items-center gap-2">
-            <Target size={20} className="opacity-80" />
-            Target Seeds
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={() => setIsTemplateDialogOpen(true)}>
-              <FileText size={14} className="mr-2" />
-              Template
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => document.getElementById('target-file-input')?.click()}>
-              <Upload size={14} className="mr-2" />
-              Import
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleExportToFile}
-              disabled={targetSeeds.seeds.length === 0}
-            >
-              <Download size={14} className="mr-2" />
-              Export
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleClearAll}
-              disabled={targetSeeds.seeds.length === 0}
-            >
-              <Trash size={14} className="mr-2" />
-              Clear
-            </Button>
-          </div>
+        {/* タイトルのみを表示し、その下に操作ボタンをまとめて配置 */}
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Target size={20} className="opacity-80" />
+          Target Seeds
         </CardTitle>
+        <div
+          className="mt-2 grid grid-cols-4 gap-2"
+          role="group"
+          aria-label="Target Seeds operations"
+        >
+          <Button className="w-full" variant="outline" size="sm" onClick={() => setIsTemplateDialogOpen(true)}>
+            <FileText size={14} className="mr-2" />
+            Template
+          </Button>
+          <Button className="w-full" variant="outline" size="sm" onClick={() => document.getElementById('target-file-input')?.click()}>
+            <Upload size={14} className="mr-2" />
+            Import
+          </Button>
+          <Button
+            className="w-full"
+            variant="outline"
+            size="sm"
+            onClick={handleExportToFile}
+            disabled={targetSeeds.seeds.length === 0}
+          >
+            <Download size={14} className="mr-2" />
+            Export
+          </Button>
+          <Button
+            className="w-full"
+            variant="outline"
+            size="sm"
+            onClick={handleClearAll}
+            disabled={targetSeeds.seeds.length === 0}
+          >
+            <Trash size={14} className="mr-2" />
+            Clear
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col min-h-0 space-y-2 overflow-y-auto">
         <p className="text-xs text-muted-foreground flex-shrink-0">

@@ -34,7 +34,7 @@ export function ResultsCard({
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return null;
-    return sortOrder === 'asc' ? <ChevronUp size={16} /> : <ChevronDown size={16} />;
+    return sortOrder === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
   };
 
   const handleSort = (field: SortField) => {
@@ -68,13 +68,14 @@ export function ResultsCard({
             }
           </div>
         ) : (
-          <div className="overflow-auto flex-1">
-            <Table className="table-auto min-w-full">
+          <div className="overflow-y-auto flex-1">
+            <Table className="table-auto min-w-full text-xs leading-tight">
               <TableHeader>
-                <TableRow>
-                  {/* モバイル表示では起動時刻とMT Seedと詳細アイコンのみ表示 */}
+                <TableRow className="h-9">
+                  <TableHead className="w-12 px-1 text-center"></TableHead>
+                  <TableHead className="px-2 font-mono text-[11px] whitespace-nowrap min-w-[120px]">LCG Seed</TableHead>
                   <TableHead 
-                    className="cursor-pointer select-none whitespace-normal sm:whitespace-nowrap min-w-[100px]"
+                    className="px-2 cursor-pointer select-none"
                     onClick={() => handleSort('datetime')}
                   >
                     <div className="flex items-center gap-1">
@@ -82,60 +83,60 @@ export function ResultsCard({
                     </div>
                   </TableHead>
                   <TableHead 
-                    className="cursor-pointer select-none whitespace-normal sm:whitespace-nowrap min-w-[90px]"
+                    className="px-2 cursor-pointer select-none"
                     onClick={() => handleSort('seed')}
                   >
                     <div className="flex items-center gap-1">
                       MT Seed {getSortIcon('seed')}
                     </div>
                   </TableHead>
-                  {/* デスクトップのみ表示 */}
                   <TableHead 
-                    className="hidden md:table-cell whitespace-normal sm:whitespace-nowrap min-w-[120px]"
-                  >
-                    LCG Seed
-                  </TableHead>
-                  <TableHead 
-                    className="hidden md:table-cell cursor-pointer select-none whitespace-normal sm:whitespace-nowrap min-w-[70px]"
+                    className="px-2 cursor-pointer select-none"
                     onClick={() => handleSort('timer0')}
                   >
                     <div className="flex items-center gap-1">
                       Timer0 {getSortIcon('timer0')}
                     </div>
                   </TableHead>
-                  <TableHead className="whitespace-normal sm:whitespace-nowrap min-w-[50px]">
-                    {/* Icon only column */}
+                  <TableHead 
+                    className="px-2 cursor-pointer select-none"
+                    onClick={() => handleSort('vcount')}
+                  >
+                    <div className="flex items-center gap-1">
+                      VCount {getSortIcon('vcount')}
+                    </div>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredAndSortedResults.map((result, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="whitespace-normal sm:whitespace-nowrap min-w-[100px]">
-                      <span className="font-mono text-sm break-all sm:break-normal">
-                        {formatDateTime(result.datetime)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="font-mono whitespace-normal sm:whitespace-nowrap break-all sm:break-normal min-w-[90px]">
-                      0x{result.seed.toString(16).toUpperCase().padStart(8, '0')}
-                    </TableCell>
-                    {/* デスクトップのみ表示 */}
-                    <TableCell className="hidden md:table-cell font-mono text-xs whitespace-normal sm:whitespace-nowrap break-all sm:break-normal min-w-[120px]">
-                      {lcgSeedToHex(result.lcgSeed)}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell font-mono whitespace-normal sm:whitespace-nowrap break-all sm:break-normal min-w-[70px]">
-                      0x{result.timer0.toString(16).toUpperCase().padStart(4, '0')}
-                    </TableCell>
-                    <TableCell className="whitespace-normal sm:whitespace-nowrap min-w-[50px]">
+                  <TableRow key={index} className="h-9">
+                    <TableCell className="px-1 py-1 text-center">
                       <Button 
                         variant="ghost" 
                         size="sm"
                         onClick={() => onShowDetails(result)}
-                        className="h-8 w-8 p-0"
+                        className="h-7 w-7 p-0"
                         title="View Details"
+                        aria-label="View search result details"
                       >
-                        <Eye size={16} />
+                        <Eye size={14} />
                       </Button>
+                    </TableCell>
+                    <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-nowrap min-w-[120px]">
+                      {lcgSeedToHex(result.lcgSeed)}
+                    </TableCell>
+                    <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-normal">
+                      {formatDateTime(result.datetime)}
+                    </TableCell>
+                    <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-normal">
+                      0x{result.seed.toString(16).toUpperCase().padStart(8, '0')}
+                    </TableCell>
+                    <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-normal">
+                      0x{result.timer0.toString(16).toUpperCase().padStart(4, '0')}
+                    </TableCell>
+                    <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-normal">
+                      0x{result.vcount.toString(16).toUpperCase().padStart(2, '0')}
                     </TableCell>
                   </TableRow>
                 ))}

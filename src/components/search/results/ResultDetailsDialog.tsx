@@ -41,22 +41,13 @@ export function ResultDetailsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+  <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Seed Result Details</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>MT Seed (Initial Seed)</Label>
-              <div className="font-mono text-lg">
-                0x{result.seed.toString(16).toUpperCase().padStart(8, '0')}
-              </div>
-              <div className="text-sm text-muted-foreground font-mono">
-                {result.seed} (decimal)
-              </div>
-            </div>
             <div>
               <Label>LCG Seed</Label>
               <div 
@@ -69,6 +60,12 @@ export function ResultDetailsDialog({
               </div>
               <div className="text-xs text-muted-foreground">
                 Click to copy to Generation Panel
+              </div>
+            </div>
+            <div>
+              <Label>MT Seed</Label>
+              <div className="font-mono text-lg">
+                0x{result.seed.toString(16).toUpperCase().padStart(8, '0')}
               </div>
             </div>
           </div>
@@ -86,16 +83,10 @@ export function ResultDetailsDialog({
             <div>
               <Label>Timer0</Label>
               <div className="font-mono">0x{result.timer0.toString(16).toUpperCase().padStart(4, '0')}</div>
-              <div className="text-sm text-muted-foreground font-mono">
-                {result.timer0} (decimal)
-              </div>
             </div>
             <div>
               <Label>VCount</Label>
               <div className="font-mono">0x{result.vcount.toString(16).toUpperCase().padStart(2, '0')}</div>
-              <div className="text-sm text-muted-foreground font-mono">
-                {result.vcount} (decimal)
-              </div>
             </div>
             <div>
               <Label>ROM</Label>
