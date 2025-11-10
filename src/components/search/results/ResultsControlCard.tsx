@@ -76,7 +76,7 @@ export function ResultsControlCard({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="datetime">Date/Time</SelectItem>
-                <SelectItem value="seed">Seed Value</SelectItem>
+                <SelectItem value="seed">MT Seed</SelectItem>
                 <SelectItem value="timer0">Timer0</SelectItem>
                 <SelectItem value="vcount">VCount</SelectItem>
               </SelectContent>

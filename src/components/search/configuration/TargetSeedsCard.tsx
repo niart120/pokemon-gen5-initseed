@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Trash, Upload, Download, Warning, Target } from '@phosphor-icons/react';
+import { Trash, Upload, Download, Warning, Target, FileText } from '@phosphor-icons/react';
 import { useAppStore } from '../../../store/app-store';
 import { SeedCalculator } from '../../../lib/core/seed-calculator';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
+import { TemplateSelectionDialog } from './TemplateSelectionDialog';
 
 export function TargetSeedsCard() {
   const {
@@ -20,6 +21,7 @@ export function TargetSeedsCard() {
 
   const { isStack } = useResponsiveLayout();
   const [parseErrors, setParseErrors] = React.useState<{ line: number; value: string; error: string }[]>([]);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = React.useState(false);
 
   // Parse input and update seeds when input changes
   React.useEffect(() => {
@@ -74,6 +76,12 @@ export function TargetSeedsCard() {
     URL.revokeObjectURL(url);
   };
 
+  const handleApplyTemplate = (seeds: number[]) => {
+    // Convert seeds to hex format and set as input
+    const seedsText = seeds.map(seed => `0x${seed.toString(16).toUpperCase().padStart(8, '0')}`).join('\n');
+    setTargetSeedInput(seedsText);
+  };
+
   const exampleSeeds = [
     '0x12345678',
     'ABCDEF00', 
@@ -83,36 +91,45 @@ export function TargetSeedsCard() {
   return (
     <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full min-h-64'}`}>
       <CardHeader className="pb-0 flex-shrink-0">
-        <CardTitle className="flex items-center justify-between text-base">
-          <div className="flex items-center gap-2">
-            <Target size={20} className="opacity-80" />
-            Target Seeds
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => document.getElementById('target-file-input')?.click()}>
-              <Upload size={14} className="mr-2" />
-              Import
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleExportToFile}
-              disabled={targetSeeds.seeds.length === 0}
-            >
-              <Download size={14} className="mr-2" />
-              Export
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleClearAll}
-              disabled={targetSeeds.seeds.length === 0}
-            >
-              <Trash size={14} className="mr-2" />
-              Clear
-            </Button>
-          </div>
+        {/* タイトルのみを表示し、その下に操作ボタンをまとめて配置 */}
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Target size={20} className="opacity-80" />
+          Target Seeds
         </CardTitle>
+        <div
+          className="mt-2 grid grid-cols-4 gap-2"
+          role="group"
+          aria-label="Target Seeds operations"
+        >
+          <Button className="w-full" variant="outline" size="sm" onClick={() => setIsTemplateDialogOpen(true)}>
+            <FileText size={14} className="mr-2" />
+            Template
+          </Button>
+          <Button className="w-full" variant="outline" size="sm" onClick={() => document.getElementById('target-file-input')?.click()}>
+            <Upload size={14} className="mr-2" />
+            Import
+          </Button>
+          <Button
+            className="w-full"
+            variant="outline"
+            size="sm"
+            onClick={handleExportToFile}
+            disabled={targetSeeds.seeds.length === 0}
+          >
+            <Download size={14} className="mr-2" />
+            Export
+          </Button>
+          <Button
+            className="w-full"
+            variant="outline"
+            size="sm"
+            onClick={handleClearAll}
+            disabled={targetSeeds.seeds.length === 0}
+          >
+            <Trash size={14} className="mr-2" />
+            Clear
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col min-h-0 space-y-2 overflow-y-auto">
         <p className="text-xs text-muted-foreground flex-shrink-0">
@@ -169,6 +186,13 @@ export function TargetSeedsCard() {
           </Alert>
         )}
       </CardContent>
+
+      {/* Template Selection Dialog */}
+      <TemplateSelectionDialog
+        isOpen={isTemplateDialogOpen}
+        onOpenChange={setIsTemplateDialogOpen}
+        onApplyTemplate={handleApplyTemplate}
+      />
     </Card>
   );
 }
