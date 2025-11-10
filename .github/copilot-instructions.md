@@ -21,6 +21,9 @@
   - `/public/test-integration.html`: 統合テスト
   - `/public/test-simd.html`: SIMD機能テスト
 - `/scripts`: Build automation scripts
+- `/docs`: GitHub Pages deployment files
+- `/spec`: プロジェクト仕様書と設計ドキュメント
+  - `/spec/agent`: GitHub Copilot Agent専用ドキュメント配置先
 
 ## t_wada Principle
 - Code      → How
@@ -42,16 +45,11 @@
 - ESLint/Prettier設定に準拠
 - 技術文書は事実ベース・簡潔に記述
 
-## パフォーマンス監視アーキテクチャ
-### 本番用
-> 旧 `src/lib/core/performance-monitor.ts` は廃止済みです。
-
-### 開発用
-> 旧 `DevelopmentPerformanceAnalyzer` は廃止済みです。
+## ドキュメンテーション
+- `/spec` フォルダに仕様書・設計ドキュメントを配置する
+  - GitHub Copilot AgentがPRに紐づく実装を行う場合 `/spec/agent/pr_{PR番号}` に配置すること
 
 ## テストシステム
-### 開発テスト
-> `public/test-development.html` は廃止済みです。
 
 ### 統合テスト (`public/test-integration.html`)
 - システム全体の統合テスト
@@ -62,11 +60,6 @@
 - SIMD最適化の動作確認
 - パフォーマンス比較測定
 
-## 重要なライブラリ・フレームワーク
-- **WebAssembly**: 高性能なSHA-1ハッシュ計算とバッチ処理
-- **Zustand**: アプリケーション状態管理
-- **Radix UI**: アクセシブルなUIコンポーネント
-- **Vitest**: TypeScript/WebAssembly統合テスト
 
 ## 主要スクリプト
 ### 開発
