@@ -25,7 +25,7 @@ jobs:
               steps.metadata.outputs.update-type == 'version-update:semver-minor' }}
         uses: hmarr/auto-approve-action@v4
         with:
-          token: ${{ secrets.DEPENDABOT_GITHUB_TOKEN }}
+          github-token: ${{ secrets.DEPENDABOT_GITHUB_TOKEN }}
 
       - name: Enable auto-merge (squash)
         if: |
