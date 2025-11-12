@@ -514,15 +514,12 @@ mod native_tests {
         for &key_code in &key_codes {
             let raw = xored_to_raw(key_code);
             // START, SELECT, L, R の4つが同時に押されているものは含まれないはず
-            let has_all_four = (raw & START) != 0
-                && (raw & SELECT) != 0
-                && (raw & L) != 0
-                && (raw & R) != 0;
+            let has_all_four =
+                (raw & START) != 0 && (raw & SELECT) != 0 && (raw & L) != 0 && (raw & R) != 0;
             assert!(
                 !has_all_four,
                 "START + SELECT + L + R 4つ同時押しが検出されました: raw=0x{:X}, key_code=0x{:X}",
-                raw,
-                key_code
+                raw, key_code
             );
         }
 
@@ -555,10 +552,8 @@ mod native_tests {
             );
 
             // START + SELECT + L + R 4つ同時押しチェック
-            let has_all_four = (raw & START) != 0
-                && (raw & SELECT) != 0
-                && (raw & L) != 0
-                && (raw & R) != 0;
+            let has_all_four =
+                (raw & START) != 0 && (raw & SELECT) != 0 && (raw & L) != 0 && (raw & R) != 0;
             assert!(
                 !has_all_four,
                 "START + SELECT + L + R 4つ同時押しが検出されました: raw=0x{:X}",
@@ -673,10 +668,8 @@ mod native_tests {
             );
 
             // START + SELECT + L + R の4つ同時押しがないことを確認
-            let has_all_four = (raw & START) != 0
-                && (raw & SELECT) != 0
-                && (raw & L) != 0
-                && (raw & R) != 0;
+            let has_all_four =
+                (raw & START) != 0 && (raw & SELECT) != 0 && (raw & L) != 0 && (raw & R) != 0;
             assert!(
                 !has_all_four,
                 "START + SELECT + L + R 4つ同時押しが検出: 0x{:X}",
@@ -687,10 +680,7 @@ mod native_tests {
         // 除外された組み合わせの数を確認
         let excluded_count = total_combinations - key_codes.len();
         // 最低でも何らかの組み合わせが除外されているはず
-        assert!(
-            excluded_count > 0,
-            "不可能な組み合わせが除外されていません"
-        );
+        assert!(excluded_count > 0, "不可能な組み合わせが除外されていません");
     }
 
     #[test]
