@@ -1,4 +1,5 @@
 import type { SearchResult } from '../../types/search';
+import { keyCodeToNames } from '@/lib/utils/key-input';
 
 /**
  * Export functionality for search results
@@ -71,7 +72,7 @@ export class ResultExporter {
 
       if (options.includeDetails) {
         const macAddress = result.macAddress?.map(b => b.toString(16).padStart(2, '0')).join(':') || '';
-        const keyInput = result.keyInput ? `0x${result.keyInput.toString(16).padStart(8, '0')}` : '';
+        const keyInput = this.formatKeyInput(result);
         row.push(macAddress, keyInput);
       }
 
@@ -133,7 +134,8 @@ export class ResultExporter {
 
         if (options.includeDetails) {
           exportResult.macAddress = result.macAddress?.map(b => `0x${b.toString(16).padStart(2, '0')}`);
-          exportResult.keyInput = result.keyInput ? `0x${result.keyInput.toString(16).padStart(8, '0')}` : null;
+          const formattedKey = this.formatKeyInput(result);
+          exportResult.keyInput = formattedKey ? formattedKey : null;
         }
 
         if (options.includeMessage) {
@@ -173,7 +175,7 @@ export class ResultExporter {
 
       if (options.includeDetails) {
         const macAddress = result.macAddress?.map(b => b.toString(16).padStart(2, '0')).join(':') || 'N/A';
-        const keyInput = result.keyInput ? `0x${result.keyInput.toString(16).padStart(8, '0')}` : 'N/A';
+  const keyInput = this.formatKeyInput(result) || 'N/A';
         lines.push(`  MAC Address: ${macAddress}`);
         lines.push(`  Key Input: ${keyInput}`);
       }
@@ -191,6 +193,23 @@ export class ResultExporter {
     });
 
     return lines.join('\n');
+  }
+
+  private static formatKeyInput(result: SearchResult): string {
+    if (result.keyCode != null) {
+      const hex = `0x${result.keyCode.toString(16).toUpperCase().padStart(4, '0')}`;
+      const names = keyCodeToNames(result.keyCode);
+      if (names.length === 0) {
+        return `${hex} (No keys)`;
+      }
+      return `${hex} (${names.join(' + ')})`;
+    }
+
+    if (result.keyInput != null) {
+      return `mask: 0x${result.keyInput.toString(16).toUpperCase().padStart(4, '0')}`;
+    }
+
+    return '';
   }
 
   /**

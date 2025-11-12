@@ -5,10 +5,25 @@
 
 import { SeedCalculator } from '../lib/core/seed-calculator';
 import { toMacUint8Array } from '@/lib/utils/mac-address';
+import { keyMaskToKeyCode } from '@/lib/utils/key-input';
 import type { SearchConditions } from '../types/search';
 import type { InitialSeedResult } from '../types/search';
 import type { TimerState, WorkerProgressMessage } from '../types/callbacks';
 import type { Hardware } from '../types/rom';
+
+type WasmIntegratedResult = {
+  seed: number;
+  hash: string;
+  year: number;
+  month: number;
+  date: number;
+  hour: number;
+  minute: number;
+  second: number;
+  timer0: number;
+  vcount: number;
+  keyCode?: number;
+};
 
 // Performance optimization: Use larger batch sizes for better WASM utilization
 const BATCH_SIZE_SECONDS = 86400;   // 1日
@@ -201,9 +216,10 @@ async function processBatchIntegrated(
         await new Promise(resolve => setTimeout(resolve, 0));
 
         // サブチャンクの結果を処理
-        for (const result of results) {
+  const wasmResults = results as unknown as WasmIntegratedResult[];
+  for (const result of wasmResults) {
           const resultDate = new Date(result.year, result.month - 1, result.date, result.hour, result.minute, result.second);
-          const message = calculator.generateMessage(conditions, result.timer0, result.vcount, resultDate);
+          const message = calculator.generateMessage(conditions, result.timer0, result.vcount, resultDate, result.keyCode);
           const { hash, lcgSeed } = calculator.calculateSeed(message);
 
           const searchResult: InitialSeedResult = {
@@ -211,6 +227,7 @@ async function processBatchIntegrated(
             datetime: resultDate,
             timer0: result.timer0,
             vcount: result.vcount,
+            keyCode: result.keyCode ?? null,
             conditions,
             message,
             sha1Hash: hash,
@@ -264,6 +281,7 @@ async function processBatchIndividual(
   }
   
   let processedCount = 0;
+  const fallbackKeyCode = keyMaskToKeyCode(conditions.keyInput);
   
   for (let timer0 = timer0Min; timer0 <= timer0Max; timer0++) {
     const actualVCount = calculator.getVCountForTimer0(params, timer0);
@@ -287,7 +305,7 @@ async function processBatchIndividual(
       
       try {
         // Generate message and calculate seed
-        const message = calculator.generateMessage(conditions, timer0, actualVCount, currentDateTime);
+  const message = calculator.generateMessage(conditions, timer0, actualVCount, currentDateTime, fallbackKeyCode);
         const { seed, hash, lcgSeed } = calculator.calculateSeed(message);
 
         // Check if seed matches any target
@@ -297,6 +315,7 @@ async function processBatchIndividual(
             datetime: currentDateTime,
             timer0,
             vcount: actualVCount,
+            keyCode: fallbackKeyCode,
             conditions,
             message,
             sha1Hash: hash,

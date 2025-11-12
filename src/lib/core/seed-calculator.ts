@@ -3,6 +3,7 @@ import { initWasm, getWasm, isWasmReady } from './wasm-interface';
 import type { SearchConditions } from '../../types/search';
 import type { ROMParameters, Hardware } from '../../types/rom';
 import romParameters from '../../data/rom-parameters';
+import { keyMaskToKeyCode } from '@/lib/utils/key-input';
 
 const HARDWARE_FRAME_VALUES: Record<Hardware, number> = {
   DS: 8,
@@ -117,7 +118,13 @@ export class SeedCalculator {
   /**
    * Generate message array for SHA-1 calculation
    */
-  public generateMessage(conditions: SearchConditions, timer0: number, vcount: number, datetime: Date): number[] {
+  public generateMessage(
+    conditions: SearchConditions,
+    timer0: number,
+    vcount: number,
+    datetime: Date,
+    keyCodeOverride?: number | null,
+  ): number[] {
     const params = this.getROMParameters(conditions.romVersion, conditions.romRegion);
     if (!params) {
       throw new Error(`No parameters found for ${conditions.romVersion} ${conditions.romRegion}`);
@@ -179,7 +186,10 @@ export class SeedCalculator {
     message[11] = 0x00000000;
     
     // data[12]: Key input (little-endian conversion needed)
-    message[12] = this.toLittleEndian32(conditions.keyInput);
+    const resolvedKeyCode = keyCodeOverride != null
+      ? keyCodeOverride
+      : keyMaskToKeyCode(conditions.keyInput);
+    message[12] = this.toLittleEndian32(resolvedKeyCode);
     
     // data[13-15]: SHA-1 padding
     message[13] = 0x80000000;

@@ -29,7 +29,7 @@ function enumerateCpuBaseline(conditions: SearchConditions, context: WebGpuSearc
     for (let timer0 = segment.timer0Min; timer0 <= segment.timer0Max; timer0 += 1) {
       for (let secondOffset = 0; secondOffset < rangeSeconds; secondOffset += 1) {
         const datetime = new Date(context.startTimestampMs + secondOffset * 1000);
-        const message = calculator.generateMessage(conditions, timer0, segment.vcount, datetime);
+  const message = calculator.generateMessage(conditions, timer0, segment.vcount, datetime, segment.keyCode);
         const { seed } = calculator.calculateSeed(message);
         entries.push({ seed, timer0, vcount: segment.vcount, datetime });
       }

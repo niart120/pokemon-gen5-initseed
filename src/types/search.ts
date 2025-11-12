@@ -45,6 +45,7 @@ export interface InitialSeedResult {
   datetime: Date;
   timer0: number;
   vcount: number;
+  keyCode: number | null;
   conditions: SearchConditions;
   message: number[];
   sha1Hash: string;
@@ -63,6 +64,7 @@ export interface SearchResult {
   hardware: Hardware;
   macAddress?: number[];
   keyInput?: number;
+  keyCode?: number | null;
   message?: number[];
   hash?: string;
 }

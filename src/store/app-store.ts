@@ -112,7 +112,7 @@ const defaultSearchConditions: SearchConditions = {
     endSecond: 59,
   },
   
-  keyInput: 0x2FFF, // Default: no keys pressed
+  keyInput: 0x0000, // Default: no key input
   macAddress: [0x00, 0x1B, 0x2C, 0x3D, 0x4E, 0x5F],
 };
 

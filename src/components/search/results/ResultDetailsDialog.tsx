@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialo
 import { Label } from '../../ui/label';
 import { toast } from 'sonner';
 import { lcgSeedToHex } from '@/lib/utils/lcg-seed';
+import { keyCodeToNames } from '@/lib/utils/key-input';
 import { useAppStore } from '@/store/app-store';
 import type { InitialSeedResult } from '../../../types/search';
 
@@ -38,6 +39,13 @@ export function ResultDetailsDialog({
   };
 
   if (!result) return null;
+
+  const keyNames = result.keyCode != null ? keyCodeToNames(result.keyCode) : [];
+  const keyInputDisplay = result.keyCode == null
+    ? 'Unavailable'
+    : keyNames.length > 0
+      ? keyNames.join(', ')
+      : 'No keys';
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -95,6 +103,14 @@ export function ResultDetailsDialog({
             <div>
               <Label>Hardware</Label>
               <div>{result.conditions.hardware}</div>
+            </div>
+          </div>
+
+          {/* Key Input */}
+          <div>
+            <Label>Key Input</Label>
+            <div className="font-mono text-sm">
+              {keyInputDisplay}
             </div>
           </div>
 

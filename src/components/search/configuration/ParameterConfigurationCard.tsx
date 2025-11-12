@@ -6,6 +6,7 @@ import { Gear } from '@phosphor-icons/react';
 import { Timer0VCountParam } from './params/Timer0VCountParam';
 import { DateRangeParam } from './params/DateRangeParam';
 import { MACAddressParam } from './params/MACAddressParam';
+import { KeyInputParam } from './params/KeyInputParam';
 
 export function ParameterConfigurationCard() {
   return (
@@ -19,6 +20,11 @@ export function ParameterConfigurationCard() {
         
         {/* 日付範囲設定 */}
         <DateRangeParam />
+        
+        <Separator />
+        
+        {/* キー入力設定 */}
+        <KeyInputParam />
         
         <Separator />
         

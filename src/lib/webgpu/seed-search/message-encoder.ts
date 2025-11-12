@@ -12,6 +12,43 @@ const HARDWARE_FRAME_VALUES: Record<Hardware, number> = {
   '3DS': 9,
 };
 
+/**
+ * Generate all possible key codes from a key input mask
+ * @param keyInputMask - Bit mask where 1 indicates an available key
+ * @returns Array of key codes (each combination XORed with 0x2FFF)
+ */
+function generateKeyCodes(keyInputMask: number): number[] {
+  const enabledBits: number[] = [];
+  
+  // Collect enabled bit positions
+  for (let bit = 0; bit < 12; bit++) {
+    if ((keyInputMask & (1 << bit)) !== 0) {
+      enabledBits.push(bit);
+    }
+  }
+  
+  // Generate power set (2^n combinations)
+  const n = enabledBits.length;
+  const totalCombinations = 1 << n; // 2^n
+  const keyCodes: number[] = [];
+  
+  for (let i = 0; i < totalCombinations; i++) {
+    let combination = 0;
+    for (let bitIndex = 0; bitIndex < n; bitIndex++) {
+      if ((i & (1 << bitIndex)) !== 0) {
+        // Set this bit (key is pressed - bit becomes 0 after XOR)
+        combination |= 1 << enabledBits[bitIndex];
+      }
+    }
+    // XOR with 0x2FFF to get the keycode
+    // (pressed keys become 0, unpressed become 1, then XOR inverts them)
+    const keyCode = combination ^ 0x2FFF;
+    keyCodes.push(keyCode);
+  }
+  
+  return keyCodes;
+}
+
 export function buildSearchContext(conditions: SearchConditions): WebGpuSearchContext {
   const startDate = buildDate(
     conditions.dateRange.startYear,
@@ -73,50 +110,59 @@ export function buildSearchContext(conditions: SearchConditions): WebGpuSearchCo
   const frameValue = HARDWARE_FRAME_VALUES[conditions.hardware];
 
   const { macLower, data7Swapped } = computeMacWords(conditions.macAddress, frameValue);
-  const keyInputSwapped = swap32(conditions.keyInput >>> 0);
+  
+  // Generate all possible key codes from the key input mask
+  const keyCodes = generateKeyCodes(conditions.keyInput);
   const nazoSwapped = createNazoSwapped(params.nazo);
 
   const segments: WebGpuSegment[] = [];
   let baseOffset = 0;
-  for (let index = 0; index < timer0Segments.length; index += 1) {
-    const segmentInfo = timer0Segments[index];
-    const timer0Count = segmentInfo.timer0Max - segmentInfo.timer0Min + 1;
-    const totalMessages = rangeSeconds * timer0Count;
+  
+  // For each key code, create segments
+  for (const keyCode of keyCodes) {
+    const keyInputSwapped = swap32(keyCode >>> 0);
+    
+    for (let index = 0; index < timer0Segments.length; index += 1) {
+      const segmentInfo = timer0Segments[index];
+      const timer0Count = segmentInfo.timer0Max - segmentInfo.timer0Min + 1;
+      const totalMessages = rangeSeconds * timer0Count;
 
-    const config: GpuSha1WorkloadConfig = {
-      startSecondsSince2000: startSecondsSince2000 >>> 0,
-      rangeSeconds: rangeSeconds >>> 0,
-      timer0Min: segmentInfo.timer0Min >>> 0,
-      timer0Max: segmentInfo.timer0Max >>> 0,
-      timer0Count: timer0Count >>> 0,
-      vcountMin: segmentInfo.vcount >>> 0,
-      vcountMax: segmentInfo.vcount >>> 0,
-      vcountCount: 1 >>> 0,
-      totalMessages: totalMessages >>> 0,
-      hardwareType: mapHardwareToId(conditions.hardware),
-      macLower: macLower >>> 0,
-      data7Swapped: data7Swapped >>> 0,
-      keyInputSwapped: keyInputSwapped >>> 0,
-      nazoSwapped,
-      startYear: startYear >>> 0,
-      startDayOfYear: startDayOfYear >>> 0,
-      startSecondOfDay: startSecondOfDay >>> 0,
-      startDayOfWeek: startDayOfWeek >>> 0,
-    };
+      const config: GpuSha1WorkloadConfig = {
+        startSecondsSince2000: startSecondsSince2000 >>> 0,
+        rangeSeconds: rangeSeconds >>> 0,
+        timer0Min: segmentInfo.timer0Min >>> 0,
+        timer0Max: segmentInfo.timer0Max >>> 0,
+        timer0Count: timer0Count >>> 0,
+        vcountMin: segmentInfo.vcount >>> 0,
+        vcountMax: segmentInfo.vcount >>> 0,
+        vcountCount: 1 >>> 0,
+        totalMessages: totalMessages >>> 0,
+        hardwareType: mapHardwareToId(conditions.hardware),
+        macLower: macLower >>> 0,
+        data7Swapped: data7Swapped >>> 0,
+        keyInputSwapped: keyInputSwapped >>> 0,
+        nazoSwapped,
+        startYear: startYear >>> 0,
+        startDayOfYear: startDayOfYear >>> 0,
+        startSecondOfDay: startSecondOfDay >>> 0,
+        startDayOfWeek: startDayOfWeek >>> 0,
+      };
 
-    segments.push({
-      index,
-      baseOffset,
-      timer0Min: segmentInfo.timer0Min,
-      timer0Max: segmentInfo.timer0Max,
-      timer0Count,
-      vcount: segmentInfo.vcount,
-      rangeSeconds,
-      totalMessages,
-      config,
-    });
+      segments.push({
+        index,
+        baseOffset,
+        timer0Min: segmentInfo.timer0Min,
+        timer0Max: segmentInfo.timer0Max,
+        timer0Count,
+        vcount: segmentInfo.vcount,
+        rangeSeconds,
+        totalMessages,
+        keyCode,
+        config,
+      });
 
-    baseOffset += totalMessages;
+      baseOffset += totalMessages;
+    }
   }
 
   const totalMessages = segments.reduce((sum, segment) => sum + segment.totalMessages, 0);
