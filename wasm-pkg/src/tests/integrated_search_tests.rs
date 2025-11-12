@@ -32,6 +32,7 @@ mod wasm_tests {
             10,
             30,
             45,
+            0x2FFF,
             1120,
             50,
         );
@@ -43,6 +44,7 @@ mod wasm_tests {
         assert_eq!(result.hour(), 10);
         assert_eq!(result.minute(), 30);
         assert_eq!(result.second(), 45);
+        assert_eq!(result.key_code(), 0x2FFF);
         assert_eq!(result.timer0(), 1120);
         assert_eq!(result.vcount(), 50);
     }
@@ -371,6 +373,7 @@ mod wasm_tests {
             10,
             30,
             45,
+            0x2FFF,
             1120,
             50,
         );
@@ -383,6 +386,7 @@ mod wasm_tests {
         assert_eq!(result.hour(), 10);
         assert_eq!(result.minute(), 30);
         assert_eq!(result.second(), 45);
+        assert_eq!(result.key_code(), 0x2FFF);
         assert_eq!(result.timer0(), 1120);
         assert_eq!(result.vcount(), 50);
     }
@@ -407,6 +411,7 @@ mod native_tests {
             10,
             30,
             45,
+            0x2FFF,
             1120,
             50,
         );
@@ -418,6 +423,7 @@ mod native_tests {
         assert_eq!(result.hour(), 10);
         assert_eq!(result.minute(), 30);
         assert_eq!(result.second(), 45);
+        assert_eq!(result.key_code(), 0x2FFF);
         assert_eq!(result.timer0(), 1120);
         assert_eq!(result.vcount(), 50);
     }

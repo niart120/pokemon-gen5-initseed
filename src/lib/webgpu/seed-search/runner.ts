@@ -761,7 +761,8 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
       const timer0 = timer0Min + timer0Index;
     const vcount = vcountMin + vcountIndex;
     const datetime = new Date(context.startTimestampMs + secondOffset * 1000);
-    const message = state.seedCalculator.generateMessage(context.conditions, timer0, vcount, datetime);
+  const keyCode = dispatchContext.segment.keyCode;
+  const message = state.seedCalculator.generateMessage(context.conditions, timer0, vcount, datetime, keyCode);
       const { hash, seed: recalculatedSeed, lcgSeed } = state.seedCalculator.calculateSeed(message);
       if (recalculatedSeed !== seed) {
         console.warn('GPU/CPU seed mismatch detected', {
@@ -775,6 +776,7 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
         datetime,
         timer0,
         vcount,
+        keyCode,
         conditions: context.conditions,
         message,
         sha1Hash: hash,

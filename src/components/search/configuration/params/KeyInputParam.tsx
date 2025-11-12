@@ -1,57 +1,10 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Toggle } from '@/components/ui/toggle';
 import { useAppStore } from '../../../../store/app-store';
 import { GameController } from '@phosphor-icons/react';
-
-// キーマッピング定義（下位ビットから）
-const KEY_BITS = {
-  A: 0,
-  B: 1,
-  Select: 2,
-  Start: 3,
-  Right: 4,
-  Left: 5,
-  Up: 6,
-  Down: 7,
-  R: 8,
-  L: 9,
-  X: 10,
-  Y: 11,
-} as const;
-
-// キーの種類
-type KeyName = keyof typeof KEY_BITS;
-
-// デフォルト値（0 = キー入力なし）
-const DEFAULT_KEY_INPUT = 0x0000;
-
-// keyInput（mask）から有効なキー配列を生成
-function getAvailableKeys(keyInput: number): KeyName[] {
-  const available: KeyName[] = [];
-  
-  for (const [key, bit] of Object.entries(KEY_BITS)) {
-    // ビットが1の場合、利用可能
-    if ((keyInput & (1 << bit)) !== 0) {
-      available.push(key as KeyName);
-    }
-  }
-  return available;
-}
-
-// 有効なキー配列からkeyInput（mask）を生成
-function calculateKeyInput(availableKeys: KeyName[]): number {
-  let mask = 0;
-  
-  for (const key of availableKeys) {
-    const bit = KEY_BITS[key];
-    // 利用可能なキーのビットを1にする
-    mask |= (1 << bit);
-  }
-  
-  return mask;
-}
+import { KEY_INPUT_DEFAULT, keyMaskToNames, keyNamesToMask, type KeyName } from '@/lib/utils/key-input';
 
 export function KeyInputParam() {
   const { searchConditions, setSearchConditions } = useAppStore();
@@ -59,11 +12,11 @@ export function KeyInputParam() {
   const [tempKeyInput, setTempKeyInput] = useState(searchConditions.keyInput);
   
   // 現在利用可能なキーのリスト
-  const availableKeys = getAvailableKeys(searchConditions.keyInput);
-  const tempAvailableKeys = getAvailableKeys(tempKeyInput);
+  const availableKeys = keyMaskToNames(searchConditions.keyInput);
+  const tempAvailableKeys = keyMaskToNames(tempKeyInput);
   
   const handleToggleKey = (key: KeyName) => {
-    const currentAvailable = getAvailableKeys(tempKeyInput);
+    const currentAvailable = keyMaskToNames(tempKeyInput);
     let newAvailable: KeyName[];
     
     if (currentAvailable.includes(key)) {
@@ -74,12 +27,12 @@ export function KeyInputParam() {
       newAvailable = [...currentAvailable, key];
     }
     
-    const newKeyInput = calculateKeyInput(newAvailable);
+    const newKeyInput = keyNamesToMask(newAvailable);
     setTempKeyInput(newKeyInput);
   };
 
   const handleReset = () => {
-    setTempKeyInput(DEFAULT_KEY_INPUT);
+    setTempKeyInput(KEY_INPUT_DEFAULT);
   };
   
   const handleApply = () => {

@@ -31,6 +31,7 @@ export interface WebGpuSegment {
   vcount: number;
   rangeSeconds: number;
   totalMessages: number;
+  keyCode: number;
   config: GpuSha1WorkloadConfig;
 }
 

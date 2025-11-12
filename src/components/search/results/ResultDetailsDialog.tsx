@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialo
 import { Label } from '../../ui/label';
 import { toast } from 'sonner';
 import { lcgSeedToHex } from '@/lib/utils/lcg-seed';
+import { keyCodeToNames } from '@/lib/utils/key-input';
 import { useAppStore } from '@/store/app-store';
 import type { InitialSeedResult } from '../../../types/search';
 
@@ -38,6 +39,13 @@ export function ResultDetailsDialog({
   };
 
   if (!result) return null;
+
+  const keyNames = result.keyCode != null ? keyCodeToNames(result.keyCode) : [];
+  const keyInputDisplay = result.keyCode == null
+    ? 'Unavailable'
+    : keyNames.length > 0
+      ? keyNames.join(', ')
+      : 'No keys';
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -100,20 +108,9 @@ export function ResultDetailsDialog({
 
           {/* Key Input */}
           <div>
-            <Label>Key Input (Mask)</Label>
+            <Label>Key Input</Label>
             <div className="font-mono text-sm">
-              0x{result.conditions.keyInput.toString(16).toUpperCase().padStart(4, '0')}
-              {(() => {
-                const KEY_BITS = {
-                  A: 0, B: 1, Select: 2, Start: 3,
-                  Right: 4, Left: 5, Up: 6, Down: 7,
-                  R: 8, L: 9, X: 10, Y: 11,
-                };
-                const available = Object.entries(KEY_BITS)
-                  .filter(([_, bit]) => (result.conditions.keyInput & (1 << bit)) !== 0)
-                  .map(([key, _]) => key);
-                return available.length > 0 ? ` (${available.join(', ')})` : ' (No keys)';
-              })()}
+              {keyInputDisplay}
             </div>
           </div>
 

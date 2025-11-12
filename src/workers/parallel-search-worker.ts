@@ -6,9 +6,24 @@
 import type { TimerState } from '../types/callbacks';
 import { SeedCalculator } from '../lib/core/seed-calculator';
 import { toMacUint8Array } from '@/lib/utils/mac-address';
+import { keyMaskToKeyCode } from '@/lib/utils/key-input';
 import type { SearchConditions, InitialSeedResult } from '../types/search';
 import type { ParallelWorkerRequest, ParallelWorkerResponse, WorkerChunk } from '../types/parallel';
 import type { Hardware } from '../types/rom';
+
+type WasmIntegratedResult = {
+  seed: number;
+  hash: string;
+  year: number;
+  month: number;
+  date: number;
+  hour: number;
+  minute: number;
+  second: number;
+  timer0: number;
+  vcount: number;
+  keyCode?: number;
+};
 
 // Timer state for accurate elapsed time calculation
 // use shared TimerState
@@ -254,8 +269,9 @@ async function processChunkWithWasm(
       // WebAssembly呼び出し後に非同期yield
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      // サブチャンクの結果を統合
-      for (const result of subResults) {
+  // サブチャンクの結果を統合
+  const wasmResults = subResults as unknown as WasmIntegratedResult[];
+  for (const result of wasmResults) {
         const resultDate = new Date(
           result.year, 
           result.month - 1, 
@@ -265,7 +281,7 @@ async function processChunkWithWasm(
           result.second
         );
         
-        const message = calculator.generateMessage(conditions, result.timer0, result.vcount, resultDate);
+        const message = calculator.generateMessage(conditions, result.timer0, result.vcount, resultDate, result.keyCode);
         const { hash, lcgSeed } = calculator.calculateSeed(message);
 
         allResults.push({
@@ -273,6 +289,7 @@ async function processChunkWithWasm(
           datetime: resultDate,
           timer0: result.timer0,
           vcount: result.vcount,
+          keyCode: result.keyCode ?? null,
           conditions,
           message,
           sha1Hash: hash,
@@ -307,6 +324,7 @@ async function processChunkWithTypeScript(
   const targetSeedSet = new Set(targetSeeds);
   let matchesFound = 0;
   let processedCount = 0;
+  const fallbackKeyCode = keyMaskToKeyCode(conditions.keyInput);
   
   const params = calculator.getROMParameters(conditions.romVersion, conditions.romRegion);
   if (!params) {
@@ -343,7 +361,7 @@ async function processChunkWithTypeScript(
       
       try {
         // Seed計算
-        const message = calculator.generateMessage(conditions, timer0, actualVCount, currentDateTime);
+  const message = calculator.generateMessage(conditions, timer0, actualVCount, currentDateTime, fallbackKeyCode);
         const { seed, hash, lcgSeed } = calculator.calculateSeed(message);
 
         // マッチチェック
@@ -353,6 +371,7 @@ async function processChunkWithTypeScript(
             datetime: currentDateTime,
             timer0,
             vcount: actualVCount,
+            keyCode: fallbackKeyCode,
             conditions,
             message,
             sha1Hash: hash,

@@ -62,7 +62,7 @@ function computeSampleSeeds(
     for (let timer0 = segment.timer0Min; timer0 <= segment.timer0Max; timer0 += 1) {
       for (let offset = 0; offset < rangeSeconds; offset += 1) {
         const datetime = new Date(context.startTimestampMs + offset * 1000);
-        const message = sampleSeedCalculator.generateMessage(conditions, timer0, segment.vcount, datetime);
+  const message = sampleSeedCalculator.generateMessage(conditions, timer0, segment.vcount, datetime, segment.keyCode);
         const { seed } = sampleSeedCalculator.calculateSeed(message);
         seeds.push(seed);
         if (seeds.length >= sampleCount) {

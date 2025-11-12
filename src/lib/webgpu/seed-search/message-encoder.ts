@@ -157,6 +157,7 @@ export function buildSearchContext(conditions: SearchConditions): WebGpuSearchCo
         vcount: segmentInfo.vcount,
         rangeSeconds,
         totalMessages,
+        keyCode,
         config,
       });
 

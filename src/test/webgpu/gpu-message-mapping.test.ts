@@ -228,7 +228,7 @@ describe('webgpu seed search message mapping', () => {
       expect(expectedDatetime.getSeconds()).toBe(simulated.second);
       expect(expectedDatetime.getDay()).toBe(simulated.dayOfWeek);
 
-  const message = calculator.generateMessage(conditions, simulated.timer0, simulated.vcount, expectedDatetime);
+  const message = calculator.generateMessage(conditions, simulated.timer0, simulated.vcount, expectedDatetime, segment.keyCode);
   const gpuMessage = buildGpuMessage(segment, simulated, conditions.hardware);
   expect(gpuMessage).toEqual(message);
   const hash = sha1.calculateHash(message);
@@ -266,7 +266,8 @@ describe('webgpu seed search message mapping', () => {
         rolloverConditions,
         simulated.timer0,
         simulated.vcount,
-        expectedDatetime
+        expectedDatetime,
+        rolloverSegment.keyCode
       );
       const gpuMessage = buildGpuMessage(rolloverSegment, simulated, rolloverConditions.hardware);
       expect(gpuMessage).toEqual(message);

@@ -52,6 +52,7 @@ pub struct SearchResult {
     second: u32,
     timer0: u32,
     vcount: u32,
+    key_code: u32,
 }
 
 #[wasm_bindgen]
@@ -67,6 +68,7 @@ impl SearchResult {
         hour: u32,
         minute: u32,
         second: u32,
+        key_code: u32,
         timer0: u32,
         vcount: u32,
     ) -> SearchResult {
@@ -79,6 +81,7 @@ impl SearchResult {
             hour,
             minute,
             second,
+            key_code,
             timer0,
             vcount,
         }
@@ -124,6 +127,10 @@ impl SearchResult {
     pub fn vcount(&self) -> u32 {
         self.vcount
     }
+    #[wasm_bindgen(getter = keyCode)]
+    pub fn key_code(&self) -> u32 {
+        self.key_code
+    }
 }
 
 /// 統合シード探索器
@@ -135,9 +142,6 @@ pub struct IntegratedSeedSearcher {
 
     // キャッシュされた基本メッセージ（キー入力以外）
     base_message: [u32; 16],
-    
-    // 利用可能なキー入力マスク
-    key_input_mask: u32,
     
     // 利用可能なキーコードのリスト（べき集合から生成）
     key_codes: Vec<u32>,
@@ -243,7 +247,6 @@ impl IntegratedSeedSearcher {
         Ok(IntegratedSeedSearcher {
             hardware: hardware.to_string(),
             base_message,
-            key_input_mask,
             key_codes,
         })
     }
@@ -314,6 +317,7 @@ impl IntegratedSeedSearcher {
                             seed,
                             &hash_values,
                             current_seconds_since_2000,
+                            key_code,
                             &params,
                             &target_set,
                             &results,
@@ -478,6 +482,7 @@ impl IntegratedSeedSearcher {
                 seed,
                 &hash_values,
                 seconds_batch[i],
+                key_code,
                 &params_for_result,
                 target_seeds,
                 results,
@@ -518,6 +523,7 @@ impl IntegratedSeedSearcher {
                 seed,
                 &hash_values,
                 current_seconds_since_2000,
+                key_code,
                 params,
                 target_seeds,
                 results,
@@ -583,6 +589,7 @@ impl IntegratedSeedSearcher {
         seed: u32,
         hash_values: &HashValues,
         seconds_since_2000: i64,
+        key_code: u32,
         params: &SearchParams,
         target_seeds: &BTreeSet<u32>,
         results: &js_sys::Array,
@@ -607,6 +614,7 @@ impl IntegratedSeedSearcher {
                     hour,
                     minute,
                     second,
+                    key_code,
                     params.timer0,
                     params.vcount,
                 );

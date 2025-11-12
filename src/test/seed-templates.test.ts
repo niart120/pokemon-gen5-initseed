@@ -38,7 +38,7 @@ describe('Seed Templates', () => {
     const templateNames = SEED_TEMPLATES.map(t => t.name);
     
     // Check for expected templates
-    expect(templateNames).toContain('BW 固定 6V');
-    expect(templateNames).toContain('BW2 野生 5VS0');
+    expect(templateNames).toContain('BW 固定・野生 6V');
+    expect(templateNames).toContain('BW2 固定・野生 5VA0');
   });
 });
