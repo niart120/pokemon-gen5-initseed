@@ -264,7 +264,7 @@ export function KeyInputParam() {
             {/* リセットボタン */}
             <div className="flex justify-between items-center pt-4 border-t">
               <div className="text-sm text-muted-foreground">
-                Selected: {pressedKeys.length} key{pressedKeys.length !== 1 ? 's' : ''}
+                Selected: {availableKeys.length} key{availableKeys.length !== 1 ? 's' : ''}
               </div>
               <Button
                 variant="outline"
