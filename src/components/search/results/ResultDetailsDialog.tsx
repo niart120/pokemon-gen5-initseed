@@ -98,6 +98,27 @@ export function ResultDetailsDialog({
             </div>
           </div>
 
+          {/* Key Input */}
+          <div>
+            <Label>Key Input</Label>
+            <div className="font-mono text-sm">
+              0x{result.conditions.keyInput.toString(16).toUpperCase().padStart(4, '0')}
+              {(() => {
+                const DEFAULT_KEY_INPUT = 0x2FFF;
+                const KEY_BITS = {
+                  A: 0, B: 1, Select: 2, Start: 3,
+                  Right: 4, Left: 5, Up: 6, Down: 7,
+                  R: 8, L: 9, X: 10, Y: 11,
+                };
+                const rawValue = result.conditions.keyInput ^ DEFAULT_KEY_INPUT;
+                const pressed = Object.entries(KEY_BITS)
+                  .filter(([_, bit]) => (rawValue & (1 << bit)) === 0)
+                  .map(([key, _]) => key);
+                return pressed.length > 0 ? ` (${pressed.join(', ')})` : ' (No keys)';
+              })()}
+            </div>
+          </div>
+
           {/* SHA-1 Hash */}
           <div>
             <Label>SHA-1 Hash</Label>
