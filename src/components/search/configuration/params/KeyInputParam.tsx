@@ -24,58 +24,55 @@ const KEY_BITS = {
 // キーの種類
 type KeyName = keyof typeof KEY_BITS;
 
-// デフォルト値（全ビット1 = 押されていない状態）
-const DEFAULT_KEY_INPUT = 0x2FFF;
+// デフォルト値（0 = キー入力なし）
+const DEFAULT_KEY_INPUT = 0x0000;
 
-// keyInputからpressedKeys配列を生成
-function getPressedKeys(keyInput: number): KeyName[] {
-  const pressed: KeyName[] = [];
-  // keyInputはXOR 0x2FFFされた値なので、元に戻す
-  const rawValue = keyInput ^ DEFAULT_KEY_INPUT;
+// keyInput（mask）から有効なキー配列を生成
+function getAvailableKeys(keyInput: number): KeyName[] {
+  const available: KeyName[] = [];
   
   for (const [key, bit] of Object.entries(KEY_BITS)) {
-    // ビットが0の場合、押されている
-    if ((rawValue & (1 << bit)) === 0) {
-      pressed.push(key as KeyName);
+    // ビットが1の場合、利用可能
+    if ((keyInput & (1 << bit)) !== 0) {
+      available.push(key as KeyName);
     }
   }
-  return pressed;
+  return available;
 }
 
-// pressedKeys配列からkeyInputを生成
-function calculateKeyInput(pressedKeys: KeyName[]): number {
-  let rawValue = DEFAULT_KEY_INPUT; // すべて1で開始
+// 有効なキー配列からkeyInput（mask）を生成
+function calculateKeyInput(availableKeys: KeyName[]): number {
+  let mask = 0;
   
-  for (const key of pressedKeys) {
+  for (const key of availableKeys) {
     const bit = KEY_BITS[key];
-    // 押されたキーのビットを0にする
-    rawValue &= ~(1 << bit);
+    // 利用可能なキーのビットを1にする
+    mask |= (1 << bit);
   }
   
-  // XOR 0x2FFFして保存
-  return rawValue ^ DEFAULT_KEY_INPUT;
+  return mask;
 }
 
 export function KeyInputParam() {
   const { searchConditions, setSearchConditions } = useAppStore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  // 現在押されているキーのリスト
-  const pressedKeys = getPressedKeys(searchConditions.keyInput);
+  // 現在利用可能なキーのリスト
+  const availableKeys = getAvailableKeys(searchConditions.keyInput);
   
   const handleToggleKey = (key: KeyName) => {
-    const currentPressed = getPressedKeys(searchConditions.keyInput);
-    let newPressed: KeyName[];
+    const currentAvailable = getAvailableKeys(searchConditions.keyInput);
+    let newAvailable: KeyName[];
     
-    if (currentPressed.includes(key)) {
+    if (currentAvailable.includes(key)) {
       // キーを外す
-      newPressed = currentPressed.filter(k => k !== key);
+      newAvailable = currentAvailable.filter(k => k !== key);
     } else {
       // キーを追加
-      newPressed = [...currentPressed, key];
+      newAvailable = [...currentAvailable, key];
     }
     
-    const newKeyInput = calculateKeyInput(newPressed);
+    const newKeyInput = calculateKeyInput(newAvailable);
     setSearchConditions({ keyInput: newKeyInput });
   };
 
@@ -98,9 +95,9 @@ export function KeyInputParam() {
         </Button>
       </div>
       
-      {pressedKeys.length > 0 && (
+      {availableKeys.length > 0 && (
         <div className="text-xs text-muted-foreground">
-          Available keys: {pressedKeys.join(', ')}
+          Available keys: {availableKeys.join(', ')}
         </div>
       )}
       
@@ -124,7 +121,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="Up"
                     aria-label="Up"
-                    pressed={pressedKeys.includes('Up')}
+                    pressed={availableKeys.includes('Up')}
                     onPressedChange={() => handleToggleKey('Up')}
                     className="w-12 h-12"
                   >
@@ -135,7 +132,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="Left"
                     aria-label="Left"
-                    pressed={pressedKeys.includes('Left')}
+                    pressed={availableKeys.includes('Left')}
                     onPressedChange={() => handleToggleKey('Left')}
                     className="w-12 h-12"
                   >
@@ -145,7 +142,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="Right"
                     aria-label="Right"
-                    pressed={pressedKeys.includes('Right')}
+                    pressed={availableKeys.includes('Right')}
                     onPressedChange={() => handleToggleKey('Right')}
                     className="w-12 h-12"
                   >
@@ -156,7 +153,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="Down"
                     aria-label="Down"
-                    pressed={pressedKeys.includes('Down')}
+                    pressed={availableKeys.includes('Down')}
                     onPressedChange={() => handleToggleKey('Down')}
                     className="w-12 h-12"
                   >
@@ -173,7 +170,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="Select"
                     aria-label="Select"
-                    pressed={pressedKeys.includes('Select')}
+                    pressed={availableKeys.includes('Select')}
                     onPressedChange={() => handleToggleKey('Select')}
                     className="px-3 py-2"
                   >
@@ -182,7 +179,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="Start"
                     aria-label="Start"
-                    pressed={pressedKeys.includes('Start')}
+                    pressed={availableKeys.includes('Start')}
                     onPressedChange={() => handleToggleKey('Start')}
                     className="px-3 py-2"
                   >
@@ -199,7 +196,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="X"
                     aria-label="X"
-                    pressed={pressedKeys.includes('X')}
+                    pressed={availableKeys.includes('X')}
                     onPressedChange={() => handleToggleKey('X')}
                     className="w-12 h-12"
                   >
@@ -210,7 +207,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="Y"
                     aria-label="Y"
-                    pressed={pressedKeys.includes('Y')}
+                    pressed={availableKeys.includes('Y')}
                     onPressedChange={() => handleToggleKey('Y')}
                     className="w-12 h-12"
                   >
@@ -220,7 +217,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="A"
                     aria-label="A"
-                    pressed={pressedKeys.includes('A')}
+                    pressed={availableKeys.includes('A')}
                     onPressedChange={() => handleToggleKey('A')}
                     className="w-12 h-12"
                   >
@@ -231,7 +228,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="B"
                     aria-label="B"
-                    pressed={pressedKeys.includes('B')}
+                    pressed={availableKeys.includes('B')}
                     onPressedChange={() => handleToggleKey('B')}
                     className="w-12 h-12"
                   >
@@ -247,7 +244,7 @@ export function KeyInputParam() {
               <Toggle
                 value="L"
                 aria-label="L"
-                pressed={pressedKeys.includes('L')}
+                pressed={availableKeys.includes('L')}
                 onPressedChange={() => handleToggleKey('L')}
                 className="px-6 py-2"
               >
@@ -256,7 +253,7 @@ export function KeyInputParam() {
               <Toggle
                 value="R"
                 aria-label="R"
-                pressed={pressedKeys.includes('R')}
+                pressed={availableKeys.includes('R')}
                 onPressedChange={() => handleToggleKey('R')}
                 className="px-6 py-2"
               >

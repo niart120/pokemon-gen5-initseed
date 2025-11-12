@@ -133,8 +133,46 @@ pub struct IntegratedSeedSearcher {
     // 実行時に必要なパラメータ
     hardware: String,
 
-    // キャッシュされた基本メッセージ
+    // キャッシュされた基本メッセージ（キー入力以外）
     base_message: [u32; 16],
+    
+    // 利用可能なキー入力マスク
+    key_input_mask: u32,
+    
+    // 利用可能なキーコードのリスト（べき集合から生成）
+    key_codes: Vec<u32>,
+}
+
+/// キーマスクからべき集合を生成し、各要素を 0x2FFF と XOR したキーコードを返す
+fn generate_key_codes(key_input_mask: u32) -> Vec<u32> {
+    let mut enabled_bits = Vec::new();
+    
+    // 有効なビット位置を収集
+    for bit in 0..12 {
+        if (key_input_mask & (1 << bit)) != 0 {
+            enabled_bits.push(bit);
+        }
+    }
+    
+    // べき集合を生成（2^n 通りの組み合わせ）
+    let n = enabled_bits.len();
+    let total_combinations = 1 << n; // 2^n
+    let mut key_codes = Vec::with_capacity(total_combinations);
+    
+    for i in 0..total_combinations {
+        let mut combination = 0u32;
+        for (bit_index, &bit_pos) in enabled_bits.iter().enumerate() {
+            if (i & (1 << bit_index)) != 0 {
+                // このビットを0にする（キーが押されている）
+                combination |= 1 << bit_pos;
+            }
+        }
+        // 押されているビットが0、押されていないビットが1の状態を0x2FFFとXOR
+        let key_code = combination ^ 0x2FFF;
+        key_codes.push(key_code);
+    }
+    
+    key_codes
 }
 
 #[wasm_bindgen]
@@ -145,7 +183,7 @@ impl IntegratedSeedSearcher {
         mac: &[u8],
         nazo: &[u32],
         hardware: &str,
-        key_input: u32,
+        key_input_mask: u32,
         frame: u32,
     ) -> Result<IntegratedSeedSearcher, JsValue> {
         // バリデーション
@@ -162,7 +200,7 @@ impl IntegratedSeedSearcher {
             _ => return Err(JsValue::from_str("Hardware must be DS, DS_LITE, or 3DS")),
         }
 
-        // 基本メッセージテンプレートを事前構築（TypeScript側レイアウトに準拠）
+        // 基本メッセージテンプレートを事前構築（キー入力以外）
         let mut base_message = [0u32; 16];
 
         // data[0-4]: Nazo values (little-endian conversion already applied)
@@ -190,17 +228,23 @@ impl IntegratedSeedSearcher {
         base_message[10] = 0x00000000;
         base_message[11] = 0x00000000;
 
-        // data[12]: Key input (now configurable)
-        base_message[12] = swap_bytes_32(key_input);
+        // data[12]: Key input - 動的に設定（キーコードリストから選択）
+        // ここでは仮の値を設定
+        base_message[12] = 0;
 
         // data[13-15]: SHA-1 padding
         base_message[13] = 0x80000000;
         base_message[14] = 0x00000000;
         base_message[15] = 0x000001A0;
+        
+        // キーコードリストを生成
+        let key_codes = generate_key_codes(key_input_mask);
 
         Ok(IntegratedSeedSearcher {
             hardware: hardware.to_string(),
             base_message,
+            key_input_mask,
+            key_codes,
         })
     }
 
@@ -246,32 +290,35 @@ impl IntegratedSeedSearcher {
         // 外側ループ: Timer0とVCount（SIMD版と同様の構造）
         for timer0 in timer0_min..=timer0_max {
             for vcount in vcount_min..=vcount_max {
-                // 内側ループ: 日時範囲の探索
-                for second_offset in 0..range_seconds {
-                    let current_seconds_since_2000 = base_seconds_since_2000 + second_offset as i64;
+                // キー入力の全組み合わせをループ
+                for &key_code in &self.key_codes {
+                    // 内側ループ: 日時範囲の探索
+                    for second_offset in 0..range_seconds {
+                        let current_seconds_since_2000 = base_seconds_since_2000 + second_offset as i64;
 
-                    let (time_code, date_code) =
-                        match self.calculate_datetime_codes(current_seconds_since_2000) {
-                            Some(result) => result,
-                            None => continue,
-                        };
+                        let (time_code, date_code) =
+                            match self.calculate_datetime_codes(current_seconds_since_2000) {
+                                Some(result) => result,
+                                None => continue,
+                            };
 
-                    // メッセージを構築してSHA-1計算
-                    let message = self.build_message(timer0, vcount, date_code, time_code);
-                    let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(&message);
-                    let seed = crate::sha1::calculate_pokemon_seed_from_hash(h0, h1);
+                        // メッセージを構築してSHA-1計算
+                        let message = self.build_message(timer0, vcount, date_code, time_code, key_code);
+                        let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(&message);
+                        let seed = crate::sha1::calculate_pokemon_seed_from_hash(h0, h1);
 
-                    // ターゲットシードマッチ時のみ日時とハッシュを生成
-                    let hash_values = HashValues { h0, h1, h2, h3, h4 };
-                    let params = SearchParams { timer0, vcount };
-                    self.check_and_add_result(
-                        seed,
-                        &hash_values,
-                        current_seconds_since_2000,
-                        &params,
-                        &target_set,
-                        &results,
-                    );
+                        // ターゲットシードマッチ時のみ日時とハッシュを生成
+                        let hash_values = HashValues { h0, h1, h2, h3, h4 };
+                        let params = SearchParams { timer0, vcount };
+                        self.check_and_add_result(
+                            seed,
+                            &hash_values,
+                            current_seconds_since_2000,
+                            &params,
+                            &target_set,
+                            &results,
+                        );
+                    }
                 }
             }
         }
@@ -321,30 +368,35 @@ impl IntegratedSeedSearcher {
         // 外側ループ: Timer0とVCount
         for timer0 in timer0_min..=timer0_max {
             for vcount in vcount_min..=vcount_max {
-                for second_offset in (0..range_seconds).step_by(4) {
-                    let batch_size = std::cmp::min(4, range_seconds - second_offset);
+                // キー入力の全組み合わせをループ
+                for &key_code in &self.key_codes {
+                    for second_offset in (0..range_seconds).step_by(4) {
+                        let batch_size = std::cmp::min(4, range_seconds - second_offset);
 
-                    if batch_size == 4 {
-                        // 4つの秒を並列処理
-                        let params = SearchParams { timer0, vcount };
-                        self.process_simd_batch(
-                            second_offset,
-                            base_seconds_since_2000,
-                            &params,
-                            &target_set,
-                            &results,
-                        );
-                    } else {
-                        // 残りの秒を個別処理
-                        let params = SearchParams { timer0, vcount };
-                        self.process_remaining_seconds(
-                            second_offset,
-                            batch_size,
-                            base_seconds_since_2000,
-                            &params,
-                            &target_set,
-                            &results,
-                        );
+                        if batch_size == 4 {
+                            // 4つの秒を並列処理
+                            let params = SearchParams { timer0, vcount };
+                            self.process_simd_batch(
+                                second_offset,
+                                base_seconds_since_2000,
+                                &params,
+                                key_code,
+                                &target_set,
+                                &results,
+                            );
+                        } else {
+                            // 残りの秒を個別処理
+                            let params = SearchParams { timer0, vcount };
+                            self.process_remaining_seconds(
+                                second_offset,
+                                batch_size,
+                                base_seconds_since_2000,
+                                &params,
+                                key_code,
+                                &target_set,
+                                &results,
+                            );
+                        }
                     }
                 }
             }
@@ -360,6 +412,7 @@ impl IntegratedSeedSearcher {
         second_offset: u32,
         base_seconds_since_2000: i64,
         params: &SearchParams,
+        key_code: u32,
         target_seeds: &BTreeSet<u32>,
         results: &js_sys::Array,
     ) {
@@ -370,6 +423,7 @@ impl IntegratedSeedSearcher {
         // Timer0/VCountの値を事前に計算（SIMD用）
         let timer_vcount_value = (params.vcount << 16) | params.timer0;
         let swapped_timer_vcount = crate::sha1::swap_bytes_32(timer_vcount_value);
+        let swapped_key_code = crate::sha1::swap_bytes_32(key_code);
 
         // 4つのメッセージを準備
         for i in 0..4 {
@@ -392,6 +446,7 @@ impl IntegratedSeedSearcher {
             message[5] = swapped_timer_vcount; // 事前計算済み
             message[8] = date_code;
             message[9] = time_code;
+            message[12] = swapped_key_code;
 
             let base_idx = i * 16;
             messages[base_idx..base_idx + 16].copy_from_slice(&message);
@@ -438,6 +493,7 @@ impl IntegratedSeedSearcher {
         batch_size: u32,
         base_seconds_since_2000: i64,
         params: &SearchParams,
+        key_code: u32,
         target_seeds: &BTreeSet<u32>,
         results: &js_sys::Array,
     ) {
@@ -452,7 +508,7 @@ impl IntegratedSeedSearcher {
                 };
 
             // メッセージを構築してSHA-1計算
-            let message = self.build_message(params.timer0, params.vcount, date_code, time_code);
+            let message = self.build_message(params.timer0, params.vcount, date_code, time_code, key_code);
             let (h0, h1, h2, h3, h4) = crate::sha1::calculate_pokemon_sha1(&message);
             let seed = crate::sha1::calculate_pokemon_seed_from_hash(h0, h1);
 
@@ -505,11 +561,12 @@ impl IntegratedSeedSearcher {
 
     /// メッセージ構築の共通処理
     #[inline(always)]
-    fn build_message(&self, timer0: u32, vcount: u32, date_code: u32, time_code: u32) -> [u32; 16] {
+    fn build_message(&self, timer0: u32, vcount: u32, date_code: u32, time_code: u32, key_code: u32) -> [u32; 16] {
         let mut message = self.base_message;
         message[5] = crate::sha1::swap_bytes_32((vcount << 16) | timer0);
         message[8] = date_code;
         message[9] = time_code;
+        message[12] = crate::sha1::swap_bytes_32(key_code);
         message
     }
 
