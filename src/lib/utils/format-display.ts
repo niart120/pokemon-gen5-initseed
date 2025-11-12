@@ -8,7 +8,7 @@ export function pidHex(pid: number): string {
 }
 
 export function seedHex(seed: bigint | number): string {
-  return '0x' + formatHexDisplay(typeof seed === 'bigint' ? seed : BigInt(seed >>> 0), 16, true);
+  return formatHexDisplay(typeof seed === 'bigint' ? seed : BigInt(seed >>> 0), 16, true);
 }
 
 const UNKNOWN_LABEL: Record<SupportedLocale, string> = {
