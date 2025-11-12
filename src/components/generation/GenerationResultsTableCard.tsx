@@ -4,7 +4,7 @@ import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-he
 import { Table } from '@phosphor-icons/react';
 import { useAppStore } from '@/store/app-store';
 import { selectFilteredSortedResults, selectUiReadyResults, type GenerationSlice } from '@/store/generation-store';
-import { pidHex, natureName, shinyLabel, seedHex, needleDisplay } from '@/lib/utils/format-display';
+import { pidHex, natureName, shinyLabel, seedHex, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
 
@@ -35,7 +35,8 @@ export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProp
           <thead className="sticky top-0 bg-muted text-[11px]">
             <tr className="text-left">
               <th scope="col" className="px-2 py-1 font-medium w-14">Adv<span className="sr-only">ance</span></th>
-              <th scope="col" className="px-2 py-1 font-medium min-w-[70px] w-20">needle</th>
+              <th scope="col" className="px-2 py-1 font-medium w-10">dir</th>
+              <th scope="col" className="px-2 py-1 font-medium w-8">v</th>
               <th scope="col" className="px-2 py-1 font-medium min-w-[90px] w-32">Species</th>
               <th scope="col" className="px-2 py-1 font-medium w-32">PID</th>
               <th scope="col" className="px-2 py-1 font-medium w-24">Nature</th>
@@ -49,10 +50,12 @@ export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProp
           <tbody>
             {rawResults.map((r, idx) => {
               const u = uiResults[idx];
+              const needleDir = calculateNeedleDirection(r.seed);
               return (
                 <tr key={r.advance} className="odd:bg-background even:bg-muted/30">
                   <td className="px-2 py-1 font-mono tabular-nums">{r.advance}</td>
-                  <td className="px-2 py-1 font-mono whitespace-nowrap">{needleDisplay(r.seed)}</td>
+                  <td className="px-2 py-1 text-center">{needleDirectionArrow(needleDir)}</td>
+                  <td className="px-2 py-1 font-mono tabular-nums">{needleDir}</td>
                   <td className="px-2 py-1 truncate max-w-[120px]" title={u?.speciesName || 'Unknown'}>{u?.speciesName || 'Unknown'}</td>
                   <td className="px-2 py-1 font-mono whitespace-nowrap">{pidHex(r.pid)}</td>
                   <td className="px-2 py-1 whitespace-nowrap">{natureName(r.nature, locale)}</td>
