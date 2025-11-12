@@ -9,7 +9,8 @@ import { KEY_INPUT_DEFAULT, keyMaskToNames, keyNamesToMask, type KeyName } from 
 export function KeyInputParam() {
   const { searchConditions, setSearchConditions } = useAppStore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [tempKeyInput, setTempKeyInput] = useState(searchConditions.keyInput);
+  // 初期状態は全解除（すべてのキーを未選択）にする
+  const [tempKeyInput, setTempKeyInput] = useState(KEY_INPUT_DEFAULT);
   
   // 現在利用可能なキーのリスト
   const availableKeys = keyMaskToNames(searchConditions.keyInput);
