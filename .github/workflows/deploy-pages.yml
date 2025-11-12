@@ -1,0 +1,80 @@
+---
+name: Deploy to GitHub Pages
+
+'on':
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    # copilot/* ブランチから main へのマージ時のみ実行
+    if: |
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'copilot/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Install wasm-pack
+        run: >-
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh
+          -sSf | sh
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            wasm-pkg/target/
+            node_modules/
+          key: >-
+            ${{ runner.os }}-deploy-${{ hashFiles('**/package-lock.json',
+            '**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-deploy-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and deploy
+        run: npm run deploy
+
+      - name: Configure git
+        run: |
+          git config --local user.email \
+            "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Commit and push docs changes
+        run: |
+          git add docs/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: auto-deploy GitHub Pages [skip ci]"
+            git push
+          fi
