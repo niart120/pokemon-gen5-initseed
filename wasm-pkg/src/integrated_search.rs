@@ -147,8 +147,50 @@ pub struct IntegratedSeedSearcher {
     key_codes: Vec<u32>,
 }
 
+/// 実機上で不可能なキー入力の組み合わせをチェックする
+/// 
+/// XOR 0x2FFFする前の生のキーコード（押されているキーが1のビット）について判定
+/// 
+/// # 不可能な組み合わせ
+/// - 上下同時押し (UP: bit 6, DOWN: bit 7)
+/// - 左右同時押し (LEFT: bit 5, RIGHT: bit 4)
+/// - Start, Select, L, R の4つ同時押し (START: bit 3, SELECT: bit 2, L: bit 9, R: bit 8)
+fn is_invalid_key_combination(raw_key_input: u32) -> bool {
+    // ビット定義
+    const RIGHT: u32 = 1 << 4;
+    const LEFT: u32 = 1 << 5;
+    const UP: u32 = 1 << 6;
+    const DOWN: u32 = 1 << 7;
+    const R: u32 = 1 << 8;
+    const L: u32 = 1 << 9;
+    const SELECT: u32 = 1 << 2;
+    const START: u32 = 1 << 3;
+
+    // 上下同時押しチェック
+    if (raw_key_input & UP) != 0 && (raw_key_input & DOWN) != 0 {
+        return true;
+    }
+
+    // 左右同時押しチェック
+    if (raw_key_input & LEFT) != 0 && (raw_key_input & RIGHT) != 0 {
+        return true;
+    }
+
+    // Start, Select, L, R の4つ同時押しチェック
+    if (raw_key_input & START) != 0
+        && (raw_key_input & SELECT) != 0
+        && (raw_key_input & L) != 0
+        && (raw_key_input & R) != 0
+    {
+        return true;
+    }
+
+    false
+}
+
 /// キーマスクからべき集合を生成し、各要素を 0x2FFF と XOR したキーコードを返す
-fn generate_key_codes(key_input_mask: u32) -> Vec<u32> {
+/// 実機上で不可能なキー入力の組み合わせは除外される
+pub(crate) fn generate_key_codes(key_input_mask: u32) -> Vec<u32> {
     let mut enabled_bits = Vec::new();
     
     // 有効なビット位置を収集
@@ -171,6 +213,12 @@ fn generate_key_codes(key_input_mask: u32) -> Vec<u32> {
                 combination |= 1 << bit_pos;
             }
         }
+        
+        // 不可能なキー入力の組み合わせをチェック
+        if is_invalid_key_combination(combination) {
+            continue;
+        }
+        
         // 押されているビットが0、押されていないビットが1の状態を0x2FFFとXOR
         let key_code = combination ^ 0x2FFF;
         key_codes.push(key_code);
