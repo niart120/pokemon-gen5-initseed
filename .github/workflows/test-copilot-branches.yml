@@ -33,6 +33,11 @@ jobs:
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh
           -sSf | sh
 
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
@@ -52,5 +57,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
+      - name: Build WebAssembly
+        run: npm run build:wasm
+
+      - name: Copy WASM files
+        run: npm run copy:wasm
+
+      - name: Run Rust tests
+        run: npm run test:rust
+
+      - name: Run Rust browser tests
+        run: npm run test:rust:browser
+
+      - name: Run JavaScript tests
         run: npm run test
