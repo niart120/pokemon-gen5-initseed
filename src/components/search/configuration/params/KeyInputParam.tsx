@@ -56,12 +56,14 @@ function calculateKeyInput(availableKeys: KeyName[]): number {
 export function KeyInputParam() {
   const { searchConditions, setSearchConditions } = useAppStore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [tempKeyInput, setTempKeyInput] = useState(searchConditions.keyInput);
   
   // 現在利用可能なキーのリスト
   const availableKeys = getAvailableKeys(searchConditions.keyInput);
+  const tempAvailableKeys = getAvailableKeys(tempKeyInput);
   
   const handleToggleKey = (key: KeyName) => {
-    const currentAvailable = getAvailableKeys(searchConditions.keyInput);
+    const currentAvailable = getAvailableKeys(tempKeyInput);
     let newAvailable: KeyName[];
     
     if (currentAvailable.includes(key)) {
@@ -73,11 +75,21 @@ export function KeyInputParam() {
     }
     
     const newKeyInput = calculateKeyInput(newAvailable);
-    setSearchConditions({ keyInput: newKeyInput });
+    setTempKeyInput(newKeyInput);
   };
 
   const handleReset = () => {
-    setSearchConditions({ keyInput: DEFAULT_KEY_INPUT });
+    setTempKeyInput(DEFAULT_KEY_INPUT);
+  };
+  
+  const handleApply = () => {
+    setSearchConditions({ keyInput: tempKeyInput });
+    setIsDialogOpen(false);
+  };
+  
+  const handleOpenDialog = () => {
+    setTempKeyInput(searchConditions.keyInput);
+    setIsDialogOpen(true);
   };
 
   return (
@@ -87,7 +99,7 @@ export function KeyInputParam() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setIsDialogOpen(true)}
+          onClick={handleOpenDialog}
           className="gap-2"
         >
           <GameController size={16} />
@@ -97,7 +109,7 @@ export function KeyInputParam() {
       
       {availableKeys.length > 0 && (
         <div className="text-xs text-muted-foreground">
-          Available keys: {availableKeys.join(', ')}
+          {availableKeys.join(', ')}
         </div>
       )}
       
@@ -105,23 +117,41 @@ export function KeyInputParam() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Key Input Configuration</DialogTitle>
-            <DialogDescription>
-              Select the keys that can be pressed during seed generation. Layout matches the actual controller.
-            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6 py-4">
+            {/* L/Rボタン (最上部) */}
+            <div className="flex justify-between px-8">
+              <Toggle
+                value="L"
+                aria-label="L"
+                pressed={tempAvailableKeys.includes('L')}
+                onPressedChange={() => handleToggleKey('L')}
+                className="px-6 py-2"
+              >
+                L
+              </Toggle>
+              <Toggle
+                value="R"
+                aria-label="R"
+                pressed={tempAvailableKeys.includes('R')}
+                onPressedChange={() => handleToggleKey('R')}
+                className="px-6 py-2"
+              >
+                R
+              </Toggle>
+            </div>
+            
             {/* コントローラレイアウト */}
             <div className="grid grid-cols-3 gap-4">
               {/* 左エリア: 十字キー */}
               <div className="flex flex-col items-center justify-center space-y-2">
-                <div className="text-xs font-medium mb-2">D-Pad</div>
                 <div className="grid grid-cols-3 gap-1">
                   <div></div>
                   <Toggle
                     value="Up"
                     aria-label="Up"
-                    pressed={availableKeys.includes('Up')}
+                    pressed={tempAvailableKeys.includes('Up')}
                     onPressedChange={() => handleToggleKey('Up')}
                     className="w-12 h-12"
                   >
@@ -132,7 +162,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="Left"
                     aria-label="Left"
-                    pressed={availableKeys.includes('Left')}
+                    pressed={tempAvailableKeys.includes('Left')}
                     onPressedChange={() => handleToggleKey('Left')}
                     className="w-12 h-12"
                   >
@@ -142,7 +172,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="Right"
                     aria-label="Right"
-                    pressed={availableKeys.includes('Right')}
+                    pressed={tempAvailableKeys.includes('Right')}
                     onPressedChange={() => handleToggleKey('Right')}
                     className="w-12 h-12"
                   >
@@ -153,7 +183,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="Down"
                     aria-label="Down"
-                    pressed={availableKeys.includes('Down')}
+                    pressed={tempAvailableKeys.includes('Down')}
                     onPressedChange={() => handleToggleKey('Down')}
                     className="w-12 h-12"
                   >
@@ -165,12 +195,11 @@ export function KeyInputParam() {
               
               {/* 中央エリア: Select/Start */}
               <div className="flex flex-col items-center justify-center space-y-2">
-                <div className="text-xs font-medium mb-2">Center</div>
                 <div className="flex gap-2">
                   <Toggle
                     value="Select"
                     aria-label="Select"
-                    pressed={availableKeys.includes('Select')}
+                    pressed={tempAvailableKeys.includes('Select')}
                     onPressedChange={() => handleToggleKey('Select')}
                     className="px-3 py-2"
                   >
@@ -179,7 +208,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="Start"
                     aria-label="Start"
-                    pressed={availableKeys.includes('Start')}
+                    pressed={tempAvailableKeys.includes('Start')}
                     onPressedChange={() => handleToggleKey('Start')}
                     className="px-3 py-2"
                   >
@@ -190,13 +219,12 @@ export function KeyInputParam() {
               
               {/* 右エリア: A/B/X/Y */}
               <div className="flex flex-col items-center justify-center space-y-2">
-                <div className="text-xs font-medium mb-2">Buttons</div>
                 <div className="grid grid-cols-3 gap-1">
                   <div></div>
                   <Toggle
                     value="X"
                     aria-label="X"
-                    pressed={availableKeys.includes('X')}
+                    pressed={tempAvailableKeys.includes('X')}
                     onPressedChange={() => handleToggleKey('X')}
                     className="w-12 h-12"
                   >
@@ -207,7 +235,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="Y"
                     aria-label="Y"
-                    pressed={availableKeys.includes('Y')}
+                    pressed={tempAvailableKeys.includes('Y')}
                     onPressedChange={() => handleToggleKey('Y')}
                     className="w-12 h-12"
                   >
@@ -217,7 +245,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="A"
                     aria-label="A"
-                    pressed={availableKeys.includes('A')}
+                    pressed={tempAvailableKeys.includes('A')}
                     onPressedChange={() => handleToggleKey('A')}
                     className="w-12 h-12"
                   >
@@ -228,7 +256,7 @@ export function KeyInputParam() {
                   <Toggle
                     value="B"
                     aria-label="B"
-                    pressed={availableKeys.includes('B')}
+                    pressed={tempAvailableKeys.includes('B')}
                     onPressedChange={() => handleToggleKey('B')}
                     className="w-12 h-12"
                   >
@@ -239,39 +267,20 @@ export function KeyInputParam() {
               </div>
             </div>
             
-            {/* L/Rボタン */}
-            <div className="flex justify-between px-8">
-              <Toggle
-                value="L"
-                aria-label="L"
-                pressed={availableKeys.includes('L')}
-                onPressedChange={() => handleToggleKey('L')}
-                className="px-6 py-2"
-              >
-                L
-              </Toggle>
-              <Toggle
-                value="R"
-                aria-label="R"
-                pressed={availableKeys.includes('R')}
-                onPressedChange={() => handleToggleKey('R')}
-                className="px-6 py-2"
-              >
-                R
-              </Toggle>
-            </div>
-            
-            {/* リセットボタン */}
+            {/* ボタン群 */}
             <div className="flex justify-between items-center pt-4 border-t">
-              <div className="text-sm text-muted-foreground">
-                Selected: {availableKeys.length} key{availableKeys.length !== 1 ? 's' : ''}
-              </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleReset}
               >
                 Reset All
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleApply}
+              >
+                Apply
               </Button>
             </div>
           </div>
