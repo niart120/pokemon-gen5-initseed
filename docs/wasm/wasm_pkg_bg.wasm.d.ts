@@ -6,7 +6,7 @@ export const encountercalculator_calculate_encounter_slot: (a: number, b: number
 export const encountercalculator_slot_to_table_index: (a: number, b: number) => number;
 export const encountercalculator_get_dust_cloud_content: (a: number) => number;
 export const __wbg_searchresult_free: (a: number, b: number) => void;
-export const searchresult_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => number;
+export const searchresult_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => number;
 export const searchresult_hash: (a: number, b: number) => void;
 export const searchresult_year: (a: number) => number;
 export const searchresult_month: (a: number) => number;
@@ -16,6 +16,7 @@ export const searchresult_minute: (a: number) => number;
 export const searchresult_second: (a: number) => number;
 export const searchresult_timer0: (a: number) => number;
 export const searchresult_vcount: (a: number) => number;
+export const searchresult_key_code: (a: number) => number;
 export const __wbg_integratedseedsearcher_free: (a: number, b: number) => void;
 export const integratedseedsearcher_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
 export const integratedseedsearcher_search_seeds_integrated: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => number;

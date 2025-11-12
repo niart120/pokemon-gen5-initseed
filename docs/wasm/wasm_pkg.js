@@ -1001,10 +1001,10 @@ export class IntegratedSeedSearcher {
      * @param {Uint8Array} mac
      * @param {Uint32Array} nazo
      * @param {string} hardware
-     * @param {number} key_input
+     * @param {number} key_input_mask
      * @param {number} frame
      */
-    constructor(mac, nazo, hardware, key_input, frame) {
+    constructor(mac, nazo, hardware, key_input_mask, frame) {
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             const ptr0 = passArray8ToWasm0(mac, wasm.__wbindgen_export_0);
@@ -1013,7 +1013,7 @@ export class IntegratedSeedSearcher {
             const len1 = WASM_VECTOR_LEN;
             const ptr2 = passStringToWasm0(hardware, wasm.__wbindgen_export_0, wasm.__wbindgen_export_1);
             const len2 = WASM_VECTOR_LEN;
-            wasm.integratedseedsearcher_new(retptr, ptr0, len0, ptr1, len1, ptr2, len2, key_input, frame);
+            wasm.integratedseedsearcher_new(retptr, ptr0, len0, ptr1, len1, ptr2, len2, key_input_mask, frame);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
@@ -1903,13 +1903,14 @@ export class SearchResult {
      * @param {number} hour
      * @param {number} minute
      * @param {number} second
+     * @param {number} key_code
      * @param {number} timer0
      * @param {number} vcount
      */
-    constructor(seed, hash, year, month, date, hour, minute, second, timer0, vcount) {
+    constructor(seed, hash, year, month, date, hour, minute, second, key_code, timer0, vcount) {
         const ptr0 = passStringToWasm0(hash, wasm.__wbindgen_export_0, wasm.__wbindgen_export_1);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.searchresult_new(seed, ptr0, len0, year, month, date, hour, minute, second, timer0, vcount);
+        const ret = wasm.searchresult_new(seed, ptr0, len0, year, month, date, hour, minute, second, key_code, timer0, vcount);
         this.__wbg_ptr = ret >>> 0;
         SearchResultFinalization.register(this, this.__wbg_ptr, this);
         return this;
@@ -1994,6 +1995,13 @@ export class SearchResult {
      */
     get vcount() {
         const ret = wasm.searchresult_vcount(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get keyCode() {
+        const ret = wasm.searchresult_key_code(this.__wbg_ptr);
         return ret >>> 0;
     }
 }

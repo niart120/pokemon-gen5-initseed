@@ -425,7 +425,7 @@ export class IntegratedSeedSearcher {
   /**
    * コンストラクタ: 固定パラメータの事前計算
    */
-  constructor(mac: Uint8Array, nazo: Uint32Array, hardware: string, key_input: number, frame: number);
+  constructor(mac: Uint8Array, nazo: Uint32Array, hardware: string, key_input_mask: number, frame: number);
   /**
    * 統合シード探索メイン関数
    * 日時範囲とTimer0/VCount範囲を指定して一括探索
@@ -853,7 +853,7 @@ export class RawPokemonData {
  */
 export class SearchResult {
   free(): void;
-  constructor(seed: number, hash: string, year: number, month: number, date: number, hour: number, minute: number, second: number, timer0: number, vcount: number);
+  constructor(seed: number, hash: string, year: number, month: number, date: number, hour: number, minute: number, second: number, key_code: number, timer0: number, vcount: number);
   readonly seed: number;
   readonly hash: string;
   readonly year: number;
@@ -864,6 +864,7 @@ export class SearchResult {
   readonly second: number;
   readonly timer0: number;
   readonly vcount: number;
+  readonly keyCode: number;
 }
 /**
  * 連続列挙用のシード列挙器（offsetのみ）
@@ -1057,7 +1058,7 @@ export interface InitOutput {
   readonly encountercalculator_slot_to_table_index: (a: number, b: number) => number;
   readonly encountercalculator_get_dust_cloud_content: (a: number) => number;
   readonly __wbg_searchresult_free: (a: number, b: number) => void;
-  readonly searchresult_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => number;
+  readonly searchresult_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => number;
   readonly searchresult_hash: (a: number, b: number) => void;
   readonly searchresult_year: (a: number) => number;
   readonly searchresult_month: (a: number) => number;
@@ -1067,6 +1068,7 @@ export interface InitOutput {
   readonly searchresult_second: (a: number) => number;
   readonly searchresult_timer0: (a: number) => number;
   readonly searchresult_vcount: (a: number) => number;
+  readonly searchresult_key_code: (a: number) => number;
   readonly __wbg_integratedseedsearcher_free: (a: number, b: number) => void;
   readonly integratedseedsearcher_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
   readonly integratedseedsearcher_search_seeds_integrated: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => number;
