@@ -48,6 +48,35 @@ export function shinyDomainStatus(t: number): 'normal' | 'square' | 'star' {
   }
 }
 
+/**
+ * Calculate needle direction value from LCG seed
+ * Formula: ((seed >>> 32n) * 8n) >> 32n
+ * Returns value 0-7 representing 8 directions
+ */
+export function calculateNeedleDirection(seed: bigint): number {
+  const direction = ((seed >> 32n) * 8n) >> 32n;
+  return Number(direction & 7n); // Ensure 0-7 range
+}
+
+/**
+ * Map needle direction value to arrow character
+ * 0: ↑, 1: ↗, 2: →, 3: ↘, 4: ↓, 5: ↙, 6: ←, 7: ↖
+ */
+export function needleDirectionArrow(direction: number): string {
+  const arrows = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
+  return arrows[direction] ?? '?';
+}
+
+/**
+ * Get formatted needle display with both arrow and value
+ * e.g., "↑(0)", "↗(1)", etc.
+ */
+export function needleDisplay(seed: bigint): string {
+  const direction = calculateNeedleDirection(seed);
+  const arrow = needleDirectionArrow(direction);
+  return `${arrow}(${direction})`;
+}
+
 export function adaptGenerationResultDisplay(r: GenerationResult, locale: SupportedLocale = 'en') {
   return {
     advance: r.advance,

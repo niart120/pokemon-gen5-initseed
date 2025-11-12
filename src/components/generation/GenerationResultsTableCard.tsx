@@ -4,7 +4,7 @@ import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-he
 import { Table } from '@phosphor-icons/react';
 import { useAppStore } from '@/store/app-store';
 import { selectFilteredSortedResults, selectUiReadyResults, type GenerationSlice } from '@/store/generation-store';
-import { pidHex, natureName, shinyLabel } from '@/lib/utils/format-display';
+import { pidHex, natureName, shinyLabel, seedHex, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
 
@@ -35,6 +35,8 @@ export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProp
           <thead className="sticky top-0 bg-muted text-[11px]">
             <tr className="text-left">
               <th scope="col" className="px-2 py-1 font-medium w-14">Adv<span className="sr-only">ance</span></th>
+              <th scope="col" className="px-2 py-1 font-medium w-10">dir</th>
+              <th scope="col" className="px-2 py-1 font-medium w-8">v</th>
               <th scope="col" className="px-2 py-1 font-medium min-w-[90px] w-32">Species</th>
               <th scope="col" className="px-2 py-1 font-medium w-32">PID</th>
               <th scope="col" className="px-2 py-1 font-medium w-24">Nature</th>
@@ -42,14 +44,18 @@ export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProp
               <th scope="col" className="px-2 py-1 font-medium w-8">G<span className="sr-only">ender</span></th>
               <th scope="col" className="px-2 py-1 font-medium w-10">Lv</th>
               <th scope="col" className="px-2 py-1 font-medium w-16">Shiny</th>
+              <th scope="col" className="px-2 py-1 font-medium min-w-[120px] w-36">Seed</th>
             </tr>
           </thead>
           <tbody>
             {rawResults.map((r, idx) => {
               const u = uiResults[idx];
+              const needleDir = calculateNeedleDirection(r.seed);
               return (
                 <tr key={r.advance} className="odd:bg-background even:bg-muted/30">
                   <td className="px-2 py-1 font-mono tabular-nums">{r.advance}</td>
+                  <td className="px-2 py-1 text-center">{needleDirectionArrow(needleDir)}</td>
+                  <td className="px-2 py-1 font-mono tabular-nums">{needleDir}</td>
                   <td className="px-2 py-1 truncate max-w-[120px]" title={u?.speciesName || 'Unknown'}>{u?.speciesName || 'Unknown'}</td>
                   <td className="px-2 py-1 font-mono whitespace-nowrap">{pidHex(r.pid)}</td>
                   <td className="px-2 py-1 whitespace-nowrap">{natureName(r.nature, locale)}</td>
@@ -57,6 +63,7 @@ export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProp
                   <td className="px-2 py-1">{u?.gender || '?'}</td>
                   <td className="px-2 py-1 tabular-nums">{u?.level ?? ''}</td>
                   <td className="px-2 py-1">{shinyLabel(r.shiny_type, locale)}</td>
+                  <td className="px-2 py-1 font-mono whitespace-nowrap">{seedHex(r.seed)}</td>
                 </tr>
               );
             })}
