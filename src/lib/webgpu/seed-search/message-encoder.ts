@@ -1,4 +1,5 @@
 import romParameters from '@/data/rom-parameters';
+import { hasImpossibleKeyCombination, KEY_CODE_BASE } from '@/lib/utils/key-input';
 import type { Hardware } from '@/types/rom';
 import type { SearchConditions } from '@/types/search';
 import type { GpuSha1WorkloadConfig, WebGpuSearchContext, WebGpuSegment } from './types';
@@ -40,9 +41,13 @@ function generateKeyCodes(keyInputMask: number): number[] {
         combination |= 1 << enabledBits[bitIndex];
       }
     }
-    // XOR with 0x2FFF to get the keycode
+    if (hasImpossibleKeyCombination(combination)) {
+      continue;
+    }
+
+    // XOR with base value to get the keycode
     // (pressed keys become 0, unpressed become 1, then XOR inverts them)
-    const keyCode = combination ^ 0x2FFF;
+    const keyCode = combination ^ KEY_CODE_BASE;
     keyCodes.push(keyCode);
   }
   
