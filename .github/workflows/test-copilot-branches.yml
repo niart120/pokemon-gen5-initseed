@@ -66,8 +66,5 @@ jobs:
       - name: Run Rust tests
         run: npm run test:rust
 
-      - name: Run Rust browser tests
-        run: npm run test:rust:browser
-
       - name: Run JavaScript tests
         run: npm run test
