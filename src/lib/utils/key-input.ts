@@ -24,9 +24,25 @@ const KEY_MASK_LIMIT = 0x0FFF;
 export const KEY_CODE_BASE = 0x2FFF;
 export const KEY_INPUT_DEFAULT = 0x0000;
 
+export const RAW_INVALID_KEY_COMBINATION_MASKS = [
+  (1 << KEY_TO_BIT['Up']) | (1 << KEY_TO_BIT['Down']),
+  (1 << KEY_TO_BIT['Left']) | (1 << KEY_TO_BIT['Right']),
+  (1 << KEY_TO_BIT['Select']) | (1 << KEY_TO_BIT['Start']) | (1 << KEY_TO_BIT['L']) | (1 << KEY_TO_BIT['R']),
+] as const;
+
 function normalizeMask(mask: number): number {
   if (!Number.isFinite(mask)) return 0;
   return mask & KEY_MASK_LIMIT;
+}
+
+export function hasImpossibleKeyCombination(rawMask: number): boolean {
+  const normalized = normalizeMask(rawMask);
+  for (const invalidMask of RAW_INVALID_KEY_COMBINATION_MASKS) {
+    if ((normalized & invalidMask) === invalidMask) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function keyMaskToNames(mask: number): KeyName[] {

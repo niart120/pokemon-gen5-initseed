@@ -431,4 +431,290 @@ mod native_tests {
     // 注意: IntegratedSeedSearcherはwasm_bindgen依存のため、
     // ネイティブ環境ではテストできません。
     // WASMテストでのみ実行されます。
+
+    // ==== キーコード生成とフィルタリングのテスト ====
+
+    /// キーコードのビット定義
+    const A: u32 = 1 << 0;
+    const B: u32 = 1 << 1;
+    const SELECT: u32 = 1 << 2;
+    const START: u32 = 1 << 3;
+    const RIGHT: u32 = 1 << 4;
+    const LEFT: u32 = 1 << 5;
+    const UP: u32 = 1 << 6;
+    const DOWN: u32 = 1 << 7;
+    const R: u32 = 1 << 8;
+    const L: u32 = 1 << 9;
+    const X: u32 = 1 << 10;
+    const Y: u32 = 1 << 11;
+
+    /// XOR 0x2FFFする前の生のキーコードをXOR後のキーコードに変換
+    fn raw_to_xored(raw: u32) -> u32 {
+        raw ^ 0x2FFF
+    }
+
+    /// XOR後のキーコードを生のキーコードに戻す（逆変換）
+    fn xored_to_raw(xored: u32) -> u32 {
+        xored ^ 0x2FFF
+    }
+
+    #[test]
+    fn test_generate_key_codes_excludes_up_down_combination() {
+        // UP + DOWN のビットを有効化
+        let mask = UP | DOWN | A; // A も含めて3ビット有効
+        let key_codes = crate::integrated_search::generate_key_codes(mask);
+
+        // 生成されたキーコードを元の形式に戻して検証
+        for &key_code in &key_codes {
+            let raw = xored_to_raw(key_code);
+            // UP と DOWN が同時に押されているものは含まれないはず
+            assert!(
+                !((raw & UP) != 0 && (raw & DOWN) != 0),
+                "UP + DOWN 同時押しが検出されました: raw=0x{:X}, key_code=0x{:X}",
+                raw,
+                key_code
+            );
+        }
+
+        // 期待される組み合わせ数を確認
+        // 3ビット有効 (UP, DOWN, A) で2^3=8通りの組み合わせから、
+        // UP+DOWN, UP+DOWN+A の2通りを除外して6通り
+        assert_eq!(key_codes.len(), 6);
+    }
+
+    #[test]
+    fn test_generate_key_codes_excludes_left_right_combination() {
+        // LEFT + RIGHT のビットを有効化
+        let mask = LEFT | RIGHT | B; // B も含めて3ビット有効
+        let key_codes = crate::integrated_search::generate_key_codes(mask);
+
+        // 生成されたキーコードを元の形式に戻して検証
+        for &key_code in &key_codes {
+            let raw = xored_to_raw(key_code);
+            // LEFT と RIGHT が同時に押されているものは含まれないはず
+            assert!(
+                !((raw & LEFT) != 0 && (raw & RIGHT) != 0),
+                "LEFT + RIGHT 同時押しが検出されました: raw=0x{:X}, key_code=0x{:X}",
+                raw,
+                key_code
+            );
+        }
+
+        // 期待される組み合わせ数を確認
+        assert_eq!(key_codes.len(), 6);
+    }
+
+    #[test]
+    fn test_generate_key_codes_excludes_start_select_l_r_combination() {
+        // START + SELECT + L + R のビットを有効化
+        let mask = START | SELECT | L | R;
+        let key_codes = crate::integrated_search::generate_key_codes(mask);
+
+        // 生成されたキーコードを元の形式に戻して検証
+        for &key_code in &key_codes {
+            let raw = xored_to_raw(key_code);
+            // START, SELECT, L, R の4つが同時に押されているものは含まれないはず
+            let has_all_four =
+                (raw & START) != 0 && (raw & SELECT) != 0 && (raw & L) != 0 && (raw & R) != 0;
+            assert!(
+                !has_all_four,
+                "START + SELECT + L + R 4つ同時押しが検出されました: raw=0x{:X}, key_code=0x{:X}",
+                raw, key_code
+            );
+        }
+
+        // 4ビット有効で2^4=16通りの組み合わせから、
+        // START+SELECT+L+R の1通りを除外して15通り
+        assert_eq!(key_codes.len(), 15);
+    }
+
+    #[test]
+    fn test_generate_key_codes_complex_combination() {
+        // 複数の不可能な組み合わせを含むマスク
+        let mask = UP | DOWN | LEFT | RIGHT | START | SELECT | L | R;
+        let key_codes = crate::integrated_search::generate_key_codes(mask);
+
+        for &key_code in &key_codes {
+            let raw = xored_to_raw(key_code);
+
+            // UP + DOWN 同時押しチェック
+            assert!(
+                !((raw & UP) != 0 && (raw & DOWN) != 0),
+                "UP + DOWN 同時押しが検出されました: raw=0x{:X}",
+                raw
+            );
+
+            // LEFT + RIGHT 同時押しチェック
+            assert!(
+                !((raw & LEFT) != 0 && (raw & RIGHT) != 0),
+                "LEFT + RIGHT 同時押しが検出されました: raw=0x{:X}",
+                raw
+            );
+
+            // START + SELECT + L + R 4つ同時押しチェック
+            let has_all_four =
+                (raw & START) != 0 && (raw & SELECT) != 0 && (raw & L) != 0 && (raw & R) != 0;
+            assert!(
+                !has_all_four,
+                "START + SELECT + L + R 4つ同時押しが検出されました: raw=0x{:X}",
+                raw
+            );
+        }
+
+        // 8ビット有効 (2^8 = 256通り) から不可能な組み合わせを除外
+        // 正確な数は計算が複雑だが、256より少なくなることを確認
+        assert!(key_codes.len() < 256);
+        assert!(key_codes.len() > 0);
+    }
+
+    #[test]
+    fn test_generate_key_codes_valid_combinations_included() {
+        // 有効な組み合わせがちゃんと含まれることを確認
+        let mask = UP | DOWN | LEFT | RIGHT;
+        let key_codes = crate::integrated_search::generate_key_codes(mask);
+
+        // UP のみ押されている組み合わせが含まれるか
+        let up_only = raw_to_xored(UP);
+        assert!(
+            key_codes.contains(&up_only),
+            "UP のみの組み合わせが含まれていません"
+        );
+
+        // DOWN のみ押されている組み合わせが含まれるか
+        let down_only = raw_to_xored(DOWN);
+        assert!(
+            key_codes.contains(&down_only),
+            "DOWN のみの組み合わせが含まれていません"
+        );
+
+        // LEFT のみ押されている組み合わせが含まれるか
+        let left_only = raw_to_xored(LEFT);
+        assert!(
+            key_codes.contains(&left_only),
+            "LEFT のみの組み合わせが含まれていません"
+        );
+
+        // RIGHT のみ押されている組み合わせが含まれるか
+        let right_only = raw_to_xored(RIGHT);
+        assert!(
+            key_codes.contains(&right_only),
+            "RIGHT のみの組み合わせが含まれていません"
+        );
+
+        // UP + LEFT の組み合わせが含まれるか（これは有効）
+        let up_left = raw_to_xored(UP | LEFT);
+        assert!(
+            key_codes.contains(&up_left),
+            "UP + LEFT の組み合わせが含まれていません"
+        );
+
+        // 何も押されていない組み合わせが含まれるか
+        let none = raw_to_xored(0);
+        assert!(
+            key_codes.contains(&none),
+            "何も押されていない組み合わせが含まれていません"
+        );
+    }
+
+    #[test]
+    fn test_generate_key_codes_no_mask() {
+        // マスクが0の場合（何も有効でない）
+        let mask = 0;
+        let key_codes = crate::integrated_search::generate_key_codes(mask);
+
+        // 何も押されていない組み合わせのみ
+        assert_eq!(key_codes.len(), 1);
+        assert_eq!(key_codes[0], 0x2FFF); // 0 XOR 0x2FFF
+    }
+
+    #[test]
+    fn test_generate_key_codes_single_bit() {
+        // 単一ビットのみ有効
+        let mask = A;
+        let key_codes = crate::integrated_search::generate_key_codes(mask);
+
+        // 2通り（押す、押さない）
+        assert_eq!(key_codes.len(), 2);
+        assert!(key_codes.contains(&raw_to_xored(0))); // 何も押さない
+        assert!(key_codes.contains(&raw_to_xored(A))); // A を押す
+    }
+
+    #[test]
+    fn test_generate_key_codes_all_invalid_patterns_excluded() {
+        // 全ビット有効にして、不可能な組み合わせがすべて除外されることを確認
+        let mask = 0xFFF; // 12ビット全て有効
+        let key_codes = crate::integrated_search::generate_key_codes(mask);
+
+        // 2^12 = 4096通りから不可能な組み合わせを除外
+        let total_combinations = 1 << 12;
+        assert!(key_codes.len() < total_combinations);
+
+        // 全ての生成されたキーコードが有効であることを確認
+        for &key_code in &key_codes {
+            let raw = xored_to_raw(key_code);
+
+            // UP + DOWN 同時押しがないことを確認
+            assert!(
+                !((raw & UP) != 0 && (raw & DOWN) != 0),
+                "UP + DOWN 同時押しが検出: 0x{:X}",
+                raw
+            );
+
+            // LEFT + RIGHT 同時押しがないことを確認
+            assert!(
+                !((raw & LEFT) != 0 && (raw & RIGHT) != 0),
+                "LEFT + RIGHT 同時押しが検出: 0x{:X}",
+                raw
+            );
+
+            // START + SELECT + L + R の4つ同時押しがないことを確認
+            let has_all_four =
+                (raw & START) != 0 && (raw & SELECT) != 0 && (raw & L) != 0 && (raw & R) != 0;
+            assert!(
+                !has_all_four,
+                "START + SELECT + L + R 4つ同時押しが検出: 0x{:X}",
+                raw
+            );
+        }
+
+        // 除外された組み合わせの数を確認
+        let excluded_count = total_combinations - key_codes.len();
+        // 最低でも何らかの組み合わせが除外されているはず
+        assert!(excluded_count > 0, "不可能な組み合わせが除外されていません");
+    }
+
+    #[test]
+    fn test_specific_invalid_combinations() {
+        // 特定の不可能な組み合わせが生成されないことを直接テスト
+
+        // UP + DOWN のみを有効化
+        let mask_up_down = UP | DOWN;
+        let key_codes = crate::integrated_search::generate_key_codes(mask_up_down);
+        // UP+DOWN の組み合わせが含まれないことを確認
+        let up_down_combination = raw_to_xored(UP | DOWN);
+        assert!(
+            !key_codes.contains(&up_down_combination),
+            "UP + DOWN の組み合わせが含まれています"
+        );
+
+        // LEFT + RIGHT のみを有効化
+        let mask_left_right = LEFT | RIGHT;
+        let key_codes = crate::integrated_search::generate_key_codes(mask_left_right);
+        // LEFT+RIGHT の組み合わせが含まれないことを確認
+        let left_right_combination = raw_to_xored(LEFT | RIGHT);
+        assert!(
+            !key_codes.contains(&left_right_combination),
+            "LEFT + RIGHT の組み合わせが含まれています"
+        );
+
+        // START + SELECT + L + R のみを有効化
+        let mask_four_buttons = START | SELECT | L | R;
+        let key_codes = crate::integrated_search::generate_key_codes(mask_four_buttons);
+        // 4つの組み合わせが含まれないことを確認
+        let four_buttons_combination = raw_to_xored(START | SELECT | L | R);
+        assert!(
+            !key_codes.contains(&four_buttons_combination),
+            "START + SELECT + L + R の組み合わせが含まれています"
+        );
+    }
 }

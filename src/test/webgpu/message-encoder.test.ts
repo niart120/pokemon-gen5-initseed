@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildSearchContext } from '../../lib/webgpu/seed-search/message-encoder';
-import type { SearchConditions } from '../../types/search';
+import { hasImpossibleKeyCombination, keyCodeToMask, keyNamesToMask } from '@/lib/utils/key-input';
+import { buildSearchContext } from '@/lib/webgpu/seed-search/message-encoder';
+import type { SearchConditions } from '@/types/search';
 
 const REAL_DATE = Date;
 
@@ -181,5 +182,50 @@ describe('buildSearchContext', () => {
     }
 
     expect(totalMessages).toBe(context.totalMessages);
+  });
+
+  it('上下同時押しを含むキーコードを除外する', () => {
+    const context = withMockedLocalTimezone(-540, () => {
+      const conditions = createSearchConditions(singleDayRange);
+      conditions.keyInput = keyNamesToMask(['Up', 'Down']);
+      conditions.timer0VCountConfig.timer0Range = { min: 0xC79, max: 0xC79 };
+      return buildSearchContext(conditions);
+    });
+
+    const uniqueKeyCodes = new Set(context.segments.map(segment => segment.keyCode));
+    expect(uniqueKeyCodes.size).toBe(3);
+    for (const code of uniqueKeyCodes) {
+      expect(hasImpossibleKeyCombination(keyCodeToMask(code))).toBe(false);
+    }
+  });
+
+  it('左右同時押しを含むキーコードを除外する', () => {
+    const context = withMockedLocalTimezone(-540, () => {
+      const conditions = createSearchConditions(singleDayRange);
+      conditions.keyInput = keyNamesToMask(['Left', 'Right', 'A']);
+      conditions.timer0VCountConfig.timer0Range = { min: 0xC79, max: 0xC79 };
+      return buildSearchContext(conditions);
+    });
+
+    const uniqueKeyCodes = new Set(context.segments.map(segment => segment.keyCode));
+    expect(uniqueKeyCodes.size).toBe(6);
+    for (const code of uniqueKeyCodes) {
+      expect(hasImpossibleKeyCombination(keyCodeToMask(code))).toBe(false);
+    }
+  });
+
+  it('Start+Select+L+R同時押しを含むキーコードを除外する', () => {
+    const context = withMockedLocalTimezone(-540, () => {
+      const conditions = createSearchConditions(singleDayRange);
+      conditions.keyInput = keyNamesToMask(['Start', 'Select', 'L', 'R', 'B']);
+      conditions.timer0VCountConfig.timer0Range = { min: 0xC79, max: 0xC79 };
+      return buildSearchContext(conditions);
+    });
+
+    const uniqueKeyCodes = new Set(context.segments.map(segment => segment.keyCode));
+    expect(uniqueKeyCodes.size).toBe(30);
+    for (const code of uniqueKeyCodes) {
+      expect(hasImpossibleKeyCombination(keyCodeToMask(code))).toBe(false);
+    }
   });
 });

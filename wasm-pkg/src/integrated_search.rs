@@ -142,27 +142,69 @@ pub struct IntegratedSeedSearcher {
 
     // キャッシュされた基本メッセージ（キー入力以外）
     base_message: [u32; 16],
-    
+
     // 利用可能なキーコードのリスト（べき集合から生成）
     key_codes: Vec<u32>,
 }
 
+/// 実機上で不可能なキー入力の組み合わせをチェックする
+///
+/// XOR 0x2FFFする前の生のキーコード（押されているキーが1のビット）について判定
+///
+/// # 不可能な組み合わせ
+/// - 上下同時押し (UP: bit 6, DOWN: bit 7)
+/// - 左右同時押し (LEFT: bit 5, RIGHT: bit 4)
+/// - Start, Select, L, R の4つ同時押し (START: bit 3, SELECT: bit 2, L: bit 9, R: bit 8)
+fn is_invalid_key_combination(raw_key_input: u32) -> bool {
+    // ビット定義
+    const RIGHT: u32 = 1 << 4;
+    const LEFT: u32 = 1 << 5;
+    const UP: u32 = 1 << 6;
+    const DOWN: u32 = 1 << 7;
+    const R: u32 = 1 << 8;
+    const L: u32 = 1 << 9;
+    const SELECT: u32 = 1 << 2;
+    const START: u32 = 1 << 3;
+
+    // 上下同時押しチェック
+    if (raw_key_input & UP) != 0 && (raw_key_input & DOWN) != 0 {
+        return true;
+    }
+
+    // 左右同時押しチェック
+    if (raw_key_input & LEFT) != 0 && (raw_key_input & RIGHT) != 0 {
+        return true;
+    }
+
+    // Start, Select, L, R の4つ同時押しチェック
+    if (raw_key_input & START) != 0
+        && (raw_key_input & SELECT) != 0
+        && (raw_key_input & L) != 0
+        && (raw_key_input & R) != 0
+    {
+        return true;
+    }
+
+    false
+}
+
 /// キーマスクからべき集合を生成し、各要素を 0x2FFF と XOR したキーコードを返す
-fn generate_key_codes(key_input_mask: u32) -> Vec<u32> {
+/// 実機上で不可能なキー入力の組み合わせは除外される
+pub(crate) fn generate_key_codes(key_input_mask: u32) -> Vec<u32> {
     let mut enabled_bits = Vec::new();
-    
+
     // 有効なビット位置を収集
     for bit in 0..12 {
         if (key_input_mask & (1 << bit)) != 0 {
             enabled_bits.push(bit);
         }
     }
-    
+
     // べき集合を生成（2^n 通りの組み合わせ）
     let n = enabled_bits.len();
     let total_combinations = 1 << n; // 2^n
     let mut key_codes = Vec::with_capacity(total_combinations);
-    
+
     for i in 0..total_combinations {
         let mut combination = 0u32;
         for (bit_index, &bit_pos) in enabled_bits.iter().enumerate() {
@@ -171,11 +213,17 @@ fn generate_key_codes(key_input_mask: u32) -> Vec<u32> {
                 combination |= 1 << bit_pos;
             }
         }
+
+        // 不可能なキー入力の組み合わせをチェック
+        if is_invalid_key_combination(combination) {
+            continue;
+        }
+
         // 押されているビットが0、押されていないビットが1の状態を0x2FFFとXOR
         let key_code = combination ^ 0x2FFF;
         key_codes.push(key_code);
     }
-    
+
     key_codes
 }
 
@@ -240,7 +288,7 @@ impl IntegratedSeedSearcher {
         base_message[13] = 0x80000000;
         base_message[14] = 0x00000000;
         base_message[15] = 0x000001A0;
-        
+
         // キーコードリストを生成
         let key_codes = generate_key_codes(key_input_mask);
 
@@ -297,7 +345,8 @@ impl IntegratedSeedSearcher {
                 for &key_code in &self.key_codes {
                     // 内側ループ: 日時範囲の探索
                     for second_offset in 0..range_seconds {
-                        let current_seconds_since_2000 = base_seconds_since_2000 + second_offset as i64;
+                        let current_seconds_since_2000 =
+                            base_seconds_since_2000 + second_offset as i64;
 
                         let (time_code, date_code) =
                             match self.calculate_datetime_codes(current_seconds_since_2000) {
@@ -306,7 +355,8 @@ impl IntegratedSeedSearcher {
                             };
 
                         // メッセージを構築してSHA-1計算
-                        let message = self.build_message(timer0, vcount, date_code, time_code, key_code);
+                        let message =
+                            self.build_message(timer0, vcount, date_code, time_code, key_code);
                         let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(&message);
                         let seed = crate::sha1::calculate_pokemon_seed_from_hash(h0, h1);
 
@@ -513,7 +563,8 @@ impl IntegratedSeedSearcher {
                 };
 
             // メッセージを構築してSHA-1計算
-            let message = self.build_message(params.timer0, params.vcount, date_code, time_code, key_code);
+            let message =
+                self.build_message(params.timer0, params.vcount, date_code, time_code, key_code);
             let (h0, h1, h2, h3, h4) = crate::sha1::calculate_pokemon_sha1(&message);
             let seed = crate::sha1::calculate_pokemon_seed_from_hash(h0, h1);
 
@@ -567,7 +618,14 @@ impl IntegratedSeedSearcher {
 
     /// メッセージ構築の共通処理
     #[inline(always)]
-    fn build_message(&self, timer0: u32, vcount: u32, date_code: u32, time_code: u32, key_code: u32) -> [u32; 16] {
+    fn build_message(
+        &self,
+        timer0: u32,
+        vcount: u32,
+        date_code: u32,
+        time_code: u32,
+        key_code: u32,
+    ) -> [u32; 16] {
         let mut message = self.base_message;
         message[5] = crate::sha1::swap_bytes_32((vcount << 16) | timer0);
         message[8] = date_code;
