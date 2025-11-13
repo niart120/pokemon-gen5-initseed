@@ -25,7 +25,7 @@ export const GenerationPanel: React.FC = () => {
     // SearchPanelモバイル挙動へ合わせる: ページ全体スクロールに委ね、
     // 個別overflow-autoコンテナを廃止し縦スタック構造に統一。
     return (
-      <div className={`${sizes.gap} flex flex-col min-h-0`}>
+      <div className={`${sizes.gap} flex flex-col h-full overflow-y-auto overflow-x-hidden`}>
         {/* 自然高さのカードは flex-none */}
         <div className="flex-none">
           <GenerationParamsCard />
@@ -37,7 +37,7 @@ export const GenerationPanel: React.FC = () => {
           <GenerationResultsControlCard />
         </div>
         {/* 結果テーブルは領域に収める（mainにスクロールを閉じ込める） */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-[200px]">
           <GenerationResultsTableCard />
         </div>
       </div>

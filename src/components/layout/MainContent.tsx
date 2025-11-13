@@ -14,7 +14,7 @@ export function MainContent() {
 
   // レスポンシブに応じたoverflow設定とレイアウト
   const overflowClasses = isStack 
-    ? "overflow-y-auto overflow-x-visible" // 縦スタック時：垂直スクロール有り、水平スクロール無し
+    ? "overflow-y-auto overflow-x-hidden" // 縦スタック時：垂直スクロール有り、水平スクロール無し
     : "overflow-x-auto overflow-y-auto"; // 横並び時：両方向スクロール有り（必要に応じて）
 
   const layoutClasses = isStack
@@ -44,19 +44,19 @@ export function MainContent() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="search" className="flex-1 min-h-0">
+        <TabsContent value="search" className="flex-1 min-h-0 overflow-hidden">
           <SearchPanel />
         </TabsContent>
 
-        <TabsContent value="generation" className="flex-1 min-h-0">
+        <TabsContent value="generation" className="flex-1 min-h-0 overflow-hidden">
           <GenerationPanel />
         </TabsContent>
 
-        <TabsContent value="history" className="flex-1 min-h-0">
+        <TabsContent value="history" className="flex-1 min-h-0 overflow-hidden">
           <OptionPanel />
         </TabsContent>
 
-        <TabsContent value="help" className="flex-1 min-h-0">
+        <TabsContent value="help" className="flex-1 min-h-0 overflow-hidden">
           <HelpPanel />
         </TabsContent>
         </Tabs>
