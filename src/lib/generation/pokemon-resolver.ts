@@ -15,6 +15,12 @@ import type { UnresolvedPokemonData, GenderRatio } from '@/types/pokemon-raw';
 import type { EncounterTable } from '@/data/encounter-tables';
 import { natureName as formatNatureName, shinyDomainStatus } from '@/lib/utils/format-display';
 import { getGeneratedSpeciesById, type GeneratedAbilities } from '@/data/species/generated';
+import type { IndividualValues } from '@/lib/utils/individual-values';
+import {
+  calculatePokemonStats,
+  computeIndividualValuesFromSeed,
+  type CalculatedStats,
+} from '@/lib/utils/pokemon-stats';
 import { formatHexDisplay } from '@/lib/utils/hex-parser';
 
 // Context to supply reference data and environment for resolution
@@ -36,6 +42,7 @@ export type ResolvedPokemonData = Readonly<{
   level?: number;
   gender?: 'M' | 'F' | 'N';
   abilityIndex?: 0 | 1 | 2; // 0: ability1, 1: ability2, 2: hidden
+  encounterType: number;
 }>;
 
 // Lightweight UI output: only fields needed for display
@@ -44,10 +51,13 @@ export interface UiReadyPokemonData {
   pidHex: string; // 16進数表記 (0x...)
   speciesName: string; // ローカライズ済み名
   natureName: string; // ローカライズ済み名
+  natureId: number;
   abilityName: string; // ローカライズ済み名（隠れ特性含む）
   gender: 'M' | 'F' | '-' | '?'; // '-'=性別不明/N, '?'=未解決
   level?: number;
   shinyStatus: 'normal' | 'square' | 'star';
+  stats?: CalculatedStats;
+  ivs?: IndividualValues;
 }
 
 // Public API
@@ -72,6 +82,7 @@ export function resolvePokemon(
     level,
     gender,
     abilityIndex,
+    encounterType: raw.encounter_type,
   };
 }
 
@@ -85,7 +96,7 @@ export function resolveBatch(
 // UI adapter helpers (kept here for convenience but still UI-agnostic)
 export function toUiReadyPokemon(
   data: ResolvedPokemonData,
-  opts: { locale?: 'ja' | 'en' } = {}
+  opts: { locale?: 'ja' | 'en'; version?: 'B' | 'W' | 'B2' | 'W2'; baseSeed?: bigint } = {}
 ): UiReadyPokemonData {
   const locale = opts.locale ?? 'ja';
   const speciesName = getSpeciesName(data.speciesId, locale);
@@ -98,15 +109,38 @@ export function toUiReadyPokemon(
   } else {
     gender = '?';
   }
+
+  let ivs: IndividualValues | undefined;
+  let stats: CalculatedStats | undefined;
+  const species = data.speciesId ? getGeneratedSpeciesById(data.speciesId) : null;
+  const levelReady = typeof data.level === 'number' && Number.isFinite(data.level);
+  const baseSeed = opts.baseSeed;
+  if (species && levelReady && baseSeed !== undefined) {
+    const version = opts.version ?? 'B';
+    ivs = computeIndividualValuesFromSeed(baseSeed, {
+      version,
+      encounterType: data.encounterType,
+    });
+    stats = calculatePokemonStats({
+      species,
+      ivs,
+      level: data.level as number,
+      natureId: data.natureId,
+    });
+  }
+
   return {
     seedHex: formatHexDisplay(data.seed, 16, true),
     pidHex: formatHexDisplay(data.pid >>> 0, 8, true),
     speciesName,
-  natureName: formatNatureName(data.natureId),
+    natureName: formatNatureName(data.natureId, locale),
+    natureId: data.natureId,
     abilityName,
     gender,
     level: data.level,
-  shinyStatus: shinyDomainStatus(data.shinyType),
+    shinyStatus: shinyDomainStatus(data.shinyType),
+    stats,
+    ivs,
   };
 }
 

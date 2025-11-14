@@ -513,15 +513,25 @@ export const selectResolvedResults = (s: GenerationSlice): ResolvedPokemonData[]
 let _uiReadyCache: {
   resolvedRef: ResolvedPokemonData[];
   locale: string;
+  version: 'B' | 'W' | 'B2' | 'W2';
+  baseSeed: bigint | undefined;
   output: UiReadyPokemonData[];
 } | null = null;
 
 export const selectUiReadyResults = (s: GenerationSlice, locale: 'ja' | 'en' = 'ja'): UiReadyPokemonData[] => {
   const resolved = selectResolvedResults(s);
-  if (_uiReadyCache && _uiReadyCache.resolvedRef === resolved && _uiReadyCache.locale === locale) {
+  const version = (s.params?.version ?? s.draftParams.version ?? 'B') as 'B' | 'W' | 'B2' | 'W2';
+  const baseSeed = s.params?.baseSeed;
+  if (
+    _uiReadyCache &&
+    _uiReadyCache.resolvedRef === resolved &&
+    _uiReadyCache.locale === locale &&
+    _uiReadyCache.version === version &&
+    _uiReadyCache.baseSeed === baseSeed
+  ) {
     return _uiReadyCache.output;
   }
-  const out = resolved.map(r => toUiReadyPokemon(r, { locale }));
-  _uiReadyCache = { resolvedRef: resolved, locale, output: out };
+  const out = resolved.map(r => toUiReadyPokemon(r, { locale, version, baseSeed }));
+  _uiReadyCache = { resolvedRef: resolved, locale, version, baseSeed, output: out };
   return out;
 };
