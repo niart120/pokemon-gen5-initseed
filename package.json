@@ -125,7 +125,7 @@
         "rimraf": "^6.0.1",
         "tailwindcss": "^4.0.17",
         "typescript": "~5.7.2",
-        "typescript-eslint": "^8.39.0",
+        "typescript-eslint": "^8.46.4",
         "vite": "^7.2.2",
         "vite-plugin-top-level-await": "^1.6.0",
         "vite-plugin-wasm": "^3.5.0",
