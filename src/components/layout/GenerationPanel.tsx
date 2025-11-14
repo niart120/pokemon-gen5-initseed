@@ -7,6 +7,7 @@ import { GenerationResultsTableCard } from '@/components/generation/GenerationRe
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { LEFT_COLUMN_WIDTH_CLAMP } from './constants';
 import { getResponsiveSizes } from '@/lib/utils/responsive-sizes';
+import { ProfilePanel } from '@/components/profile/ProfilePanel';
 
 /**
  * GenerationPanel (Phase1 / Layout Refactor)
@@ -28,6 +29,9 @@ export const GenerationPanel: React.FC = () => {
       <div className={`${sizes.gap} flex flex-col h-full overflow-y-auto overflow-x-hidden`}>
         {/* 自然高さのカードは flex-none */}
         <div className="flex-none">
+          <ProfilePanel />
+        </div>
+        <div className="flex-none">
           <GenerationParamsCard />
         </div>
         <div className="flex-none">
@@ -46,33 +50,38 @@ export const GenerationPanel: React.FC = () => {
 
   // デスクトップ: 2カラム (左: 制御+パラメータ 固定幅clamp / 右: 結果エリア)
   return (
-    <div className="flex gap-3 h-full min-h-0 w-full overflow-hidden">
-      {/* Left Column */}
-      <div
-        className="flex flex-col gap-3 min-h-0"
-        style={{
-          width: LEFT_COLUMN_WIDTH_CLAMP,
-          flex: `0 0 ${LEFT_COLUMN_WIDTH_CLAMP}`
-        }}
-      >
-        <GenerationRunCard />
-        <GenerationParamsCard />
+    <div className="flex flex-col gap-3 h-full min-h-0 w-full overflow-hidden">
+      <div className="flex-none">
+        <ProfilePanel />
       </div>
-      {/* Right Column */}
-      <div className="flex flex-col gap-3 min-h-0 overflow-hidden flex-1">
+      <div className="flex gap-3 flex-1 min-h-0 w-full overflow-hidden">
+        {/* Left Column */}
         <div
-          className={[
-            'flex flex-col gap-2',
-            'sticky top-0 z-10 backdrop-blur bg-background/90 border-b border-border/50 p-1 rounded-md',
-          ].join(' ')}
-          role="region"
-          aria-label="Generation results controls"
-          data-testid="gen-results-sticky"
+          className="flex flex-col gap-3 min-h-0"
+          style={{
+            width: LEFT_COLUMN_WIDTH_CLAMP,
+            flex: `0 0 ${LEFT_COLUMN_WIDTH_CLAMP}`
+          }}
         >
-          <GenerationResultsControlCard />
+          <GenerationRunCard />
+          <GenerationParamsCard />
         </div>
-        <div className="flex-1 min-h-0">
-          <GenerationResultsTableCard />
+        {/* Right Column */}
+        <div className="flex flex-col gap-3 min-h-0 overflow-hidden flex-1">
+          <div
+            className={[
+              'flex flex-col gap-2',
+              'sticky top-0 z-10 backdrop-blur bg-background/90 border-b border-border/50 p-1 rounded-md',
+            ].join(' ')}
+            role="region"
+            aria-label="Generation results controls"
+            data-testid="gen-results-sticky"
+          >
+            <GenerationResultsControlCard />
+          </div>
+          <div className="flex-1 min-h-0">
+            <GenerationResultsTableCard />
+          </div>
         </div>
       </div>
     </div>

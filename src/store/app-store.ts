@@ -2,8 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { SearchConditions, InitialSeedResult, TargetSeedList, SearchProgress, SearchPreset } from '../types/search';
 import type { GenerationParamsHex } from '@/types/generation';
-import type { ROMVersion, ROMRegion, Hardware } from '../types/rom';
 import type { ParallelSearchSettings, AggregatedProgress } from '../types/parallel';
+import type { DeviceProfile, DeviceProfileDraft } from '../types/profile';
+import { createDefaultDeviceProfile, createDeviceProfile, applyDeviceProfileDraft } from '../types/profile';
 import { DEMO_TARGET_SEEDS } from '../data/default-seeds';
 
 import type { GenerationSlice } from './generation-store';
@@ -13,6 +14,14 @@ import { DEFAULT_LOCALE } from '@/types/i18n';
 export type SearchExecutionMode = 'gpu' | 'cpu-parallel' | 'cpu-single';
 
 interface AppStore extends GenerationSlice {
+  profiles: DeviceProfile[];
+  activeProfileId: string | null;
+  setActiveProfile: (profileId: string | null) => void;
+  createProfile: (draft: DeviceProfileDraft) => DeviceProfile;
+  updateProfile: (profileId: string, draft: Partial<DeviceProfileDraft>) => void;
+  deleteProfile: (profileId: string) => void;
+  applyProfileToSearch: (profileId?: string) => void;
+  applyProfileToGeneration: (profileId?: string) => void;
   locale: 'ja' | 'en';
   setLocale: (locale: 'ja' | 'en') => void;
   // Search conditions
@@ -80,23 +89,25 @@ interface AppStore extends GenerationSlice {
   loadPreset: (presetId: string) => void;
 }
 
+const defaultDeviceProfile = createDefaultDeviceProfile();
+
 const defaultSearchConditions: SearchConditions = {
-  romVersion: 'B' as ROMVersion,
-  romRegion: 'JPN' as ROMRegion,
-  hardware: 'DS' as Hardware,
-  
+  romVersion: defaultDeviceProfile.romVersion,
+  romRegion: defaultDeviceProfile.romRegion,
+  hardware: defaultDeviceProfile.hardware,
+
   timer0VCountConfig: {
-    useAutoConfiguration: true,
+    useAutoConfiguration: defaultDeviceProfile.timer0Auto,
     timer0Range: {
-      min: 3193,
-      max: 3194,
+      min: defaultDeviceProfile.timer0Range.min,
+      max: defaultDeviceProfile.timer0Range.max,
     },
     vcountRange: {
-      min: 95,
-      max: 95,
+      min: defaultDeviceProfile.vcountRange.min,
+      max: defaultDeviceProfile.vcountRange.max,
     },
   },
-  
+
   dateRange: {
     startYear: 2000,
     endYear: 2099,
@@ -113,7 +124,7 @@ const defaultSearchConditions: SearchConditions = {
   },
   
   keyInput: 0x0000, // Default: no key input
-  macAddress: [0x00, 0x1B, 0x2C, 0x3D, 0x4E, 0x5F],
+  macAddress: Array.from(defaultDeviceProfile.macAddress),
 };
 
 const defaultSearchProgress: SearchProgress = {
@@ -146,6 +157,15 @@ const defaultParallelSearchSettings: ParallelSearchSettings = {
   maxWorkers: navigator.hardwareConcurrency || 4,
   chunkStrategy: 'time-based',
 };
+
+function resolveProfile(state: Pick<AppStore, 'profiles' | 'activeProfileId'>, profileId?: string | null): DeviceProfile | undefined {
+  if (!state.profiles.length) return undefined;
+  const targetId = profileId ?? state.activeProfileId;
+  if (!targetId) {
+    return state.profiles[0];
+  }
+  return state.profiles.find((profile) => profile.id === targetId) ?? state.profiles[0];
+}
 
 // Use demo seeds for initial setup (development only)
 if (import.meta.env.DEV) {
@@ -225,8 +245,97 @@ export const useAppStore = create<AppStore>()(
   persist<AppStore>(
     (set, get) => ({
       // Generation slice 注入
-  ...createGenerationSlice(set, get),
-  locale: DEFAULT_LOCALE,
+      ...createGenerationSlice(set, get),
+      profiles: [defaultDeviceProfile],
+      activeProfileId: defaultDeviceProfile.id,
+      setActiveProfile: (profileId) => {
+        set({ activeProfileId: profileId });
+        const profile = resolveProfile(get(), profileId);
+        if (profile) {
+          get().applyProfileToSearch(profile.id);
+          get().applyProfileToGeneration(profile.id);
+        }
+      },
+      createProfile: (draft) => {
+        const profile = createDeviceProfile(draft);
+        set((state) => ({
+          profiles: [...state.profiles, profile],
+          activeProfileId: profile.id,
+        }));
+        get().applyProfileToSearch(profile.id);
+        get().applyProfileToGeneration(profile.id);
+        return profile;
+      },
+      updateProfile: (profileId, draft) => {
+        set((state) => {
+          const existing = state.profiles.find((p) => p.id === profileId);
+          if (!existing) return {};
+          const updated = applyDeviceProfileDraft(existing, draft);
+          const profiles = state.profiles.map((p) => (p.id === profileId ? updated : p));
+          return { profiles };
+        });
+        const profile = resolveProfile(get(), profileId);
+        if (profile) {
+          get().applyProfileToSearch(profile.id);
+          get().applyProfileToGeneration(profile.id);
+        }
+      },
+      deleteProfile: (profileId) => {
+        set((state) => {
+          const profiles = state.profiles.filter((p) => p.id !== profileId);
+          let activeProfileId = state.activeProfileId;
+          if (activeProfileId === profileId) {
+            activeProfileId = profiles[0]?.id ?? null;
+          }
+          return { profiles, activeProfileId };
+        });
+        const profile = resolveProfile(get());
+        if (profile) {
+          get().applyProfileToSearch(profile.id);
+          get().applyProfileToGeneration(profile.id);
+        }
+      },
+      applyProfileToSearch: (profileId) => {
+        const state = get();
+        const profile = resolveProfile(state, profileId);
+        if (!profile) return;
+        set((current) => ({
+          searchConditions: {
+            ...current.searchConditions,
+            romVersion: profile.romVersion,
+            romRegion: profile.romRegion,
+            hardware: profile.hardware,
+            timer0VCountConfig: {
+              ...current.searchConditions.timer0VCountConfig,
+              useAutoConfiguration: profile.timer0Auto,
+              timer0Range: {
+                min: profile.timer0Range.min,
+                max: profile.timer0Range.max,
+              },
+              vcountRange: {
+                min: profile.vcountRange.min,
+                max: profile.vcountRange.max,
+              },
+            },
+            macAddress: Array.from(profile.macAddress),
+          },
+        }));
+      },
+      applyProfileToGeneration: (profileId) => {
+        const state = get();
+        const profile = resolveProfile(state, profileId);
+        if (!profile) return;
+        state.setDraftParams({
+          version: profile.romVersion,
+          tid: profile.tid,
+          sid: profile.sid,
+          shinyCharm: profile.shinyCharm,
+          newGame: profile.newGame,
+          withSave: profile.withSave,
+          memoryLink: profile.memoryLink,
+        });
+      },
+      locale: DEFAULT_LOCALE,
       setLocale: (locale) => set({ locale }),
       // 元々の AppStore フィールド
       // Search conditions
@@ -433,6 +542,8 @@ export const useAppStore = create<AppStore>()(
       })(),
       partialize: (state: AppStore) => ({
         locale: state.locale,
+        profiles: state.profiles,
+        activeProfileId: state.activeProfileId,
         searchConditions: state.searchConditions,
         targetSeeds: state.targetSeeds,
         parallelSearchSettings: state.parallelSearchSettings,
@@ -447,7 +558,7 @@ export const useAppStore = create<AppStore>()(
         if (!persisted || typeof persisted !== 'object') return current;
         const { __generation, ...rest } = persisted as Partial<AppStore> & { __generation?: unknown };
         const revived = __generation ? reviveGenerationMinimal(__generation) : {};
-        return {
+        const merged = {
           ...current,
           ...rest,
           ...revived,
@@ -458,6 +569,13 @@ export const useAppStore = create<AppStore>()(
           results: current.results,
           progress: current.progress,
         } as AppStore;
+        if (!merged.profiles || merged.profiles.length === 0) {
+          merged.profiles = current.profiles;
+          merged.activeProfileId = current.activeProfileId;
+        } else if (!merged.activeProfileId || !merged.profiles.some((p) => p.id === merged.activeProfileId)) {
+          merged.activeProfileId = merged.profiles[0]?.id ?? null;
+        }
+        return merged;
       },
       // migrate 不要（新キーで旧スキーマ非対応）
       migrate: (s) => s as AppStore,

@@ -169,13 +169,6 @@ export const GenerationParamsCard: React.FC = () => {
   const syncNatureOptions = React.useMemo(() => {
     return SYNC_NATURE_IDS.map(id => ({ id, label: natureName(id, locale) }));
   }, [locale]);
-  const newGame = hexDraft.newGame ?? false;
-  const withSave = hexDraft.withSave ?? true;
-  const withSaveChecked = newGame ? withSave : false;
-  const memoryLink = hexDraft.memoryLink ?? false;
-  const versionIsBw = version === 'B' || version === 'W';
-  const memoryLinkDisabled = disabled || versionIsBw || !withSave;
-  const withSaveDisabled = disabled || !newGame;
 
   // フィールド選択に応じて遭遇テーブルと補助データをストアへ供給
   React.useEffect(() => {
@@ -267,58 +260,7 @@ export const GenerationParamsCard: React.FC = () => {
     <Card className={`py-2 flex flex-col ${isStack ? '' : 'h-full min-h-64'}`} aria-labelledby="gen-params-title" role="form">
       <StandardCardHeader icon={<Gear size={20} className="opacity-80" />} title={<span id="gen-params-title">Generation Parameters</span>} />
   <StandardCardContent noScroll={isStack}>
-      {/* Basics */}
-      <section aria-labelledby="gen-basics" className="space-y-2" role="group">
-          <h4 id="gen-basics" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Basics</h4>
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3">
-            {/* Version */}
-            <div className="flex flex-col gap-1 min-w-0">
-              <Label className="text-xs" id="lbl-version-select" htmlFor="version-select">Version</Label>
-              <Select value={draftParams.version ?? 'B'} onValueChange={v=> update({ version: v as GenerationParamsHex['version'] })} disabled={disabled}>
-                <SelectTrigger id="version-select" aria-labelledby="lbl-version-select version-select">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {['B','W','B2','W2'].map(v=> <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            {/* TID */}
-            <div className="flex flex-col gap-1 min-w-24">
-              <Label className="text-xs" htmlFor="tid">TID</Label>
-              <Input id="tid" type="number" inputMode="numeric" className="h-9 min-w-24" disabled={disabled} value={draftParams.tid ?? 0} onChange={e=> update({ tid: Number(e.target.value) })} />
-            </div>
-            {/* SID */}
-            <div className="flex flex-col gap-1 min-w-24">
-              <Label className="text-xs" htmlFor="sid">SID</Label>
-              <Input id="sid" type="number" inputMode="numeric" className="h-9 min-w-24" disabled={disabled} value={draftParams.sid ?? 0} onChange={e=> update({ sid: Number(e.target.value) })} />
-            </div>
-          </div>
-          {/* Checkboxes - separate row to prevent overlap */}
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 pt-2">
-            {/* New Game */}
-            <div className="flex items-center gap-2">
-              <Checkbox id="new-game" aria-labelledby="lbl-new-game" checked={newGame} disabled={disabled} onCheckedChange={v=> update({ newGame: Boolean(v) })} />
-              <Label id="lbl-new-game" htmlFor="new-game" className="text-xs">New Game</Label>
-            </div>
-            {/* With Save */}
-            <div className="flex items-center gap-2">
-              <Checkbox id="with-save" aria-labelledby="lbl-with-save" checked={withSaveChecked} disabled={withSaveDisabled} onCheckedChange={v=> update({ withSave: newGame ? v === true : true })} />
-              <Label id="lbl-with-save" htmlFor="with-save" className="text-xs">With Save</Label>
-            </div>
-            {/* Memory Link */}
-            <div className="flex items-center gap-2">
-              <Checkbox id="memory-link" aria-labelledby="lbl-memory-link" checked={memoryLink} disabled={memoryLinkDisabled} onCheckedChange={v=> update({ memoryLink: Boolean(v) })} />
-              <Label id="lbl-memory-link" htmlFor="memory-link" className="text-xs">Memory Link</Label>
-            </div>
-            {/* Shiny Charm */}
-            <div className="flex items-center gap-2">
-              <Checkbox id="shiny-charm" aria-labelledby="lbl-shiny-charm" checked={draftParams.shinyCharm ?? false} disabled={disabled || versionIsBw} onCheckedChange={v=> update({ shinyCharm: Boolean(v) })} />
-              <Label id="lbl-shiny-charm" htmlFor="shiny-charm" className="text-xs">Shiny Charm</Label>
-            </div>
-          </div>
-        </section>
-        <Separator />
+      {/* Profile-managed fields (Version, TID, SID, etc.) are configured via Device Profile panel. */}
   {/* Target (Range) */}
   <section aria-labelledby="gen-target" className="space-y-2" role="group">
           <h4 id="gen-target" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Target</h4>
@@ -478,8 +420,8 @@ export const GenerationParamsCard: React.FC = () => {
             </div>
           </div>
         </section>
-        <Separator />
-  {/* Stop Conditions */}
+          <Separator />
+        {/* Stop Conditions */}
   <section aria-labelledby="gen-stop" className="space-y-2" role="group">
           <h4 id="gen-stop" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Stop Conditions</h4>
           <div className="flex flex-wrap gap-6">

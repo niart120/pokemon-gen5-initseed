@@ -23,7 +23,7 @@ export function MainContent() {
 
   return (
     <main className={`px-2 sm:px-3 lg:px-3 xl:px-4 2xl:px-4 py-1 max-w-none flex-1 min-h-0 ${layoutClasses} ${overflowClasses}`}>
-      <div className="max-w-screen-2xl xl:max-w-[1700px] 2xl:max-w-[1900px] mx-auto w-full flex-1 flex flex-col min-w-0 min-h-0">
+      <div className="max-w-screen-2xl xl:max-w-[1700px] 2xl:max-w-[1900px] mx-auto w-full flex-1 flex flex-col min-w-0 min-h-0 gap-3">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-2 flex flex-col flex-1 min-h-0">
           <TabsList className="grid grid-cols-4 w-full max-w-6xl mx-auto flex-shrink-0 h-9">
           <TabsTrigger value="search" className="flex items-center gap-2">
