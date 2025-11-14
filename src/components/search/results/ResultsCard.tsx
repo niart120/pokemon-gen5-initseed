@@ -3,9 +3,12 @@ import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAppStore } from '../../../store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
-import { lcgSeedToHex } from '@/lib/utils/lcg-seed';
+import { lcgSeedToHex, lcgSeedToMtSeed } from '@/lib/utils/lcg-seed';
+import { getIvTooltipEntries } from '@/lib/utils/individual-values-display';
+import { useLocale } from '@/lib/i18n/locale-context';
 import type { InitialSeedResult } from '../../../types/search';
 import type { SortField } from './ResultsControlCard';
 
@@ -28,6 +31,7 @@ export function ResultsCard({
 }: ResultsCardProps) {
   const { lastSearchDuration } = useAppStore();
   const { isStack } = useResponsiveLayout();
+  const locale = useLocale();
   const formatDateTime = (date: Date): string => {
     return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
   };
@@ -124,13 +128,39 @@ export function ResultsCard({
                       </Button>
                     </TableCell>
                     <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-nowrap min-w-[120px]">
-                      {lcgSeedToHex(result.lcgSeed)}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>{lcgSeedToHex(result.lcgSeed)}</span>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="space-y-1 text-left">
+                          {getIvTooltipEntries(lcgSeedToMtSeed(result.lcgSeed), locale).map(entry => (
+                            <div key={entry.label} className="space-y-0.5">
+                              <div className="font-semibold leading-tight">{entry.label}</div>
+                              <div className="font-mono leading-tight">{entry.spread}</div>
+                              <div className="font-mono text-[10px] text-muted-foreground leading-tight">{entry.pattern}</div>
+                            </div>
+                          ))}
+                        </TooltipContent>
+                      </Tooltip>
                     </TableCell>
                     <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-normal">
                       {formatDateTime(result.datetime)}
                     </TableCell>
                     <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-normal">
-                      0x{result.seed.toString(16).toUpperCase().padStart(8, '0')}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>0x{result.seed.toString(16).toUpperCase().padStart(8, '0')}</span>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="space-y-1 text-left">
+                          {getIvTooltipEntries(result.seed, locale).map(entry => (
+                            <div key={entry.label} className="space-y-0.5">
+                              <div className="font-semibold leading-tight">{entry.label}</div>
+                              <div className="font-mono leading-tight">{entry.spread}</div>
+                              <div className="font-mono text-[10px] text-muted-foreground leading-tight">{entry.pattern}</div>
+                            </div>
+                          ))}
+                        </TooltipContent>
+                      </Tooltip>
                     </TableCell>
                     <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-normal">
                       0x{result.timer0.toString(16).toUpperCase().padStart(4, '0')}

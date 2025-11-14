@@ -60,7 +60,7 @@ export const SEED_TEMPLATES: SeedTemplate[] = [
 
   {
     name: 'BW 徘徊 6V',
-    description: 'ブラック・ホワイト 徘徊（消費なし） 6V（5種類）',
+    description: 'ブラック・ホワイト 徘徊（消費1） 6V（5種類）',
     seeds: [
       0x35652A5F,
       0x4707F449,
@@ -71,7 +71,7 @@ export const SEED_TEMPLATES: SeedTemplate[] = [
   },
   {
     name: 'BW 徘徊 V2UVVV めざ氷',
-    description: 'ブラック・ホワイト 徘徊（消費なし） V2UVVV（めざ氷 6種類）',
+    description: 'ブラック・ホワイト 徘徊（消費1） V2UVVV（めざ氷 6種類）',
     seeds: [
       0x5F3DE7EF,
       0x7F1983D4,
@@ -83,7 +83,7 @@ export const SEED_TEMPLATES: SeedTemplate[] = [
   },
   {
     name: 'BW 徘徊 U2UUUV めざ飛',
-    description: 'ブラック・ホワイト 徘徊（消費なし） U2UUUV（めざ飛 5種類）',
+    description: 'ブラック・ホワイト 徘徊（消費1） U2UUUV（めざ飛 5種類）',
     seeds: [
       0x4A28CBE0,
       0x5B41C530,

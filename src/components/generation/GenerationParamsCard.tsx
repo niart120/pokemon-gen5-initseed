@@ -25,6 +25,9 @@ import { resolveEncounterLocationName, resolveStaticEncounterName } from '@/data
 import { buildResolutionContext, enrichForSpecies } from '@/lib/initialization/build-resolution-context';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { getIvTooltipEntries } from '@/lib/utils/individual-values-display';
+import { lcgSeedToMtSeed } from '@/lib/utils/lcg-seed';
 
 // Simple hex normalization guard
 function isHexLike(v: string) { return /^(0x)?[0-9a-fA-F]*$/.test(v.trim()); }
@@ -63,6 +66,18 @@ export const GenerationParamsCard: React.FC = () => {
   const setAbilityCatalog = useAppStore(s=>s.setAbilityCatalog);
   const disabled = status === 'running' || status === 'paused' || status === 'starting';
   const hexDraft: Partial<GenerationParamsHex> = draftParams;
+
+  const baseSeedTooltipEntries = React.useMemo(() => {
+    const raw = (hexDraft.baseSeedHex ?? '').trim();
+    if (!raw) return null;
+    const hexDigits = raw.startsWith('0x') || raw.startsWith('0X') ? raw.slice(2) : raw;
+    if (!hexDigits) return null;
+    if (!/^[0-9a-fA-F]+$/.test(hexDigits)) return null;
+    const lcgSeed = BigInt(`0x${hexDigits}`);
+    if (lcgSeed < 0n) return null;
+    const mtSeed = lcgSeedToMtSeed(lcgSeed);
+    return getIvTooltipEntries(mtSeed, locale);
+  }, [hexDraft.baseSeedHex, locale]);
 
   const update = (partial: Partial<GenerationParamsHex>) => {
     const next: Partial<GenerationParamsHex> = { ...partial };
@@ -311,8 +326,32 @@ export const GenerationParamsCard: React.FC = () => {
             {/* Base Seed */}
             <div className="flex flex-col gap-1 min-w-0">
               <Label className="text-xs" htmlFor="base-seed">Base Seed (hex)</Label>
-              <Input id="base-seed" className="font-mono h-9 min-w-40" disabled={disabled} value={hexDraft.baseSeedHex ?? '0'}
-                onChange={e=> { const v=e.target.value; if (isHexLike(v)) update({ baseSeedHex: v.replace(/^0x/i,'') }); }} placeholder="1a2b3c4d5e6f7890" />
+              {baseSeedTooltipEntries && baseSeedTooltipEntries.length > 0 ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input
+                      id="base-seed"
+                      className="font-mono h-9 min-w-40"
+                      disabled={disabled}
+                      value={hexDraft.baseSeedHex ?? '0'}
+                      onChange={e=> { const v=e.target.value; if (isHexLike(v)) update({ baseSeedHex: v.replace(/^0x/i,'') }); }}
+                      placeholder="1a2b3c4d5e6f7890"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="space-y-1 text-left">
+                    {baseSeedTooltipEntries.map(entry => (
+                      <div key={entry.label} className="space-y-0.5">
+                        <div className="font-semibold leading-tight">{entry.label}</div>
+                        <div className="font-mono leading-tight">{entry.spread}</div>
+                        <div className="font-mono text-[10px] text-muted-foreground leading-tight">{entry.pattern}</div>
+                      </div>
+                    ))}
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <Input id="base-seed" className="font-mono h-9 min-w-40" disabled={disabled} value={hexDraft.baseSeedHex ?? '0'}
+                  onChange={e=> { const v=e.target.value; if (isHexLike(v)) update({ baseSeedHex: v.replace(/^0x/i,'') }); }} placeholder="1a2b3c4d5e6f7890" />
+              )}
             </div>
             {/* Min Advance (offset) */}
             <div className="flex flex-col gap-1 min-w-0">

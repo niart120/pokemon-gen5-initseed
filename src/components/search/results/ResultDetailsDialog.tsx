@@ -1,11 +1,15 @@
+import { useMemo } from 'react';
 import { Eye, Copy } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { Label } from '../../ui/label';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import { toast } from 'sonner';
-import { lcgSeedToHex } from '@/lib/utils/lcg-seed';
+import { lcgSeedToHex, lcgSeedToMtSeed } from '@/lib/utils/lcg-seed';
 import { keyCodeToNames } from '@/lib/utils/key-input';
 import { useAppStore } from '@/store/app-store';
+import { getIvTooltipEntries } from '@/lib/utils/individual-values-display';
+import { useLocale } from '@/lib/i18n/locale-context';
 import type { InitialSeedResult } from '../../../types/search';
 
 interface ResultDetailsDialogProps {
@@ -20,6 +24,7 @@ export function ResultDetailsDialog({
   onOpenChange,
 }: ResultDetailsDialogProps) {
   const { setDraftParams } = useAppStore();
+  const locale = useLocale();
 
   const formatDateTime = (date: Date): string => {
     return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
@@ -36,6 +41,31 @@ export function ResultDetailsDialog({
     });
     
     toast.success('LCG Seed copied to Generation Panel');
+  };
+
+  const lcgSeedHex = result ? lcgSeedToHex(result.lcgSeed) : '';
+  const mtSeedHex = result ? `0x${result.seed.toString(16).toUpperCase().padStart(8, '0')}` : '';
+  const lcgTooltipEntries = useMemo(() => {
+    if (!result) return [];
+    return getIvTooltipEntries(lcgSeedToMtSeed(result.lcgSeed), locale);
+  }, [result, locale]);
+  const mtTooltipEntries = useMemo(() => {
+    if (!result) return [];
+    return getIvTooltipEntries(result.seed >>> 0, locale);
+  }, [result, locale]);
+
+  const handleCopyMtSeed = async () => {
+    if (!result) return;
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+      toast.error('Clipboard is not available');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(mtSeedHex);
+      toast.success('MT Seed copied to clipboard');
+    } catch {
+      toast.error('Failed to copy MT Seed');
+    }
   };
 
   if (!result) return null;
@@ -58,23 +88,53 @@ export function ResultDetailsDialog({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>LCG Seed</Label>
-              <div 
-                className="font-mono text-lg cursor-pointer hover:bg-accent p-2 rounded flex items-center gap-2 group"
-                onClick={handleCopyLcgSeed}
-                title="Click to copy to Generation Panel"
-              >
-                {lcgSeedToHex(result.lcgSeed)}
-                <Copy size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Click to copy to Generation Panel
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="font-mono text-lg cursor-pointer hover:bg-accent p-2 rounded flex items-center gap-2 group"
+                    onClick={handleCopyLcgSeed}
+                    title="Click to copy to Generation Panel"
+                  >
+                    {lcgSeedHex}
+                    <Copy size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="space-y-1 text-left">
+                  {lcgTooltipEntries.map(entry => (
+                    <div key={entry.label} className="space-y-0.5">
+                      <div className="font-semibold leading-tight">{entry.label}</div>
+                      <div className="font-mono leading-tight">{entry.spread}</div>
+                      <div className="font-mono text-[10px] text-muted-foreground leading-tight">{entry.pattern}</div>
+                    </div>
+                  ))}
+                </TooltipContent>
+              </Tooltip>
+              <div className="text-xs text-muted-foreground">Click to copy to Generation Panel</div>
             </div>
             <div>
               <Label>MT Seed</Label>
-              <div className="font-mono text-lg">
-                0x{result.seed.toString(16).toUpperCase().padStart(8, '0')}
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className="font-mono text-lg cursor-pointer hover:bg-accent p-2 rounded flex items-center gap-2 group"
+                    onClick={handleCopyMtSeed}
+                    title="Click to copy MT Seed"
+                  >
+                    {mtSeedHex}
+                    <Copy size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="space-y-1 text-left">
+                  {mtTooltipEntries.map(entry => (
+                    <div key={entry.label} className="space-y-0.5">
+                      <div className="font-semibold leading-tight">{entry.label}</div>
+                      <div className="font-mono leading-tight">{entry.spread}</div>
+                      <div className="font-mono text-[10px] text-muted-foreground leading-tight">{entry.pattern}</div>
+                    </div>
+                  ))}
+                </TooltipContent>
+              </Tooltip>
+              <div className="text-xs text-muted-foreground">Click to copy MT Seed</div>
             </div>
           </div>
 
