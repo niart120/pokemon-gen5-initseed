@@ -1,9 +1,9 @@
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { ProfileRenameDialog } from '@/components/profile/sections/ProfileRenameDialog';
 import type { DeviceProfile } from '@/types/profile';
 import { SELECT_IMPORT_CURRENT, SELECT_NEW_PROFILE } from '@/components/profile/hooks/useProfileCardForm';
 
@@ -34,9 +34,29 @@ export function ProfileManagementSection({
   onLoad,
   onDelete,
 }: ProfileManagementSectionProps) {
+  const [renameOpen, setRenameOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!canModify && renameOpen) {
+      setRenameOpen(false);
+    }
+  }, [canModify, renameOpen]);
+
+  const handleRenameOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen && !canModify) {
+        return;
+      }
+      setRenameOpen(nextOpen);
+    },
+    [canModify],
+  );
+
+  const onRename = () =>  handleRenameOpenChange(true);
+
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <div className="flex min-w-[12rem] flex-col gap-1 sm:w-56">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="profile-select" className="text-xs">Profile</Label>
         <Select value={activeProfileId} onValueChange={onSelectProfile}>
           <SelectTrigger id="profile-select" className="h-9">
@@ -54,22 +74,17 @@ export function ProfileManagementSection({
           </SelectContent>
         </Select>
       </div>
-      <div className="flex min-w-[12rem] flex-1 flex-col gap-1 sm:w-64">
-        <Label htmlFor="profile-name" className="text-xs">Profile Name</Label>
-        <Input
-          id="profile-name"
-          value={profileName}
-          onChange={(event) => onProfileNameChange(event.target.value)}
-          placeholder="My profile"
-          className="h-9"
-        />
-      </div>
-      <div className="ml-auto flex items-center gap-2">
         {dirty && <Badge variant="secondary">未保存</Badge>}
+        <Button size="sm" variant="outline" onClick={onRename} disabled={!canModify}>Rename</Button>
         <Button size="sm" variant="outline" onClick={onSave} disabled={!canModify}>Save</Button>
         <Button size="sm" variant="outline" onClick={onLoad} disabled={!canModify}>Load</Button>
         <Button size="sm" variant="destructive" onClick={onDelete} disabled={disableDelete}>Delete</Button>
-      </div>
+      <ProfileRenameDialog
+        profileName={profileName}
+        open={renameOpen}
+        onOpenChange={handleRenameOpenChange}
+        onRename={onProfileNameChange}
+      />
     </div>
   );
 }
