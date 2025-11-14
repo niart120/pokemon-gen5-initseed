@@ -32,7 +32,6 @@ export function ProfileCard() {
     disableDelete,
     onProfileNameChange,
     onSave,
-    onLoad,
     onDelete,
   } = header;
   const { sectionOpen, isStack, toggleSection } = layout;
@@ -48,7 +47,6 @@ export function ProfileCard() {
       onSelectProfile={onSelect}
       onProfileNameChange={onProfileNameChange}
       onSave={onSave}
-      onLoad={onLoad}
       onDelete={onDelete}
     />
   );
@@ -137,7 +135,7 @@ export function ProfileCard() {
 
         <Separator />
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-2 lg:grid-cols-4">
           {isStack ? (
             <>
               <CollapsedSection

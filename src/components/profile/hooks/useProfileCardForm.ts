@@ -41,7 +41,6 @@ interface HeaderControls {
   disableDelete: boolean;
   onProfileNameChange: (value: string) => void;
   onSave: () => void;
-  onLoad: () => void;
   onDelete: () => void;
 }
 
@@ -116,8 +115,6 @@ export function useProfileCardForm(): UseProfileCardFormResult {
   const createProfile = useAppStore((state) => state.createProfile);
   const updateProfile = useAppStore((state) => state.updateProfile);
   const deleteProfile = useAppStore((state) => state.deleteProfile);
-  const applyProfileToSearch = useAppStore((state) => state.applyProfileToSearch);
-  const applyProfileToGeneration = useAppStore((state) => state.applyProfileToGeneration);
 
   const activeProfile = React.useMemo(
     () => resolveActiveProfile(profiles, activeProfileId),
@@ -356,13 +353,6 @@ export function useProfileCardForm(): UseProfileCardFormResult {
     toast.success('Profile saved');
   }, [activeProfile, form, updateProfile]);
 
-  const handleLoad = React.useCallback(() => {
-    if (!activeProfile) return;
-    applyProfileToSearch(activeProfile.id);
-    applyProfileToGeneration(activeProfile.id);
-    toast.success('Profile loaded');
-  }, [activeProfile, applyProfileToGeneration, applyProfileToSearch]);
-
   const disableDelete = profiles.length <= 1;
   const memoryLinkDisabled = form.romVersion === 'B' || form.romVersion === 'W' || !form.withSave;
   const withSaveDisabled = !form.newGame;
@@ -381,7 +371,6 @@ export function useProfileCardForm(): UseProfileCardFormResult {
     disableDelete,
     onProfileNameChange: handleNameChange,
     onSave: handleSave,
-    onLoad: handleLoad,
     onDelete: handleDelete,
   };
 

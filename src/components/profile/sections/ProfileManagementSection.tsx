@@ -17,7 +17,6 @@ interface ProfileManagementSectionProps {
   onSelectProfile: (profileId: string) => void;
   onProfileNameChange: (value: string) => void;
   onSave: () => void;
-  onLoad: () => void;
   onDelete: () => void;
 }
 
@@ -31,7 +30,6 @@ export function ProfileManagementSection({
   onSelectProfile,
   onProfileNameChange,
   onSave,
-  onLoad,
   onDelete,
 }: ProfileManagementSectionProps) {
   const [renameOpen, setRenameOpen] = React.useState(false);
@@ -52,12 +50,12 @@ export function ProfileManagementSection({
     [canModify],
   );
 
-  const onRename = () =>  handleRenameOpenChange(true);
+  const onRename = () => handleRenameOpenChange(true);
 
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1">
-        <Label htmlFor="profile-select" className="text-xs">Profile</Label>
+        <Label htmlFor="profile-select" className="text-xs">Profile </Label> 
         <Select value={activeProfileId} onValueChange={onSelectProfile}>
           <SelectTrigger id="profile-select" className="h-9">
             <SelectValue placeholder="プロファイルを選択" />
@@ -65,7 +63,7 @@ export function ProfileManagementSection({
           <SelectContent>
             {profiles.map((profile) => (
               <SelectItem key={profile.id} value={profile.id}>
-                {profile.name}
+                {profile.name} {dirty && <Badge variant="secondary">not saved</Badge>}
               </SelectItem>
             ))}
             <div className="my-1 h-px bg-border" role="separator" />
@@ -74,11 +72,9 @@ export function ProfileManagementSection({
           </SelectContent>
         </Select>
       </div>
-        {dirty && <Badge variant="secondary">未保存</Badge>}
-        <Button size="sm" variant="outline" onClick={onRename} disabled={!canModify}>Rename</Button>
-        <Button size="sm" variant="outline" onClick={onSave} disabled={!canModify}>Save</Button>
-        <Button size="sm" variant="outline" onClick={onLoad} disabled={!canModify}>Load</Button>
-        <Button size="sm" variant="destructive" onClick={onDelete} disabled={disableDelete}>Delete</Button>
+      <Button size="sm" variant="outline" onClick={onRename} disabled={!canModify}>Rename</Button>
+      <Button size="sm" variant="outline" onClick={onSave} disabled={!canModify}>Save</Button>
+      <Button size="sm" variant="destructive" onClick={onDelete} disabled={disableDelete}>Delete</Button>
       <ProfileRenameDialog
         profileName={profileName}
         open={renameOpen}
