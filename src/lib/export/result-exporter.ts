@@ -197,7 +197,6 @@ export class ResultExporter {
 
   private static formatKeyInput(result: SearchResult): string {
     if (result.keyCode != null) {
-      const hex = `0x${result.keyCode.toString(16).toUpperCase().padStart(4, '0')}`;
       const names = keyCodeToNames(result.keyCode);
       if (names.length === 0) {
         return `(No keys)`;
