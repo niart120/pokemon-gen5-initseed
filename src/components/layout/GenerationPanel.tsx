@@ -7,7 +7,7 @@ import { GenerationResultsTableCard } from '@/components/generation/GenerationRe
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { LEFT_COLUMN_WIDTH_CLAMP } from './constants';
 import { getResponsiveSizes } from '@/lib/utils/responsive-sizes';
-import { ProfilePanel } from '@/components/profile/ProfilePanel';
+import { ProfileCard } from '@/components/profile/ProfileCard';
 
 /**
  * GenerationPanel (Phase1 / Layout Refactor)
@@ -29,7 +29,7 @@ export const GenerationPanel: React.FC = () => {
       <div className={`${sizes.gap} flex flex-col h-full overflow-y-auto overflow-x-hidden`}>
         {/* 自然高さのカードは flex-none */}
         <div className="flex-none">
-          <ProfilePanel />
+          <ProfileCard />
         </div>
         <div className="flex-none">
           <GenerationParamsCard />
@@ -52,7 +52,7 @@ export const GenerationPanel: React.FC = () => {
   return (
     <div className="flex flex-col gap-3 h-full min-h-0 w-full overflow-hidden">
       <div className="flex-none">
-        <ProfilePanel />
+        <ProfileCard />
       </div>
       <div className="flex gap-3 flex-1 min-h-0 w-full overflow-hidden">
         {/* Left Column */}

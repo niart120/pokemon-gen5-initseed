@@ -10,7 +10,7 @@ import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { getResponsiveSizes } from '@/lib/utils/responsive-sizes';
 import { LEFT_COLUMN_WIDTH_CLAMP } from './constants';
 import type { InitialSeedResult, SearchResult } from '../../types/search';
-import { ProfilePanel } from '@/components/profile/ProfilePanel';
+import { ProfileCard } from '@/components/profile/ProfileCard';
 
 export function SearchPanel() {
   const { searchResults } = useAppStore();
@@ -111,7 +111,7 @@ export function SearchPanel() {
       <>
         <div className={`${sizes.gap} flex flex-col h-full overflow-y-auto overflow-x-hidden`}>
           <div className="flex-none">
-            <ProfilePanel />
+            <ProfileCard />
           </div>
           <div className="flex-none">
             <SearchParamsCard />
@@ -160,7 +160,7 @@ export function SearchPanel() {
     <>
       <div className={`flex flex-col ${sizes.gap} max-w-full h-full min-h-0 min-w-fit overflow-hidden`}>
         <div className="flex-none">
-          <ProfilePanel />
+          <ProfileCard />
         </div>
         <div className={`flex ${sizes.gap} max-w-full flex-1 min-h-0 min-w-fit overflow-hidden`}>
           {/* 左カラム: 設定エリア */}
