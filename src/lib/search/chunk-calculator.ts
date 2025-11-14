@@ -5,6 +5,7 @@
 
 import type { SearchConditions } from '../../types/search';
 import type { WorkerChunk } from '../../types/parallel';
+import { countValidKeyCombinations } from '@/lib/utils/key-input';
 
 export interface ChunkMetrics {
   totalChunks: number;
@@ -15,6 +16,15 @@ export interface ChunkMetrics {
 }
 
 export class ChunkCalculator {
+  private static getOperationsPerSecond(conditions: SearchConditions): number {
+    const timer0Count =
+      conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1;
+    const vcountCount =
+      conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1;
+    const keyCombinationCount = countValidKeyCombinations(conditions.keyInput);
+    return Math.max(1, timer0Count * vcountCount * keyCombinationCount);
+  }
+
   /**
    * 最適なチャンク分割を計算
    */
@@ -39,6 +49,7 @@ export class ChunkCalculator {
     conditions: SearchConditions,
     workerCount: number
   ): WorkerChunk[] {
+    const operationsPerSecond = this.getOperationsPerSecond(conditions);
     const startDate = new Date(
       conditions.dateRange.startYear,
       conditions.dateRange.startMonth - 1,
@@ -77,8 +88,7 @@ export class ChunkCalculator {
         const estimatedOperations = this.estimateOperations(
           chunkStartDate,
           chunkEndDate,
-          conditions.timer0VCountConfig.timer0Range,
-          conditions.timer0VCountConfig.vcountRange
+          operationsPerSecond
         );
 
         chunks.push({
@@ -101,14 +111,10 @@ export class ChunkCalculator {
   private static estimateOperations(
     startDate: Date,
     endDate: Date,
-    timer0Range: { min: number; max: number },
-    vcountRange: { min: number; max: number }
+    operationsPerSecond: number
   ): number {
     const seconds = Math.floor((endDate.getTime() - startDate.getTime()) / 1000) + 1;
-    const timer0Count = timer0Range.max - timer0Range.min + 1;
-    const vcountCount = vcountRange.max - vcountRange.min + 1;
-    
-    return seconds * timer0Count * vcountCount;
+    return Math.max(1, seconds * operationsPerSecond);
   }
 
   /**
@@ -122,7 +128,8 @@ export class ChunkCalculator {
     const timer0Count = conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1;
     const vcountCount = conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1;
     
-    const totalOperations = totalSeconds * timer0Count * vcountCount;
+    const operationsPerSecond = timer0Count * vcountCount * countValidKeyCombinations(conditions.keyInput);
+    const totalOperations = totalSeconds * operationsPerSecond;
     
     // 時刻範囲が他の次元より大きい場合は時刻優位
     const timeRangeDominant = totalSeconds > Math.max(timer0Count, vcountCount) * 10;

@@ -100,48 +100,48 @@ export function KeyInputParam() {
             <div className="grid grid-cols-3 gap-4">
               {/* 左エリア: 十字キー */}
               <div className="flex flex-col items-center justify-center space-y-2">
-                <div className="grid grid-cols-3 gap-1">
+                <div className="grid grid-cols-3 gap-1 font-arrows">
                   <div></div>
                   <Toggle
-                    value="Up"
+                    value="[↑]"
                     aria-label="Up"
-                    pressed={tempAvailableKeys.includes('Up')}
-                    onPressedChange={() => handleToggleKey('Up')}
+                    pressed={tempAvailableKeys.includes('[↑]')}
+                    onPressedChange={() => handleToggleKey('[↑]')}
                     className="w-12 h-12"
                   >
-                    Up
+                    [↑]
                   </Toggle>
                   <div></div>
                   
                   <Toggle
-                    value="Left"
+                    value="[←]"
                     aria-label="Left"
-                    pressed={tempAvailableKeys.includes('Left')}
-                    onPressedChange={() => handleToggleKey('Left')}
+                    pressed={tempAvailableKeys.includes('[←]')}
+                    onPressedChange={() => handleToggleKey('[←]')}
                     className="w-12 h-12"
                   >
-                    Left
+                    [←]
                   </Toggle>
                   <div className="w-12 h-12"></div>
                   <Toggle
-                    value="Right"
+                    value="[→]"
                     aria-label="Right"
-                    pressed={tempAvailableKeys.includes('Right')}
-                    onPressedChange={() => handleToggleKey('Right')}
+                    pressed={tempAvailableKeys.includes('[→]')}
+                    onPressedChange={() => handleToggleKey('[→]')}
                     className="w-12 h-12"
                   >
-                    Right
+                    [→]
                   </Toggle>
                   
                   <div></div>
                   <Toggle
-                    value="Down"
+                    value="[↓]"
                     aria-label="Down"
-                    pressed={tempAvailableKeys.includes('Down')}
-                    onPressedChange={() => handleToggleKey('Down')}
+                    pressed={tempAvailableKeys.includes('[↓]')}
+                    onPressedChange={() => handleToggleKey('[↓]')}
                     className="w-12 h-12"
                   >
-                    Down
+                    [↓]
                   </Toggle>
                   <div></div>
                 </div>

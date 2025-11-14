@@ -6,7 +6,7 @@
 import type { TimerState } from '../types/callbacks';
 import { SeedCalculator } from '../lib/core/seed-calculator';
 import { toMacUint8Array } from '@/lib/utils/mac-address';
-import { keyMaskToKeyCode } from '@/lib/utils/key-input';
+import { countValidKeyCombinations, keyMaskToKeyCode } from '@/lib/utils/key-input';
 import type { SearchConditions, InitialSeedResult } from '../types/search';
 import type { ParallelWorkerRequest, ParallelWorkerResponse, WorkerChunk } from '../types/parallel';
 import type { Hardware } from '../types/rom';
@@ -46,6 +46,8 @@ const timerState: TimerState = {
 };
 
 let calculator: SeedCalculator;
+
+const TARGET_OPERATIONS_PER_SUB_CHUNK = 1_000_000;
 
 /**
  * MACアドレスを Uint8Array(6) に変換
@@ -182,20 +184,32 @@ async function processChunkWithWasm(
     frameValue
   );
 
+  // Target seed配列のJIT変換を一度だけ実施してコストを削減
+  const targetSeedArray = targetSeeds.length > 0 ? new Uint32Array(targetSeeds) : new Uint32Array(0);
+  const keyCombinationCount = countValidKeyCombinations(conditions.keyInput);
+  const timer0Count =
+    conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1;
+  const vcountCount =
+    conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1;
+  const operationsPerSecond = timer0Count * vcountCount * Math.max(keyCombinationCount, 1);
+
   try {
     const chunk = searchState.chunk!;
     const startDate = chunk.startDateTime;
     const endDate = chunk.endDateTime;
     const rangeSeconds = Math.floor((endDate.getTime() - startDate.getTime()) / 1000) + 1;
-    const totalOperations = rangeSeconds * 
-      (conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1) *
-      (conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1);
+    const totalOperations = rangeSeconds * operationsPerSecond;
 
     // 初期進捗報告
     reportProgress(0, totalOperations, 0);
 
-    // サブチャンク分割 (5日)
-    const subChunkSeconds = Math.min(5 * 24 * 60 * 60, rangeSeconds);
+    // サブチャンク分割 (5日上限、負荷に応じて短縮)
+    const rawSubChunkSeconds = Math.floor(TARGET_OPERATIONS_PER_SUB_CHUNK / Math.max(operationsPerSecond, 1));
+    const boundedSubChunkSeconds = Math.max(1, rawSubChunkSeconds);
+    const subChunkSeconds = Math.max(
+      1,
+      Math.min(rangeSeconds, Math.min(5 * 24 * 60 * 60, boundedSubChunkSeconds))
+    );
     const allResults: InitialSeedResult[] = [];
     let processedOperations = 0;
 
@@ -263,7 +277,7 @@ async function processChunkWithWasm(
         conditions.timer0VCountConfig.timer0Range.max,
         conditions.timer0VCountConfig.vcountRange.min,
         conditions.timer0VCountConfig.vcountRange.max,
-        new Uint32Array(targetSeeds)
+        targetSeedArray
       );
       
       // WebAssembly呼び出し後に非同期yield
@@ -299,9 +313,7 @@ async function processChunkWithWasm(
       }
 
       // サブチャンク完了後の進捗報告
-      const subChunkOperations = subChunkRange * 
-        (conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1) *
-        (conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1);
+      const subChunkOperations = subChunkRange * operationsPerSecond;
       processedOperations += subChunkOperations;
       reportProgress(processedOperations, totalOperations, allResults.length);
     }
@@ -323,8 +335,10 @@ async function processChunkWithTypeScript(
   const chunk = searchState.chunk!;
   const targetSeedSet = new Set(targetSeeds);
   let matchesFound = 0;
-  let processedCount = 0;
+  let processedOperations = 0;
+  let operationsSinceProgress = 0;
   const fallbackKeyCode = keyMaskToKeyCode(conditions.keyInput);
+  const keyCombinationCount = countValidKeyCombinations(conditions.keyInput);
   
   const params = calculator.getROMParameters(conditions.romVersion, conditions.romRegion);
   if (!params) {
@@ -337,7 +351,8 @@ async function processChunkWithTypeScript(
   // フォールバック実装は各 timer0 について実効 VCount を1つだけ評価するため、
   // 実行される操作数は「秒数 × timer0 値の個数」とする
   const totalOperations = totalSeconds *
-    (conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1);
+    (conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1) *
+    Math.max(keyCombinationCount, 1);
 
   // Timer0範囲をループ
   for (let timer0 = conditions.timer0VCountConfig.timer0Range.min; timer0 <= conditions.timer0VCountConfig.timer0Range.max; timer0++) {
@@ -392,11 +407,13 @@ async function processChunkWithTypeScript(
           matchesFound++;
         }
         
-        processedCount++;
+        processedOperations += keyCombinationCount;
+        operationsSinceProgress += keyCombinationCount;
         
         // 進捗報告と一時停止チェック (1000操作ごと)
-        if (processedCount % 1000 === 0) {
-          reportProgress(processedCount, totalOperations, matchesFound);
+        if (operationsSinceProgress >= 1000) {
+          reportProgress(processedOperations, totalOperations, matchesFound);
+          operationsSinceProgress = 0;
           
           // 追加の一時停止チェック
           if (searchState.isPaused) {
@@ -416,7 +433,7 @@ async function processChunkWithTypeScript(
   }
   
   // 最終進捗報告
-  reportProgress(processedCount, totalOperations, matchesFound);
+  reportProgress(processedOperations, totalOperations, matchesFound);
   
   return matchesFound;
 }

@@ -54,7 +54,7 @@ export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProp
               return (
                 <tr key={r.advance} className="odd:bg-background even:bg-muted/30">
                   <td className="px-2 py-1 font-mono tabular-nums">{r.advance}</td>
-                  <td className="px-2 py-1 text-center">{needleDirectionArrow(needleDir)}</td>
+                  <td className="px-2 py-1 text-center font-arrows">{needleDirectionArrow(needleDir)}</td>
                   <td className="px-2 py-1 font-mono tabular-nums">{needleDir}</td>
                   <td className="px-2 py-1 truncate max-w-[120px]" title={u?.speciesName || 'Unknown'}>{u?.speciesName || 'Unknown'}</td>
                   <td className="px-2 py-1 font-mono whitespace-nowrap">{pidHex(r.pid)}</td>

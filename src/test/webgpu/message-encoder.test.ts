@@ -187,7 +187,7 @@ describe('buildSearchContext', () => {
   it('上下同時押しを含むキーコードを除外する', () => {
     const context = withMockedLocalTimezone(-540, () => {
       const conditions = createSearchConditions(singleDayRange);
-      conditions.keyInput = keyNamesToMask(['Up', 'Down']);
+      conditions.keyInput = keyNamesToMask(['[↑]', '[↓]']);
       conditions.timer0VCountConfig.timer0Range = { min: 0xC79, max: 0xC79 };
       return buildSearchContext(conditions);
     });
@@ -202,7 +202,7 @@ describe('buildSearchContext', () => {
   it('左右同時押しを含むキーコードを除外する', () => {
     const context = withMockedLocalTimezone(-540, () => {
       const conditions = createSearchConditions(singleDayRange);
-      conditions.keyInput = keyNamesToMask(['Left', 'Right', 'A']);
+      conditions.keyInput = keyNamesToMask(['[←]', '[→]', 'A']);
       conditions.timer0VCountConfig.timer0Range = { min: 0xC79, max: 0xC79 };
       return buildSearchContext(conditions);
     });

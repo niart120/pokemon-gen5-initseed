@@ -200,9 +200,9 @@ export class ResultExporter {
       const hex = `0x${result.keyCode.toString(16).toUpperCase().padStart(4, '0')}`;
       const names = keyCodeToNames(result.keyCode);
       if (names.length === 0) {
-        return `${hex} (No keys)`;
+        return `(No keys)`;
       }
-      return `${hex} (${names.join(' + ')})`;
+      return `(${names.join(' + ')})`;
     }
 
     if (result.keyInput != null) {

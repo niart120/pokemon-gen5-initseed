@@ -274,6 +274,7 @@ export class MultiWorkerSearchManager {
     workerId: number,
     progressData: {
       currentStep: number;
+      totalSteps: number;
       elapsedTime: number;
       estimatedTimeRemaining: number;
       matchesFound: number;
@@ -285,6 +286,9 @@ export class MultiWorkerSearchManager {
 
     // 進捗データ更新（totalStepsやstatusは既存のものを維持）
     currentProgress.currentStep = progressData.currentStep;
+    if (progressData.totalSteps > 0 && progressData.totalSteps !== currentProgress.totalSteps) {
+      currentProgress.totalSteps = progressData.totalSteps;
+    }
     currentProgress.elapsedTime = progressData.elapsedTime;
     currentProgress.estimatedTimeRemaining = progressData.estimatedTimeRemaining;
     currentProgress.matchesFound = progressData.matchesFound;

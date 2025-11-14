@@ -39,6 +39,7 @@ export function SearchPanel() {
       hardware: result.conditions.hardware,
       macAddress: result.conditions.macAddress,
       keyInput: result.conditions.keyInput,
+      keyCode: result.keyCode,
       message: result.message,
       hash: result.sha1Hash,
     }));

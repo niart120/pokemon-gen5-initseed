@@ -109,7 +109,7 @@ export function ResultDetailsDialog({
           {/* Key Input */}
           <div>
             <Label>Key Input</Label>
-            <div className="font-mono text-sm">
+            <div className="font-mono text-sm font-arrows">
               {keyInputDisplay}
             </div>
           </div>

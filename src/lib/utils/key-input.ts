@@ -3,10 +3,10 @@ const KEY_DEFINITIONS = [
   ['B', 1],
   ['Select', 2],
   ['Start', 3],
-  ['Right', 4],
-  ['Left', 5],
-  ['Up', 6],
-  ['Down', 7],
+  ['[→]', 4],
+  ['[←]', 5],
+  ['[↑]', 6],
+  ['[↓]', 7],
   ['R', 8],
   ['L', 9],
   ['X', 10],
@@ -20,23 +20,54 @@ const KEY_TO_BIT: Record<KeyName, number> = KEY_DEFINITIONS.reduce((acc, [key, b
   return acc;
 }, {} as Record<KeyName, number>);
 
-const KEY_MASK_LIMIT = 0x0FFF;
+const KEY_BIT_COUNT = KEY_DEFINITIONS.length;
+const KEY_MASK_LIMIT = (1 << KEY_BIT_COUNT) - 1;
 export const KEY_CODE_BASE = 0x2FFF;
 export const KEY_INPUT_DEFAULT = 0x0000;
 
 export const RAW_INVALID_KEY_COMBINATION_MASKS = [
-  (1 << KEY_TO_BIT['Up']) | (1 << KEY_TO_BIT['Down']),
-  (1 << KEY_TO_BIT['Left']) | (1 << KEY_TO_BIT['Right']),
+  (1 << KEY_TO_BIT['[↑]']) | (1 << KEY_TO_BIT['[↓]']),
+  (1 << KEY_TO_BIT['[←]']) | (1 << KEY_TO_BIT['[→]']),
   (1 << KEY_TO_BIT['Select']) | (1 << KEY_TO_BIT['Start']) | (1 << KEY_TO_BIT['L']) | (1 << KEY_TO_BIT['R']),
 ] as const;
 
-function normalizeMask(mask: number): number {
-  if (!Number.isFinite(mask)) return 0;
+type KeyRepresentation = 'mask' | 'code';
+
+function toMask(value: number, representation: KeyRepresentation): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  if (representation === 'mask') {
+    return value & KEY_MASK_LIMIT;
+  }
+
+  const normalizedCode = value & KEY_CODE_BASE;
+  const mask = normalizedCode ^ KEY_CODE_BASE;
   return mask & KEY_MASK_LIMIT;
 }
 
+function toCode(mask: number): number {
+  const normalizedMask = toMask(mask, 'mask');
+  return KEY_CODE_BASE ^ normalizedMask;
+}
+
+function collectKeyNames(mask: number): KeyName[] {
+  const names: KeyName[] = [];
+  for (const [key, bit] of KEY_DEFINITIONS) {
+    if ((mask & (1 << bit)) !== 0) {
+      names.push(key);
+    }
+  }
+  return names;
+}
+
+export function normalizeKeyMask(mask: number): number {
+  return toMask(mask, 'mask');
+}
+
 export function hasImpossibleKeyCombination(rawMask: number): boolean {
-  const normalized = normalizeMask(rawMask);
+  const normalized = toMask(rawMask, 'mask');
   for (const invalidMask of RAW_INVALID_KEY_COMBINATION_MASKS) {
     if ((normalized & invalidMask) === invalidMask) {
       return true;
@@ -46,15 +77,8 @@ export function hasImpossibleKeyCombination(rawMask: number): boolean {
 }
 
 export function keyMaskToNames(mask: number): KeyName[] {
-  const normalized = normalizeMask(mask);
-
-  const names: KeyName[] = [];
-  for (const [key, bit] of KEY_DEFINITIONS) {
-    if ((normalized & (1 << bit)) !== 0) {
-      names.push(key);
-    }
-  }
-  return names;
+  const normalized = toMask(mask, 'mask');
+  return collectKeyNames(normalized);
 }
 
 export function keyNamesToMask(names: Iterable<KeyName>): number {
@@ -65,24 +89,56 @@ export function keyNamesToMask(names: Iterable<KeyName>): number {
       mask |= 1 << bit;
     }
   }
-  return normalizeMask(mask);
+  return toMask(mask, 'mask');
 }
 
 export function toggleKeyInMask(mask: number, key: KeyName): number {
   const bit = KEY_TO_BIT[key];
-  if (bit === undefined) return mask;
-  return normalizeMask(mask ^ (1 << bit));
+  if (bit === undefined) {
+    return toMask(mask, 'mask');
+  }
+  const normalized = toMask(mask, 'mask');
+  return toMask(normalized ^ (1 << bit), 'mask');
 }
 
 export function keyMaskToKeyCode(mask: number): number {
-  return KEY_CODE_BASE ^ normalizeMask(mask);
+  return toCode(mask);
 }
 
 export function keyCodeToMask(keyCode: number): number {
-  if (!Number.isFinite(keyCode)) return 0;
-  return KEY_CODE_BASE ^ (keyCode & KEY_CODE_BASE);
+  return toMask(keyCode, 'code');
 }
 
 export function keyCodeToNames(keyCode: number): KeyName[] {
-  return keyMaskToNames(keyCodeToMask(keyCode));
+  const normalizedMask = toMask(keyCode, 'code');
+  return collectKeyNames(normalizedMask);
+}
+
+export function countValidKeyCombinations(mask: number): number {
+  const normalized = toMask(mask, 'mask');
+  const enabledBits: number[] = [];
+  for (let bit = 0; bit < KEY_BIT_COUNT; bit += 1) {
+    if ((normalized & (1 << bit)) !== 0) {
+      enabledBits.push(bit);
+    }
+  }
+
+  const totalCombinations = 1 << enabledBits.length;
+  let validCount = 0;
+
+  for (let combinationIndex = 0; combinationIndex < totalCombinations; combinationIndex += 1) {
+    let combinationMask = 0;
+    for (let bitIndex = 0; bitIndex < enabledBits.length; bitIndex += 1) {
+      if ((combinationIndex & (1 << bitIndex)) !== 0) {
+        combinationMask |= 1 << enabledBits[bitIndex]!;
+      }
+    }
+
+    if (hasImpossibleKeyCombination(combinationMask)) {
+      continue;
+    }
+    validCount += 1;
+  }
+
+  return validCount > 0 ? validCount : 1;
 }
