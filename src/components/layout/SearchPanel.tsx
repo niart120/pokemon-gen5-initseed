@@ -108,14 +108,14 @@ export function SearchPanel() {
     // スマートフォン・縦長画面: 縦スタック配置
     return (
       <>
-        <div className={`${sizes.gap} flex flex-col min-h-0`}>
+        <div className={`${sizes.gap} flex flex-col h-full overflow-y-auto overflow-x-hidden`}>
           <div className="flex-none">
             <ROMConfigurationCard />
           </div>
           <div className="flex-none">
             <ParameterConfigurationCard />
           </div>
-          <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="flex-none">
             <TargetSeedsCard />
           </div>
           <div className="flex-none">
@@ -134,7 +134,7 @@ export function SearchPanel() {
               setSortField={setSortField}
             />
           </div>
-          <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-[200px]">
             <ResultsCard
               filteredAndSortedResults={filteredAndSortedResults}
               searchResultsLength={searchResults.length}
