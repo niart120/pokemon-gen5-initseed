@@ -29,7 +29,7 @@ export function Timer0VCountSection({
   onVCountHexBlur,
 }: Timer0VCountSectionProps) {
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-5">
       <div className="flex min-w-0 flex-col gap-1">
         <Label htmlFor="timer0-min" className="text-xs">Timer0 Min</Label>
         <Input

@@ -63,7 +63,7 @@ export function ProfileManagementSection({
           <SelectContent>
             {profiles.map((profile) => (
               <SelectItem key={profile.id} value={profile.id}>
-                {profile.name} {dirty && <Badge variant="secondary">not saved</Badge>}
+                {profile.name}
               </SelectItem>
             ))}
             <div className="my-1 h-px bg-border" role="separator" />
@@ -81,6 +81,7 @@ export function ProfileManagementSection({
         onOpenChange={handleRenameOpenChange}
         onRename={onProfileNameChange}
       />
+      {dirty && <Badge variant="secondary">not saved</Badge>}
     </div>
   );
 }
