@@ -22,12 +22,12 @@ BW/BW2仕様の64bit線形合同法による乱数生成エンジンの実装。
 ### Personality RNG
 **ファイル**: [algorithms/personality-rng.md](./algorithms/personality-rng.md)
 
-BW/BW2 仕様の 64bit 線形合同法による乱数生成エンジン。シードの更新式、シンクロ判定用の補助乱数、遭遇スロット計算用のバリエーションを定義しています。
+BW/BW2 仕様の 64bit 線形合同法による乱数生成エンジン。Seedの更新式、シンクロ判定用の補助乱数、エンカウントスロット計算用のバリエーションを定義しています。
 
 ### Encounter Calculator
 **ファイル**: [algorithms/encounter-calculator.md](./algorithms/encounter-calculator.md)
 
-遭遇スロット計算とエンカウントタイプ別確率分布の実装。通常・なみのり・釣り・特殊各種の分布、およびスロット値からテーブルインデックスへの変換をまとめています。
+エンカウントスロット計算とエンカウントタイプ別確率分布の実装。通常・なみのり・釣り・特殊各種の分布、およびスロット値からテーブルインデックスへの変換をまとめています。
 
 ### Offset Calculator
 **ファイル**: [algorithms/offset-calculator.md](./algorithms/offset-calculator.md)
@@ -42,12 +42,12 @@ BW/BW2 仕様の 64bit 線形合同法による乱数生成エンジン。シー
 ### PID & Shiny Checker
 **ファイル**: [algorithms/pid-shiny-checker.md](./algorithms/pid-shiny-checker.md)
 
-遭遇タイプ別 PID 生成、色違い判定、シンクロ適用範囲、乱数消費パターンの違いを整理します。
+エンカウントタイプ別 PID 生成、色違い判定、シンクロ適用範囲、乱数消費パターンの違いを整理します。
 
 ### Special Encounters
 **ファイル**: [algorithms/special-encounters.md](./algorithms/special-encounters.md)
 
-揺れる草むらや砂煙など特殊エンカウント固有の仕様を定義。遭遇テーブル、レベル計算方針、アイテムドロップ、隠れ特性の扱いを記録しています。
+揺れる草むらや砂煙など特殊エンカウント固有の仕様を定義。エンカウントテーブル、レベル計算方針、アイテムドロップ、隠れ特性の扱いを記録しています。
 - 不要な計算の回避
 - メモリ効率の良いデータ構造
 
@@ -75,7 +75,7 @@ BW/BW2 仕様の 64bit 線形合同法による乱数生成エンジン。シー
 詳細な実装仕様は以下のファイルを参照：
 
 - [algorithms/personality-rng.md](./algorithms/personality-rng.md) - 性格値乱数列エンジン
-- [algorithms/encounter-calculator.md](./algorithms/encounter-calculator.md) - 遭遇計算エンジン  
+- [algorithms/encounter-calculator.md](./algorithms/encounter-calculator.md) - エンカウント計算エンジン  
 - [algorithms/offset-calculator.md](./algorithms/offset-calculator.md) - オフセット計算エンジン
 - [algorithms/pokemon-generator.md](./algorithms/pokemon-generator.md) - ポケモンデータ構造と統合Generator
 - [algorithms/pid-shiny-checker.md](./algorithms/pid-shiny-checker.md) - 性格値・色違い判定

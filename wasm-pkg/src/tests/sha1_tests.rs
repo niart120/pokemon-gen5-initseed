@@ -119,7 +119,7 @@ mod wasm_tests {
             assert_ne!(h3, 0, "Message {} resulted in h3=0", i);
             assert_ne!(h4, 0, "Message {} resulted in h4=0", i);
 
-            // シード計算も正常に動作することを確認
+            // Seed計算も正常に動作することを確認
             let seed = calculate_pokemon_seed_from_hash(h0, h1);
             assert_ne!(seed, 0, "Message {} resulted in seed=0", i);
         }
@@ -143,7 +143,7 @@ mod wasm_tests {
         assert_eq!(h3_1, h3_2);
         assert_eq!(h4_1, h4_2);
 
-        // シード計算も一致することを確認
+        // Seed計算も一致することを確認
         let seed_1 = calculate_pokemon_seed_from_hash(h0_1, h1_1);
         let seed_2 = calculate_pokemon_seed_from_hash(h0_2, h1_2);
         assert_eq!(seed_1, seed_2);

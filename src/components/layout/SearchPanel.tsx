@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useAppStore } from '../../store/app-store';
-import { 
-  ROMConfigurationCard, 
-  ParameterConfigurationCard,
-  TargetSeedsCard 
+import {
+  SearchParamsCard,
+  TargetSeedsCard
 } from '../search/configuration';
 import { SearchControlCard, SearchProgressCard } from '../search/control';
 import { ResultsControlCard, ResultsCard, ResultDetailsDialog, type SortField } from '../search/results';
@@ -11,6 +10,7 @@ import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { getResponsiveSizes } from '@/lib/utils/responsive-sizes';
 import { LEFT_COLUMN_WIDTH_CLAMP } from './constants';
 import type { InitialSeedResult, SearchResult } from '../../types/search';
+import { ProfileCard } from '@/components/profile/ProfileCard';
 
 export function SearchPanel() {
   const { searchResults } = useAppStore();
@@ -111,10 +111,10 @@ export function SearchPanel() {
       <>
         <div className={`${sizes.gap} flex flex-col h-full overflow-y-auto overflow-x-hidden`}>
           <div className="flex-none">
-            <ROMConfigurationCard />
+            <ProfileCard />
           </div>
           <div className="flex-none">
-            <ParameterConfigurationCard />
+            <SearchParamsCard />
           </div>
           <div className="flex-none">
             <TargetSeedsCard />
@@ -158,54 +158,56 @@ export function SearchPanel() {
   // PC: 3カラム配置（設定 | 検索制御・進捗 | 結果）
   return (
     <>
-      <div className={`flex ${sizes.gap} max-w-full h-full min-h-0 min-w-fit overflow-hidden`}>
-        {/* 左カラム: 設定エリア */}
-        <div
-          className={`flex-1 flex flex-col ${sizes.gap} min-w-0 overflow-y-auto`}
-          style={{ minHeight: 0, width: LEFT_COLUMN_WIDTH_CLAMP, flex: `0 0 ${LEFT_COLUMN_WIDTH_CLAMP}` }}
-        >
-          <div className="flex-none">
-            <ROMConfigurationCard />
-          </div>
-          <div className="flex-none">
-            <ParameterConfigurationCard />
-          </div>
-          <div className="flex-1 min-h-0">
-            <TargetSeedsCard />
-          </div>
+      <div className={`flex flex-col ${sizes.gap} max-w-full h-full min-h-0 min-w-fit overflow-hidden`}>
+        <div className="flex-none">
+          <ProfileCard />
         </div>
-        
-        {/* 中央カラム: 検索制御・進捗エリア */}
-        <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
-          <div className="flex-none">
-            <SearchControlCard />
+        <div className={`flex ${sizes.gap} max-w-full flex-1 min-h-0 min-w-fit overflow-hidden`}>
+          {/* 左カラム: 設定エリア */}
+          <div
+            className={`flex-1 flex flex-col ${sizes.gap} min-w-0 overflow-y-auto`}
+            style={{ minHeight: 0, width: LEFT_COLUMN_WIDTH_CLAMP, flex: `0 0 ${LEFT_COLUMN_WIDTH_CLAMP}` }}
+          >
+            <div className="flex-none">
+              <SearchParamsCard />
+            </div>
+            <div className="flex-1 min-h-0">
+              <TargetSeedsCard />
+            </div>
           </div>
-          <div className="flex-1 min-h-0">
-            <SearchProgressCard />
+
+          {/* 中央カラム: 検索制御・進捗エリア */}
+          <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
+            <div className="flex-none">
+              <SearchControlCard />
+            </div>
+            <div className="flex-1 min-h-0">
+              <SearchProgressCard />
+            </div>
           </div>
-        </div>
-        
-        {/* 右カラム: 結果エリア */}
-        <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
-          <div className="flex-none">
-            <ResultsControlCard
-              filteredResultsCount={filteredAndSortedResults.length}
-              convertedResults={convertToSearchResults}
-              filterSeed={filterSeed}
-              setFilterSeed={setFilterSeed}
-              sortField={sortField}
-              setSortField={setSortField}
-            />
-          </div>
-          <div className="flex-1 min-h-0">
-            <ResultsCard
-              filteredAndSortedResults={filteredAndSortedResults}
-              searchResultsLength={searchResults.length}
-              sortField={sortField}
-              sortOrder={sortOrder}
-              onSort={handleSort}
-              onShowDetails={handleShowDetails}
-            />
+
+          {/* 右カラム: 結果エリア */}
+          <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
+            <div className="flex-none">
+              <ResultsControlCard
+                filteredResultsCount={filteredAndSortedResults.length}
+                convertedResults={convertToSearchResults}
+                filterSeed={filterSeed}
+                setFilterSeed={setFilterSeed}
+                sortField={sortField}
+                setSortField={setSortField}
+              />
+            </div>
+            <div className="flex-1 min-h-0">
+              <ResultsCard
+                filteredAndSortedResults={filteredAndSortedResults}
+                searchResultsLength={searchResults.length}
+                sortField={sortField}
+                sortOrder={sortOrder}
+                onSort={handleSort}
+                onShowDetails={handleShowDetails}
+              />
+            </div>
           </div>
         </div>
       </div>

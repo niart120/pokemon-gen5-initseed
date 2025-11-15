@@ -7,7 +7,7 @@
 | カテゴリ | パス | ステータス | メモ |
 | --- | --- | --- | --- |
 | **コア仕様** | `pokemon-generation-feature-spec.md` | Active | Generation 機能のMVP要件・入力/出力定義。UI更新に合わせて随時同期する。 |
-|  | `pokemon-data-specification.md` | Draft | 種族・遭遇データ構造の仕様。実データ生成フロー整備後に更新が必要。 |
+|  | `pokemon-data-specification.md` | Draft | 種族・エンカウントデータ構造の仕様。実データ生成フロー整備後に更新が必要。 |
 | **実装仕様** | `implementation/README.md` | Active | 実装仕様書の入口。アーキテクチャ/アルゴリズム/データ管理の詳細を参照。 |
 |  | `implementation/01-architecture.md` | Active | UI/サービス/WASM 層の責務分離とデータフロー。 |
 |  | `implementation/02-algorithms.md` | Active | 核心アルゴリズムのサマリ。`implementation/algorithms/` の詳細ドキュメントと連携。 |

@@ -31,7 +31,7 @@ export enum DustCloudContent {
   EvolutionStone = 2,
 }
 /**
- * 遭遇タイプ列挙型
+ * エンカウントタイプ列挙型
  */
 export enum EncounterType {
   /**
@@ -85,7 +85,7 @@ export enum EncounterType {
   /**
    * 徘徊ポケモン（ドキュメント仕様準拠）
    */
-  Roaming = 20,
+  Roamer = 20,
 }
 /**
  * ゲームモード列挙型（仕様書準拠）
@@ -303,7 +303,7 @@ export class BitUtils {
   static extract_bits(value: number, start_bit: number, bit_count: number): number;
 }
 /**
- * 遭遇計算エンジン
+ * エンカウント計算エンジン
  */
 export class EncounterCalculator {
   free(): void;
@@ -312,22 +312,22 @@ export class EncounterCalculator {
    */
   constructor();
   /**
-   * 遭遇スロットを計算
+   * エンカウントスロットを計算
    *
    * # Arguments
    * * `version` - ゲームバージョン
-   * * `encounter_type` - 遭遇タイプ
+   * * `encounter_type` - エンカウントタイプ
    * * `random_value` - 乱数値（32bit）
    *
    * # Returns
-   * 遭遇スロット番号（0-11）
+   * エンカウントスロット番号（0-11）
    */
   static calculate_encounter_slot(version: GameVersion, encounter_type: EncounterType, random_value: number): number;
   /**
    * スロット番号をテーブルインデックスに変換
    *
    * # Arguments
-   * * `encounter_type` - 遭遇タイプ
+   * * `encounter_type` - エンカウントタイプ
    * * `slot` - スロット番号
    *
    * # Returns
@@ -417,7 +417,7 @@ export class ExtraResult {
   readonly get_value3: number;
 }
 /**
- * 統合シード探索器
+ * 統合Seed探索器
  * 固定パラメータを事前計算し、日時範囲を高速探索する
  */
 export class IntegratedSeedSearcher {
@@ -427,12 +427,12 @@ export class IntegratedSeedSearcher {
    */
   constructor(mac: Uint8Array, nazo: Uint32Array, hardware: string, key_input_mask: number, frame: number);
   /**
-   * 統合シード探索メイン関数
+   * 統合Seed探索メイン関数
    * 日時範囲とTimer0/VCount範囲を指定して一括探索
    */
   search_seeds_integrated(year_start: number, month_start: number, date_start: number, hour_start: number, minute_start: number, second_start: number, range_seconds: number, timer0_min: number, timer0_max: number, vcount_min: number, vcount_max: number, target_seeds: Uint32Array): Array<any>;
   /**
-   * 統合シード探索SIMD版
+   * 統合Seed探索SIMD版
    * range_secondsを最内ループに配置してSIMD SHA-1計算を活用
    */
   search_seeds_integrated_simd(year_start: number, month_start: number, date_start: number, hour_start: number, minute_start: number, second_start: number, range_seconds: number, timer0_min: number, timer0_max: number, vcount_min: number, vcount_max: number, target_seeds: Uint32Array): Array<any>;
@@ -514,7 +514,7 @@ export class OffsetCalculator {
    * 新しいOffsetCalculatorインスタンスを作成
    *
    * # Arguments
-   * * `seed` - 初期シード値
+   * * `seed` - 初期Seed値
    */
   constructor(seed: bigint);
   /**
@@ -535,7 +535,7 @@ export class OffsetCalculator {
    * 計算器をリセット
    *
    * # Arguments
-   * * `new_seed` - 新しいシード値
+   * * `new_seed` - 新しいSeed値
    */
   reset(new_seed: bigint): void;
   /**
@@ -588,10 +588,10 @@ export class OffsetCalculator {
    */
   readonly get_advances: number;
   /**
-   * 現在のシード値を取得
+   * 現在のSeed値を取得
    *
    * # Returns
-   * 現在のシード値
+   * 現在のSeed値
    */
   readonly get_current_seed: bigint;
 }
@@ -666,7 +666,7 @@ export class PIDCalculator {
    * # Returns
    * 生成されたPID（ID補正適用後）
    */
-  static generate_roaming_pid(r1: number, tid: number, sid: number): number;
+  static generate_roamer_pid(r1: number, tid: number, sid: number): number;
   /**
    * BW/BW2準拠 イベントポケモンのPID生成
    * 32bit乱数 ^ 0x10000（ID補正なし - 先頭特性無効）
@@ -713,7 +713,7 @@ export class PersonalityRNG {
    * 新しいPersonalityRNGインスタンスを作成
    *
    * # Arguments
-   * * `seed` - 初期シード値（64bit）
+   * * `seed` - 初期Seed値（64bit）
    */
   constructor(seed: bigint);
   /**
@@ -738,55 +738,55 @@ export class PersonalityRNG {
    */
   advance(advances: number): void;
   /**
-   * シードをリセット
+   * Seedをリセット
    *
    * # Arguments
-   * * `initial_seed` - リセット後のシード値
+   * * `initial_seed` - リセット後のSeed値
    */
   reset(initial_seed: bigint): void;
   /**
    * 0x0からの進行度を計算
    *
    * # Arguments
-   * * `seed` - 計算対象のシード値
+   * * `seed` - 計算対象のSeed値
    *
    * # Returns
    * 0x0からの進行度
    */
   static get_index(seed: bigint): bigint;
   /**
-   * 2つのシード間の距離を計算
+   * 2つのSeed間の距離を計算
    *
    * # Arguments
-   * * `from_seed` - 開始シード
-   * * `to_seed` - 終了シード
+   * * `from_seed` - 開始Seed
+   * * `to_seed` - 終了Seed
    *
    * # Returns
    * from_seedからto_seedまでの距離
    */
   static distance_between(from_seed: bigint, to_seed: bigint): bigint;
   /**
-   * 指定シードから現在のシードまでの距離
+   * 指定Seedから現在のSeedまでの距離
    *
    * # Arguments
-   * * `source_seed` - 開始シード
+   * * `source_seed` - 開始Seed
    *
    * # Returns
-   * source_seedから現在のシードまでの距離
+   * source_seedから現在のSeedまでの距離
    */
   distance_from(source_seed: bigint): bigint;
   /**
-   * 現在のシード値を取得
+   * 現在のSeed値を取得
    *
    * # Returns
-   * 現在の内部シード値
+   * 現在の内部Seed値
    */
   readonly current_seed: bigint;
   /**
-   * シード値を設定
+   * Seed値を設定
    *
    * # Arguments
-   * * `new_seed` - 新しいシード値
+   * * `new_seed` - 新しいSeed値
    */
   set seed(value: bigint);
 }
@@ -803,7 +803,7 @@ export class PokemonGenerator {
    * BW/BW2準拠 単体ポケモン生成（統括関数）
    *
    * # Arguments
-   * * `seed` - 初期シード値
+   * * `seed` - 初期Seed値
    * * `config` - BW準拠設定
    *
    * # Returns
@@ -811,14 +811,14 @@ export class PokemonGenerator {
    */
   static generate_single_pokemon_bw(seed: bigint, config: BWGenerationConfig): RawPokemonData;
   /**
-   * オフセット適用後の生成開始シードを計算
+   * オフセット適用後の生成開始Seedを計算
    */
   static calculate_generation_seed(initial_seed: bigint, offset: bigint): bigint;
   /**
    * BW/BW2準拠 バッチ生成（offsetのみ）
    *
    * # Arguments
-   * * `base_seed` - 列挙の基準シード（初期シード）
+   * * `base_seed` - 列挙の初期Seed
    * * `offset` - 最初の生成までの前進数（ゲーム内不定消費を含めた開始位置）
    * * `count` - 生成数（0なら空）
    * * `config` - BW準拠設定
@@ -867,7 +867,7 @@ export class SearchResult {
   readonly keyCode: number;
 }
 /**
- * 連続列挙用のシード列挙器（offsetのみ）
+ * 連続列挙用のSeed列挙器（offsetのみ）
  */
 export class SeedEnumerator {
   free(): void;
@@ -1038,10 +1038,10 @@ export class ValidationUtils {
    */
   static is_valid_hex_string(hex_str: string): boolean;
   /**
-   * シード値の妥当性チェック
+   * Seed値の妥当性チェック
    *
    * # Arguments
-   * * `seed` - シード値
+   * * `seed` - Seed値
    *
    * # Returns
    * 妥当性
@@ -1124,7 +1124,7 @@ export interface InitOutput {
   readonly personalityrng_distance_from: (a: number, b: bigint) => bigint;
   readonly pidcalculator_generate_base_pid: (a: number) => number;
   readonly pidcalculator_apply_id_correction: (a: number, b: number, c: number) => number;
-  readonly pidcalculator_generate_roaming_pid: (a: number, b: number, c: number) => number;
+  readonly pidcalculator_generate_roamer_pid: (a: number, b: number, c: number) => number;
   readonly pidcalculator_generate_gift_pid: (a: number, b: number) => number;
   readonly pidcalculator_generate_egg_pid: (a: number, b: number) => number;
   readonly shinychecker_is_shiny: (a: number, b: number, c: number) => number;

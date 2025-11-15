@@ -10,7 +10,7 @@ use wasm_bindgen::prelude::*;
 #[derive(Debug, Clone)]
 pub struct RawPokemonData {
     pub personality_value: u32,     // 性格値（PID）
-    pub encounter_slot_value: u32,  // 遭遇スロット値
+    pub encounter_slot_value: u32,  // エンカウントスロット値
     pub nature_id: u32,             // 性格ID
     pub sync_applied: bool,         // シンクロ適用フラグ
     pub advances: u32,              // 進行度（乱数消費回数）
@@ -18,7 +18,7 @@ pub struct RawPokemonData {
     pub shiny_flag: bool,           // 色違いフラグ
     pub ability_slot: u32,          // 特性スロット
     pub gender_value: u8,           // 性別判定値
-    pub rng_seed_used: u64,         // 使用された乱数シード
+    pub rng_seed_used: u64,         // 使用された乱数Seed
     pub encounter_type: u32,        // エンカウントタイプ
 }
 ```
@@ -103,7 +103,7 @@ impl PokemonGenerator {
             (false, self.rng.nature_roll())
         };
         
-        // Step 2: 遭遇スロット決定
+        // Step 2: エンカウントスロット決定
         let encounter_slot_value = match self.game_version {
             GameVersion::B | GameVersion::W => self.rng.encounter_slot_bw(),
             GameVersion::B2 | GameVersion::W2 => self.rng.encounter_slot_bw2(),
@@ -141,7 +141,7 @@ impl PokemonGenerator {
         
         Some(RawPokemonData {
             personality_value, // 性格値（PID）
-            encounter_slot_value, // 遭遇スロット値
+            encounter_slot_value, // エンカウントスロット値
             nature_id, // 性格ID
             sync_applied, // シンクロ適用フラグ
             advances, // 進行度（乱数消費回数）
@@ -213,7 +213,7 @@ impl PokemonGenerator {
 - 野生エンカウント（0-7）のみ適用
 - 固定シンボル・ギフト・徘徊ポケモンはシンクロ無効
 
-### 2. 遭遇スロット決定
+### 2. エンカウントスロット決定
 - BW/BW2で計算式が異なる
 - 各エンカウントタイプで使用されるスロット数が異なる
 

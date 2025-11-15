@@ -2,18 +2,22 @@ import React from 'react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { SUPPORTED_LOCALES, type SupportedLocale } from '@/types/i18n';
 import { useLocale, useLocaleControls } from '@/lib/i18n/locale-context';
+import { localeOptionLabels, localeSelectorLabel } from '@/lib/i18n/strings/common';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 
 export function AppHeader() {
   const locale = useLocale();
   const { setLocale } = useLocaleControls();
 
-  const localeLabels: Record<SupportedLocale, string> = {
-    ja: '日本語',
-    en: 'English',
-  };
+  const selectorLabel = resolveLocaleValue(localeSelectorLabel, locale);
+  const currentLocaleLabel = resolveLocaleValue(localeOptionLabels, locale);
+
+  const isSupportedLocale = (value: string): value is SupportedLocale =>
+    (SUPPORTED_LOCALES as readonly string[]).includes(value);
 
   const handleLocaleChange = (value: string) => {
-    setLocale(value as SupportedLocale);
+    if (!isSupportedLocale(value)) return;
+    setLocale(value);
   };
 
   return (
@@ -30,14 +34,14 @@ export function AppHeader() {
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">Locale</span>
+              <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{selectorLabel}</span>
               <Select value={locale} onValueChange={handleLocaleChange}>
                 <SelectTrigger className="w-[110px] h-8">
-                  <SelectValue>{localeLabels[locale]}</SelectValue>
+                  <SelectValue>{currentLocaleLabel}</SelectValue>
                 </SelectTrigger>
                 <SelectContent align="end" className="min-w-[120px]">
                   {SUPPORTED_LOCALES.map(code => (
-                    <SelectItem key={code} value={code}>{localeLabels[code]}</SelectItem>
+                    <SelectItem key={code} value={code}>{localeOptionLabels[code]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

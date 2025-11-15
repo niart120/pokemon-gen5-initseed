@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
-import { Card } from '@/components/ui/card';
-import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
+import { PanelCard } from '@/components/ui/panel-card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -15,6 +14,25 @@ import { isWebGpuSupported } from '@/lib/search/search-mode';
 import { isWakeLockSupported, requestWakeLock, releaseWakeLock, setupAutoWakeLockManagement } from '@/lib/utils/wake-lock';
 import type { InitialSeedResult } from '../../../types/search';
 import type { SearchExecutionMode } from '@/store/app-store';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import {
+  formatSearchControlChangeModeWhileRunningAlert,
+  formatSearchControlCpuCoresLabel,
+  formatSearchControlMaxWorkersLabel,
+  formatSearchControlMissingTargetsAlert,
+  formatSearchControlNoMatchesAlert,
+  formatSearchControlSearchErrorAlert,
+  formatSearchControlStartErrorAlert,
+  resolveSearchControlButtonLabel,
+  resolveSearchControlExecutionModeHint,
+  resolveSearchControlExecutionModeLabel,
+  searchControlExecutionModeAriaLabel,
+  searchControlPanelTitle,
+  searchControlWakeLockLabel,
+  searchControlWorkerMinLabel,
+  searchControlWorkerThreadsLabel,
+} from '@/lib/i18n/strings/search-control';
 
 export function SearchControlCard() {
   const { isStack } = useResponsiveLayout();
@@ -37,6 +55,7 @@ export function SearchControlCard() {
     searchExecutionMode,
     setSearchExecutionMode,
   } = useAppStore();
+  const locale = useLocale();
 
   // ワーカー数設定を初期化時に同期
   useEffect(() => {
@@ -91,7 +110,7 @@ export function SearchControlCard() {
 
   const handleStartSearch = async () => {
     if (targetSeeds.seeds.length === 0) {
-      alert('Please add target seeds before starting the search.');
+      alert(formatSearchControlMissingTargetsAlert(locale));
       return;
     }
 
@@ -101,9 +120,9 @@ export function SearchControlCard() {
     try {
       // Get the worker manager
       const workerManager = getSearchWorkerManager();
-      
+
       // Set parallel mode based on settings
-  workerManager.setParallelMode(searchExecutionMode === 'cpu-parallel');
+      workerManager.setParallelMode(searchExecutionMode === 'cpu-parallel');
       
       // Start search with worker
       await workerManager.startSearch(
@@ -149,14 +168,14 @@ export function SearchControlCard() {
             // 結果が0件の場合のみアラートを表示（状態更新の確実な完了を待つ）
             setTimeout(() => {
               if (matchesFound === 0) {
-                alert(`Search completed. No matches found in ${totalSteps.toLocaleString()} combinations.\n\nTry:\n- Expanding the date range\n- Checking Timer0/VCount ranges\n- Verifying target seed format\n\nCheck browser console for detailed debug information.`);
+                alert(formatSearchControlNoMatchesAlert(totalSteps, locale));
               }
               // 結果が見つかった場合はダイアログを表示しない（ユーザーは結果タブで確認可能）
             }, 100);
           },
           onError: (error: string) => {
             console.error('Search error:', error);
-            alert(`Search failed: ${error}`);
+            alert(formatSearchControlSearchErrorAlert(error, locale));
             stopSearch();
             // エラー時は即座にリセット（不正な状態を避けるため）
             resetSearchWorkerManager();
@@ -178,7 +197,8 @@ export function SearchControlCard() {
       );
     } catch (error) {
       console.error('Failed to start worker search:', error);
-      alert(`Failed to start search: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const message = error instanceof Error ? error.message : (locale === 'ja' ? '不明なエラー' : 'Unknown error');
+      alert(formatSearchControlStartErrorAlert(message, locale));
       setParallelProgress(null);
       stopSearch();
       // 例外時は即座にリセット（不正な状態を避けるため）
@@ -211,26 +231,30 @@ export function SearchControlCard() {
   }> = [
     {
       value: 'cpu-parallel',
-      label: 'CPU Parallel',
+      label: resolveSearchControlExecutionModeLabel('cpuParallel', locale),
       disabled: !isParallelAvailable,
-      hint: !isParallelAvailable ? 'Parallel workers are not available on this device' : undefined,
+      hint: !isParallelAvailable
+        ? resolveSearchControlExecutionModeHint('cpuParallelUnavailable', locale)
+        : undefined,
     },
     {
       value: 'cpu-single',
-      label: 'CPU Single',
+      label: resolveSearchControlExecutionModeLabel('cpuSingle', locale),
       disabled: false,
     },
     {
       value: 'gpu',
-      label: 'GPU',
+      label: resolveSearchControlExecutionModeLabel('gpu', locale),
       disabled: !isWebGpuAvailable,
-      hint: !isWebGpuAvailable ? 'WebGPU is not available in this browser' : undefined,
+      hint: !isWebGpuAvailable
+        ? resolveSearchControlExecutionModeHint('gpuUnavailable', locale)
+        : undefined,
     },
   ];
 
   const handleExecutionModeChange = (value: string) => {
     if (searchProgress.isRunning) {
-      alert('Cannot change execution mode while search is running.');
+      alert(formatSearchControlChangeModeWhileRunningAlert(locale));
       return;
     }
 
@@ -269,9 +293,14 @@ export function SearchControlCard() {
 
   // 統一レイアウト: シンプルな検索制御
   return (
-    <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full'} gap-2`}>
-      <StandardCardHeader icon={<Play size={20} className="opacity-80" />} title="Search Control" />
-      <StandardCardContent className="overflow-hidden">
+    <PanelCard
+      icon={<Play size={20} className="opacity-80" />} 
+      title={resolveLocaleValue(searchControlPanelTitle, locale)}
+      className={isStack ? 'max-h-96' : undefined}
+      fullHeight={!isStack}
+      scrollMode="parent"
+      contentClassName="overflow-hidden"
+    >
         <div className="space-y-2">
           {/* 検索制御ボタンと設定 */}
           <div className="flex gap-2 items-center flex-wrap">
@@ -285,7 +314,7 @@ export function SearchControlCard() {
                   size="sm"
                 >
                   <Play size={16} className="mr-2" />
-                  Start Search
+                  {resolveSearchControlButtonLabel('start', locale)}
                 </Button>
               ) : (
                 <>
@@ -297,7 +326,7 @@ export function SearchControlCard() {
                       size="sm"
                     >
                       <Pause size={16} className="mr-2" />
-                      Pause
+                      {resolveSearchControlButtonLabel('pause', locale)}
                     </Button>
                   ) : (
                     <Button 
@@ -306,7 +335,7 @@ export function SearchControlCard() {
                       size="sm"
                     >
                       <Play size={16} className="mr-2" />
-                      Resume
+                      {resolveSearchControlButtonLabel('resume', locale)}
                     </Button>
                   )}
                   <Button 
@@ -315,7 +344,7 @@ export function SearchControlCard() {
                     size="sm"
                   >
                     <Square size={16} className="mr-2" />
-                    Stop
+                    {resolveSearchControlButtonLabel('stop', locale)}
                   </Button>
                 </>
               )}
@@ -330,7 +359,7 @@ export function SearchControlCard() {
                   onCheckedChange={handleWakeLockChange}
                 />
                 <Label htmlFor="wake-lock-inline" className="text-xs whitespace-nowrap">
-                  Keep Screen On
+                  {resolveLocaleValue(searchControlWakeLockLabel, locale)}
                 </Label>
               </div>
             )}
@@ -342,7 +371,7 @@ export function SearchControlCard() {
               className="flex w-full flex-wrap items-center gap-3"
               value={searchExecutionMode}
               onValueChange={handleExecutionModeChange}
-              aria-label="Search execution mode"
+              aria-label={resolveLocaleValue(searchControlExecutionModeAriaLabel, locale)}
             >
               {executionModeOptions.map((option) => {
                 const id = `execution-mode-${option.value}`;
@@ -372,7 +401,9 @@ export function SearchControlCard() {
               <Separator />
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <div id="worker-threads-label" className="text-sm">Worker Threads</div>
+                  <div id="worker-threads-label" className="text-sm">
+                    {resolveLocaleValue(searchControlWorkerThreadsLabel, locale)}
+                  </div>
                   <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
                     {parallelSearchSettings.maxWorkers}
                   </span>
@@ -388,15 +419,14 @@ export function SearchControlCard() {
                   className="flex-1"
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>1 worker</span>
-                  <span>CPU cores: {maxCpuCores}</span>
-                  <span>{Math.max(maxCpuCores, 8)} max</span>
+                  <span>{resolveLocaleValue(searchControlWorkerMinLabel, locale)}</span>
+                  <span>{formatSearchControlCpuCoresLabel(maxCpuCores, locale)}</span>
+                  <span>{formatSearchControlMaxWorkersLabel(Math.max(maxCpuCores, 8), locale)}</span>
                 </div>
               </div>
             </>
           )}
         </div>
-      </StandardCardContent>
-    </Card>
+    </PanelCard>
   );
 }

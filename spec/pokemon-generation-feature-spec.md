@@ -3,13 +3,13 @@
 ## 1. 概要
 
 ### 1.1 目的
-初期Seed (64bit) から連続する乱数列を列挙し、BW/BW2 における遭遇ポケモンの核心乱数属性 (PID, 性格, 特性スロット, 色違い, 同期適用, スロット値 等) を高速ストリーミング表示する。
+初期Seed (64bit) から連続する乱数列を列挙し、BW/BW2 におけるエンカウントポケモンの核心乱数属性 (PID, 性格, 特性スロット, 色違い, 同期適用, スロット値 等) を高速ストリーミング表示する。
 
 ### 1.2 対象ゲーム
 - ポケットモンスターブラック・ホワイト（第5世代）
 - ポケットモンスターブラック2・ホワイト2（第5世代）
 
-### 1.3 対象遭遇方法 (MVP)
+### 1.3 対象エンカウント方法 (MVP)
 - 野生 / Surf / Fishing / ShakingGrass / DustCloud / Shadow / Bubble 系列 (encounterType enum 値に準拠)
 - 固定シンボル / 個体値生成 完全計算は FUTURE (未実装)
 
@@ -19,12 +19,12 @@
 
 #### 2.1.1 基本パラメータ
 - **初期Seed値**: 64bit値（16進数表記）
-- **遭遇方法**: 野生/固定シンボル/つり
+- **エンカウント方法**: 野生/固定シンボル/つり
 - **シンクロ設定**: シンクロ有効/無効、対象性格
 - **表ID**: トレーナーID（16bit、0-65535）
 - **裏ID**: 秘密ID（16bit、0-65535）
 
-#### 2.1.2 遭遇方法別パラメータ (MVP範囲外)
+#### 2.1.2 エンカウント方法別パラメータ (MVP範囲外)
 位置/レベル/種族直接指定は現段階 UI / Worker では未使用。Encounter Slot 解決は FUTURE。
 
 ### 2.2 出力情報
@@ -65,7 +65,7 @@
 | maxAdvances | 消費上限 | 1..1,000,000 |
 | maxResults | 収集上限 | 1..100,000 且つ ≤ maxAdvances |
 | version | ゲーム版 | enum |
-| encounterType | 遭遇種別 | enum |
+| encounterType | エンカウント種別 | enum |
 | tid / sid | 表/裏ID | 0..65535 |
 | syncEnabled | シンクロ有効 | boolean |
 | syncNatureId | 性格ID | 0..24 |
@@ -94,8 +94,8 @@ type RawLike = {
 
 #### 3.2.2 ポケモン生成手順 (MVP 抜粋)
 
-##### Step 1: 遭遇判定
-1. 野生の場合：遭遇スロット決定（乱数消費1回）
+##### Step 1: エンカウント判定
+1. 野生の場合：エンカウントスロット決定（乱数消費1回）
 2. つりの場合：つり成功判定 + スロット決定
 3. 固定の場合：スキップ
 
@@ -106,7 +106,7 @@ type RawLike = {
    
 2. **特性決定**（乱数消費1回）
    - 通常特性：0-1で特性1/2決定
-   - 隠れ特性：遭遇方法により判定
+   - 隠れ特性：エンカウント方法により判定
 
 ##### Step 3: 個体値生成 (FUTURE)
 IV 計算は現段階未公開 (RawLike に含まず)
@@ -130,7 +130,7 @@ IV 計算は現段階未公開 (RawLike に含まず)
 - **TypeScript**: UI・データ管理・表示処理（計算処理は行わず、WASMの結果をパース・表示のみ担当）
 
 #### 3.3.2 ポケモンデータ
-種族/遭遇テーブルは段階的導入。現行は encounter_slot_value をそのまま表示。
+種族/エンカウントテーブルは段階的導入。現行は encounter_slot_value をそのまま表示。
 
 #### 3.3.3 パフォーマンス考慮
 - **バッチ処理**: 大量生成時の効率化
@@ -165,12 +165,12 @@ interface PokemonSpecies {
 }
 ```
 
-### 5.2 遭遇テーブル (FUTURE)
+### 5.2 エンカウントテーブル (FUTURE)
 ```typescript
 interface EncounterTable {
   location: string;             // 場所名
-  encounterType: EncounterType; // 遭遇方法
-  slots: EncounterSlot[];       // 遭遇スロット情報
+  encounterType: EncounterType; // エンカウント方法
+  slots: EncounterSlot[];       // エンカウントスロット情報
 }
 
 interface EncounterSlot {
@@ -227,10 +227,10 @@ Validation 主項目: baseSeed, maxAdvances, maxResults ≤ maxAdvances, batchSi
 
 ### 8.2 データソース
 - [ポケモン攻略DE.com](http://blog.game-de.com/pokedata/pokemon-data/) : ポケモン種族データ
-- [ポケモンの友(B)](https://pokebook.jp/data/sp5/enc_b) : ブラックの遭遇テーブル
-- [ポケモンの友(W)](https://pokebook.jp/data/sp5/enc_w) : ホワイトの遭遇テーブル
-- [ポケモンの友(B2)](https://pokebook.jp/data/sp5/enc_b2) : ブラック2の遭遇テーブル
-- [ポケモンの友(W2)](https://pokebook.jp/data/sp5/enc_w2) : ホワイト2の遭遇テーブル
+- [ポケモンの友(B)](https://pokebook.jp/data/sp5/enc_b) : ブラックのエンカウントテーブル
+- [ポケモンの友(W)](https://pokebook.jp/data/sp5/enc_w) : ホワイトのエンカウントテーブル
+- [ポケモンの友(B2)](https://pokebook.jp/data/sp5/enc_b2) : ブラック2のエンカウントテーブル
+- [ポケモンの友(W2)](https://pokebook.jp/data/sp5/enc_w2) : ホワイト2のエンカウントテーブル
 
 ---
 

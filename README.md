@@ -8,7 +8,7 @@
 ## 主な機能
 - Rust WebAssembly コアによる高速 SHA-1 初期 Seed 探索（SIMD128 対応）
 - Web Worker ベースの検索・世代引き離し処理と進捗監視
-- Encounter/Species データを利用した Generation 結果解析（シードから連続乱数の列挙）
+- Encounter/Species データを利用した Generation 結果解析（Seedから連続乱数の列挙）
 - Generation 結果のフィルタリング・ソート・エクスポート（CSV / JSON / TXT）
 - WebGPU ベースの検索ランナー（対応ブラウザでの実験的パス）
 - Vitest / wasm-pack / Playwright MCP を組み合わせた多層テスト
@@ -18,7 +18,7 @@
 | --- | --- | --- |
 | UI (React + Zustand) | `src/components`, `src/store` | 検索条件・結果 UI、Zustand ストア |
 | 検索コア | `src/lib/core`, `src/workers/search-worker*.ts` | wasm-bindgen 経由で `IntegratedSeedSearcher` を実行 |
-| Generation | `src/lib/generation`, `src/workers/generation-worker.ts` | シード列挙・Pokemon Resolver |
+| Generation | `src/lib/generation`, `src/workers/generation-worker.ts` | Seed列挙・Pokemon Resolver |
 | データ管理 | `src/data/encounters`, `src/data/species` | Encounter テーブル・種族データのローダ |
 | Rust / wasm | `wasm-pkg/src/*.rs` | SHA-1 SIMD、Encounter 計算、Pokemon Generator 等 |
 
@@ -60,7 +60,7 @@ npm run deploy            # dist → docs へコピー（GitHub Pages 用）
 
 ## データソース・参考
 - ポケモン第5世代乱数調整: https://rusted-coil.sakura.ne.jp/pokemon/ran/ran_5.htm
-- 遭遇テーブル: https://pokebook.jp/
+- エンカウントテーブル: https://pokebook.jp/
 - 補助資料: https://xxsakixx.com/
 
 ## ライセンス

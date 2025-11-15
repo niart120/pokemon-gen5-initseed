@@ -5,21 +5,29 @@ import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
 import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
 import type { DomainEncounterType } from '@/types/domain';
+import { resolveBatch, toUiReadyPokemon, type ResolutionContext, type ResolvedPokemonData, type UiReadyPokemonData } from '@/lib/generation/pokemon-resolver';
 
 export type GenerationStatus = 'idle' | 'starting' | 'running' | 'paused' | 'stopping' | 'completed' | 'error';
 
+export type ShinyFilterMode = 'all' | 'shiny' | 'non-shiny';
+
+export interface StatRange {
+  min?: number;
+  max?: number;
+}
+
+export type StatRangeFilters = Partial<Record<'hp' | 'attack' | 'defense' | 'specialAttack' | 'specialDefense' | 'speed', StatRange>>;
+
 export interface GenerationFilters {
-  shinyOnly: boolean;
-  natureIds: number[]; // 追加フィルタ用プレースホルダ
-  sortField?: 'advance' | 'pid' | 'nature' | 'shiny' | 'species' | 'ability' | 'level';
-  sortOrder?: 'asc' | 'desc';
-  advanceRange?: { min?: number; max?: number };
-  shinyTypes?: number[]; // 0/1/2 指定。空 or undefined は全許可
-  // --- New advanced filters (Phase3/4 UI) ---
-  speciesIds?: number[]; // EncounterTable から解決された nationalId (複数選択)
-  abilityIndices?: (0 | 1 | 2)[]; // 0:通常1,1:通常2,2:隠れ（speciesIds 選択時のみ有効）
-  levelRange?: { min?: number; max?: number };
-  genders?: ('M' | 'F' | 'N')[]; // 種族選択時のみ有効（N=性別不明種）
+  sortField: 'advance' | 'pid' | 'nature' | 'shiny' | 'species' | 'ability' | 'level';
+  sortOrder: 'asc' | 'desc';
+  shinyMode: ShinyFilterMode;
+  speciesIds: number[];
+  natureIds: number[];
+  abilityIndices: (0 | 1 | 2)[];
+  genders: ('M' | 'F' | 'N')[];
+  levelRange: StatRange | undefined;
+  statRanges: StatRangeFilters;
 }
 
 export interface GenerationSliceState {
@@ -41,7 +49,7 @@ export interface GenerationSliceState {
   // 動的Encounter UI 追加状態
   encounterField?: string; // 正規化 location key
   encounterSpeciesId?: number; // 単一選択 speciesId
-  staticEncounterId?: string | null; // 選択した静的遭遇エントリID
+  staticEncounterId?: string | null; // 選択した静的エンカウントエントリID
 }
 
 export interface GenerationSliceActions {
@@ -116,6 +124,20 @@ type PartialState<T> = Partial<T> | ((state: T) => Partial<T>);
 type SetFn = (partial: PartialState<GenerationSlice>, replace?: boolean) => void;
 type GetFn<T> = () => T;
 
+export function createDefaultGenerationFilters(): GenerationFilters {
+  return {
+    sortField: 'advance',
+    sortOrder: 'asc',
+    shinyMode: 'all',
+    speciesIds: [],
+    natureIds: [],
+    abilityIndices: [],
+    genders: [],
+    levelRange: undefined,
+    statRanges: {},
+  };
+}
+
 export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): GenerationSlice => ({
   params: null,
   draftParams: {
@@ -131,7 +153,7 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
   results: [],
   lastCompletion: null,
   error: null,
-  filters: { shinyOnly: false, natureIds: [], sortField: 'advance', sortOrder: 'asc', advanceRange: undefined, shinyTypes: undefined, speciesIds: undefined, abilityIndices: undefined, levelRange: undefined, genders: undefined },
+  filters: createDefaultGenerationFilters(),
   metrics: {},
   internalFlags: { receivedAnyBatch: false },
   encounterTable: undefined,
@@ -151,7 +173,7 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
       const versionChanged = partial.version !== undefined && partial.version !== prevDraft.version;
 
       if (encounterTypeChanged || versionChanged) {
-        // 新しい遭遇タイプ・バージョンに合わせて UI 選択肢を整理
+        // 新しいエンカウントタイプ・バージョンに合わせて UI 選択肢を整理
         const encounterTypeValue = nextDraft.encounterType;
         if (encounterTypeValue === undefined) {
           encounterField = undefined;
@@ -298,9 +320,65 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     }
   },
   clearResults: () => set({ results: [] }),
-  applyFilters: (partial) => set((state: GenerationSlice) => ({ filters: { ...state.filters, ...partial } })),
+  applyFilters: (partial) => set((state: GenerationSlice) => {
+    const current = state.filters;
+    const nextSortField = partial.sortField ?? current.sortField;
+    const nextSortOrder = partial.sortOrder ?? current.sortOrder;
+    const nextShinyMode = partial.shinyMode ?? current.shinyMode;
+    const nextSpecies = partial.speciesIds ? [...partial.speciesIds] : current.speciesIds;
+    const nextNature = partial.natureIds ? [...partial.natureIds] : current.natureIds;
+    const nextAbility = partial.abilityIndices ? [...partial.abilityIndices] : current.abilityIndices;
+    const nextGenders = partial.genders ? [...partial.genders] as ('M' | 'F' | 'N')[] : current.genders;
+
+    let nextLevelRange = current.levelRange;
+    if (Object.prototype.hasOwnProperty.call(partial, 'levelRange')) {
+      const range = partial.levelRange;
+      if (!range) {
+        nextLevelRange = undefined;
+      } else {
+        const hasMin = range.min != null;
+        const hasMax = range.max != null;
+        nextLevelRange = hasMin || hasMax
+          ? {
+              min: hasMin ? range.min : undefined,
+              max: hasMax ? range.max : undefined,
+            }
+          : undefined;
+      }
+    }
+
+    let nextStatRanges = current.statRanges;
+    if (partial.statRanges) {
+      nextStatRanges = {};
+      const entries = Object.entries(partial.statRanges) as Array<[keyof StatRangeFilters, StatRange | undefined]>;
+      for (const [key, range] of entries) {
+        if (!range) continue;
+        const hasMin = range.min != null;
+        const hasMax = range.max != null;
+        if (!hasMin && !hasMax) continue;
+        nextStatRanges[key] = {
+          min: hasMin ? range.min : undefined,
+          max: hasMax ? range.max : undefined,
+        };
+      }
+    }
+
+    const next: GenerationFilters = {
+      sortField: nextSortField,
+      sortOrder: nextSortOrder,
+      shinyMode: nextShinyMode,
+      speciesIds: nextSpecies,
+      natureIds: nextNature,
+      abilityIndices: nextAbility,
+      genders: nextGenders,
+      levelRange: nextLevelRange,
+      statRanges: nextStatRanges,
+    };
+
+    return { filters: next } as Partial<GenerationSlice>;
+  }),
   // 追加: リセット
-  resetGenerationFilters: () => set({ filters: { shinyOnly: false, natureIds: [], sortField: 'advance', sortOrder: 'asc', advanceRange: undefined, shinyTypes: undefined, speciesIds: undefined, abilityIndices: undefined, levelRange: undefined, genders: undefined } }),
+  resetGenerationFilters: () => set({ filters: createDefaultGenerationFilters() }),
   resetGenerationState: () => set({
     status: 'idle',
     progress: null,
@@ -394,97 +472,194 @@ export function getCurrentHexParams(state: GenerationSlice): GenerationParamsHex
   return state.params ? generationParamsToHex(state.params) : null;
 }
 
-// 結果フィルタ+ソート用セレクタ（簡易版）
-// メモ化キャッシュ（単純参照比較）
-let _filteredSortedCache: {
+export interface FilteredGenerationDisplayRow {
+  raw: GenerationResult;
+  resolved?: ResolvedPokemonData;
+  ui?: UiReadyPokemonData;
+}
+
+type FilteredRowsCache = {
   resultsRef: GenerationResult[];
   filtersRef: GenerationFilters;
-  output: GenerationResult[];
-} | null = null;
+  encounterTableRef?: EncounterTable;
+  genderRatiosRef?: Map<number, GenderRatio>;
+  abilityCatalogRef?: Map<number, string[]>;
+  locale: 'ja' | 'en';
+  rows: FilteredGenerationDisplayRow[];
+  raw: GenerationResult[];
+} | null;
 
-export const selectFilteredSortedResults = (s: GenerationSlice) => {
-  const { results, filters } = s;
-  if (_filteredSortedCache && _filteredSortedCache.resultsRef === results && _filteredSortedCache.filtersRef === filters) {
-    return _filteredSortedCache.output;
+let _filteredRowsCache: FilteredRowsCache = null;
+
+function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonNullable<FilteredRowsCache> {
+  const {
+    results,
+    filters,
+    encounterTable,
+    genderRatios,
+    abilityCatalog,
+  } = s as GenerationSlice & {
+    encounterTable?: EncounterTable;
+    genderRatios?: Map<number, GenderRatio>;
+    abilityCatalog?: Map<number, string[]>;
+    locale?: 'ja' | 'en';
+  };
+
+  const cache = _filteredRowsCache;
+  if (
+    cache &&
+    cache.resultsRef === results &&
+    cache.filtersRef === filters &&
+    cache.encounterTableRef === encounterTable &&
+    cache.genderRatiosRef === genderRatios &&
+    cache.abilityCatalogRef === abilityCatalog &&
+    cache.locale === locale
+  ) {
+    return cache;
   }
-  let arr: GenerationResult[] = results;
-  if (filters.shinyOnly) arr = arr.filter(r => r.shiny_type !== 0);
-  if (filters.shinyTypes && filters.shinyTypes.length > 0) {
-    const set = new Set(filters.shinyTypes);
-    arr = arr.filter(r => set.has(r.shiny_type));
-  }
-  if (filters.natureIds && filters.natureIds.length > 0) {
-    const nset = new Set(filters.natureIds);
-    arr = arr.filter(r => nset.has(r.nature));
-  }
-  if (filters.advanceRange) {
-    const { min, max } = filters.advanceRange;
-    if (min != null) arr = arr.filter(r => r.advance >= min);
-    if (max != null) arr = arr.filter(r => r.advance <= max);
-  }
-  // --- Conditional resolved-based filters ---
-  const needsResolved = (
-    (filters.speciesIds && filters.speciesIds.length > 0) ||
-    (filters.levelRange && (filters.levelRange.min != null || filters.levelRange.max != null)) ||
-    (filters.abilityIndices && filters.abilityIndices.length > 0) ||
-    (filters.genders && filters.genders.length > 0)
-  );
-  if (needsResolved) {
-    // 解決結果を一度だけ取得
-    const resolved = selectResolvedResults(s);
-    // map: pid+advance で紐付け（advance は一意性高い）
-    // 直接 resolved 配列でフィルタ後に元 raw 参照を返却
-    let resolvedArr = resolved;
-    if (filters.speciesIds && filters.speciesIds.length > 0) {
-      const sp = new Set(filters.speciesIds);
-      resolvedArr = resolvedArr.filter(r => r.speciesId != null && sp.has(r.speciesId));
+
+  const resolved = selectResolvedResults(s);
+  const uiReady = selectUiReadyResults(s, locale);
+
+  const shinyMode = filters.shinyMode;
+  const natureSet = filters.natureIds.length ? new Set(filters.natureIds) : null;
+  const speciesSet = filters.speciesIds.length ? new Set(filters.speciesIds) : null;
+  const abilitySet = speciesSet && filters.abilityIndices.length ? new Set(filters.abilityIndices) : null;
+  const genderSet = speciesSet && filters.genders.length ? new Set(filters.genders) : null;
+  const statKeys: Array<keyof StatRangeFilters> = ['hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed'];
+  const hasStatFilters = statKeys.some((key) => {
+    const range = filters.statRanges[key];
+    return !!range && (range.min != null || range.max != null);
+  });
+  const levelRange = filters.levelRange;
+  const hasLevelFilter = Boolean(levelRange && (levelRange.min != null || levelRange.max != null));
+
+  const rows: FilteredGenerationDisplayRow[] = [];
+
+  for (let i = 0; i < results.length; i++) {
+    const raw = results[i];
+    const resolvedData = resolved[i];
+    const uiData = uiReady[i];
+
+    if (shinyMode === 'shiny' && raw.shiny_type === 0) continue;
+    if (shinyMode === 'non-shiny' && raw.shiny_type !== 0) continue;
+    if (natureSet && !natureSet.has(raw.nature)) continue;
+
+    if (speciesSet) {
+      const speciesId = resolvedData?.speciesId;
+      if (!speciesId || !speciesSet.has(speciesId)) continue;
     }
-    if (filters.levelRange) {
-      const { min, max } = filters.levelRange;
-      if (min != null) resolvedArr = resolvedArr.filter(r => r.level != null && r.level >= min);
-      if (max != null) resolvedArr = resolvedArr.filter(r => r.level != null && r.level <= max);
+
+    if (abilitySet) {
+      const abilityIndex = resolvedData?.abilityIndex;
+      if (abilityIndex == null || !abilitySet.has(abilityIndex)) continue;
     }
-    // ability/gender は species 選択時のみ有効
-    const speciesSelected = filters.speciesIds && filters.speciesIds.length > 0;
-    if (speciesSelected && filters.abilityIndices && filters.abilityIndices.length > 0) {
-      const aset = new Set(filters.abilityIndices);
-      resolvedArr = resolvedArr.filter(r => r.abilityIndex != null && aset.has(r.abilityIndex));
+
+    if (genderSet) {
+      const gender = resolvedData?.gender;
+      if (!gender || !genderSet.has(gender)) continue;
     }
-    if (speciesSelected && filters.genders && filters.genders.length > 0) {
-      const gset = new Set(filters.genders);
-      resolvedArr = resolvedArr.filter(r => r.gender && gset.has(r.gender));
+
+    if (hasLevelFilter) {
+      const level = resolvedData?.level;
+      if (level == null) continue;
+      if (levelRange?.min != null && level < levelRange.min) continue;
+      if (levelRange?.max != null && level > levelRange.max) continue;
     }
-    // raw 配列へ復元: seed/pid/advance マッチ (advance で検索)
-    const advanceSet = new Set(resolvedArr.map(r => r.pid.toString() + ':' + r.seed.toString()));
-    arr = arr.filter(r => advanceSet.has((r.pid >>> 0).toString() + ':' + r.seed.toString()));
+
+    if (hasStatFilters) {
+      const stats = uiData?.stats;
+      if (!stats) continue;
+      let ok = true;
+      for (const key of statKeys) {
+        const range = filters.statRanges[key];
+        if (!range) continue;
+        const value = stats[key as keyof typeof stats];
+        if (range.min != null && value < range.min) {
+          ok = false;
+          break;
+        }
+        if (range.max != null && value > range.max) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) continue;
+    }
+
+    rows.push({ raw, resolved: resolvedData, ui: uiData });
   }
-  const field = filters.sortField || 'advance';
+
+  const field = filters.sortField ?? 'advance';
   const order = filters.sortOrder === 'desc' ? -1 : 1;
-  const cmp = (a: GenerationResult, b: GenerationResult) => {
-    let av:number, bv:number;
-    switch(field) {
-      case 'pid': av = a.pid >>> 0; bv = b.pid >>> 0; break;
-      case 'nature': av = a.nature; bv = b.nature; break;
-      case 'shiny': av = a.shiny_type; bv = b.shiny_type; break;
-      // species / ability / level は未解決 raw のため一旦 advance 安全フォールバック（UI側で並び替え予定）
+
+  rows.sort((a, b) => {
+    const ar = a.raw;
+    const br = b.raw;
+    const aResolved = a.resolved;
+    const bResolved = b.resolved;
+    let av: number;
+    let bv: number;
+    switch (field) {
+      case 'pid':
+        av = ar.pid >>> 0;
+        bv = br.pid >>> 0;
+        break;
+      case 'nature':
+        av = ar.nature;
+        bv = br.nature;
+        break;
+      case 'shiny':
+        av = ar.shiny_type;
+        bv = br.shiny_type;
+        break;
       case 'species':
+        av = aResolved?.speciesId ?? Number.MAX_SAFE_INTEGER;
+        bv = bResolved?.speciesId ?? Number.MAX_SAFE_INTEGER;
+        break;
       case 'ability':
+        av = aResolved?.abilityIndex ?? Number.MAX_SAFE_INTEGER;
+        bv = bResolved?.abilityIndex ?? Number.MAX_SAFE_INTEGER;
+        break;
       case 'level':
-        av = a.advance; bv = b.advance; break;
+        av = aResolved?.level ?? Number.MAX_SAFE_INTEGER;
+        bv = bResolved?.level ?? Number.MAX_SAFE_INTEGER;
+        break;
       case 'advance':
-      default: av = a.advance; bv = b.advance; break;
+      default:
+        av = ar.advance;
+        bv = br.advance;
+        break;
     }
     if (av < bv) return -1 * order;
     if (av > bv) return 1 * order;
     return 0;
+  });
+
+  const raw = rows.map((entry) => entry.raw);
+  const nextCache: NonNullable<FilteredRowsCache> = {
+    resultsRef: results,
+    filtersRef: filters,
+    encounterTableRef: encounterTable,
+    genderRatiosRef: genderRatios,
+    abilityCatalogRef: abilityCatalog,
+    locale,
+    rows,
+    raw,
   };
-  const output = [...arr].sort(cmp);
-  _filteredSortedCache = { resultsRef: results, filtersRef: filters, output };
-  return output;
+  _filteredRowsCache = nextCache;
+  return nextCache;
+}
+
+export const selectFilteredDisplayRows = (s: GenerationSlice, locale: 'ja' | 'en' = 'ja'): FilteredGenerationDisplayRow[] => {
+  return computeFilteredRowsCache(s, locale).rows;
+};
+
+export const selectFilteredSortedResults = (s: GenerationSlice, locale: 'ja' | 'en' = 'ja') => {
+  return computeFilteredRowsCache(s, locale).raw;
 };
 
 // ===== Resolution / UI adapters =====
-import { resolveBatch, toUiReadyPokemon, type ResolutionContext, type ResolvedPokemonData, type UiReadyPokemonData } from '@/lib/generation/pokemon-resolver';
 
 let _resolvedCache: {
   resultsRef: GenerationResult[];

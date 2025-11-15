@@ -2,13 +2,13 @@
 
 ## Overview
 
-Resolver は WASM の Raw 出力（snake_case）を、遭遇テーブル/種族データを用いて解決するドメイン層です。旧 pokemon-assembler は廃止され、`pokemon-resolver.ts` と `build-resolution-context.ts` を利用します。
+Resolver は WASM の Raw 出力（snake_case）を、エンカウントテーブル/種族データを用いて解決するドメイン層です。旧 pokemon-assembler は廃止され、`pokemon-resolver.ts` と `build-resolution-context.ts` を利用します。
 
 ## Key Features
 
 ### 1. Data Generation/Resolution
 - Raw WASM (`types/pokemon-raw.ts`) → `resolvePokemon()` で speciesId/level/gender 等を解決
-- 遭遇スロット/レベルは `data/encounter-tables` と `buildResolutionContext()` のテーブルに基づく
+- エンカウントスロット/レベルは `data/encounter-tables` と `buildResolutionContext()` のテーブルに基づく
 - UI 名称は `toUiReadyPokemon()` で最低限を付与（i18nは上位層）
 
 ### 2. Special Encounter Handling

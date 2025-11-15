@@ -9,7 +9,7 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct RawPokemonData {
-    /// 初期シード値
+    /// 初期Seed値
     seed: u64,
     /// PID
     pid: u32,
@@ -21,7 +21,7 @@ pub struct RawPokemonData {
     ability_slot: u8,
     /// 性別値（0-255）
     gender_value: u8,
-    /// 遭遇スロット値
+    /// エンカウントスロット値
     encounter_slot_value: u8,
     /// エンカウントタイプ（数値保存）
     encounter_type: u8,
@@ -91,7 +91,7 @@ impl RawPokemonData {
 pub struct BWGenerationConfig {
     /// ゲームバージョン
     version: GameVersion,
-    /// 遭遇タイプ
+    /// エンカウントタイプ
     encounter_type: EncounterType,
     /// トレーナーID
     tid: u16,
@@ -190,7 +190,7 @@ impl PokemonGenerator {
     /// BW/BW2準拠 単体ポケモン生成（統括関数）
     ///
     /// # Arguments
-    /// * `seed` - 初期シード値
+    /// * `seed` - 初期Seed値
     /// * `config` - BW準拠設定
     ///
     /// # Returns
@@ -201,7 +201,7 @@ impl PokemonGenerator {
             EncounterType::StaticSymbol => Self::generate_static_symbol(seed, config),
 
             // 徘徊
-            EncounterType::Roaming => Self::generate_roaming(seed, config),
+            EncounterType::Roamer => Self::generate_roamer(seed, config),
 
             // イベント系（御三家・化石）
             EncounterType::StaticStarter
@@ -226,7 +226,7 @@ impl PokemonGenerator {
         }
     }
 
-    /// オフセット適用後の生成開始シードを計算
+    /// オフセット適用後の生成開始Seedを計算
     #[wasm_bindgen]
     pub fn calculate_generation_seed(initial_seed: u64, offset: u64) -> u64 {
         if offset == 0 {
@@ -267,14 +267,14 @@ impl PokemonGenerator {
             pid,
             nature_id,
             sync_applied,
-            0, // 固定シンボルは遭遇スロット0
+            0, // 固定シンボルはエンカウントスロット0
             0, // レベル乱数なし
             config,
         )
     }
 
     /// 徘徊生成
-    fn generate_roaming(seed: u64, config: &BWGenerationConfig) -> RawPokemonData {
+    fn generate_roamer(seed: u64, config: &BWGenerationConfig) -> RawPokemonData {
         let mut rng = PersonalityRNG::new(seed);
 
         // 徘徊はシンクロ無効
@@ -282,7 +282,7 @@ impl PokemonGenerator {
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
         let pid = Self::finalize_pid_with_shiny_rules(&mut rng, config, pid_base, |base| {
-            PIDCalculator::generate_roaming_pid(base, config.tid, config.sid)
+            PIDCalculator::generate_roamer_pid(base, config.tid, config.sid)
         });
 
         // 性格生成（徘徊はシンクロ無効なので通常性格のみ）
@@ -290,7 +290,7 @@ impl PokemonGenerator {
 
         Self::build_pokemon_data(
             seed, pid, nature_id, false, // sync_applied = false
-            0,     // 徘徊は遭遇スロット0
+            0,     // 徘徊はエンカウントスロット0
             0,     // レベル乱数なし
             config,
         )
@@ -313,7 +313,7 @@ impl PokemonGenerator {
 
         Self::build_pokemon_data(
             seed, pid, nature_id, false, // sync_applied = false
-            0,     // イベント系は遭遇スロット0
+            0,     // イベント系はエンカウントスロット0
             0,     // レベル乱数なし
             config,
         )
@@ -327,7 +327,7 @@ impl PokemonGenerator {
         let sync_success =
             Self::perform_sync_check(&mut rng, config.encounter_type, config.sync_enabled);
 
-        // 遭遇スロット決定
+        // エンカウントスロット決定
         let encounter_slot_value = EncounterCalculator::calculate_encounter_slot(
             config.version,
             config.encounter_type,
@@ -376,7 +376,7 @@ impl PokemonGenerator {
         let sync_success =
             Self::perform_sync_check(&mut rng, config.encounter_type, config.sync_enabled);
 
-        // 遭遇スロット決定
+        // エンカウントスロット決定
         let encounter_slot_value = EncounterCalculator::calculate_encounter_slot(
             config.version,
             config.encounter_type,
@@ -426,7 +426,7 @@ impl PokemonGenerator {
         // 釣り成功判定
         let _fishing_success = rng.next();
 
-        // 遭遇スロット決定
+        // エンカウントスロット決定
         let encounter_slot_value = EncounterCalculator::calculate_encounter_slot(
             config.version,
             config.encounter_type,
@@ -565,7 +565,7 @@ impl PokemonGenerator {
     /// BW/BW2準拠 バッチ生成（offsetのみ）
     ///
     /// # Arguments
-    /// * `base_seed` - 列挙の基準シード（初期シード）
+    /// * `base_seed` - 列挙の初期Seed
     /// * `offset` - 最初の生成までの前進数（ゲーム内不定消費を含めた開始位置）
     /// * `count` - 生成数（0なら空）
     /// * `config` - BW準拠設定
@@ -589,14 +589,14 @@ impl PokemonGenerator {
         } as usize;
         let mut results = Vec::with_capacity(capped);
 
-        // 初期シード: base_seed を offset だけ前進
+        // 初期Seed: base_seed を offset だけ前進
         let (m_off, a_off) = Self::lcg_affine_for_steps(offset);
         let mut cur_seed = Self::lcg_apply(base_seed, m_off, a_off);
 
         for _ in 0..capped {
             let pokemon = Self::generate_single_pokemon_bw(cur_seed, config);
             results.push(pokemon);
-            // 次のシードへ（1ステップ）
+            // 次のSeedへ（1ステップ）
             cur_seed = PersonalityRNG::next_seed(cur_seed);
         }
         results
@@ -648,7 +648,7 @@ impl PokemonGenerator {
     ///
     /// # Arguments
     /// * `rng` - 乱数生成器
-    /// * `encounter_type` - 遭遇タイプ
+    /// * `encounter_type` - エンカウントタイプ
     /// * `sync_enabled` - シンクロ有効フラグ
     ///
     /// # Returns
@@ -676,7 +676,7 @@ impl PokemonGenerator {
     /// # Arguments
     /// * `rng` - 乱数生成器
     /// * `sync_success` - シンクロ判定結果
-    /// * `encounter_type` - 遭遇タイプ
+    /// * `encounter_type` - エンカウントタイプ
     /// * `sync_enabled` - シンクロ有効フラグ
     /// * `sync_nature_id` - シンクロ性格ID
     ///
@@ -721,7 +721,7 @@ impl PokemonGenerator {
             EncounterType::StaticStarter => 11,
             EncounterType::StaticFossil => 12,
             EncounterType::StaticEvent => 13,
-            EncounterType::Roaming => 20,
+            EncounterType::Roamer => 20,
         }
     }
 
@@ -735,7 +735,7 @@ impl PokemonGenerator {
     }
 }
 
-/// 連続列挙用のシード列挙器（offsetのみ）
+/// 連続列挙用のSeed列挙器（offsetのみ）
 #[wasm_bindgen]
 pub struct SeedEnumerator {
     current_seed: u64,
@@ -891,7 +891,7 @@ mod tests {
         let static_pokemon =
             PokemonGenerator::generate_single_pokemon_bw(0x123456789ABCDEF0, &config);
 
-        // 同じシードでも異なるPID生成方式で結果が変わることを確認
+        // 同じSeedでも異なるPID生成方式で結果が変わることを確認
         assert_ne!(wild.pid, static_pokemon.pid);
         assert_eq!(wild.encounter_type, 0);
         assert_eq!(static_pokemon.encounter_type, 10);
@@ -905,7 +905,7 @@ mod tests {
 
         assert_eq!(list.len(), 5);
 
-        // 各ポケモンが異なるシードから生成されていることを確認
+        // 各ポケモンが異なるSeedから生成されていることを確認
         for i in 1..list.len() {
             assert_ne!(list[i - 1].seed, list[i].seed);
         }

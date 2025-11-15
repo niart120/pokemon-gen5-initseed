@@ -2,7 +2,7 @@
 
 ## 性格値（PID）生成の正確な仕様
 
-BW/BW2では遭遇タイプによって性格値の生成アルゴリズムが異なる：
+BW/BW2ではエンカウントタイプによって性格値の生成アルゴリズムが異なる：
 
 - **野生エンカウント（0-7）**: 通常・なみのり・釣り・特殊エンカウント全般
   - 通常（草むら・洞窟・ダンジョン共通）
@@ -42,8 +42,8 @@ impl PIDCalculator {
     }
     
     // 徘徊ポケモン（20）: PID = r1[n] (XOR処理無し、固定シンボルと同様)
-    // イベント発生時に個体決定され、以降の遭遇では同じ個体が出現
-    pub fn generate_roaming_pid(r1: u32) -> u32 {
+    // イベント発生時に個体決定され、以降のエンカウントでは同じ個体が出現
+    pub fn generate_roamer_pid(r1: u32) -> u32 {
         r1
     }
     
@@ -104,7 +104,7 @@ impl ShinyChecker {
 }
 ```
 
-## 遭遇タイプ別PID生成パターン
+## エンカウントタイプ別PID生成パターン
 
 現在の実装では、シンプルな静的関数設計を採用し、PersonalityRNGと組み合わせて使用します：
 
@@ -159,7 +159,7 @@ let shiny_type = ShinyChecker::check_shiny_type(tid, sid, pid);
             nature
         };
         
-        // Step 3: 遭遇スロット (r1[n+2])
+        // Step 3: エンカウントスロット (r1[n+2])
         let encounter_slot = self.rng.encounter_slot_bw();
         result.advances += 1;
         
@@ -189,7 +189,7 @@ let shiny_type = ShinyChecker::check_shiny_type(tid, sid, pid);
 - **徘徊ポケモン（20）**: シンクロ無効
 
 ### 実装上の注意点
-- 遭遇タイプによる処理分岐の正確な実装
+- エンカウントタイプによる処理分岐の正確な実装
 - シンクロ判定タイミングの統一
 - 色違い判定アルゴリズムの実装精度（閾値8）
 - PID生成時のXOR処理の適用/非適用の正確な判定

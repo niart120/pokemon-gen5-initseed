@@ -120,7 +120,7 @@ impl PIDCalculator {
     ///
     /// # Returns
     /// 生成されたPID（ID補正適用後）
-    pub fn generate_roaming_pid(r1: u32, tid: u16, sid: u16) -> u32 {
+    pub fn generate_roamer_pid(r1: u32, tid: u16, sid: u16) -> u32 {
         Self::generate_pid_with_correction(r1, tid, sid, true)
     }
 
@@ -375,11 +375,11 @@ mod tests {
     }
 
     #[test]
-    fn test_pid_generation_roaming() {
+    fn test_pid_generation_roamer() {
         let r1 = 0x12345678;
         let tid = 12345;
         let sid = 54321;
-        let pid = PIDCalculator::generate_roaming_pid(r1, tid, sid);
+        let pid = PIDCalculator::generate_roamer_pid(r1, tid, sid);
 
         // 基本PID生成の確認（新仕様: 徘徊も ^ 0x10000 を適用）
         let expected_base = 0x12345678 ^ 0x10000;

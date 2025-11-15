@@ -10,6 +10,30 @@ import { keyCodeToNames } from '@/lib/utils/key-input';
 import { useAppStore } from '@/store/app-store';
 import { getIvTooltipEntries } from '@/lib/utils/individual-values-display';
 import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import {
+  clipboardUnavailable,
+  copyMtSeedHint,
+  copyToGenerationPanelHint,
+  dateTimeLabel,
+  detailsButtonLabel,
+  formatKeyInputDisplay,
+  formatResultDateTime,
+  generatedMessageLabel,
+  hardwareLabel,
+  keyInputLabel,
+  keyInputUnavailableLabel,
+  lcgSeedCopySuccess,
+  lcgSeedLabel,
+  mtSeedCopyFailure,
+  mtSeedCopySuccess,
+  mtSeedLabel,
+  resultDetailsTitle,
+  romLabel,
+  sha1HashLabel,
+  timer0Label,
+  vcountLabel,
+} from '@/lib/i18n/strings/search-results';
 import type { InitialSeedResult } from '../../../types/search';
 
 interface ResultDetailsDialogProps {
@@ -26,10 +50,6 @@ export function ResultDetailsDialog({
   const { setDraftParams } = useAppStore();
   const locale = useLocale();
 
-  const formatDateTime = (date: Date): string => {
-    return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-  };
-
   const handleCopyLcgSeed = () => {
     if (!result) return;
     
@@ -40,7 +60,7 @@ export function ResultDetailsDialog({
       baseSeedHex: lcgSeedHex,
     });
     
-    toast.success('LCG Seed copied to Generation Panel');
+    toast.success(resolveLocaleValue(lcgSeedCopySuccess, locale));
   };
 
   const lcgSeedHex = result ? lcgSeedToHex(result.lcgSeed) : '';
@@ -57,14 +77,14 @@ export function ResultDetailsDialog({
   const handleCopyMtSeed = async () => {
     if (!result) return;
     if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
-      toast.error('Clipboard is not available');
+      toast.error(resolveLocaleValue(clipboardUnavailable, locale));
       return;
     }
     try {
       await navigator.clipboard.writeText(mtSeedHex);
-      toast.success('MT Seed copied to clipboard');
+      toast.success(resolveLocaleValue(mtSeedCopySuccess, locale));
     } catch {
-      toast.error('Failed to copy MT Seed');
+      toast.error(resolveLocaleValue(mtSeedCopyFailure, locale));
     }
   };
 
@@ -72,28 +92,26 @@ export function ResultDetailsDialog({
 
   const keyNames = result.keyCode != null ? keyCodeToNames(result.keyCode) : [];
   const keyInputDisplay = result.keyCode == null
-    ? 'Unavailable'
-    : keyNames.length > 0
-      ? keyNames.join(', ')
-      : 'No keys';
+    ? resolveLocaleValue(keyInputUnavailableLabel, locale)
+    : formatKeyInputDisplay(keyNames, locale);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
   <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Seed Result Details</DialogTitle>
+          <DialogTitle>{resolveLocaleValue(resultDetailsTitle, locale)}</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>LCG Seed</Label>
+              <Label>{resolveLocaleValue(lcgSeedLabel, locale)}</Label>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div 
                     className="font-mono text-lg cursor-pointer hover:bg-accent p-2 rounded flex items-center gap-2 group"
                     onClick={handleCopyLcgSeed}
-                    title="Click to copy to Generation Panel"
+                    title={resolveLocaleValue(copyToGenerationPanelHint, locale)}
                   >
                     {lcgSeedHex}
                     <Copy size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -109,16 +127,16 @@ export function ResultDetailsDialog({
                   ))}
                 </TooltipContent>
               </Tooltip>
-              <div className="text-xs text-muted-foreground">Click to copy to Generation Panel</div>
+              <div className="text-xs text-muted-foreground">{resolveLocaleValue(copyToGenerationPanelHint, locale)}</div>
             </div>
             <div>
-              <Label>MT Seed</Label>
+              <Label>{resolveLocaleValue(mtSeedLabel, locale)}</Label>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
                     className="font-mono text-lg cursor-pointer hover:bg-accent p-2 rounded flex items-center gap-2 group"
                     onClick={handleCopyMtSeed}
-                    title="Click to copy MT Seed"
+                    title={resolveLocaleValue(copyMtSeedHint, locale)}
                   >
                     {mtSeedHex}
                     <Copy size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -134,41 +152,41 @@ export function ResultDetailsDialog({
                   ))}
                 </TooltipContent>
               </Tooltip>
-              <div className="text-xs text-muted-foreground">Click to copy MT Seed</div>
+              <div className="text-xs text-muted-foreground">{resolveLocaleValue(copyMtSeedHint, locale)}</div>
             </div>
           </div>
 
           {/* Date/Time */}
           <div>
-            <Label>Date/Time</Label>
+            <Label>{resolveLocaleValue(dateTimeLabel, locale)}</Label>
             <div className="font-mono">
-              {formatDateTime(result.datetime)}
+              {formatResultDateTime(result.datetime, locale)}
             </div>
           </div>
 
           {/* Parameters */}
           <div className="grid grid-cols-4 gap-4">
             <div>
-              <Label>Timer0</Label>
+              <Label>{resolveLocaleValue(timer0Label, locale)}</Label>
               <div className="font-mono">0x{result.timer0.toString(16).toUpperCase().padStart(4, '0')}</div>
             </div>
             <div>
-              <Label>VCount</Label>
+              <Label>{resolveLocaleValue(vcountLabel, locale)}</Label>
               <div className="font-mono">0x{result.vcount.toString(16).toUpperCase().padStart(2, '0')}</div>
             </div>
             <div>
-              <Label>ROM</Label>
+              <Label>{resolveLocaleValue(romLabel, locale)}</Label>
               <div>{result.conditions.romVersion} {result.conditions.romRegion}</div>
             </div>
             <div>
-              <Label>Hardware</Label>
+              <Label>{resolveLocaleValue(hardwareLabel, locale)}</Label>
               <div>{result.conditions.hardware}</div>
             </div>
           </div>
 
           {/* Key Input */}
           <div>
-            <Label>Key Input</Label>
+            <Label>{resolveLocaleValue(keyInputLabel, locale)}</Label>
             <div className="font-mono text-sm font-arrows">
               {keyInputDisplay}
             </div>
@@ -176,7 +194,7 @@ export function ResultDetailsDialog({
 
           {/* SHA-1 Hash */}
           <div>
-            <Label>SHA-1 Hash</Label>
+            <Label>{resolveLocaleValue(sha1HashLabel, locale)}</Label>
             <div className="font-mono text-sm break-all p-2 bg-muted rounded">
               {result.sha1Hash}
             </div>
@@ -184,7 +202,7 @@ export function ResultDetailsDialog({
 
           {/* Message Array */}
           <div>
-            <Label>Generated Message (32-bit words)</Label>
+            <Label>{resolveLocaleValue(generatedMessageLabel, locale)}</Label>
             <div className="grid grid-cols-4 gap-2 mt-2">
               {result.message.map((word, index) => (
                 <div key={index} className="text-center">
@@ -209,6 +227,7 @@ interface ResultDetailsButtonProps {
 }
 
 export function ResultDetailsButton({ result: _result, onClick }: ResultDetailsButtonProps) {
+  const locale = useLocale();
   return (
     <Button 
       variant="outline" 
@@ -216,7 +235,7 @@ export function ResultDetailsButton({ result: _result, onClick }: ResultDetailsB
       onClick={onClick}
     >
       <Eye size={16} className="mr-1" />
-      Details
+      {resolveLocaleValue(detailsButtonLabel, locale)}
     </Button>
   );
 }

@@ -5,6 +5,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SEED_TEMPLATES, type SeedTemplate } from '@/data/seed-templates';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import {
+  formatTemplateSelectionApplyButtonLabel,
+  formatTemplateSelectionSeedCount,
+  templateSelectionCancelButtonLabel,
+  templateSelectionDialogDescription,
+  templateSelectionDialogTitle,
+} from '@/lib/i18n/strings/search-template-selection';
 
 interface TemplateSelectionDialogProps {
   isOpen: boolean;
@@ -18,6 +27,7 @@ export function TemplateSelectionDialog({
   onApplyTemplate,
 }: TemplateSelectionDialogProps) {
   const [selectedTemplates, setSelectedTemplates] = React.useState<Set<string>>(new Set());
+  const locale = useLocale();
 
   const handleToggleTemplate = (templateName: string) => {
     const newSelection = new Set(selectedTemplates);
@@ -55,12 +65,12 @@ export function TemplateSelectionDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>Select Seed Templates</DialogTitle>
+          <DialogTitle>{resolveLocaleValue(templateSelectionDialogTitle, locale)}</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Select one or more templates to load pre-defined seed lists. Selected templates will be merged.
+            {resolveLocaleValue(templateSelectionDialogDescription, locale)}
           </p>
 
           <ScrollArea className="h-[400px] pr-4">
@@ -90,7 +100,7 @@ export function TemplateSelectionDialog({
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      {template.seeds.length} seed{template.seeds.length !== 1 ? 's' : ''}
+                      {formatTemplateSelectionSeedCount(template.seeds.length, locale)}
                     </p>
                   </div>
                 </div>
@@ -100,13 +110,13 @@ export function TemplateSelectionDialog({
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={handleCancel}>
-              Cancel
+              {resolveLocaleValue(templateSelectionCancelButtonLabel, locale)}
             </Button>
             <Button 
               onClick={handleApply}
               disabled={selectedTemplates.size === 0}
             >
-              Apply Selected ({selectedTemplates.size})
+              {formatTemplateSelectionApplyButtonLabel(selectedTemplates.size, locale)}
             </Button>
           </div>
         </div>

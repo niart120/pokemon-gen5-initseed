@@ -132,7 +132,7 @@
 - ✅ Rust + WebAssembly実装完了
 - ✅ SHA-1ハッシュアルゴリズム (Rustクレート使用)
 - ✅ 事前計算テーブル (TimeCode: 86,400エントリ、DateCode: 36,525エントリ)
-- ✅ 統合シード探索 (IntegratedSeedSearcher)
+- ✅ 統合Seed探索 (IntegratedSeedSearcher)
 - ✅ エンディアン変換最適化
 - ✅ 大幅なパフォーマンス向上 (統合処理により最大135倍高速化)
 

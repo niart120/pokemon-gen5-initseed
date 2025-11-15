@@ -3,7 +3,7 @@
  * wasm-bindgen 生成物からアダプトした、シリアラブルなプレーンデータ
  */
 export interface UnresolvedPokemonData {
-  /** 初期シード値 */
+  /** 初期Seed値 */
   seed: bigint;
   /** PID (32bit) */
   pid: number;
@@ -15,7 +15,7 @@ export interface UnresolvedPokemonData {
   ability_slot: number;
   /** 性別値 (0-255) */
   gender_value: number;
-  /** 遭遇スロット値 */
+  /** エンカウントスロット値 */
   encounter_slot_value: number;
   /** エンカウントタイプ (0-7: 野生, 10-13: 固定, 20: 徘徊) */
   encounter_type: number;

@@ -1,4 +1,4 @@
-/// 統合シード探索のテストコード
+/// 統合Seed探索のテストコード
 use crate::integrated_search::SearchResult;
 
 #[cfg(target_arch = "wasm32")]
@@ -229,7 +229,7 @@ mod wasm_tests {
         use crate::datetime_codes::{DateCodeGenerator, TimeCodeGenerator};
         use js_sys::Date;
 
-        web_sys::console::log_1(&"=== 統合シード探索パフォーマンステスト開始 ===".into());
+        web_sys::console::log_1(&"=== 統合Seed探索パフォーマンステスト開始 ===".into());
 
         // テスト用パラメータ
         let mac = [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC];
@@ -272,7 +272,7 @@ mod wasm_tests {
         let total_calculations =
             range_seconds as u64 * timer0_range * vcount_range * target_seeds.len() as u64;
         let output = format!(
-            "探索範囲: {}秒 × Timer0({}) × VCount({}) × ターゲット({}) = {} 計算",
+            "探索範囲: {}秒 × Timer0({}) × VCount({}) × 目標({}) = {} 計算",
             range_seconds,
             timer0_range,
             vcount_range,
@@ -314,11 +314,11 @@ mod wasm_tests {
                     message[8] = date_code;
                     message[9] = time_code;
 
-                    // SHA-1計算とシード生成
+                    // SHA-1計算とSeed生成
                     let (h0, h1, _h2, _h3, _h4) = calculate_pokemon_sha1(&message);
                     let seed = calculate_pokemon_seed_from_hash(h0, h1);
 
-                    // ターゲットシードとマッチング
+                    // 目標Seedとマッチング
                     for &target in &target_seeds {
                         if seed == target {
                             matches_found += 1;
@@ -334,7 +334,7 @@ mod wasm_tests {
         let duration_ms = end - start;
 
         // 結果出力
-        web_sys::console::log_1(&"=== 統合シード探索パフォーマンス結果 ===".into());
+        web_sys::console::log_1(&"=== 統合Seed探索パフォーマンス結果 ===".into());
         let output = format!("総計算回数: {}", calculations_done);
         web_sys::console::log_1(&output.into());
         let output = format!("実行時間: {:.2}ms", duration_ms);
@@ -358,7 +358,7 @@ mod wasm_tests {
             calc_per_sec
         );
 
-        web_sys::console::log_1(&"=== 統合シード探索パフォーマンステスト完了 ===".into());
+        web_sys::console::log_1(&"=== 統合Seed探索パフォーマンステスト完了 ===".into());
     }
 
     // SearchResult テスト（元 search_result.rs から移行）

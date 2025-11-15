@@ -389,10 +389,10 @@ impl ValidationUtils {
         cleaned.chars().all(|c| c.is_ascii_hexdigit())
     }
 
-    /// シード値の妥当性チェック
+    /// Seed値の妥当性チェック
     ///
     /// # Arguments
-    /// * `seed` - シード値
+    /// * `seed` - Seed値
     ///
     /// # Returns
     /// 妥当性
@@ -507,7 +507,7 @@ mod tests {
         assert!(!ValidationUtils::is_valid_hex_string("12G3"));
         assert!(!ValidationUtils::is_valid_hex_string("xyz"));
 
-        // シード検証
+        // Seed検証
         assert!(ValidationUtils::is_valid_seed(0x123456789ABCDEF0));
         assert!(!ValidationUtils::is_valid_seed(0));
     }

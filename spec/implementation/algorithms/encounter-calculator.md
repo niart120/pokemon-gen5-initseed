@@ -1,4 +1,4 @@
-# 遭遇計算エンジン（WASM実装）
+# エンカウント計算エンジン（WASM実装）
 
 ```rust
 // wasm-pkg/src/encounter_calculator.rs
@@ -28,11 +28,11 @@ pub enum EncounterType {
     StaticGift = 11,         // 固定配布
 }
 
-/// 遭遇計算機（静的関数ベース）
+/// エンカウント計算機（静的関数ベース）
 pub struct EncounterCalculator;
 
 impl EncounterCalculator {
-    // ゲームバージョン別の遭遇スロット計算
+    // ゲームバージョン別のエンカウントスロット計算
     pub fn calculate_encounter_slot_by_game_version(version: GameVersion, rand_value: u32) -> u32 {
         match version {
             GameVersion::B | GameVersion::W => {
@@ -46,7 +46,7 @@ impl EncounterCalculator {
         }
     }
     
-    // 遭遇タイプ別スロット値計算
+    // エンカウントタイプ別スロット値計算
     pub fn calculate_encounter_slot(version: GameVersion, encounter_type: EncounterType, rand_value: u32) -> u8 {
         // 実装は内部で適切に処理
     }
@@ -85,7 +85,7 @@ pub enum DustCloudContent {
 }
 ```
 
-## 遭遇タイプ定義
+## エンカウントタイプ定義
 
 ### 通常エンカウント（0-2）
 - **通常（0）**: 草むら・洞窟・ダンジョン共通（12スロット）
@@ -105,12 +105,12 @@ pub enum DustCloudContent {
 
 ## バージョン間の違い
 
-### 遭遇スロット計算式
+### エンカウントスロット計算式
 - **BW**: (rand * 0xFFFF / 0x290) >> 32
 - **BW2**: (rand * 100) >> 32
 
 ### 実装上の注意点
 - 静的関数ベースの設計
-- EncounterType列挙型による型安全な遭遇タイプ指定
+- EncounterType列挙型による型安全なエンカウントタイプ指定
 - 各エンカウントタイプごとの確率分布を正確に実装
 - 特殊エンカウントでのアイテム出現判定も含む

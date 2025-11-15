@@ -782,7 +782,7 @@
     },
     "static": {
       "ja": "固定/徘徊",
-      "en": "Static/Roaming"
+      "en": "Static/Roamer"
     },
     "gift": {
       "ja": "配達員",
@@ -842,9 +842,9 @@
       "ja": "イベント(交換)",
       "en": "Event"
     },
-    "Roaming": {
+    "Roamer": {
       "ja": "徘徊",
-      "en": "Roaming"
+      "en": "Roamer"
     }
   }
 }
