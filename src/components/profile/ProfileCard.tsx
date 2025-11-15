@@ -1,6 +1,5 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
-import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
+import { PanelCard } from '@/components/ui/panel-card';
 import { Separator } from '@/components/ui/separator';
 import { DeviceMobileSpeaker } from '@phosphor-icons/react';
 import type { Hardware, ROMRegion, ROMVersion } from '@/types/rom';
@@ -108,15 +107,18 @@ export function ProfileCard() {
   );
 
   return (
-    <Card className="py-3">
-      <StandardCardHeader
-        icon={<DeviceMobileSpeaker size={20} className="opacity-80" />}
-        title="Device Profile"
-      />
-      <StandardCardContent className="space-y-4">
-        <ProfileErrorsAlert errors={errors} />
-
-        <Separator />
+    <PanelCard
+      icon={<DeviceMobileSpeaker size={20} className="opacity-80" />}
+      title="Device Profile"
+      fullHeight={false}
+      contentClassName="space-y-4"
+    >
+        {errors.length > 0 && (
+          <>
+            <ProfileErrorsAlert errors={errors} />
+            <Separator />
+          </>
+        )}
 
         <div className="grid gap-2 lg:grid-cols-4">
           {isStack ? (
@@ -179,7 +181,6 @@ export function ProfileCard() {
             </>
           )}
         </div>
-      </StandardCardContent>
-    </Card>
+    </PanelCard>
   );
 }

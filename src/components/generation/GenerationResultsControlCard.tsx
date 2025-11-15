@@ -133,7 +133,6 @@ export const GenerationResultsControlCard: React.FC = () => {
       aria-labelledby="gen-results-control-title"
       role="region"
     >
-      <Separator />
       <form onSubmit={e=> e.preventDefault()} className="flex flex-col gap-4" aria-describedby="results-filter-hint">
         <div className="flex justify-end">
           <Button type="button" size="sm" variant="ghost" onClick={resetGenerationFilters}>

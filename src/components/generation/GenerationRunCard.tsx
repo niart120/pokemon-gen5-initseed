@@ -1,6 +1,5 @@
 import React, { useCallback } from 'react';
-import { Card } from '@/components/ui/card';
-import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
+import { PanelCard } from '@/components/ui/panel-card';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Square, ChartBar } from '@phosphor-icons/react';
 import { useAppStore } from '@/store/app-store';
@@ -40,12 +39,15 @@ export const GenerationRunCard: React.FC = () => {
   const canStart = status === 'idle' || status === 'completed' || status === 'error';
 
   return (
-    <Card className="flex flex-col" role="region" aria-labelledby="gen-run-title">
-      <StandardCardHeader
-        icon={<ChartBar size={20} className="opacity-80" />}
-        title={<span id="gen-run-title">Generation Run</span>}
-      />
-      <StandardCardContent className="gap-3" noScroll={isStack}>
+    <PanelCard
+      icon={<ChartBar size={20} className="opacity-80" />}
+      title={<span id="gen-run-title">Generation Run</span>}
+      fullHeight={false}
+      scrollMode={isStack ? 'parent' : 'content'}
+      contentClassName="gap-3"
+      role="region"
+      aria-labelledby="gen-run-title"
+    >
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
           <div className="text-destructive text-xs space-y-0.5" role="alert" aria-live="polite">
@@ -101,7 +103,6 @@ export const GenerationRunCard: React.FC = () => {
         <div className="sr-only" aria-live="polite">
           {status}. {done} of {total} advances. {pct ? pct.toFixed(1) : '0.0'} percent complete.
         </div>
-      </StandardCardContent>
-    </Card>
+    </PanelCard>
   );
 };
