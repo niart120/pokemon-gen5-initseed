@@ -9,7 +9,7 @@
 | セクション小見出し / 補助ラベル | `text-sm font-medium` | 例: グループラベル、統計ラベル |
 | 本文 / 入力ラベル | `text-sm` | Shadcn `Label` に準拠 (ただし密度必要なら `text-xs sm:text-sm`) |
 | メタ情報 / 補足テキスト | `text-xs text-muted-foreground` | 例: ヒント、説明文 |
-| 数値/固定幅 | `font-mono text-sm` | 例: シード値、進捗カウンタ |
+| 数値/固定幅 | `font-mono text-sm` | 例: Seed値、進捗カウンタ |
 | ミニバッジ/ワーカーステータス | `text-[10px] font-medium` | 8–10px 範囲、過小さ回避 |
 
 ## 2. カードレイアウト

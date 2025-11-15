@@ -109,7 +109,7 @@ impl OffsetCalculator {
     /// 新しいOffsetCalculatorインスタンスを作成
     ///
     /// # Arguments
-    /// * `seed` - 初期シード値
+    /// * `seed` - 初期Seed値
     #[wasm_bindgen(constructor)]
     pub fn new(seed: u64) -> OffsetCalculator {
         OffsetCalculator {
@@ -146,10 +146,10 @@ impl OffsetCalculator {
         self.advances
     }
 
-    /// 現在のシード値を取得
+    /// 現在のSeed値を取得
     ///
     /// # Returns
-    /// 現在のシード値
+    /// 現在のSeed値
     #[wasm_bindgen(getter)]
     pub fn get_current_seed(&self) -> u64 {
         self.rng.current_seed()
@@ -158,7 +158,7 @@ impl OffsetCalculator {
     /// 計算器をリセット
     ///
     /// # Arguments
-    /// * `new_seed` - 新しいシード値
+    /// * `new_seed` - 新しいSeed値
     pub fn reset(&mut self, new_seed: u64) {
         self.rng.reset(new_seed);
         self.advances = 0;

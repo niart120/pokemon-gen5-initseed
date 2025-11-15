@@ -12,17 +12,17 @@
 2. **特殊用途乱数生成**
    - sync_check(): シンクロ判定用（(r1[n] * 2) >> 32）
    - nature_roll(): 性格決定用（(r1[n] * 25) >> 32）
-   - encounter_slot_bw/bw2(): 遭遇スロット決定（BW/BW2別計算式）
+   - encounter_slot_bw/bw2(): エンカウントスロット決定（BW/BW2別計算式）
 3. **wasm-bindgen統合**
-   - getter/setterでJavaScript側からのシード操作
+   - getter/setterでJavaScript側からのSeed操作
    - WebAssembly環境での64bit整数演算最適化
 
-#### 8.1.2 Week 2: 遭遇計算エンジン（encounter-calculator.md）
+#### 8.1.2 Week 2: エンカウント計算エンジン（encounter-calculator.md）
 1. **EncounterCalculator実装**
    - GameVersion enum（BW/BW2対応）
    - calculate_encounter_slot(): バージョン別スロット計算
    - slot_to_table_index(): 8種エンカウントタイプ対応
-2. **遭遇スロット分布実装**
+2. **エンカウントスロット分布実装**
    - 通常エンカウント（12スロット、20%/20%/10%...）
    - なみのり（5スロット、60%/30%/5%/4%/1%）
    - 釣り（5スロット、70%/15%/10%/5%）
@@ -57,14 +57,14 @@
 3. **PokemonGenerator統合（pokemon-generator.md）**
    - RawPokemonData構造体定義
    - generate_pokemon_batch(): バッチ処理メイン関数
-   - 遭遇タイプ別処理分岐（0-7: 野生、10-11: 固定、20: 徘徊）
+   - エンカウントタイプ別処理分岐（0-7: 野生、10-11: 固定、20: 徘徊）
 4. **特殊エンカウント対応（special-encounters.md）**
    - 揺れる草むら・砂煙・ポケモンの影・水泡系
    - エンカウントタイプ3-7の確率分布実装
 5. **基本テスト**
    - 各アルゴリズム単体テスト
    - 参照実装との一致確認
-   - 遭遇タイプ別動作検証
+   - エンカウントタイプ別動作検証
 
 ### 8.2 Phase 2: TypeScript Integration（2週間）
 
@@ -98,7 +98,7 @@
 
 ### 8.3 Phase 3: UI Components（2週間）
 1. **入力コンポーネント**
-   - 基本パラメータ・遭遇設定フォーム
+   - 基本パラメータ・エンカウント設定フォーム
    - バリデーション機能
 2. **結果表示コンポーネント**
    - テーブル・カード表示
@@ -139,8 +139,8 @@
 
 **最優先（Phase 1 Week 1-2必須）**
 - PersonalityRNG: 64bit LCG乱数エンジン
-- EncounterCalculator: BW/BW2遭遇スロット計算
-- 基本的な遭遇タイプ対応（0-2: 通常・なみのり・釣り）
+- EncounterCalculator: BW/BW2エンカウントスロット計算
+- 基本的なエンカウントタイプ対応（0-2: 通常・なみのり・釣り）
 
 **高優先（Phase 1 Week 3-4必須）**
 - OffsetCalculator: PT操作、TID/SID決定、住人決定、Extra処理
@@ -162,7 +162,7 @@
 ```
 personality-rng.md (基盤乱数エンジン)
     ↓
-encounter-calculator.md (遭遇計算)
+encounter-calculator.md (エンカウント計算)
     ↓
 offset-calculator.md (オフセット計算)
     ↓
@@ -179,7 +179,7 @@ TypeScript Integration (データ処理・UI)
 
 #### Phase 1成果物
 - **Week 1**: PersonalityRNG + 単体テスト
-- **Week 2**: EncounterCalculator + 遭遇スロット検証テスト
+- **Week 2**: EncounterCalculator + エンカウントスロット検証テスト
 - **Week 3**: OffsetCalculator + オフセット計算精度テスト
 - **Week 4**: PokemonGenerator統合 + 全体統合テスト
 

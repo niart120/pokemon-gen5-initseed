@@ -14,6 +14,32 @@ import { natureName } from '@/lib/utils/format-display';
 import { getIvTooltipEntries } from '@/lib/utils/individual-values-display';
 import { lcgSeedToMtSeed } from '@/lib/utils/lcg-seed';
 import { useLocale } from '@/lib/i18n/locale-context';
+import {
+  generationParamsAbilityLabel,
+  generationParamsAbilityOptionLabels,
+  generationParamsBaseSeedLabel,
+  generationParamsBaseSeedPlaceholder,
+  generationParamsDataUnavailablePlaceholder,
+  generationParamsEncounterCategoryLabel,
+  generationParamsEncounterFieldLabel,
+  generationParamsEncounterSpeciesLabel,
+  generationParamsEncounterTypeLabel,
+  generationParamsMaxAdvancesLabel,
+  generationParamsMinAdvanceLabel,
+  generationParamsNoTypesAvailableLabel,
+  generationParamsNotApplicablePlaceholder,
+  generationParamsPanelTitle,
+  generationParamsScreenReaderAnnouncement,
+  generationParamsSectionTitles,
+  generationParamsSelectOptionPlaceholder,
+  generationParamsSelectSpeciesPlaceholder,
+  generationParamsStaticDataPendingLabel,
+  generationParamsStopFirstShinyLabel,
+  generationParamsStopOnCapLabel,
+  generationParamsSyncNatureLabel,
+  generationParamsTypeUnavailablePlaceholder,
+} from '@/lib/i18n/strings/generation-params';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import { useAppStore } from '@/store/app-store';
 import type { GenerationParamsHex } from '@/types/generation';
 import {
@@ -38,10 +64,10 @@ function toDomainEncounterType(value: number): DomainEncounterType | null {
 }
 
 // Ability モード選択肢 (Compound は WIP のため disabled)
-const ABILITY_OPTIONS: Array<{ value: NonNullable<GenerationParamsHex['abilityMode']>; label: string; disabled?: boolean }> = [
-  { value: 'none', label: '-' },
-  { value: 'sync', label: 'Sync' },
-  { value: 'compound', label: 'Compound (WIP)', disabled: true },
+const ABILITY_OPTION_DEFS: Array<{ value: NonNullable<GenerationParamsHex['abilityMode']>; disabled?: boolean }> = [
+  { value: 'none' },
+  { value: 'sync' },
+  { value: 'compound', disabled: true },
 ];
 
 const DEFAULT_ENCOUNTER_CATEGORY: DomainEncounterTypeCategoryKey = (
@@ -67,6 +93,45 @@ export const GenerationParamsCard: React.FC = () => {
   const setAbilityCatalog = useAppStore(s => s.setAbilityCatalog);
   const disabled = status === 'running' || status === 'paused' || status === 'starting';
   const hexDraft: Partial<GenerationParamsHex> = draftParams;
+
+  const localized = React.useMemo(() => {
+    const abilityLabels = resolveLocaleValue(generationParamsAbilityOptionLabels, locale);
+    return {
+      panelTitle: resolveLocaleValue(generationParamsPanelTitle, locale),
+      sectionTitles: {
+        target: resolveLocaleValue(generationParamsSectionTitles.target, locale),
+        encounter: resolveLocaleValue(generationParamsSectionTitles.encounter, locale),
+        stop: resolveLocaleValue(generationParamsSectionTitles.stopConditions, locale),
+      },
+      labels: {
+        baseSeed: resolveLocaleValue(generationParamsBaseSeedLabel, locale),
+        baseSeedPlaceholder: resolveLocaleValue(generationParamsBaseSeedPlaceholder, locale),
+        minAdvance: resolveLocaleValue(generationParamsMinAdvanceLabel, locale),
+        maxAdvances: resolveLocaleValue(generationParamsMaxAdvancesLabel, locale),
+        encounterCategory: resolveLocaleValue(generationParamsEncounterCategoryLabel, locale),
+        encounterType: resolveLocaleValue(generationParamsEncounterTypeLabel, locale),
+        encounterField: resolveLocaleValue(generationParamsEncounterFieldLabel, locale),
+        encounterSpecies: resolveLocaleValue(generationParamsEncounterSpeciesLabel, locale),
+        ability: resolveLocaleValue(generationParamsAbilityLabel, locale),
+        syncNature: resolveLocaleValue(generationParamsSyncNatureLabel, locale),
+        stopFirstShiny: resolveLocaleValue(generationParamsStopFirstShinyLabel, locale),
+        stopOnCap: resolveLocaleValue(generationParamsStopOnCapLabel, locale),
+      },
+      placeholders: {
+        typeUnavailable: resolveLocaleValue(generationParamsTypeUnavailablePlaceholder, locale),
+        selectOption: resolveLocaleValue(generationParamsSelectOptionPlaceholder, locale),
+        notApplicable: resolveLocaleValue(generationParamsNotApplicablePlaceholder, locale),
+        selectSpecies: resolveLocaleValue(generationParamsSelectSpeciesPlaceholder, locale),
+        dataUnavailable: resolveLocaleValue(generationParamsDataUnavailablePlaceholder, locale),
+      },
+      messages: {
+        noTypesAvailable: resolveLocaleValue(generationParamsNoTypesAvailableLabel, locale),
+        staticDataPending: resolveLocaleValue(generationParamsStaticDataPendingLabel, locale),
+        screenReader: resolveLocaleValue(generationParamsScreenReaderAnnouncement, locale),
+      },
+      abilityLabels,
+    };
+  }, [locale]);
 
   const baseSeedTooltipEntries = React.useMemo(() => {
     const raw = (hexDraft.baseSeedHex ?? '').trim();
@@ -163,15 +228,21 @@ export const GenerationParamsCard: React.FC = () => {
   };
   const noTypeOptions = encounterTypeOptions.length === 0;
   const typeSelectDisabled = disabled || noTypeOptions;
-  const typeSelectPlaceholder = noTypeOptions ? 'Unavailable' : undefined;
-  const locationSelectPlaceholder = locationOptions.length ? 'Select...' : 'N/A';
-  const staticSelectPlaceholder = staticOptions.length ? 'Select species' : 'Data unavailable';
+  const typeSelectPlaceholder = noTypeOptions ? localized.placeholders.typeUnavailable : undefined;
+  const locationSelectPlaceholder = locationOptions.length ? localized.placeholders.selectOption : localized.placeholders.notApplicable;
+  const staticSelectPlaceholder = staticOptions.length ? localized.placeholders.selectSpecies : localized.placeholders.dataUnavailable;
   const { isStack } = useResponsiveLayout();
   const syncNatureOptions = React.useMemo(() => {
     return SYNC_NATURE_IDS.map(id => ({ id, label: natureName(id, locale) }));
   }, [locale]);
+  const abilityOptions = React.useMemo(() => {
+    return ABILITY_OPTION_DEFS.map(opt => ({
+      ...opt,
+      label: localized.abilityLabels[opt.value],
+    }));
+  }, [localized.abilityLabels]);
 
-  // フィールド選択に応じて遭遇テーブルと補助データをストアへ供給
+  // フィールド選択に応じてエンカウントテーブルと補助データをストアへ供給
   React.useEffect(() => {
     // Sync derived encounter context into the shared store for downstream selectors and workers.
     const state = useAppStore.getState();
@@ -261,7 +332,7 @@ export const GenerationParamsCard: React.FC = () => {
   return (
     <PanelCard
       icon={<Gear size={20} className="opacity-80" />}
-      title={<span id="gen-params-title">Generation Parameters</span>}
+      title={<span id="gen-params-title">{localized.panelTitle}</span>}
       className={isStack ? undefined : 'min-h-64'}
       fullHeight={!isStack}
       scrollMode={isStack ? 'parent' : 'content'}
@@ -271,11 +342,11 @@ export const GenerationParamsCard: React.FC = () => {
       {/* Profile-managed fields (Version, TID, SID, etc.) are configured via Device Profile panel. */}
       {/* Target (Range) */}
       <section aria-labelledby="gen-target" className="space-y-2" role="group">
-        <h4 id="gen-target" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Target</h4>
+        <h4 id="gen-target" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{localized.sectionTitles.target}</h4>
         <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {/* Base Seed */}
           <div className="flex flex-col gap-1 min-w-0">
-            <Label className="text-xs" htmlFor="base-seed">Base Seed (hex)</Label>
+            <Label className="text-xs" htmlFor="base-seed">{localized.labels.baseSeed}</Label>
             {baseSeedTooltipEntries && baseSeedTooltipEntries.length > 0 ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -288,7 +359,7 @@ export const GenerationParamsCard: React.FC = () => {
                       const v = e.target.value;
                       if (isHexLike(v)) update({ baseSeedHex: v.replace(/^0x/i, '') });
                     }}
-                    placeholder="1a2b3c4d5e6f7890"
+                    placeholder={localized.labels.baseSeedPlaceholder}
                   />
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="space-y-1 text-left">
@@ -311,13 +382,13 @@ export const GenerationParamsCard: React.FC = () => {
                   const v = e.target.value;
                   if (isHexLike(v)) update({ baseSeedHex: v.replace(/^0x/i, '') });
                 }}
-                placeholder="1a2b3c4d5e6f7890"
+                placeholder={localized.labels.baseSeedPlaceholder}
               />
             )}
           </div>
           {/* Min Advance (offset) */}
           <div className="flex flex-col gap-1 min-w-0">
-            <Label className="text-xs" htmlFor="min-advance">Min Advance</Label>
+            <Label className="text-xs" htmlFor="min-advance">{localized.labels.minAdvance}</Label>
             <Input
               id="min-advance"
               type="number"
@@ -331,7 +402,7 @@ export const GenerationParamsCard: React.FC = () => {
           </div>
           {/* Max Advances */}
           <div className="flex flex-col gap-1">
-            <Label className="text-xs" htmlFor="max-adv">Max Advances</Label>
+            <Label className="text-xs" htmlFor="max-adv">{localized.labels.maxAdvances}</Label>
             <Input
               id="max-adv"
               type="number"
@@ -347,11 +418,11 @@ export const GenerationParamsCard: React.FC = () => {
       <Separator />
       {/* Encounter & Ability */}
       <section aria-labelledby="gen-encounter" className="space-y-2" role="group">
-        <h4 id="gen-encounter" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Encounter</h4>
+        <h4 id="gen-encounter" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{localized.sectionTitles.encounter}</h4>
         <div className="grid gap-3 grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)]">
           {/* Encounter Category */}
           <div className="flex flex-col gap-1 min-w-0 w-full">
-            <Label className="text-xs" id="lbl-encounter-category" htmlFor="encounter-category">Category</Label>
+            <Label className="text-xs" id="lbl-encounter-category" htmlFor="encounter-category">{localized.labels.encounterCategory}</Label>
             <Select value={encounterCategory} onValueChange={v => onEncounterCategoryChange(v as DomainEncounterTypeCategoryKey)} disabled={disabled}>
               <SelectTrigger id="encounter-category" aria-labelledby="lbl-encounter-category encounter-category" className="w-full">
                 <SelectValue />
@@ -365,14 +436,14 @@ export const GenerationParamsCard: React.FC = () => {
           </div>
           {/* Encounter Type */}
           <div className="flex flex-col gap-1 min-w-0 w-full">
-            <Label className="text-xs" id="lbl-encounter-type" htmlFor="encounter-type">Type</Label>
+            <Label className="text-xs" id="lbl-encounter-type" htmlFor="encounter-type">{localized.labels.encounterType}</Label>
             <Select value={encounterValue.toString()} onValueChange={v => update({ encounterType: Number(v) })} disabled={typeSelectDisabled}>
               <SelectTrigger id="encounter-type" aria-labelledby="lbl-encounter-type encounter-type" className="w-full">
                 <SelectValue placeholder={typeSelectPlaceholder} />
               </SelectTrigger>
               <SelectContent className="max-h-72">
                 {noTypeOptions ? (
-                  <SelectItem value="__no-type" disabled>No types available</SelectItem>
+                  <SelectItem value="__no-type" disabled>{localized.messages.noTypesAvailable}</SelectItem>
                 ) : encounterTypeOptions.map(opt => (
                   <SelectItem key={opt.name} value={opt.value.toString()}>{opt.label}</SelectItem>
                 ))}
@@ -382,7 +453,7 @@ export const GenerationParamsCard: React.FC = () => {
           {/* Encounter Field (location) */}
           {isLocationBased && (
             <div className="flex flex-col gap-1 min-w-0 w-full">
-              <Label className="text-xs" id="lbl-encounter-field" htmlFor="encounter-field">Field</Label>
+              <Label className="text-xs" id="lbl-encounter-field" htmlFor="encounter-field">{localized.labels.encounterField}</Label>
               <Select value={encounterField ?? ''} onValueChange={v => setEncounterField(v)} disabled={disabled || locationOptions.length === 0}>
                 <SelectTrigger id="encounter-field" aria-labelledby="lbl-encounter-field encounter-field" className="w-full whitespace-normal text-left">
                   <SelectValue placeholder={locationSelectPlaceholder} className="!line-clamp-2" />
@@ -398,7 +469,7 @@ export const GenerationParamsCard: React.FC = () => {
           {/* Encounter Species (static encounters only) */}
           {!isLocationBased && (
             <div className="flex flex-col gap-1 min-w-0 w-full">
-              <Label className="text-xs" id="lbl-encounter-species" htmlFor="encounter-species">Species</Label>
+              <Label className="text-xs" id="lbl-encounter-species" htmlFor="encounter-species">{localized.labels.encounterSpecies}</Label>
               <Select
                 value={staticEncounterId ?? ''}
                 onValueChange={id => {
@@ -417,7 +488,7 @@ export const GenerationParamsCard: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
                   {staticOptionsWithLabels.length === 0 ? (
-                    <SelectItem value="__coming-soon" disabled>Data not yet available</SelectItem>
+                    <SelectItem value="__coming-soon" disabled>{localized.messages.staticDataPending}</SelectItem>
                   ) : staticOptionsWithLabels.map(sp => (
                     <SelectItem key={sp.id} value={sp.id} className="text-left">
                       {`${sp.label} (Lv.${sp.level})`}
@@ -429,19 +500,19 @@ export const GenerationParamsCard: React.FC = () => {
           )}
           {/* Ability Mode */}
           <div className="flex flex-col gap-1 min-w-0 w-full">
-            <Label className="text-xs" id="lbl-ability-mode" htmlFor="ability-mode">Ability</Label>
+            <Label className="text-xs" id="lbl-ability-mode" htmlFor="ability-mode">{localized.labels.ability}</Label>
             <Select value={abilityMode} onValueChange={v => onAbilityChange(v as NonNullable<GenerationParamsHex['abilityMode']>)} disabled={disabled}>
               <SelectTrigger id="ability-mode" aria-labelledby="lbl-ability-mode ability-mode" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="max-h-64">
-                {ABILITY_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>{opt.label}</SelectItem>)}
+                {abilityOptions.map(opt => <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>{opt.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           {/* Sync Nature */}
           <div className="flex flex-col gap-1 min-w-0 w-full">
-            <Label className="text-xs" id="lbl-sync-nature" htmlFor="sync-nature">Sync Nature</Label>
+            <Label className="text-xs" id="lbl-sync-nature" htmlFor="sync-nature">{localized.labels.syncNature}</Label>
             <Select value={(draftParams.syncNatureId ?? 0).toString()} onValueChange={v => update({ syncNatureId: Number(v) })} disabled={disabled || !syncActive}>
               <SelectTrigger id="sync-nature" aria-labelledby="lbl-sync-nature sync-nature" className="w-full">
                 <SelectValue />
@@ -458,20 +529,20 @@ export const GenerationParamsCard: React.FC = () => {
       <Separator />
       {/* Stop Conditions */}
       <section aria-labelledby="gen-stop" className="space-y-2" role="group">
-        <h4 id="gen-stop" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Stop Conditions</h4>
+        <h4 id="gen-stop" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{localized.sectionTitles.stop}</h4>
         <div className="flex flex-wrap gap-6">
           <div className="flex items-center gap-2">
             <Checkbox id="stop-first-shiny" aria-labelledby="lbl-stop-first-shiny" checked={draftParams.stopAtFirstShiny ?? false} disabled={disabled} onCheckedChange={v => update({ stopAtFirstShiny: Boolean(v) })} />
-            <Label id="lbl-stop-first-shiny" htmlFor="stop-first-shiny" className="text-xs">Stop at First Shiny</Label>
+            <Label id="lbl-stop-first-shiny" htmlFor="stop-first-shiny" className="text-xs">{localized.labels.stopFirstShiny}</Label>
           </div>
           <div className="flex items-center gap-2">
             <Checkbox id="stop-on-cap" aria-labelledby="lbl-stop-on-cap" checked={draftParams.stopOnCap ?? true} disabled={disabled} onCheckedChange={v => update({ stopOnCap: Boolean(v) })} />
-            <Label id="lbl-stop-on-cap" htmlFor="stop-on-cap" className="text-xs">Stop On Cap</Label>
+            <Label id="lbl-stop-on-cap" htmlFor="stop-on-cap" className="text-xs">{localized.labels.stopOnCap}</Label>
           </div>
         </div>
       </section>
       <div className="sr-only" aria-live="polite">
-        Generation parameters configuration. Editing disabled while generation is active.
+        {localized.messages.screenReader}
       </div>
     </PanelCard>
   );

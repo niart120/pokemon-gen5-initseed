@@ -203,7 +203,7 @@ describe('MultiWorkerSearchManager', () => {
   });
 
   describe('エラーハンドリング', () => {
-    it('空のターゲットシードでもエラーにならない', async () => {
+    it('空のターゲットSeedでもエラーにならない', async () => {
       await expect(
         manager.startParallelSearch(mockConditions, [], mockCallbacks)
       ).resolves.not.toThrow();

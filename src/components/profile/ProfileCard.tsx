@@ -10,6 +10,9 @@ import { Timer0VCountSection } from '@/components/profile/sections/Timer0VCountS
 import { GameStateSection } from '@/components/profile/sections/GameStateSection';
 import { ProfileManagementSection } from '@/components/profile/sections/ProfileManagementSection';
 import { ProfileErrorsAlert } from '@/components/profile/sections/ProfileErrorsAlert';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import { profileCardTitle, resolveProfileSectionTitle } from '@/lib/i18n/strings/profile-card';
 
 const ROM_VERSIONS: ROMVersion[] = ['B', 'W', 'B2', 'W2'];
 const ROM_REGIONS: ROMRegion[] = ['JPN', 'KOR', 'USA', 'GER', 'FRA', 'SPA', 'ITA'];
@@ -21,6 +24,7 @@ const HARDWARE_OPTIONS: { value: Hardware; label: string }[] = [
 
 export function ProfileCard() {
   const { errors, profileSelection, header, layout, rom, timer, game } = useProfileCardForm();
+  const locale = useLocale();
 
   const { profiles, activeId, onSelect } = profileSelection;
   const {
@@ -109,7 +113,7 @@ export function ProfileCard() {
   return (
     <PanelCard
       icon={<DeviceMobileSpeaker size={20} className="opacity-80" />}
-      title="Device Profile"
+      title={resolveLocaleValue(profileCardTitle, locale)}
       fullHeight={false}
       contentClassName="space-y-4"
     >
@@ -126,7 +130,7 @@ export function ProfileCard() {
               <CollapsedSection
                 sectionKey="profile"
                 headingId="profile-management"
-                title="Profile Management"
+                title={resolveProfileSectionTitle('profileManagement', locale)}
                 isOpen={sectionOpen.profile}
                 onToggle={toggleSection}
               >
@@ -135,7 +139,7 @@ export function ProfileCard() {
               <CollapsedSection
                 sectionKey="rom"
                 headingId="profile-rom"
-                title="ROM & Hardware"
+                title={resolveProfileSectionTitle('romHardware', locale)}
                 isOpen={sectionOpen.rom}
                 onToggle={toggleSection}
               >
@@ -144,7 +148,7 @@ export function ProfileCard() {
               <CollapsedSection
                 sectionKey="timer"
                 headingId="profile-timer"
-                title="Timer0 / VCount"
+                title={resolveProfileSectionTitle('timer0Vcount', locale)}
                 isOpen={sectionOpen.timer}
                 onToggle={toggleSection}
               >
@@ -153,7 +157,7 @@ export function ProfileCard() {
               <CollapsedSection
                 sectionKey="game"
                 headingId="profile-game"
-                title="Game State"
+                title={resolveProfileSectionTitle('gameState', locale)}
                 isOpen={sectionOpen.game}
                 onToggle={toggleSection}
               >
@@ -163,19 +167,27 @@ export function ProfileCard() {
           ) : (
             <>
               <section className="space-y-3" aria-labelledby="profile-management">
-                <h4 id="profile-management" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Profile Management</h4>
+                <h4 id="profile-management" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {resolveProfileSectionTitle('profileManagement', locale)}
+                </h4>
                 {profileManagementSection}
               </section>
               <section className="space-y-3" aria-labelledby="profile-rom">
-                <h4 id="profile-rom" className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">ROM & Hardware</h4>
+                <h4 id="profile-rom" className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+                  {resolveProfileSectionTitle('romHardware', locale)}
+                </h4>
                 {romSection}
               </section>
               <section className="space-y-3" aria-labelledby="profile-timer">
-                <h4 id="profile-timer" className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">Timer0 / VCount</h4>
+                <h4 id="profile-timer" className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+                  {resolveProfileSectionTitle('timer0Vcount', locale)}
+                </h4>
                 {timerSection}
               </section>
               <section className="space-y-3" aria-labelledby="profile-game">
-                <h4 id="profile-game" className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">Game State</h4>
+                <h4 id="profile-game" className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+                  {resolveProfileSectionTitle('gameState', locale)}
+                </h4>
                 {gameSection}
               </section>
             </>

@@ -2,6 +2,8 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveProfileGameFieldLabel } from '@/lib/i18n/strings/profile-game';
 
 interface GameStateSectionProps {
   tid: string;
@@ -38,10 +40,14 @@ export function GameStateSection({
   shinyCharmDisabled,
   memoryLinkDisabled,
 }: GameStateSectionProps) {
+  const locale = useLocale();
+
   return (
     <div className="grid items-end gap-3 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
       <div className="flex flex-col gap-1">
-        <Label htmlFor="profile-tid" className="text-xs">TID</Label>
+        <Label htmlFor="profile-tid" className="text-xs">
+          {resolveProfileGameFieldLabel('tid', locale)}
+        </Label>
         <Input
           id="profile-tid"
           value={tid}
@@ -52,7 +58,9 @@ export function GameStateSection({
         />
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor="profile-sid" className="text-xs">SID</Label>
+        <Label htmlFor="profile-sid" className="text-xs">
+          {resolveProfileGameFieldLabel('sid', locale)}
+        </Label>
         <Input
           id="profile-sid"
           value={sid}
@@ -64,27 +72,27 @@ export function GameStateSection({
       </div>
       <ToggleField
         id="profile-new-game"
-        label="New Game"
+        label={resolveProfileGameFieldLabel('newGame', locale)}
         checked={newGame}
         onChange={onNewGameToggle}
       />
       <ToggleField
         id="profile-with-save"
-        label="With Save"
+        label={resolveProfileGameFieldLabel('withSave', locale)}
         checked={withSave}
         onChange={onWithSaveToggle}
         disabled={withSaveDisabled}
       />
       <ToggleField
         id="profile-shiny"
-        label="Shiny Charm"
+        label={resolveProfileGameFieldLabel('shinyCharm', locale)}
         checked={shinyCharm}
         onChange={onShinyCharmToggle}
         disabled={shinyCharmDisabled}
       />
       <ToggleField
         id="profile-memory-link"
-        label="Memory Link"
+        label={resolveProfileGameFieldLabel('memoryLink', locale)}
         checked={memoryLink}
         onChange={onMemoryLinkToggle}
         disabled={memoryLinkDisabled}

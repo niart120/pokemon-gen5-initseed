@@ -9,6 +9,18 @@ import { useResponsiveLayout } from '../../../hooks/use-mobile';
 import { lcgSeedToHex, lcgSeedToMtSeed } from '@/lib/utils/lcg-seed';
 import { getIvTooltipEntries } from '@/lib/utils/individual-values-display';
 import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import {
+  formatResultCount,
+  formatResultDateTime,
+  formatSearchDuration,
+  searchResultsFilteredEmptyMessage,
+  searchResultsHeaders,
+  searchResultsInitialMessage,
+  searchResultsTitle,
+  viewDetailsAriaLabel,
+  viewDetailsLabel,
+} from '@/lib/i18n/strings/search-results';
 import type { InitialSeedResult } from '../../../types/search';
 import type { SortField } from './ResultsControlCard';
 
@@ -32,9 +44,6 @@ export function ResultsCard({
   const { lastSearchDuration } = useAppStore();
   const { isStack } = useResponsiveLayout();
   const locale = useLocale();
-  const formatDateTime = (date: Date): string => {
-    return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-  };
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return null;
@@ -50,15 +59,15 @@ export function ResultsCard({
   return (
     <PanelCard
       icon={<Eye size={20} className="flex-shrink-0 opacity-80" />}
-      title="Search Results"
+      title={resolveLocaleValue(searchResultsTitle, locale)}
       headerActions={
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="secondary" className="flex-shrink-0">
-            {filteredResultsCount} result{filteredResultsCount !== 1 ? 's' : ''}
+            {formatResultCount(filteredResultsCount, locale)}
           </Badge>
           {lastSearchDuration !== null && (
             <Badge variant="outline" className="flex-shrink-0 text-xs">
-              Search completed in {(lastSearchDuration / 1000).toFixed(1)}s
+              {formatSearchDuration(lastSearchDuration, locale)}
             </Badge>
           )}
         </div>
@@ -70,24 +79,26 @@ export function ResultsCard({
     >
         {filteredAndSortedResults.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            {searchResultsLength === 0 
-              ? "No search results yet. Run a search to see results here."
-              : "No results match the current filter criteria."
-            }
+            {resolveLocaleValue(
+              searchResultsLength === 0 ? searchResultsInitialMessage : searchResultsFilteredEmptyMessage,
+              locale,
+            )}
           </div>
         ) : (
           <div className="overflow-y-auto flex-1">
             <Table className="table-auto min-w-full text-xs leading-tight">
               <TableHeader>
                 <TableRow className="h-9">
-                  <TableHead className="w-12 px-1 text-center"></TableHead>
-                  <TableHead className="px-2 font-mono text-[11px] whitespace-nowrap min-w-[120px]">LCG Seed</TableHead>
+                  <TableHead className="w-12 px-1 text-center">{resolveLocaleValue(searchResultsHeaders.action, locale)}</TableHead>
+                  <TableHead className="px-2 font-mono text-[11px] whitespace-nowrap min-w-[120px]">
+                    {resolveLocaleValue(searchResultsHeaders.lcgSeed, locale)}
+                  </TableHead>
                   <TableHead 
                     className="px-2 cursor-pointer select-none"
                     onClick={() => handleSort('datetime')}
                   >
                     <div className="flex items-center gap-1">
-                      Date/Time {getSortIcon('datetime')}
+                      {resolveLocaleValue(searchResultsHeaders.dateTime, locale)} {getSortIcon('datetime')}
                     </div>
                   </TableHead>
                   <TableHead 
@@ -95,7 +106,7 @@ export function ResultsCard({
                     onClick={() => handleSort('seed')}
                   >
                     <div className="flex items-center gap-1">
-                      MT Seed {getSortIcon('seed')}
+                      {resolveLocaleValue(searchResultsHeaders.mtSeed, locale)} {getSortIcon('seed')}
                     </div>
                   </TableHead>
                   <TableHead 
@@ -103,7 +114,7 @@ export function ResultsCard({
                     onClick={() => handleSort('timer0')}
                   >
                     <div className="flex items-center gap-1">
-                      Timer0 {getSortIcon('timer0')}
+                      {resolveLocaleValue(searchResultsHeaders.timer0, locale)} {getSortIcon('timer0')}
                     </div>
                   </TableHead>
                   <TableHead 
@@ -111,7 +122,7 @@ export function ResultsCard({
                     onClick={() => handleSort('vcount')}
                   >
                     <div className="flex items-center gap-1">
-                      VCount {getSortIcon('vcount')}
+                      {resolveLocaleValue(searchResultsHeaders.vcount, locale)} {getSortIcon('vcount')}
                     </div>
                   </TableHead>
                 </TableRow>
@@ -125,8 +136,8 @@ export function ResultsCard({
                         size="sm"
                         onClick={() => onShowDetails(result)}
                         className="h-7 w-7 p-0"
-                        title="View Details"
-                        aria-label="View search result details"
+                        title={resolveLocaleValue(viewDetailsLabel, locale)}
+                        aria-label={resolveLocaleValue(viewDetailsAriaLabel, locale)}
                       >
                         <Eye size={14} />
                       </Button>
@@ -148,7 +159,7 @@ export function ResultsCard({
                       </Tooltip>
                     </TableCell>
                     <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-normal">
-                      {formatDateTime(result.datetime)}
+                      {formatResultDateTime(result.datetime, locale)}
                     </TableCell>
                     <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-normal">
                       <Tooltip>

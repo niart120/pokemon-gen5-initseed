@@ -2,6 +2,8 @@ import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import type { Hardware, ROMRegion, ROMVersion } from '@/types/rom';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveProfileRomLabel, formatProfileMacSegmentAria } from '@/lib/i18n/strings/profile-rom-hardware';
 
 const MAC_SEGMENT_CLASS =
   'h-9 w-7 min-w-[1rem] rounded-md border border-input bg-muted/40 px-1 text-center text-[11px] font-mono uppercase tracking-tight shadow-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/60';
@@ -50,10 +52,14 @@ export function RomHardwareSection({
   onMacSegmentKeyDown,
   onMacSegmentPaste,
 }: RomHardwareSectionProps) {
+  const locale = useLocale();
+
   return (
     <div className="flex flex-wrap items-start gap-2 sm:gap-3">
       <div className="flex flex-col gap-1 flex-none">
-        <Label htmlFor="profile-rom-version" className="text-xs">Version</Label>
+        <Label htmlFor="profile-rom-version" className="text-xs">
+          {resolveProfileRomLabel('version', locale)}
+        </Label>
         <Select value={romVersion} onValueChange={(value) => onRomVersionChange(value as ROMVersion)}>
           <SelectTrigger id="profile-rom-version" className="h-9">
             <SelectValue />
@@ -66,7 +72,9 @@ export function RomHardwareSection({
         </Select>
       </div>
       <div className="flex flex-col gap-1 flex-none">
-        <Label htmlFor="profile-rom-region" className="text-xs">Region</Label>
+        <Label htmlFor="profile-rom-region" className="text-xs">
+          {resolveProfileRomLabel('region', locale)}
+        </Label>
         <Select value={romRegion} onValueChange={(value) => onRomRegionChange(value as ROMRegion)}>
           <SelectTrigger id="profile-rom-region" className="h-9">
             <SelectValue />
@@ -79,7 +87,9 @@ export function RomHardwareSection({
         </Select>
       </div>
       <div className="flex flex-col gap-1 flex-none">
-        <Label htmlFor="profile-hardware" className="text-xs">Hardware</Label>
+        <Label htmlFor="profile-hardware" className="text-xs">
+          {resolveProfileRomLabel('hardware', locale)}
+        </Label>
         <Select value={hardware} onValueChange={(value) => onHardwareChange(value as Hardware)}>
           <SelectTrigger id="profile-hardware" className="h-9">
             <SelectValue />
@@ -92,7 +102,9 @@ export function RomHardwareSection({
         </Select>
       </div>
       <div className="flex flex-col gap-1 flex-1">
-        <Label className="text-xs">MAC Address</Label>
+        <Label className="text-xs">
+          {resolveProfileRomLabel('macAddress', locale)}
+        </Label>
         <div className="flex gap-1.5 overflow-x-auto pb-1 sm:overflow-visible">
           {macSegments.map((segment, index) => (
             <input
@@ -112,7 +124,7 @@ export function RomHardwareSection({
               spellCheck={false}
               maxLength={2}
               className={MAC_SEGMENT_CLASS}
-              aria-label={`MAC segment ${index + 1}`}
+              aria-label={formatProfileMacSegmentAria(index, locale)}
             />
           ))}
         </div>

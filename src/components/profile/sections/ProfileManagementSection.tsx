@@ -6,6 +6,16 @@ import { Badge } from '@/components/ui/badge';
 import { ProfileRenameDialog } from '@/components/profile/sections/ProfileRenameDialog';
 import type { DeviceProfile } from '@/types/profile';
 import { SELECT_IMPORT_CURRENT, SELECT_NEW_PROFILE } from '@/components/profile/hooks/useProfileCardForm';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import {
+  profileManagementSelectLabel,
+  profileManagementSelectPlaceholder,
+  profileManagementNewProfileLabel,
+  profileManagementImportCurrentLabel,
+  profileManagementDirtyBadge,
+  resolveProfileManagementButtonLabel,
+} from '@/lib/i18n/strings/profile-management';
 
 interface ProfileManagementSectionProps {
   profiles: DeviceProfile[];
@@ -33,6 +43,7 @@ export function ProfileManagementSection({
   onDelete,
 }: ProfileManagementSectionProps) {
   const [renameOpen, setRenameOpen] = React.useState(false);
+  const locale = useLocale();
 
   React.useEffect(() => {
     if (!canModify && renameOpen) {
@@ -55,10 +66,12 @@ export function ProfileManagementSection({
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1">
-        <Label htmlFor="profile-select" className="text-xs">Profile</Label>
+        <Label htmlFor="profile-select" className="text-xs">
+          {resolveLocaleValue(profileManagementSelectLabel, locale)}
+        </Label>
         <Select value={activeProfileId} onValueChange={onSelectProfile}>
           <SelectTrigger id="profile-select" className="h-9">
-            <SelectValue placeholder="プロファイルを選択" />
+            <SelectValue placeholder={resolveLocaleValue(profileManagementSelectPlaceholder, locale)} />
           </SelectTrigger>
           <SelectContent>
             {profiles.map((profile) => (
@@ -67,14 +80,24 @@ export function ProfileManagementSection({
               </SelectItem>
             ))}
             <div className="my-1 h-px bg-border" role="separator" />
-            <SelectItem value={SELECT_NEW_PROFILE}>+ New profile</SelectItem>
-            <SelectItem value={SELECT_IMPORT_CURRENT}>Import current settings</SelectItem>
+            <SelectItem value={SELECT_NEW_PROFILE}>
+              {resolveLocaleValue(profileManagementNewProfileLabel, locale)}
+            </SelectItem>
+            <SelectItem value={SELECT_IMPORT_CURRENT}>
+              {resolveLocaleValue(profileManagementImportCurrentLabel, locale)}
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
-      <Button size="sm" variant="outline" onClick={onRename} disabled={!canModify}>Rename</Button>
-      <Button size="sm" variant="outline" onClick={onSave} disabled={!canModify}>Save</Button>
-      <Button size="sm" variant="destructive" onClick={onDelete} disabled={disableDelete}>Delete</Button>
+      <Button size="sm" variant="outline" onClick={onRename} disabled={!canModify}>
+        {resolveProfileManagementButtonLabel('rename', locale)}
+      </Button>
+      <Button size="sm" variant="outline" onClick={onSave} disabled={!canModify}>
+        {resolveProfileManagementButtonLabel('save', locale)}
+      </Button>
+      <Button size="sm" variant="destructive" onClick={onDelete} disabled={disableDelete}>
+        {resolveProfileManagementButtonLabel('delete', locale)}
+      </Button>
       <ProfileRenameDialog
         profileName={profileName}
         open={renameOpen}
@@ -82,7 +105,11 @@ export function ProfileManagementSection({
         onRename={onProfileNameChange}
       />
       
-      {dirty && <Badge variant="secondary">未保存</Badge>}
+      {dirty && (
+        <Badge variant="secondary">
+          {resolveLocaleValue(profileManagementDirtyBadge, locale)}
+        </Badge>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 use crate::datetime_codes::{DateCodeGenerator, TimeCodeGenerator};
 use std::collections::BTreeSet;
-/// 統合シード探索システム
+/// 統合Seed探索システム
 /// メッセージ生成とSHA-1計算を一体化し、WebAssembly内で完結する高速探索を実現
 use wasm_bindgen::prelude::*;
 
@@ -133,7 +133,7 @@ impl SearchResult {
     }
 }
 
-/// 統合シード探索器
+/// 統合Seed探索器
 /// 固定パラメータを事前計算し、日時範囲を高速探索する
 #[wasm_bindgen]
 pub struct IntegratedSeedSearcher {
@@ -299,7 +299,7 @@ impl IntegratedSeedSearcher {
         })
     }
 
-    /// 統合シード探索メイン関数
+    /// 統合Seed探索メイン関数
     /// 日時範囲とTimer0/VCount範囲を指定して一括探索
     #[wasm_bindgen]
     #[allow(clippy::too_many_arguments)] // Search function requires comprehensive parameters
@@ -360,7 +360,7 @@ impl IntegratedSeedSearcher {
                         let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(&message);
                         let seed = crate::sha1::calculate_pokemon_seed_from_hash(h0, h1);
 
-                        // ターゲットシードマッチ時のみ日時とハッシュを生成
+                        // ターゲットSeedマッチ時のみ日時とハッシュを生成
                         let hash_values = HashValues { h0, h1, h2, h3, h4 };
                         let params = SearchParams { timer0, vcount };
                         self.check_and_add_result(
@@ -380,7 +380,7 @@ impl IntegratedSeedSearcher {
         results
     }
 
-    /// 統合シード探索SIMD版
+    /// 統合Seed探索SIMD版
     /// range_secondsを最内ループに配置してSIMD SHA-1計算を活用
     #[wasm_bindgen]
     #[allow(clippy::too_many_arguments)] // SIMD search function requires comprehensive parameters

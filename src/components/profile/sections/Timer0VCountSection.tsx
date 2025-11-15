@@ -2,6 +2,12 @@ import React from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useLocale } from '@/lib/i18n/locale-context';
+import {
+  resolveProfileTimerAutoAria,
+  resolveProfileTimerAutoLabel,
+  resolveProfileTimerFieldLabel,
+} from '@/lib/i18n/strings/profile-timer';
 
 type TimerRangeField = 'timer0Min' | 'timer0Max';
 type VCountRangeField = 'vcountMin' | 'vcountMax';
@@ -31,10 +37,14 @@ export function Timer0VCountSection({
   onVCountHexChange,
   onVCountHexBlur,
 }: Timer0VCountSectionProps) {
+  const locale = useLocale();
+
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-5">
       <div className="flex min-w-0 flex-col gap-1">
-        <Label htmlFor="timer0-min" className="text-xs">Timer0 Min</Label>
+        <Label htmlFor="timer0-min" className="text-xs">
+          {resolveProfileTimerFieldLabel('timer0Min', locale)}
+        </Label>
         <Input
           id="timer0-min"
           value={timer0Min}
@@ -46,7 +56,9 @@ export function Timer0VCountSection({
         />
       </div>
       <div className="flex min-w-0 flex-col gap-1">
-        <Label htmlFor="timer0-max" className="text-xs">Timer0 Max</Label>
+        <Label htmlFor="timer0-max" className="text-xs">
+          {resolveProfileTimerFieldLabel('timer0Max', locale)}
+        </Label>
         <Input
           id="timer0-max"
           value={timer0Max}
@@ -58,7 +70,9 @@ export function Timer0VCountSection({
         />
       </div>
       <div className="flex min-w-0 flex-col gap-1">
-        <Label htmlFor="vcount-min" className="text-xs">VCount Min</Label>
+        <Label htmlFor="vcount-min" className="text-xs">
+          {resolveProfileTimerFieldLabel('vcountMin', locale)}
+        </Label>
         <Input
           id="vcount-min"
           value={vcountMin}
@@ -70,7 +84,9 @@ export function Timer0VCountSection({
         />
       </div>
       <div className="flex min-w-0 flex-col gap-1">
-        <Label htmlFor="vcount-max" className="text-xs">VCount Max</Label>
+        <Label htmlFor="vcount-max" className="text-xs">
+          {resolveProfileTimerFieldLabel('vcountMax', locale)}
+        </Label>
         <Input
           id="vcount-max"
           value={vcountMax}
@@ -82,12 +98,14 @@ export function Timer0VCountSection({
         />
       </div>
       <div className="flex min-w-0 flex-col gap-1">
-        <Label htmlFor="profile-timer-auto" className="text-xs">Auto</Label>
+        <Label htmlFor="profile-timer-auto" className="text-xs">
+          {resolveProfileTimerAutoLabel(locale)}
+        </Label>
         <Switch
           id="profile-timer-auto"
           checked={timer0Auto}
           onCheckedChange={(value) => onAutoToggle(Boolean(value))}
-          aria-label="Toggle timer auto settings"
+          aria-label={resolveProfileTimerAutoAria(locale)}
         />
       </div>
     </div>

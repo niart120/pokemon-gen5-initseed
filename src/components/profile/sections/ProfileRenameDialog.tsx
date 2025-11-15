@@ -10,6 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useLocale } from '@/lib/i18n/locale-context';
+import {
+  profileRenameCancelButton,
+  profileRenameDialogDescription,
+  profileRenameDialogTitle,
+  profileRenameFieldLabel,
+  profileRenameFieldPlaceholder,
+  profileRenameSubmitButton,
+  resolveProfileRenameValue,
+} from '@/lib/i18n/strings/profile-rename';
 
 interface ProfileRenameDialogProps {
   profileName: string;
@@ -20,6 +30,7 @@ interface ProfileRenameDialogProps {
 
 export function ProfileRenameDialog({ profileName, open, onOpenChange, onRename }: ProfileRenameDialogProps) {
   const [value, setValue] = React.useState(profileName);
+  const locale = useLocale();
 
   React.useEffect(() => {
     if (open) {
@@ -42,8 +53,8 @@ export function ProfileRenameDialog({ profileName, open, onOpenChange, onRename 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Rename Profile</DialogTitle>
-          <DialogDescription>Update the display name for the active profile.</DialogDescription>
+          <DialogTitle>{resolveProfileRenameValue(profileRenameDialogTitle, locale)}</DialogTitle>
+          <DialogDescription>{resolveProfileRenameValue(profileRenameDialogDescription, locale)}</DialogDescription>
         </DialogHeader>
         <form
           className="space-y-4"
@@ -53,21 +64,23 @@ export function ProfileRenameDialog({ profileName, open, onOpenChange, onRename 
           }}
         >
           <div className="flex flex-col gap-1">
-            <Label htmlFor="profile-rename" className="text-xs uppercase tracking-wide text-muted-foreground">Profile Name</Label>
+            <Label htmlFor="profile-rename" className="text-xs uppercase tracking-wide text-muted-foreground">
+              {resolveProfileRenameValue(profileRenameFieldLabel, locale)}
+            </Label>
             <Input
               id="profile-rename"
               value={value}
               onChange={(event) => setValue(event.target.value)}
-              placeholder="My profile"
+              placeholder={resolveProfileRenameValue(profileRenameFieldPlaceholder, locale)}
               autoFocus
             />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {resolveProfileRenameValue(profileRenameCancelButton, locale)}
             </Button>
             <Button type="submit" disabled={!value.trim()}>
-              Rename
+              {resolveProfileRenameValue(profileRenameSubmitButton, locale)}
             </Button>
           </DialogFooter>
         </form>

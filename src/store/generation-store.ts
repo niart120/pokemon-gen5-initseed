@@ -49,7 +49,7 @@ export interface GenerationSliceState {
   // 動的Encounter UI 追加状態
   encounterField?: string; // 正規化 location key
   encounterSpeciesId?: number; // 単一選択 speciesId
-  staticEncounterId?: string | null; // 選択した静的遭遇エントリID
+  staticEncounterId?: string | null; // 選択した静的エンカウントエントリID
 }
 
 export interface GenerationSliceActions {
@@ -173,7 +173,7 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
       const versionChanged = partial.version !== undefined && partial.version !== prevDraft.version;
 
       if (encounterTypeChanged || versionChanged) {
-        // 新しい遭遇タイプ・バージョンに合わせて UI 選択肢を整理
+        // 新しいエンカウントタイプ・バージョンに合わせて UI 選択肢を整理
         const encounterTypeValue = nextDraft.encounterType;
         if (encounterTypeValue === undefined) {
           encounterField = undefined;

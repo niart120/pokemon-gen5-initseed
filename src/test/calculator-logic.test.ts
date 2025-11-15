@@ -29,7 +29,7 @@ describe('WebAssembly計算ロジックテスト', () => {
     expect(typeof hasWasm).toBe('boolean')
   })
 
-  test('基本的なシード計算が動作する', () => {
+  test('基本的なSeed計算が動作する', () => {
     // テスト用のメッセージ
     const testMessage = [
       0x12345678, 0x9ABCDEF0, 0x11111111, 0x22222222,

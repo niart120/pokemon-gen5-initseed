@@ -9,6 +9,22 @@ import { useAppStore } from '../../../store/app-store';
 import { SeedCalculator } from '../../../lib/core/seed-calculator';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
 import { TemplateSelectionDialog } from './TemplateSelectionDialog';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import {
+  formatTargetSeedsErrorBadge,
+  formatTargetSeedsErrorLine,
+  formatTargetSeedsPlaceholder,
+  targetSeedsAriaLabel,
+  targetSeedsClearButtonLabel,
+  targetSeedsExportButtonLabel,
+  targetSeedsImportButtonLabel,
+  targetSeedsPanelTitle,
+  targetSeedsParseErrorSummary,
+  targetSeedsSupportsHexHint,
+  targetSeedsTemplateButtonLabel,
+  targetSeedsValidSeedsLabel,
+} from '@/lib/i18n/strings/search-target-seeds';
 
 export function TargetSeedsCard() {
   const {
@@ -20,6 +36,7 @@ export function TargetSeedsCard() {
   } = useAppStore();
 
   const { isStack } = useResponsiveLayout();
+  const locale = useLocale();
   const [parseErrors, setParseErrors] = React.useState<{ line: number; value: string; error: string }[]>([]);
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = React.useState(false);
 
@@ -87,25 +104,28 @@ export function TargetSeedsCard() {
     'ABCDEF00', 
     '0xDEADBEEF',
   ];
+  const placeholderText = formatTargetSeedsPlaceholder(exampleSeeds, locale);
+  const operationsLabel = resolveLocaleValue(targetSeedsAriaLabel, locale);
+  const colon = locale === 'ja' ? '：' : ':';
 
   return (
     <>
       <PanelCard
-      icon={<Target size={20} className="opacity-80" />}
-      title="Target Seeds"
-      headerActions={
+        icon={<Target size={20} className="opacity-80" />}
+        title={resolveLocaleValue(targetSeedsPanelTitle, locale)}
+        headerActions={
         <div
           className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full"
           role="group"
-          aria-label="Target Seeds operations"
+          aria-label={operationsLabel}
         >
           <Button className="w-full" variant="outline" size="sm" onClick={() => setIsTemplateDialogOpen(true)}>
             <FileText size={14} className="mr-2" />
-            Template
+            {resolveLocaleValue(targetSeedsTemplateButtonLabel, locale)}
           </Button>
           <Button className="w-full" variant="outline" size="sm" onClick={() => document.getElementById('target-file-input')?.click()}>
             <Upload size={14} className="mr-2" />
-            Import
+            {resolveLocaleValue(targetSeedsImportButtonLabel, locale)}
           </Button>
           <Button
             className="w-full"
@@ -115,7 +135,7 @@ export function TargetSeedsCard() {
             disabled={targetSeeds.seeds.length === 0}
           >
             <Download size={14} className="mr-2" />
-            Export
+            {resolveLocaleValue(targetSeedsExportButtonLabel, locale)}
           </Button>
           <Button
             className="w-full"
@@ -125,19 +145,19 @@ export function TargetSeedsCard() {
             disabled={targetSeeds.seeds.length === 0}
           >
             <Trash size={14} className="mr-2" />
-            Clear
+            {resolveLocaleValue(targetSeedsClearButtonLabel, locale)}
           </Button>
         </div>
       }
-      className={isStack ? 'max-h-96' : 'min-h-64'}
-      fullHeight={!isStack}
-    >
+        className={isStack ? 'max-h-96' : 'min-h-64'}
+        fullHeight={!isStack}
+      >
         <p className="text-xs text-muted-foreground flex-shrink-0">
-          Supports hex format with or without 0x prefix. One seed per line.
+          {resolveLocaleValue(targetSeedsSupportsHexHint, locale)}
         </p>
         <Textarea
           id="seed-input"
-          placeholder={`Enter seed values in hexadecimal format:\n${exampleSeeds.join('\n')}`}
+          placeholder={placeholderText}
           value={targetSeedInput}
           onChange={(e) => setTargetSeedInput(e.target.value)}
           className="flex-1 min-h-20 max-h-48 font-mono text-sm resize-none overflow-auto"
@@ -155,14 +175,16 @@ export function TargetSeedsCard() {
         {/* Status */}
         <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Valid Seeds:</span>
+            <span className="text-sm font-medium">
+              {resolveLocaleValue(targetSeedsValidSeedsLabel, locale)}{colon}
+            </span>
             <Badge variant={targetSeeds.seeds.length > 0 ? "default" : "secondary"}>
               {targetSeeds.seeds.length}
             </Badge>
           </div>
           {parseErrors.length > 0 && (
             <Badge variant="destructive">
-              {parseErrors.length} error{parseErrors.length !== 1 ? 's' : ''}
+              {formatTargetSeedsErrorBadge(parseErrors.length, locale)}
             </Badge>
           )}
         </div>
@@ -173,11 +195,13 @@ export function TargetSeedsCard() {
             <Warning size={14} />
             <AlertDescription>
               <div className="space-y-1">
-                <p className="text-sm font-medium">Invalid seed format on the following lines:</p>
+                <p className="text-sm font-medium">
+                  {resolveLocaleValue(targetSeedsParseErrorSummary, locale)}
+                </p>
                 <ul className="text-xs space-y-1">
                   {parseErrors.map((error, index) => (
                     <li key={index} className="font-mono">
-                      Line {error.line}: "{error.value}" - {error.error}
+                      {formatTargetSeedsErrorLine(error.line, error.value, error.error, locale)}
                     </li>
                   ))}
                 </ul>

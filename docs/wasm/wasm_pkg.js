@@ -217,7 +217,7 @@ export const DustCloudContent = Object.freeze({
     EvolutionStone: 2, "2": "EvolutionStone",
 });
 /**
- * 遭遇タイプ列挙型
+ * エンカウントタイプ列挙型
  * @enum {0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 10 | 11 | 12 | 13 | 20}
  */
 export const EncounterType = Object.freeze({
@@ -680,7 +680,7 @@ const EncounterCalculatorFinalization = (typeof FinalizationRegistry === 'undefi
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_encountercalculator_free(ptr >>> 0, 1));
 /**
- * 遭遇計算エンジン
+ * エンカウント計算エンジン
  */
 export class EncounterCalculator {
 
@@ -705,15 +705,15 @@ export class EncounterCalculator {
         return this;
     }
     /**
-     * 遭遇スロットを計算
+     * エンカウントスロットを計算
      *
      * # Arguments
      * * `version` - ゲームバージョン
-     * * `encounter_type` - 遭遇タイプ
+     * * `encounter_type` - エンカウントタイプ
      * * `random_value` - 乱数値（32bit）
      *
      * # Returns
-     * 遭遇スロット番号（0-11）
+     * エンカウントスロット番号（0-11）
      * @param {GameVersion} version
      * @param {EncounterType} encounter_type
      * @param {number} random_value
@@ -727,7 +727,7 @@ export class EncounterCalculator {
      * スロット番号をテーブルインデックスに変換
      *
      * # Arguments
-     * * `encounter_type` - 遭遇タイプ
+     * * `encounter_type` - エンカウントタイプ
      * * `slot` - スロット番号
      *
      * # Returns
@@ -980,7 +980,7 @@ const IntegratedSeedSearcherFinalization = (typeof FinalizationRegistry === 'und
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_integratedseedsearcher_free(ptr >>> 0, 1));
 /**
- * 統合シード探索器
+ * 統合Seed探索器
  * 固定パラメータを事前計算し、日時範囲を高速探索する
  */
 export class IntegratedSeedSearcher {
@@ -1028,7 +1028,7 @@ export class IntegratedSeedSearcher {
         }
     }
     /**
-     * 統合シード探索メイン関数
+     * 統合Seed探索メイン関数
      * 日時範囲とTimer0/VCount範囲を指定して一括探索
      * @param {number} year_start
      * @param {number} month_start
@@ -1051,7 +1051,7 @@ export class IntegratedSeedSearcher {
         return takeObject(ret);
     }
     /**
-     * 統合シード探索SIMD版
+     * 統合Seed探索SIMD版
      * range_secondsを最内ループに配置してSIMD SHA-1計算を活用
      * @param {number} year_start
      * @param {number} month_start
@@ -1225,7 +1225,7 @@ export class OffsetCalculator {
      * 新しいOffsetCalculatorインスタンスを作成
      *
      * # Arguments
-     * * `seed` - 初期シード値
+     * * `seed` - 初期Seed値
      * @param {bigint} seed
      */
     constructor(seed) {
@@ -1267,10 +1267,10 @@ export class OffsetCalculator {
         return ret >>> 0;
     }
     /**
-     * 現在のシード値を取得
+     * 現在のSeed値を取得
      *
      * # Returns
-     * 現在のシード値
+     * 現在のSeed値
      * @returns {bigint}
      */
     get get_current_seed() {
@@ -1281,7 +1281,7 @@ export class OffsetCalculator {
      * 計算器をリセット
      *
      * # Arguments
-     * * `new_seed` - 新しいシード値
+     * * `new_seed` - 新しいSeed値
      * @param {bigint} new_seed
      */
     reset(new_seed) {
@@ -1557,7 +1557,7 @@ export class PersonalityRNG {
      * 新しいPersonalityRNGインスタンスを作成
      *
      * # Arguments
-     * * `seed` - 初期シード値（64bit）
+     * * `seed` - 初期Seed値（64bit）
      * @param {bigint} seed
      */
     constructor(seed) {
@@ -1589,10 +1589,10 @@ export class PersonalityRNG {
         return BigInt.asUintN(64, ret);
     }
     /**
-     * 現在のシード値を取得
+     * 現在のSeed値を取得
      *
      * # Returns
-     * 現在の内部シード値
+     * 現在の内部Seed値
      * @returns {bigint}
      */
     get current_seed() {
@@ -1600,10 +1600,10 @@ export class PersonalityRNG {
         return BigInt.asUintN(64, ret);
     }
     /**
-     * シード値を設定
+     * Seed値を設定
      *
      * # Arguments
-     * * `new_seed` - 新しいシード値
+     * * `new_seed` - 新しいSeed値
      * @param {bigint} new_seed
      */
     set seed(new_seed) {
@@ -1620,10 +1620,10 @@ export class PersonalityRNG {
         wasm.personalityrng_advance(this.__wbg_ptr, advances);
     }
     /**
-     * シードをリセット
+     * Seedをリセット
      *
      * # Arguments
-     * * `initial_seed` - リセット後のシード値
+     * * `initial_seed` - リセット後のSeed値
      * @param {bigint} initial_seed
      */
     reset(initial_seed) {
@@ -1633,7 +1633,7 @@ export class PersonalityRNG {
      * 0x0からの進行度を計算
      *
      * # Arguments
-     * * `seed` - 計算対象のシード値
+     * * `seed` - 計算対象のSeed値
      *
      * # Returns
      * 0x0からの進行度
@@ -1645,11 +1645,11 @@ export class PersonalityRNG {
         return BigInt.asUintN(64, ret);
     }
     /**
-     * 2つのシード間の距離を計算
+     * 2つのSeed間の距離を計算
      *
      * # Arguments
-     * * `from_seed` - 開始シード
-     * * `to_seed` - 終了シード
+     * * `from_seed` - 開始Seed
+     * * `to_seed` - 終了Seed
      *
      * # Returns
      * from_seedからto_seedまでの距離
@@ -1662,13 +1662,13 @@ export class PersonalityRNG {
         return BigInt.asUintN(64, ret);
     }
     /**
-     * 指定シードから現在のシードまでの距離
+     * 指定Seedから現在のSeedまでの距離
      *
      * # Arguments
-     * * `source_seed` - 開始シード
+     * * `source_seed` - 開始Seed
      *
      * # Returns
-     * source_seedから現在のシードまでの距離
+     * source_seedから現在のSeedまでの距離
      * @param {bigint} source_seed
      * @returns {bigint}
      */
@@ -1710,7 +1710,7 @@ export class PokemonGenerator {
      * BW/BW2準拠 単体ポケモン生成（統括関数）
      *
      * # Arguments
-     * * `seed` - 初期シード値
+     * * `seed` - 初期Seed値
      * * `config` - BW準拠設定
      *
      * # Returns
@@ -1725,7 +1725,7 @@ export class PokemonGenerator {
         return RawPokemonData.__wrap(ret);
     }
     /**
-     * オフセット適用後の生成開始シードを計算
+     * オフセット適用後の生成開始Seedを計算
      * @param {bigint} initial_seed
      * @param {bigint} offset
      * @returns {bigint}
@@ -1738,7 +1738,7 @@ export class PokemonGenerator {
      * BW/BW2準拠 バッチ生成（offsetのみ）
      *
      * # Arguments
-     * * `base_seed` - 列挙の基準シード（初期シード）
+     * * `base_seed` - 列挙の基準Seed（初期Seed）
      * * `offset` - 最初の生成までの前進数（ゲーム内不定消費を含めた開始位置）
      * * `count` - 生成数（0なら空）
      * * `config` - BW準拠設定
@@ -2010,7 +2010,7 @@ const SeedEnumeratorFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_seedenumerator_free(ptr >>> 0, 1));
 /**
- * 連続列挙用のシード列挙器（offsetのみ）
+ * 連続列挙用のSeed列挙器（offsetのみ）
  */
 export class SeedEnumerator {
 
@@ -2379,10 +2379,10 @@ export class ValidationUtils {
         return ret !== 0;
     }
     /**
-     * シード値の妥当性チェック
+     * Seed値の妥当性チェック
      *
      * # Arguments
-     * * `seed` - シード値
+     * * `seed` - Seed値
      *
      * # Returns
      * 妥当性

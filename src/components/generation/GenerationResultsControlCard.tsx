@@ -10,40 +10,37 @@ import { cn } from '@/lib/utils/cn';
 import { natureName } from '@/lib/utils/format-display';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import type { GenerationFilters, ShinyFilterMode, StatRangeFilters } from '@/store/generation-store';
+import type { ShinyFilterMode, StatRangeFilters } from '@/store/generation-store';
 import { selectResolvedResults } from '@/store/generation-store';
 import { getGeneratedSpeciesById } from '@/data/species/generated';
 import type { StatKey } from '@/lib/utils/pokemon-stats';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { anyOptionLabel } from '@/lib/i18n/strings/common';
+import {
+  abilityPreviewJoiner,
+  abilitySlotLabels,
+  genderOptionLabels,
+  noAbilitySelectionLabel,
+  noGenderSelectionLabel,
+  shinyModeOptionLabels,
+} from '@/lib/i18n/strings/generation-filters';
+import {
+  formatGenerationResultsControlStatAria,
+  generationResultsControlAbilityPreviewEllipsis,
+  generationResultsControlClearResultsLabel,
+  generationResultsControlFieldLabels,
+  generationResultsControlFiltersHeading,
+  generationResultsControlLevelAriaLabel,
+  generationResultsControlResetFiltersLabel,
+  generationResultsControlStatLabels,
+  generationResultsControlTitle,
+} from '@/lib/i18n/strings/generation-results-control';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import type { SupportedLocale } from '@/types/i18n';
 
 type AppStoreState = ReturnType<typeof useAppStore.getState>;
 
-const SHINY_MODE_OPTIONS: Array<{ value: ShinyFilterMode; label: string }> = [
-  { value: 'all', label: 'Any' },
-  { value: 'shiny', label: 'Shiny Only' },
-  { value: 'non-shiny', label: 'Non-shiny Only' },
-];
-
-const GENDER_OPTIONS: Array<{ value: 'M' | 'F' | 'N'; label: string }> = [
-  { value: 'M', label: 'Male' },
-  { value: 'F', label: 'Female' },
-  { value: 'N', label: 'Genderless' },
-];
-
-const ABILITY_SLOT_LABELS: Record<0 | 1 | 2, string> = {
-  0: 'Primary Ability',
-  1: 'Secondary Ability',
-  2: 'Hidden Ability',
-};
-
 const STAT_KEYS: StatKey[] = ['hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed'];
-const STAT_LABELS: Record<StatKey, string> = {
-  hp: 'HP',
-  attack: 'Atk',
-  defense: 'Def',
-  specialAttack: 'SpA',
-  specialDefense: 'SpD',
-  speed: 'Spe',
-};
 
 interface AbilityMeta {
   options: Array<{ index: 0 | 1 | 2; label: string }>;
@@ -51,6 +48,19 @@ interface AbilityMeta {
 }
 
 export const GenerationResultsControlCard: React.FC = () => {
+  const locale = useLocale();
+  const optionLocale: SupportedLocale = locale;
+  const anyLabel = resolveLocaleValue(anyOptionLabel, optionLocale);
+  const noAbilitiesLabel = resolveLocaleValue(noAbilitySelectionLabel, optionLocale);
+  const noGendersLabel = resolveLocaleValue(noGenderSelectionLabel, optionLocale);
+  const cardTitle = resolveLocaleValue(generationResultsControlTitle, optionLocale);
+  const filtersHeading = resolveLocaleValue(generationResultsControlFiltersHeading, optionLocale);
+  const resetFiltersLabel = resolveLocaleValue(generationResultsControlResetFiltersLabel, optionLocale);
+  const clearResultsLabel = resolveLocaleValue(generationResultsControlClearResultsLabel, optionLocale);
+  const fieldLabels = resolveLocaleValue(generationResultsControlFieldLabels, optionLocale);
+  const statLabels = resolveLocaleValue(generationResultsControlStatLabels, optionLocale);
+  const levelAriaLabel = resolveLocaleValue(generationResultsControlLevelAriaLabel, optionLocale);
+  const abilityPreviewEllipsis = resolveLocaleValue(generationResultsControlAbilityPreviewEllipsis, optionLocale);
   const filters = useAppStore((state) => state.filters);
   const applyFilters = useAppStore((state) => state.applyFilters);
   const resetGenerationFilters = useAppStore((state) => state.resetGenerationFilters);
@@ -61,7 +71,6 @@ export const GenerationResultsControlCard: React.FC = () => {
 
   const resolvedResults = useAppStore((state: AppStoreState) => selectResolvedResults(state));
 
-  const optionLocale = 'en' as const;
   const { isStack } = useResponsiveLayout();
 
   const natureOptions = React.useMemo(
@@ -85,7 +94,8 @@ export const GenerationResultsControlCard: React.FC = () => {
     return Array.from(speciesIds)
       .map((id) => {
         const species = getGeneratedSpeciesById(id);
-        const name = species ? species.names.en : `#${id}`;
+        const fallback = species?.names.en ?? `#${id}`;
+        const name = species?.names[optionLocale] ?? fallback;
         return { id, label: name };
       })
       .sort((a, b) => a.label.localeCompare(b.label, formatter));
@@ -105,30 +115,34 @@ export const GenerationResultsControlCard: React.FC = () => {
       const { ability1, ability2, hidden } = species.abilities;
       if (ability1) {
         available.add(0);
-        labelBuckets[0].add(ability1.names.en);
+        labelBuckets[0].add(ability1.names[optionLocale] ?? ability1.names.en);
       }
       if (ability2) {
         available.add(1);
-        labelBuckets[1].add(ability2.names.en);
+        labelBuckets[1].add(ability2.names[optionLocale] ?? ability2.names.en);
       }
       if (hidden) {
         available.add(2);
-        labelBuckets[2].add(hidden.names.en);
+        labelBuckets[2].add(hidden.names[optionLocale] ?? hidden.names.en);
       }
     }
+
+    const joiner = resolveLocaleValue(abilityPreviewJoiner, optionLocale);
+    const slotLabels = resolveLocaleValue(abilitySlotLabels, optionLocale);
 
     const options: Array<{ index: 0 | 1 | 2; label: string }> = [];
     ([0, 1, 2] as const).forEach((slot) => {
       if (!available.has(slot)) return;
       const names = Array.from(labelBuckets[slot]).filter(Boolean);
-      const preview = names.slice(0, 3).join(', ');
-      const suffix = names.length > 3 ? `${preview}…` : preview;
-      const label = suffix ? `${ABILITY_SLOT_LABELS[slot]} (${suffix})` : ABILITY_SLOT_LABELS[slot];
+      const preview = names.slice(0, 3).join(joiner);
+      const suffix = names.length > 3 ? `${preview}${abilityPreviewEllipsis}` : preview;
+      const slotTitle = slotLabels[slot];
+      const label = suffix ? `${slotTitle} (${suffix})` : slotTitle;
       options.push({ index: slot, label });
     });
 
     return { options, available };
-  }, [optionLocale]);
+  }, [abilityPreviewEllipsis, optionLocale]);
   const abilityMeta = React.useMemo(
     () => computeAbilityMeta(filters.speciesIds),
     [computeAbilityMeta, filters.speciesIds],
@@ -171,6 +185,24 @@ export const GenerationResultsControlCard: React.FC = () => {
     () => computeAvailableGenders(filters.speciesIds),
     [computeAvailableGenders, filters.speciesIds],
   );
+
+  const shinyOptions = React.useMemo(() => {
+    const labels = resolveLocaleValue(shinyModeOptionLabels, optionLocale);
+    return [
+      { value: 'all', label: labels.all },
+      { value: 'shiny', label: labels.shiny },
+      { value: 'non-shiny', label: labels['non-shiny'] },
+    ];
+  }, [optionLocale]);
+
+  const genderOptions = React.useMemo(() => {
+    const labels = resolveLocaleValue(genderOptionLabels, optionLocale);
+    return [
+      { value: 'M' as const, label: labels.M },
+      { value: 'F' as const, label: labels.F },
+      { value: 'N' as const, label: labels.N },
+    ];
+  }, [optionLocale]);
 
   const handleShinyModeChange = React.useCallback(
     (value: string) => {
@@ -321,7 +353,7 @@ export const GenerationResultsControlCard: React.FC = () => {
   return (
     <PanelCard
       icon={<FunnelSimple size={20} className="opacity-80" />}
-      title={<span id="gen-results-control-title">Results Control</span>}
+      title={<span id="gen-results-control-title">{cardTitle}</span>}
       headerActions={
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -332,7 +364,7 @@ export const GenerationResultsControlCard: React.FC = () => {
             className="gap-1"
           >
             <ArrowCounterClockwise size={14} />
-            Reset Filters
+            {resetFiltersLabel}
           </Button>
           <GenerationExportButton results={results} disabled={!results.length} />
           <Button
@@ -343,7 +375,7 @@ export const GenerationResultsControlCard: React.FC = () => {
             className="gap-1"
           >
             <Trash size={14} />
-            Clear Results
+            {clearResultsLabel}
           </Button>
         </div>
       }
@@ -356,21 +388,21 @@ export const GenerationResultsControlCard: React.FC = () => {
     >
       <form onSubmit={(event) => event.preventDefault()} className="flex flex-col gap-3">
         <fieldset className="space-y-2" aria-labelledby="gf-filters" role="group">
-          <div id="gf-filters" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">Filters</div>
+          <div id="gf-filters" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">{filtersHeading}</div>
           <div className={cn('grid gap-3 items-start', isStack ? 'grid-cols-1' : 'grid-cols-2')}>
             <div className={cn('flex w-full gap-3', isStack ? 'flex-col' : 'flex-wrap items-end')}>
               <div className="flex w-full flex-col gap-1 sm:w-auto">
-                <Label htmlFor="species-select" className="text-[11px] font-medium text-muted-foreground">Species</Label>
+                <Label htmlFor="species-select" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.species}</Label>
                 <Select
                   value={filters.speciesIds.length ? String(filters.speciesIds[0]) : 'any'}
                   onValueChange={handleSpeciesSelect}
                   disabled={pokemonOptions.length === 0}
                 >
                   <SelectTrigger id="species-select" className="h-9">
-                    <SelectValue placeholder="Any" />
+                    <SelectValue placeholder={anyLabel} />
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
-                    <SelectItem value="any">Any</SelectItem>
+                    <SelectItem value="any">{anyLabel}</SelectItem>
                     {pokemonOptions.map((option) => (
                       <SelectItem key={option.id} value={String(option.id)}>{option.label}</SelectItem>
                     ))}
@@ -378,17 +410,17 @@ export const GenerationResultsControlCard: React.FC = () => {
                 </Select>
               </div>
               <div className="flex w-full flex-col gap-1 sm:w-auto">
-                <Label htmlFor="ability-select" className="text-[11px] font-medium text-muted-foreground">Ability</Label>
+                <Label htmlFor="ability-select" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.ability}</Label>
                 <Select
                   value={filters.abilityIndices.length ? String(filters.abilityIndices[0]) : 'any'}
                   onValueChange={handleAbilitySelect}
                   disabled={abilityDisabled}
                 >
                   <SelectTrigger id="ability-select" className="h-9">
-                    <SelectValue placeholder={abilityDisabled ? 'No abilities' : 'Any'} />
+                    <SelectValue placeholder={abilityDisabled ? noAbilitiesLabel : anyLabel} />
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
-                    <SelectItem value="any" disabled={abilityDisabled}>Any</SelectItem>
+                    <SelectItem value="any" disabled={abilityDisabled}>{anyLabel}</SelectItem>
                     {abilityMeta.options.map((option) => (
                       <SelectItem key={option.index} value={String(option.index)}>{option.label}</SelectItem>
                     ))}
@@ -396,33 +428,33 @@ export const GenerationResultsControlCard: React.FC = () => {
                 </Select>
               </div>
               <div className="flex w-full flex-col gap-1 sm:w-auto">
-                <Label htmlFor="gender-select" className="text-[11px] font-medium text-muted-foreground">Gender</Label>
+                <Label htmlFor="gender-select" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.gender}</Label>
                 <Select
                   value={filters.genders.length ? filters.genders[0] : 'any'}
                   onValueChange={handleGenderSelect}
                   disabled={genderDisabled}
                 >
                   <SelectTrigger id="gender-select" className="h-9">
-                    <SelectValue placeholder={genderDisabled ? 'No genders' : 'Any'} />
+                    <SelectValue placeholder={genderDisabled ? noGendersLabel : anyLabel} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="any" disabled={genderDisabled}>Any</SelectItem>
-                    {GENDER_OPTIONS.map((option) => (
+                    <SelectItem value="any" disabled={genderDisabled}>{anyLabel}</SelectItem>
+                    {genderOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value} disabled={!availableGenders.has(option.value)}>
                         {option.label}
                       </SelectItem>
                     ))}
-                </SelectContent>
+                  </SelectContent>
                 </Select>
               </div>
               <div className="flex w-full flex-col gap-1 sm:w-auto">
-                <Label htmlFor="nature-select" className="text-[11px] font-medium text-muted-foreground">Nature</Label>
+                <Label htmlFor="nature-select" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.nature}</Label>
                 <Select value={filters.natureIds.length ? String(filters.natureIds[0]) : 'any'} onValueChange={handleNatureSelect}>
                   <SelectTrigger id="nature-select" className="h-9">
-                    <SelectValue placeholder="Any" />
+                    <SelectValue placeholder={anyLabel} />
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
-                    <SelectItem value="any">Any</SelectItem>
+                    <SelectItem value="any">{anyLabel}</SelectItem>
                     {natureOptions.map((option) => (
                       <SelectItem key={option.id} value={String(option.id)}>{option.label}</SelectItem>
                     ))}
@@ -430,13 +462,13 @@ export const GenerationResultsControlCard: React.FC = () => {
                 </Select>
               </div>
               <div className="flex w-full flex-col gap-1 sm:w-auto">
-                <Label htmlFor="shiny-mode" className="text-[11px] font-medium text-muted-foreground">Shiny</Label>
+                <Label htmlFor="shiny-mode" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.shiny}</Label>
                 <Select value={filters.shinyMode} onValueChange={handleShinyModeChange}>
                   <SelectTrigger id="shiny-mode" className="h-9">
-                    <SelectValue placeholder="Any" />
+                    <SelectValue placeholder={anyLabel} />
                   </SelectTrigger>
                   <SelectContent>
-                    {SHINY_MODE_OPTIONS.map((option) => (
+                    {shinyOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -445,7 +477,7 @@ export const GenerationResultsControlCard: React.FC = () => {
             </div>
             <div className={cn('flex w-full gap-3', isStack ? 'flex-col' : 'flex-wrap items-end')}>
               <div className="flex w-full flex-col gap-1 sm:w-auto">
-                <Label htmlFor="level-filter" className="text-[11px] font-medium text-muted-foreground">Lv</Label>
+                <Label htmlFor="level-filter" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.level}</Label>
                 <Input
                   id="level-filter"
                   type="text"
@@ -455,17 +487,18 @@ export const GenerationResultsControlCard: React.FC = () => {
                   value={levelValue}
                   onChange={handleLevelValueChange}
                   className="h-9 w-full px-2 text-right text-xs font-mono sm:w-16"
-                  placeholder="Any"
+                  placeholder={anyLabel}
                   disabled={!statsAvailable}
-                  aria-label="Level exact value"
+                  aria-label={levelAriaLabel}
                 />
               </div>
               {STAT_KEYS.map((stat) => {
                 const range = filters.statRanges[stat];
                 const value = range?.min != null ? String(range.min) : '';
+                const statLabel = statLabels[stat];
                 return (
                   <div key={stat} className="flex w-full flex-col gap-1 sm:w-auto">
-                    <Label htmlFor={`stat-${stat}`} className="text-[11px] font-medium text-muted-foreground">{STAT_LABELS[stat]}</Label>
+                    <Label htmlFor={`stat-${stat}`} className="text-[11px] font-medium text-muted-foreground">{statLabel}</Label>
                     <Input
                       id={`stat-${stat}`}
                       type="text"
@@ -475,9 +508,9 @@ export const GenerationResultsControlCard: React.FC = () => {
                       value={value}
                       onChange={handleStatValueChange(stat)}
                       className="h-9 w-full px-2 text-right text-xs font-mono sm:w-16"
-                      placeholder="Any"
+                      placeholder={anyLabel}
                       disabled={!statsAvailable}
-                      aria-label={`${STAT_LABELS[stat]} exact value`}
+                      aria-label={formatGenerationResultsControlStatAria(statLabel, optionLocale)}
                     />
                   </div>
                 );

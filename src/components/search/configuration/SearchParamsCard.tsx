@@ -10,11 +10,25 @@ import { Toggle } from '@/components/ui/toggle';
 import { useAppStore } from '@/store/app-store';
 import { GameController } from '@phosphor-icons/react';
 import { KEY_INPUT_DEFAULT, keyMaskToNames, keyNamesToMask, type KeyName } from '@/lib/utils/key-input';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import {
+  formatSearchParamsCurrentRange,
+  searchParamsApplyButtonLabel,
+  searchParamsConfigureButtonLabel,
+  searchParamsDialogTitle,
+  searchParamsEndDateLabel,
+  searchParamsKeyInputLabel,
+  searchParamsPanelTitle,
+  searchParamsResetButtonLabel,
+  searchParamsStartDateLabel,
+} from '@/lib/i18n/strings/search-params';
 
 export function SearchParamsCard() {
   const { searchConditions, setSearchConditions } = useAppStore();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [tempKeyInput, setTempKeyInput] = React.useState(KEY_INPUT_DEFAULT);
+  const locale = useLocale();
 
   const formatDate = (year: number, month: number, day: number): string => {
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -98,13 +112,20 @@ export function SearchParamsCard() {
     setIsDialogOpen(true);
   };
 
+  const keyJoiner = locale === 'ja' ? '、' : ', ';
+
   return (
     <>
-      <PanelCard icon={<Gear size={20} className="opacity-80" />} title="Search Filters">
+      <PanelCard
+        icon={<Gear size={20} className="opacity-80" />}
+        title={resolveLocaleValue(searchParamsPanelTitle, locale)}
+      >
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="start-date" className="text-sm font-medium">Start Date</Label>
+              <Label htmlFor="start-date" className="text-sm font-medium">
+                {resolveLocaleValue(searchParamsStartDateLabel, locale)}
+              </Label>
               <Input
                 id="start-date"
                 type="date"
@@ -116,7 +137,9 @@ export function SearchParamsCard() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="end-date" className="text-sm font-medium">End Date</Label>
+              <Label htmlFor="end-date" className="text-sm font-medium">
+                {resolveLocaleValue(searchParamsEndDateLabel, locale)}
+              </Label>
               <Input
                 id="end-date"
                 type="date"
@@ -129,20 +152,22 @@ export function SearchParamsCard() {
             </div>
           </div>
           <div className="text-xs text-muted-foreground">
-            Current range: {startDate} to {endDate}
+            {formatSearchParamsCurrentRange(startDate, endDate, locale)}
           </div>
           <Separator />
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">Key Input</div>
+              <div className="text-sm font-medium">
+                {resolveLocaleValue(searchParamsKeyInputLabel, locale)}
+              </div>
               <Button variant="outline" size="sm" onClick={openKeyDialog} className="gap-2">
                 <GameController size={16} />
-                Configure
+                {resolveLocaleValue(searchParamsConfigureButtonLabel, locale)}
               </Button>
             </div>
             {availableKeys.length > 0 && (
               <div className="text-xs text-muted-foreground">
-                {availableKeys.join(', ')}
+                {availableKeys.join(keyJoiner)}
               </div>
             )}
           </div>
@@ -151,7 +176,7 @@ export function SearchParamsCard() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Key Input Configuration</DialogTitle>
+            <DialogTitle>{resolveLocaleValue(searchParamsDialogTitle, locale)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="flex justify-between px-8">
@@ -290,15 +315,15 @@ export function SearchParamsCard() {
             </div>
             <div className="flex justify-between items-center pt-4 border-t">
               <Button variant="outline" size="sm" onClick={handleResetKeys}>
-                Reset All
+                {resolveLocaleValue(searchParamsResetButtonLabel, locale)}
               </Button>
               <Button size="sm" onClick={handleApplyKeys}>
-                Apply
+                {resolveLocaleValue(searchParamsApplyButtonLabel, locale)}
               </Button>
             </div>
           </div>
-            </DialogContent>
-          </Dialog>
-        </>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

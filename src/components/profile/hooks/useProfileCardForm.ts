@@ -6,6 +6,20 @@ import type { DeviceProfile } from '@/types/profile';
 import { deviceProfileToDraft } from '@/types/profile';
 import { getFullTimer0Range, getValidVCounts } from '@/lib/utils/rom-parameter-helpers';
 import type { Hardware, ROMRegion, ROMVersion } from '@/types/rom';
+import { useLocale } from '@/lib/i18n/locale-context';
+import {
+  formatProfileCreatedToast,
+  formatProfileDeleteConfirm,
+  resolveProfileDefaultName,
+  resolveProfileDeletedToast,
+  resolveProfileImportedName,
+  resolveProfileImportedToast,
+  resolveProfileMinimumError,
+  resolveProfileNewName,
+  resolveProfileSavedToast,
+} from '@/lib/i18n/strings/profile-messages';
+import { resolveProfileTimerFieldLabel } from '@/lib/i18n/strings/profile-timer';
+import { resolveProfileGameFieldLabel } from '@/lib/i18n/strings/profile-game';
 import {
   canonicalizeHex,
   enforceMemoryLink,
@@ -115,6 +129,21 @@ export function useProfileCardForm(): UseProfileCardFormResult {
   const createProfile = useAppStore((state) => state.createProfile);
   const updateProfile = useAppStore((state) => state.updateProfile);
   const deleteProfile = useAppStore((state) => state.deleteProfile);
+  const locale = useLocale();
+
+  const defaultProfileName = resolveProfileDefaultName(locale);
+  const newProfileName = resolveProfileNewName(locale);
+  const importedProfileName = resolveProfileImportedName(locale);
+  const importedToast = resolveProfileImportedToast(locale);
+  const savedToast = resolveProfileSavedToast(locale);
+  const deletedToast = resolveProfileDeletedToast(locale);
+  const minimumProfileError = resolveProfileMinimumError(locale);
+  const timer0MinLabel = resolveProfileTimerFieldLabel('timer0Min', locale);
+  const timer0MaxLabel = resolveProfileTimerFieldLabel('timer0Max', locale);
+  const vcountMinLabel = resolveProfileTimerFieldLabel('vcountMin', locale);
+  const vcountMaxLabel = resolveProfileTimerFieldLabel('vcountMax', locale);
+  const tidLabel = resolveProfileGameFieldLabel('tid', locale);
+  const sidLabel = resolveProfileGameFieldLabel('sid', locale);
 
   const activeProfile = React.useMemo(
     () => resolveActiveProfile(profiles, activeProfileId),
@@ -122,8 +151,8 @@ export function useProfileCardForm(): UseProfileCardFormResult {
   );
 
   const initialDraft = React.useMemo(
-    () => (activeProfile ? deviceProfileToDraft(activeProfile) : buildDraftFromCurrentState('Default Device', undefined)),
-    [activeProfile],
+    () => (activeProfile ? deviceProfileToDraft(activeProfile) : buildDraftFromCurrentState(defaultProfileName, undefined)),
+    [activeProfile, defaultProfileName],
   );
 
   const [form, setForm] = React.useState<ProfileFormState>(() => profileToForm(initialDraft));
@@ -153,21 +182,21 @@ export function useProfileCardForm(): UseProfileCardFormResult {
     (value: string) => {
       if (!value) return;
       if (value === SELECT_NEW_PROFILE) {
-        const draft = buildDraftFromCurrentState('New Profile', undefined);
+        const draft = buildDraftFromCurrentState(newProfileName, undefined);
         const profile = createProfile(draft);
         setActiveProfile(profile.id);
         setForm(profileToForm(deviceProfileToDraft(profile)));
         setDirty(false);
         setErrors([]);
-        toast.success(`Profile "${profile.name}" created`);
+        toast.success(formatProfileCreatedToast(profile.name, locale));
         return;
       }
       if (value === SELECT_IMPORT_CURRENT) {
-        const draft = buildDraftFromCurrentState(form.name || 'Imported Profile', activeProfile ?? undefined);
+        const draft = buildDraftFromCurrentState(form.name || importedProfileName, activeProfile ?? undefined);
         setForm(profileToForm(draft));
         setDirty(true);
         setErrors([]);
-        toast.success('Current settings imported into form');
+        toast.success(importedToast);
         return;
       }
       if (value === activeProfile?.id) return;
@@ -175,7 +204,16 @@ export function useProfileCardForm(): UseProfileCardFormResult {
       setErrors([]);
       setActiveProfile(value);
     },
-    [activeProfile, createProfile, form.name, setActiveProfile],
+    [
+      activeProfile,
+      createProfile,
+      form.name,
+      setActiveProfile,
+      newProfileName,
+      importedProfileName,
+      importedToast,
+      locale,
+    ],
   );
 
   const handleRomVersionChange = React.useCallback((value: ROMVersion) => {
@@ -328,21 +366,28 @@ export function useProfileCardForm(): UseProfileCardFormResult {
   const handleDelete = React.useCallback(() => {
     if (!activeProfile) return;
     if (profiles.length <= 1) {
-      toast.error('少なくとも1件のプロファイルが必要です');
+      toast.error(minimumProfileError);
       return;
     }
-    if (!window.confirm(`プロファイル「${activeProfile.name}」を削除しますか?`)) {
+    if (!window.confirm(formatProfileDeleteConfirm(activeProfile.name, locale))) {
       return;
     }
     deleteProfile(activeProfile.id);
     setErrors([]);
     setDirty(false);
-    toast.success('Profile deleted');
-  }, [activeProfile, deleteProfile, profiles.length]);
+    toast.success(deletedToast);
+  }, [activeProfile, deleteProfile, profiles.length, minimumProfileError, deletedToast, locale]);
 
   const handleSave = React.useCallback(() => {
     if (!activeProfile) return;
-    const { draft, validationErrors } = formToDraft(form);
+    const { draft, validationErrors } = formToDraft(form, locale, {
+      timer0Min: timer0MinLabel,
+      timer0Max: timer0MaxLabel,
+      vcountMin: vcountMinLabel,
+      vcountMax: vcountMaxLabel,
+      tid: tidLabel,
+      sid: sidLabel,
+    });
     if (!draft) {
       setErrors(validationErrors);
       return;
@@ -350,8 +395,20 @@ export function useProfileCardForm(): UseProfileCardFormResult {
     updateProfile(activeProfile.id, draft);
     setErrors([]);
     setDirty(false);
-    toast.success('Profile saved');
-  }, [activeProfile, form, updateProfile]);
+    toast.success(savedToast);
+  }, [
+    activeProfile,
+    form,
+    locale,
+    updateProfile,
+    timer0MinLabel,
+    timer0MaxLabel,
+    vcountMinLabel,
+    vcountMaxLabel,
+    tidLabel,
+    sidLabel,
+    savedToast,
+  ]);
 
   const disableDelete = profiles.length <= 1;
   const memoryLinkDisabled = form.romVersion === 'B' || form.romVersion === 'W' || !form.withSave;

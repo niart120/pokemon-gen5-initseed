@@ -2,6 +2,16 @@ import { formatHexDisplay, parseHexInput, parseMacByte } from '@/lib/utils/hex-p
 import type { DeviceProfileDraft } from '@/types/profile';
 import type { ProfileFormState } from './profileFormTypes';
 import type { ROMVersion } from '@/types/rom';
+import type { SupportedLocale } from '@/types/i18n';
+import {
+  formatProfileHexInvalid,
+  formatProfileIntegerRange,
+  formatProfileIntegerRequired,
+  formatProfileMacSegmentInvalid,
+  formatProfileRangeOrderError,
+  resolveProfileMacSegmentsCountError,
+  resolveProfileNameRequired,
+} from '@/lib/i18n/strings/profile-validation';
 
 export function enforceMemoryLink(current: boolean, version: ROMVersion, hasSave: boolean): boolean {
   if (version === 'B' || version === 'W') return false;
@@ -54,39 +64,50 @@ export function profileToForm(draft: DeviceProfileDraft): ProfileFormState {
   };
 }
 
-export function formToDraft(form: ProfileFormState): { draft: DeviceProfileDraft | null; validationErrors: string[] } {
+export function formToDraft(
+  form: ProfileFormState,
+  locale: SupportedLocale,
+  labels: {
+    timer0Min: string;
+    timer0Max: string;
+    vcountMin: string;
+    vcountMax: string;
+    tid: string;
+    sid: string;
+  },
+): { draft: DeviceProfileDraft | null; validationErrors: string[] } {
   const errors: string[] = [];
   if (!form.name.trim()) {
-    errors.push('Profile name is required');
+    errors.push(resolveProfileNameRequired(locale));
   }
 
-  const timer0Min = parseAndValidateHex(form.timer0Min, 'Timer0 min', 0xffff, errors);
-  const timer0Max = parseAndValidateHex(form.timer0Max, 'Timer0 max', 0xffff, errors);
-  const vcountMin = parseAndValidateHex(form.vcountMin, 'VCount min', 0xff, errors);
-  const vcountMax = parseAndValidateHex(form.vcountMax, 'VCount max', 0xff, errors);
+  const timer0Min = parseAndValidateHex(form.timer0Min, labels.timer0Min, 0xffff, locale, errors);
+  const timer0Max = parseAndValidateHex(form.timer0Max, labels.timer0Max, 0xffff, locale, errors);
+  const vcountMin = parseAndValidateHex(form.vcountMin, labels.vcountMin, 0xff, locale, errors);
+  const vcountMax = parseAndValidateHex(form.vcountMax, labels.vcountMax, 0xff, locale, errors);
 
   if (timer0Min !== null && timer0Max !== null && timer0Min > timer0Max) {
-    errors.push('Timer0 min must be less than or equal to max');
+    errors.push(formatProfileRangeOrderError('Timer0', locale));
   }
   if (vcountMin !== null && vcountMax !== null && vcountMin > vcountMax) {
-    errors.push('VCount min must be less than or equal to max');
+    errors.push(formatProfileRangeOrderError('VCount', locale));
   }
 
   const macAddress: number[] = [];
   form.macSegments.forEach((segment, index) => {
     const parsed = parseMacByte(segment);
     if (parsed === null) {
-      errors.push(`MAC segment ${index + 1} is invalid`);
+      errors.push(formatProfileMacSegmentInvalid(index + 1, locale));
     } else {
       macAddress.push(parsed);
     }
   });
 
-  const tid = parseInteger(form.tid, 'TID', errors);
-  const sid = parseInteger(form.sid, 'SID', errors);
+  const tid = parseInteger(form.tid, labels.tid, locale, errors);
+  const sid = parseInteger(form.sid, labels.sid, locale, errors);
 
   if (macAddress.length !== 6) {
-    errors.push('MAC address must contain six segments');
+    errors.push(resolveProfileMacSegmentsCountError(locale));
   }
 
   if (errors.length > 0 || timer0Min === null || timer0Max === null || vcountMin === null || vcountMax === null || tid === null || sid === null) {
@@ -116,23 +137,34 @@ export function formToDraft(form: ProfileFormState): { draft: DeviceProfileDraft
   return { draft, validationErrors: errors };
 }
 
-export function parseAndValidateHex(value: string, label: string, max: number, errors: string[]): number | null {
+export function parseAndValidateHex(
+  value: string,
+  label: string,
+  max: number,
+  locale: SupportedLocale,
+  errors: string[],
+): number | null {
   const parsed = parseHexInput(value, max);
   if (parsed === null) {
-    errors.push(`${label} must be a hexadecimal value`);
+    errors.push(formatProfileHexInvalid(label, locale));
     return null;
   }
   return parsed;
 }
 
-export function parseInteger(value: string, label: string, errors: string[]): number | null {
+export function parseInteger(
+  value: string,
+  label: string,
+  locale: SupportedLocale,
+  errors: string[],
+): number | null {
   if (!value.trim()) {
-    errors.push(`${label} is required`);
+    errors.push(formatProfileIntegerRequired(label, locale));
     return null;
   }
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed) || parsed < 0 || parsed > 65535) {
-    errors.push(`${label} must be between 0 and 65535`);
+    errors.push(formatProfileIntegerRange(label, locale));
     return null;
   }
   return parsed;

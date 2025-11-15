@@ -9,7 +9,7 @@ import { DomainGameMode } from '@/types/domain';
 
 // --- Params ---
 export interface GenerationParams {
-  baseSeed: bigint;        // 初期シード
+  baseSeed: bigint;        // 初期Seed
   offset: bigint;          // 開始advance (MVP: 0 既定)
   maxAdvances: number;     // 列挙上限 (≤ 1_000_000)
   maxResults: number;      // UI保持上限 (≤ 100_000)
@@ -20,7 +20,7 @@ export interface GenerationParams {
   syncEnabled: boolean;
   syncNatureId: number;    // 0-24
   shinyCharm: boolean;     // 光るお守り所持
-  isShinyLocked: boolean;  // 選択遭遇が色違いロック対象か
+  isShinyLocked: boolean;  // 選択エンカウントが色違いロック対象か
   stopAtFirstShiny: boolean;
   stopOnCap: boolean;      // maxResults 到達で終了するか（デフォルト true）
   batchSize: number;       // 1バッチ生成数 (UI チューニング向け推奨値のみに留める)
@@ -43,7 +43,7 @@ export interface GenerationParamsHex {
   syncNatureId: number;
   /** 所持している場合 true (後続: 色違い確率計算に利用予定) */
   shinyCharm: boolean;
-  /** 選択遭遇が色違いロック対象か */
+  /** 選択エンカウントが色違いロック対象か */
   isShinyLocked: boolean;
   stopAtFirstShiny: boolean;
   stopOnCap: boolean;

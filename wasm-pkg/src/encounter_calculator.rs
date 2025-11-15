@@ -1,5 +1,5 @@
-/// EncounterCalculator - BW/BW2遭遇計算エンジン
-/// ポケモンBW/BW2の遭遇スロット決定と確率計算を実装
+/// EncounterCalculator - BW/BW2エンカウント計算エンジン
+/// ポケモンBW/BW2のエンカウントスロット決定と確率計算を実装
 use wasm_bindgen::prelude::*;
 
 /// ゲームバージョン列挙型
@@ -12,7 +12,7 @@ pub enum GameVersion {
     W2 = 3,
 }
 
-/// 遭遇タイプ列挙型
+/// エンカウントタイプ列挙型
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EncounterType {
@@ -56,7 +56,7 @@ pub enum DustCloudContent {
     EvolutionStone = 2,
 }
 
-/// 遭遇計算エンジン
+/// エンカウント計算エンジン
 #[wasm_bindgen]
 pub struct EncounterCalculator;
 
@@ -68,15 +68,15 @@ impl EncounterCalculator {
         EncounterCalculator
     }
 
-    /// 遭遇スロットを計算
+    /// エンカウントスロットを計算
     ///
     /// # Arguments
     /// * `version` - ゲームバージョン
-    /// * `encounter_type` - 遭遇タイプ
+    /// * `encounter_type` - エンカウントタイプ
     /// * `random_value` - 乱数値（32bit）
     ///
     /// # Returns
-    /// 遭遇スロット番号（0-11）
+    /// エンカウントスロット番号（0-11）
     pub fn calculate_encounter_slot(
         version: GameVersion,
         encounter_type: EncounterType,
@@ -120,11 +120,11 @@ impl EncounterCalculator {
     /// スロット値を各エンカウントタイプの確率分布に変換
     ///
     /// # Arguments
-    /// * `encounter_type` - 遭遇タイプ
+    /// * `encounter_type` - エンカウントタイプ
     /// * `slot_value` - 生スロット値
     ///
     /// # Returns
-    /// 最終的な遭遇スロット番号
+    /// 最終的なエンカウントスロット番号
     fn slot_value_to_encounter_slot(encounter_type: EncounterType, slot_value: u32) -> u8 {
         match encounter_type {
             EncounterType::Normal => Self::calculate_normal_encounter_from_slot(slot_value),
@@ -154,7 +154,7 @@ impl EncounterCalculator {
     /// スロット番号をテーブルインデックスに変換
     ///
     /// # Arguments
-    /// * `encounter_type` - 遭遇タイプ
+    /// * `encounter_type` - エンカウントタイプ
     /// * `slot` - スロット番号
     ///
     /// # Returns
@@ -349,7 +349,7 @@ impl EncounterCalculator {
     }
 
     /// 水泡（なみのり版特殊エンカウント）スロット計算
-    /// なみのりエリアでの特殊遭遇
+    /// なみのりエリアでの特殊エンカウント
     fn calculate_surfing_bubble_encounter_from_slot(slot_value: u32) -> u8 {
         match slot_value {
             0..=49 => 0,  // 50%
@@ -361,7 +361,7 @@ impl EncounterCalculator {
     }
 
     /// 水泡釣り（釣り版特殊エンカウント）スロット計算
-    /// 釣りエリアでの特殊遭遇
+    /// 釣りエリアでの特殊エンカウント
     fn calculate_fishing_bubble_encounter_from_slot(slot_value: u32) -> u8 {
         match slot_value {
             0..=59 => 0,  // 60%
@@ -372,7 +372,7 @@ impl EncounterCalculator {
         }
     }
 
-    /// 遭遇確率の検証用関数
+    /// エンカウント確率の検証用関数
     /// 指定した乱数値範囲での各スロットの出現頻度を計算
     pub fn calculate_slot_distribution(
         encounter_type: EncounterType,
@@ -638,7 +638,7 @@ mod tests {
     #[test]
     fn test_edge_cases() {
         // 境界値のテスト（32bit乱数値）
-        // シード値0からの計算結果をテスト
+        // Seed値0からの計算結果をテスト
         let result_zero =
             EncounterCalculator::calculate_encounter_slot(GameVersion::B, EncounterType::Normal, 0);
         assert!(result_zero <= 11); // 通常エンカウントの範囲内

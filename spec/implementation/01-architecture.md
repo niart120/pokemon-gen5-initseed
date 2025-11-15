@@ -51,7 +51,7 @@ use wasm_bindgen::prelude::*;
 pub struct RawPokemonData {
     // 基本データ
     personality_value: u32,      // 性格値（PID）
-    encounter_slot_value: u32,   // 遭遇スロット値
+    encounter_slot_value: u32,   // エンカウントスロット値
     nature_id: u32,             // 性格ID（0-24）
     sync_applied: bool,         // シンクロ適用フラグ
     advances: u32,              // 消費数
@@ -64,7 +64,7 @@ pub struct RawPokemonData {
     
     // デバッグ情報
     rng_seed_used: u64,         // 使用されたseed
-    encounter_type: u32,        // 遭遇タイプ
+    encounter_type: u32,        // エンカウントタイプ
 }
 
 #[wasm_bindgen]
@@ -138,7 +138,7 @@ class PokemonResultParser {
   // WASM出力をTypeScript型に変換
   parseRawData(rawData: RawPokemonData, encounterParams: EncounterParams): GeneratedPokemon {
     return {
-      // 出現ポケモン決定（遭遇スロット → エンカウントテーブル参照）
+      // 出現ポケモン決定（エンカウントスロット → エンカウントテーブル参照）
       species: this.determineSpecies(rawData.encounter_slot_value, encounterParams),
       
       // レベルはWASM側で計算済み
@@ -172,7 +172,7 @@ class PokemonResultParser {
     const encounterTable = this.dataManager.getEncounterTable(encounterParams.location);
     if (!encounterTable) throw new Error(`Unknown location: ${encounterParams.location}`);
     
-    // 遭遇スロット値をテーブルインデックスに変換
+    // エンカウントスロット値をテーブルインデックスに変換
     const calculator = new EncounterCalculator(this.gameVersion);
     const tableIndex = calculator.slot_to_table_index(slotValue, encounterParams.type);
     
@@ -247,8 +247,8 @@ src/
 │       ├── GenerationTab.tsx           # メインタブコンポーネント
 │       ├── input/
 │       │   ├── BasicParamsCard.tsx     # 基本パラメータ入力
-│       │   ├── EncounterSettingsCard.tsx # 遭遇設定
-│       │   ├── WildEncounterForm.tsx   # 野生遭遇フォーム
+│       │   ├── EncounterSettingsCard.tsx # エンカウント設定
+│       │   ├── WildEncounterForm.tsx   # 野生エンカウントフォーム
 │       │   ├── StaticEncounterForm.tsx # 固定シンボルフォーム
 │       │   ├── RoamingEncounterForm.tsx # 徘徊ポケモンフォーム
 │       │   └── GenerationRangeCard.tsx # 生成範囲設定
@@ -272,7 +272,7 @@ src/
 ├── data/
 │   └── generation/
 │       ├── species/                    # 種族データ
-│       ├── encounters/                 # 遭遇データ
+│       ├── encounters/                 # エンカウントデータ
 │       ├── game-data/                 # ゲームデータ
 │       └── constants/                 # 定数データ
 ├── types/
@@ -286,7 +286,7 @@ wasm-pkg/
 ├── src/
 │   ├── lib.rs                         # WASMエントリーポイント
 │   ├── personality_rng.rs             # 性格値乱数列エンジン
-│   ├── encounter_calculator.rs        # 遭遇スロット計算
+│   ├── encounter_calculator.rs        # エンカウントスロット計算
 │   ├── pokemon_generator.rs           # メイン生成エンジン
 │   ├── pokemon_data.rs                # データ構造定義
 │   └── utils.rs                       # ユーティリティ
@@ -297,7 +297,7 @@ wasm-pkg/
 
 #### WASM側の責任
 - **64bit線形合同法による乱数生成**
-- **BW/BW2別の遭遇スロット計算**
+- **BW/BW2別のエンカウントスロット計算**
 - **性格値・性格・レベル決定**
 - **色違い判定**
 - **高速バッチ処理**
