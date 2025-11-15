@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { FunnelSimple, Trash, ArrowsDownUp } from '@phosphor-icons/react';
+import { FunnelSimple, Trash, ArrowsDownUp, ArrowCounterClockwise } from '@phosphor-icons/react';
 import { getGeneratedSpeciesById } from '@/data/species/generated';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -113,6 +113,16 @@ export const GenerationResultsControlCard: React.FC = () => {
       title={<span id="gen-results-control-title">Results Control</span>}
       headerActions={
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={resetGenerationFilters}
+            className="gap-1"
+          >
+            <ArrowCounterClockwise size={14} />
+            Reset Filters
+          </Button>
           <GenerationExportButton results={results} disabled={!results.length} />
           <Button
             size="sm"
@@ -134,12 +144,6 @@ export const GenerationResultsControlCard: React.FC = () => {
       role="region"
     >
       <form onSubmit={e=> e.preventDefault()} className="flex flex-col gap-4" aria-describedby="results-filter-hint">
-        <div className="flex justify-end">
-          <Button type="button" size="sm" variant="ghost" onClick={resetGenerationFilters}>
-            Reset Filters
-          </Button>
-        </div>
-        <Separator />
         {/* Primary filters & sorting */}
         <fieldset className="space-y-3" aria-labelledby="gf-primary-label" role="group">
             <div id="gf-primary-label" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">Primary</div>
