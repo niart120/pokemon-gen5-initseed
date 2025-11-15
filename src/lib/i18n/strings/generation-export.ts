@@ -27,8 +27,8 @@ export const generationExportFormatOptions = {
     en: 'CSV (Comma Separated Values)',
   } satisfies LocaleText,
   json: {
-    ja: 'JSON (JavaScript オブジェクト表記)',
-    en: 'JSON (JavaScript Object Notation)',
+    ja: 'JSON',
+    en: 'JSON',
   } satisfies LocaleText,
   txt: {
     ja: 'TXT (プレーンテキスト)',
@@ -62,7 +62,7 @@ export function formatGenerationExportSummary(resultCount: number, locale: Suppo
   const formatter = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]);
   const countText = formatter.format(resultCount);
   if (locale === 'ja') {
-    return `結果 ${countText} 件をエクスポート`;
+    return `${countText} 件をエクスポート`;
   }
   const unit = resultCount === 1 ? 'result' : 'results';
   return `Exporting ${countText} ${unit}`;
