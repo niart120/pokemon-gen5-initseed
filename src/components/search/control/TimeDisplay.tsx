@@ -1,5 +1,12 @@
 import React from 'react';
 import { formatElapsedTime, formatRemainingTime, formatProcessingRate } from '@/lib/utils/format-helpers';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import {
+  searchProgressTimeElapsedLabel,
+  searchProgressTimeRemainingLabel,
+  searchProgressTimeSpeedLabel,
+} from '@/lib/i18n/strings/search-progress';
 
 interface TimeDisplayProps {
   elapsedTime: number;
@@ -19,23 +26,27 @@ export function TimeDisplay({
   totalSteps: _
 }: TimeDisplayProps) {
   const processingRate = formatProcessingRate(currentStep, elapsedTime);
+  const locale = useLocale();
+  const elapsedLabel = resolveLocaleValue(searchProgressTimeElapsedLabel, locale);
+  const remainingLabel = resolveLocaleValue(searchProgressTimeRemainingLabel, locale);
+  const speedLabel = resolveLocaleValue(searchProgressTimeSpeedLabel, locale);
   
   return (
     <div className="grid grid-cols-3 gap-3 text-xs">
       <div>
-        <div className="text-muted-foreground">Elapsed</div>
+        <div className="text-muted-foreground">{elapsedLabel}</div>
         <div className="font-mono text-sm">
           {formatElapsedTime(elapsedTime)}
         </div>
       </div>
       <div>
-        <div className="text-muted-foreground">Remaining</div>
+        <div className="text-muted-foreground">{remainingLabel}</div>
         <div className="font-mono text-sm">
           {formatRemainingTime(estimatedTimeRemaining)}
         </div>
       </div>
       <div>
-        <div className="text-muted-foreground">Speed</div>
+        <div className="text-muted-foreground">{speedLabel}</div>
         <div className="font-mono text-sm">
           {processingRate}
         </div>

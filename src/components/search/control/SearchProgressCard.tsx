@@ -7,13 +7,33 @@ import { CaretDown, CaretUp, ChartBar } from '@phosphor-icons/react';
 import { useAppStore } from '../../../store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
 // import { getResponsiveSizes } from '../../../utils/responsive-sizes';
-import { 
-  // formatElapsedTime, 
-  // formatRemainingTime, 
+import {
+  // formatElapsedTime,
+  // formatRemainingTime,
   formatProcessingRate,
   // calculateOverallProcessingRate,
   // calculateWorkerProcessingRate
 } from '../../../lib/utils/format-helpers';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import {
+  formatSearchProgressCount,
+  formatSearchProgressPercent,
+  formatSearchProgressWorkerBadge,
+  formatSearchProgressWorkerCompletion,
+  formatSearchProgressWorkerFooter,
+  formatSearchProgressWorkerMatches,
+  formatSearchProgressWorkerOverview,
+  formatSearchProgressWorkerSummary,
+  formatSearchProgressWorkerTotal,
+  getSearchProgressWorkerStatusLabel,
+  searchProgressMatchesLabel,
+  searchProgressProgressLabel,
+  searchProgressReadyMessage,
+  searchProgressTitle,
+  searchProgressWorkerListLabel,
+  searchProgressWorkerToggleLabel,
+} from '@/lib/i18n/strings/search-progress';
 import { TimeDisplay } from './TimeDisplay';
 
 export function SearchProgressCard() {
@@ -21,6 +41,7 @@ export function SearchProgressCard() {
   const [isWorkerDetailsExpanded, setIsWorkerDetailsExpanded] = useState(true);
   const { isStack: isMobile } = useResponsiveLayout();
   // const sizes = getResponsiveSizes(uiScale);
+  const locale = useLocale();
 
   const isParallelMode = searchExecutionMode === 'cpu-parallel';
   const isRunning = searchProgress.isRunning;
@@ -65,15 +86,25 @@ export function SearchProgressCard() {
   };
 
   const workerLayout = getWorkerLayout(totalWorkerCount);
+  const title = resolveLocaleValue(searchProgressTitle, locale);
+  const progressLabel = resolveLocaleValue(searchProgressProgressLabel, locale);
+  const matchesLabel = resolveLocaleValue(searchProgressMatchesLabel, locale);
+  const readyMessage = resolveLocaleValue(searchProgressReadyMessage, locale);
+  const workerListLabel = resolveLocaleValue(searchProgressWorkerListLabel, locale);
+  const toggleLabel = resolveLocaleValue(searchProgressWorkerToggleLabel, locale);
+  const workerValues = parallelData ? Array.from(parallelData.workerProgresses.values()) : [];
+  const runningWorkers = workerValues.filter(p => p.status === 'running').length;
+  const completedWorkers = workerValues.filter(p => p.status === 'completed').length;
+  const aggregateMatches = workerValues.reduce((sum, p) => sum + p.matchesFound, 0);
 
   return (
     <PanelCard
       icon={<ChartBar size={20} className="opacity-80" />}
-      title="Search Progress"
+      title={title}
       headerActions={
         isParallelMode && parallelData && totalWorkerCount > 0 ? (
           <Badge variant="outline" className="text-xs">
-            {totalWorkerCount} Workers
+            {formatSearchProgressWorkerBadge(totalWorkerCount, locale)}
           </Badge>
         ) : undefined
       }
@@ -98,20 +129,23 @@ export function SearchProgressCard() {
             {!isParallelMode && (
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <div className="text-muted-foreground">Progress</div>
+                  <div className="text-muted-foreground">{progressLabel}</div>
                   <div className="font-mono text-sm">
-                    {searchProgress.currentStep.toLocaleString()} / {searchProgress.totalSteps.toLocaleString()}
+                    {formatSearchProgressCount(searchProgress.currentStep, locale)} / {formatSearchProgressCount(searchProgress.totalSteps, locale)}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {searchProgress.totalSteps > 0
-                      ? ((searchProgress.currentStep / searchProgress.totalSteps) * 100).toFixed(1)
-                      : '0.0'}%
+                    {formatSearchProgressPercent(
+                      searchProgress.totalSteps > 0
+                        ? (searchProgress.currentStep / searchProgress.totalSteps) * 100
+                        : 0,
+                      locale,
+                    )}
                   </div>
                 </div>
                 <div>
-                  <div className="text-muted-foreground">Matches</div>
-                  <Badge variant={searchProgress.matchesFound > 0 ? "default" : "secondary"} className="text-sm">
-                    {searchProgress.matchesFound}
+                  <div className="text-muted-foreground">{matchesLabel}</div>
+                  <Badge variant={searchProgress.matchesFound > 0 ? 'default' : 'secondary'} className="text-sm">
+                    {formatSearchProgressCount(searchProgress.matchesFound, locale)}
                   </Badge>
                 </div>
               </div>
@@ -122,7 +156,7 @@ export function SearchProgressCard() {
         {/* 検索未実行時のメッセージ */}
         {showReadyState && (
           <div className="text-center py-4 text-muted-foreground text-sm flex-shrink-0">
-            Ready to search
+            {readyMessage}
           </div>
         )}
 
@@ -131,19 +165,20 @@ export function SearchProgressCard() {
           <div className="flex-1 flex flex-col min-h-0">
             {/* ワーカー統計情報 */}
             <div className="text-xs text-muted-foreground flex justify-between flex-shrink-0">
-              <span>Workers: {parallelData.activeWorkers} active, {parallelData.completedWorkers} completed</span>
-              <span>Total: {totalWorkerCount}</span>
+              <span>{formatSearchProgressWorkerSummary(parallelData.activeWorkers, parallelData.completedWorkers, locale)}</span>
+              <span>{formatSearchProgressWorkerTotal(totalWorkerCount, locale)}</span>
             </div>
             
             {/* ワーカー詳細表示 - 残りのスペースを全て使用 */}
             <div className="flex-1 flex flex-col min-h-0 mt-2">
               <div className="flex items-center justify-between flex-shrink-0">
-                <div className="text-xs text-muted-foreground">Individual Worker Progress</div>
+                <div className="text-xs text-muted-foreground">{workerListLabel}</div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsWorkerDetailsExpanded(!isWorkerDetailsExpanded)}
                   className="h-6 w-6 p-0"
+                  aria-label={toggleLabel}
                 >
                   {isWorkerDetailsExpanded ? (
                     <CaretUp size={12} />
@@ -166,68 +201,69 @@ export function SearchProgressCard() {
                               workerLayout.cols === 3 ? 'grid-cols-3' :
                               'grid-cols-4'
                         }`}>
-                          {Array.from(parallelData.workerProgresses.entries()).map(([workerId, progress]) => (
-                            <div
-                              key={workerId}
-                              className="p-2 rounded border bg-muted/20 space-y-1.5 min-h-[4rem] min-w-[80px] sm:min-w-[80px]"
-                            >
-                              <div className="flex justify-between items-center text-xs">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-mono font-medium">W{workerId}</span>
-                                  {progress.matchesFound > 0 && (
-                                    <span className="px-1 py-0.5 bg-green-100 text-green-800 rounded text-[9px] font-medium">
-                                      [{progress.matchesFound}]
-                                    </span>
-                                  )}
+                          {Array.from(parallelData.workerProgresses.entries()).map(([workerId, progress]) => {
+                            const workerPercent = progress.totalSteps > 0 ? (progress.currentStep / progress.totalSteps) * 100 : 0;
+                            const clampedPercent = progress.status === 'completed' ? 100 : Math.min(100, workerPercent);
+                            return (
+                              <div
+                                key={workerId}
+                                className="p-2 rounded border bg-muted/20 space-y-1.5 min-h-[4rem] min-w-[80px] sm:min-w-[80px]"
+                              >
+                                <div className="flex justify-between items-center text-xs">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-mono font-medium">W{workerId}</span>
+                                    {progress.matchesFound > 0 && (
+                                      <span className="px-1 py-0.5 bg-green-100 text-green-800 rounded text-[9px] font-medium">
+                                        [{formatSearchProgressCount(progress.matchesFound, locale)}]
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
+                                      progress.status === 'completed'
+                                        ? 'bg-green-100 text-green-800'
+                                        : progress.status === 'running'
+                                          ? 'bg-blue-100 text-blue-800'
+                                          : progress.status === 'error'
+                                            ? 'bg-red-100 text-red-800'
+                                            : 'bg-gray-100 text-gray-600'
+                                    }`}
+                                  >
+                                    {getSearchProgressWorkerStatusLabel(progress.status, locale)}
+                                  </span>
                                 </div>
-                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
-                                  progress.status === 'completed' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : progress.status === 'running'
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : progress.status === 'error'
-                                        ? 'bg-red-100 text-red-800'
-                                        : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {progress.status === 'completed' ? 'Done' : 
-                                   progress.status === 'error' ? 'Error' :
-                                   progress.status === 'running' ? 'Run' : 'Init'}
-                                </span>
+                                <Progress
+                                  value={progress.status === 'completed' ? 100 : clampedPercent}
+                                  className="h-1.5"
+                                />
+                                <div className="flex justify-between text-[10px] text-muted-foreground">
+                                  <span>
+                                    {formatSearchProgressPercent(clampedPercent, locale, 0)}
+                                  </span>
+                                  <span className="font-mono">
+                                    {formatProcessingRate(progress.currentStep, progress.elapsedTime)}
+                                  </span>
+                                </div>
                               </div>
-                              <Progress 
-                                value={progress.status === 'completed' ? 100 : (progress.currentStep / progress.totalSteps) * 100} 
-                                className="h-1.5"
-                              />
-                              <div className="flex justify-between text-[10px] text-muted-foreground">
-                                <span>
-                                  {progress.status === 'completed' ? '100%' : 
-                                   `${Math.round((progress.currentStep / progress.totalSteps) * 100)}%`}
-                                </span>
-                                <span className="font-mono">
-                                  {formatProcessingRate(progress.currentStep, progress.elapsedTime)}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                       <div className="text-[10px] text-muted-foreground pt-1 border-t flex-shrink-0">
-                        Running: {Array.from(parallelData.workerProgresses.values()).filter(p => p.status === 'running').length}, 
-                        Completed: {Array.from(parallelData.workerProgresses.values()).filter(p => p.status === 'completed').length}, 
-                        Total Matches: {Array.from(parallelData.workerProgresses.values()).reduce((sum, p) => sum + p.matchesFound, 0)}
+                        {formatSearchProgressWorkerFooter(runningWorkers, completedWorkers, aggregateMatches, locale)}
                       </div>
                     </div>
                   ) : (
                     // 簡略化表示：大量ワーカー向け
                     <div className="space-y-2 flex-shrink-0">
-                      <div className="text-xs text-muted-foreground">Worker Overview ({totalWorkerCount} workers)</div>
+                      <div className="text-xs text-muted-foreground">{formatSearchProgressWorkerOverview(totalWorkerCount, locale)}</div>
                       <Progress 
                         value={(parallelData.completedWorkers / totalWorkerCount) * 100} 
                         className="h-2"
                       />
                       <div className="flex justify-between text-[10px] text-muted-foreground">
-                        <span>{parallelData.completedWorkers} / {totalWorkerCount} completed</span>
-                        <span>{Array.from(parallelData.workerProgresses.values()).reduce((sum, p) => sum + p.matchesFound, 0)} total matches</span>
+                        <span>{formatSearchProgressWorkerCompletion(parallelData.completedWorkers, totalWorkerCount, locale)}</span>
+                        <span>{formatSearchProgressWorkerMatches(aggregateMatches, locale)}</span>
                       </div>
                     </div>
                   )}

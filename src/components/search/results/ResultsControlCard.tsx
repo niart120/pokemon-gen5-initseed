@@ -7,9 +7,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { ExportButton } from './ExportButton';
 import { useAppStore } from '../../../store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import {
+  formatSearchResultsSortOption,
+  searchResultsControlClearButton,
+  searchResultsControlFilterLabel,
+  searchResultsControlFilterPlaceholder,
+  searchResultsControlSortLabel,
+  searchResultsControlSortPlaceholder,
+  searchResultsControlTitle,
+  type SearchResultsSortKey,
+} from '@/lib/i18n/strings/search-results-control';
 import type { SearchResult } from '../../../types/search';
 
-export type SortField = 'datetime' | 'seed' | 'timer0' | 'vcount';
+export type SortField = SearchResultsSortKey;
 
 interface ResultsControlCardProps {
   filteredResultsCount: number;
@@ -30,11 +42,18 @@ export function ResultsControlCard({
 }: ResultsControlCardProps) {
   const { isStack } = useResponsiveLayout();
   const { searchResults, clearSearchResults } = useAppStore();
+  const locale = useLocale();
+  const title = resolveLocaleValue(searchResultsControlTitle, locale);
+  const clearLabel = resolveLocaleValue(searchResultsControlClearButton, locale);
+  const filterLabel = resolveLocaleValue(searchResultsControlFilterLabel, locale);
+  const filterPlaceholder = resolveLocaleValue(searchResultsControlFilterPlaceholder, locale);
+  const sortLabel = resolveLocaleValue(searchResultsControlSortLabel, locale);
+  const sortPlaceholder = resolveLocaleValue(searchResultsControlSortPlaceholder, locale);
 
   return (
     <PanelCard
       icon={<Funnel size={20} className="opacity-80" />}
-      title="Results Control"
+      title={title}
       headerActions={
         <div className="flex gap-2">
           <ExportButton 
@@ -47,7 +66,7 @@ export function ResultsControlCard({
             onClick={clearSearchResults}
             disabled={searchResults.length === 0}
           >
-            Clear Results
+            {clearLabel}
           </Button>
         </div>
       }
@@ -59,26 +78,26 @@ export function ResultsControlCard({
         {/* Filters */}
         <div className="flex gap-4 items-end flex-shrink-0">
           <div className="flex-1">
-            <Label htmlFor="filter-seed">Filter by Seed</Label>
+            <Label htmlFor="filter-seed">{filterLabel}</Label>
             <Input
               id="filter-seed"
-              placeholder="Enter seed value (hex)"
+              placeholder={filterPlaceholder}
               value={filterSeed}
               onChange={(e) => setFilterSeed(e.target.value)}
               className="font-mono"
             />
           </div>
           <div>
-            <Label htmlFor="sort-field">Sort by</Label>
+            <Label htmlFor="sort-field">{sortLabel}</Label>
             <Select value={sortField} onValueChange={(value) => setSortField(value as SortField)}>
               <SelectTrigger id="sort-field" className="w-28 sm:w-32">
-                <SelectValue />
+                <SelectValue placeholder={sortPlaceholder} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="datetime">Date/Time</SelectItem>
-                <SelectItem value="seed">MT Seed</SelectItem>
-                <SelectItem value="timer0">Timer0</SelectItem>
-                <SelectItem value="vcount">VCount</SelectItem>
+                <SelectItem value="datetime">{formatSearchResultsSortOption('datetime', locale)}</SelectItem>
+                <SelectItem value="seed">{formatSearchResultsSortOption('seed', locale)}</SelectItem>
+                <SelectItem value="timer0">{formatSearchResultsSortOption('timer0', locale)}</SelectItem>
+                <SelectItem value="vcount">{formatSearchResultsSortOption('vcount', locale)}</SelectItem>
               </SelectContent>
             </Select>
           </div>
