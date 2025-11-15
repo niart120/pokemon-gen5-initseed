@@ -7,7 +7,7 @@ const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
 };
 
 export const generationExportTriggerLabel: LocaleText = {
-  ja: 'エクスポート',
+  ja: 'Export',
   en: 'Export',
 };
 
