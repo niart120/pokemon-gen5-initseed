@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { PanelCard } from '@/components/ui/panel-card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAppStore } from '../../../store/app-store';
@@ -48,11 +48,11 @@ export function ResultsCard({
   const filteredResultsCount = filteredAndSortedResults.length;
 
   return (
-    <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full min-h-96'}`}>
-      <CardHeader className="pb-0 flex-shrink-0">
-        <CardTitle className="flex items-center gap-2 flex-wrap">
-          <Eye size={20} className="flex-shrink-0 opacity-80" />
-          <span className="flex-shrink-0">Search Results</span>
+    <PanelCard
+      icon={<Eye size={20} className="flex-shrink-0 opacity-80" />}
+      title="Search Results"
+      headerActions={
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="secondary" className="flex-shrink-0">
             {filteredResultsCount} result{filteredResultsCount !== 1 ? 's' : ''}
           </Badge>
@@ -61,9 +61,13 @@ export function ResultsCard({
               Search completed in {(lastSearchDuration / 1000).toFixed(1)}s
             </Badge>
           )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col flex-1 min-h-0 p-0 overflow-y-auto">
+        </div>
+      }
+      className={isStack ? 'max-h-96' : 'min-h-96'}
+      fullHeight={!isStack}
+      padding="none"
+      spacing="none"
+    >
         {filteredAndSortedResults.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             {searchResultsLength === 0 
@@ -174,7 +178,6 @@ export function ResultsCard({
             </Table>
           </div>
         )}
-      </CardContent>
-    </Card>
+    </PanelCard>
   );
 }

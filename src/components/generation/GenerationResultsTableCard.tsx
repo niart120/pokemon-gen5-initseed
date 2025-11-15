@@ -1,6 +1,5 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
-import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
+import { PanelCard } from '@/components/ui/panel-card';
 import { Table } from '@phosphor-icons/react';
 import { useAppStore } from '@/store/app-store';
 import { selectFilteredSortedResults, selectUiReadyResults, type GenerationSlice } from '@/store/generation-store';
@@ -27,10 +26,19 @@ export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProp
   // - デスクトップ: 呼び出し元の指定を尊重（既定はfalseでカード内スクロール）
   const effectiveParentManages = isStack ? false : !!parentManagesScroll;
   return (
-    <Card className={`py-2 flex flex-col ${isStack ? '' : 'h-full min-h-64'}`} aria-labelledby="gen-results-table-title" role="region">
-  <StandardCardHeader icon={<Table size={20} className="opacity-80" />} title={<span id="gen-results-table-title">Results ({rawResults.length}) / Total {total}</span>} />
-      <StandardCardContent className="p-0" noScroll={effectiveParentManages}>
-        <table className="min-w-full text-xs" aria-describedby="gen-results-table-desc">
+    <PanelCard
+      icon={<Table size={20} className="opacity-80" />}
+      title={<span id="gen-results-table-title">Results ({rawResults.length}) / Total {total}</span>}
+      className={isStack ? 'max-h-96' : 'min-h-96'}
+      fullHeight={!isStack}
+      scrollMode={effectiveParentManages ? 'parent' : 'content'}
+      padding="none"
+      spacing="none"
+      contentClassName="p-0"
+      aria-labelledby="gen-results-table-title"
+      role="region"
+    >
+      <table className="min-w-full text-xs" aria-describedby="gen-results-table-desc">
           <caption id="gen-results-table-desc" className="sr-only">Filtered generation results list.</caption>
           <thead className="sticky top-0 bg-muted text-[11px]">
             <tr className="text-left">
@@ -88,9 +96,8 @@ export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProp
               );
             })}
           </tbody>
-        </table>
-        <div className="sr-only" aria-live="polite">{rawResults.length} filtered results shown of {total} total.</div>
-      </StandardCardContent>
-    </Card>
+      </table>
+      <div className="sr-only" aria-live="polite">{rawResults.length} filtered results shown of {total} total.</div>
+    </PanelCard>
   );
 };

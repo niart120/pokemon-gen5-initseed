@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
-import { Card } from '@/components/ui/card';
-import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
+import { PanelCard } from '@/components/ui/panel-card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -269,9 +268,14 @@ export function SearchControlCard() {
 
   // 統一レイアウト: シンプルな検索制御
   return (
-    <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full'} gap-2`}>
-      <StandardCardHeader icon={<Play size={20} className="opacity-80" />} title="Search Control" />
-      <StandardCardContent className="overflow-hidden">
+    <PanelCard
+      icon={<Play size={20} className="opacity-80" />} 
+      title="Search Control"
+      className={isStack ? 'max-h-96' : undefined}
+      fullHeight={!isStack}
+      scrollMode="parent"
+      contentClassName="overflow-hidden"
+    >
         <div className="space-y-2">
           {/* 検索制御ボタンと設定 */}
           <div className="flex gap-2 items-center flex-wrap">
@@ -396,7 +400,6 @@ export function SearchControlCard() {
             </>
           )}
         </div>
-      </StandardCardContent>
-    </Card>
+    </PanelCard>
   );
 }

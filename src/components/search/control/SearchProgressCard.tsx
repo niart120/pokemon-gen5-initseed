@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PanelCard } from '@/components/ui/panel-card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -67,21 +67,20 @@ export function SearchProgressCard() {
   const workerLayout = getWorkerLayout(totalWorkerCount);
 
   return (
-    <Card className={`py-2 flex flex-col ${isMobile ? 'max-h-96' : 'h-full min-h-80'}`}>
-      <CardHeader className="pb-0 flex-shrink-0">
-        <CardTitle className="flex items-center justify-between text-base">
-          <div className="flex items-center gap-2">
-            <ChartBar size={20} className="opacity-80" />
-            Search Progress
-          </div>
-    {isParallelMode && parallelData && totalWorkerCount > 0 && (
-            <Badge variant="outline" className="text-xs">
-              {totalWorkerCount} Workers
-            </Badge>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0 flex-1 flex flex-col min-h-0 overflow-y-auto">
+    <PanelCard
+      icon={<ChartBar size={20} className="opacity-80" />}
+      title="Search Progress"
+      headerActions={
+        isParallelMode && parallelData && totalWorkerCount > 0 ? (
+          <Badge variant="outline" className="text-xs">
+            {totalWorkerCount} Workers
+          </Badge>
+        ) : undefined
+      }
+      className={isMobile ? 'max-h-96' : 'min-h-80'}
+      fullHeight={!isMobile}
+      contentClassName="pt-0"
+    >
         {/* 基本進捗表示 - 実行中・完了後も表示 */}
         {showBaseProgress && (
           <div className="space-y-2 flex-shrink-0">
@@ -237,7 +236,6 @@ export function SearchProgressCard() {
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+    </PanelCard>
   );
 }

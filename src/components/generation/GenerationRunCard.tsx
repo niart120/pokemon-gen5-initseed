@@ -1,12 +1,11 @@
 import React, { useCallback } from 'react';
 import { Card } from '@/components/ui/card';
-import { StandardCardHeader, StandardCardContent, MetricsGrid } from '@/components/ui/card-helpers';
+import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Square, ChartBar } from '@phosphor-icons/react';
-import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/store/app-store';
-import { selectThroughputEma, selectEtaFormatted, selectShinyCount } from '@/store/generation-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
+import { Progress } from '@/components/ui/progress';
 
 // Control + Progress 統合カード (Phase1 experimental)
 export const GenerationRunCard: React.FC = () => {
@@ -21,11 +20,7 @@ export const GenerationRunCard: React.FC = () => {
     lastCompletion,
     draftParams,
     progress,
-    results,
   } = useAppStore();
-  const throughput = useAppStore(selectThroughputEma);
-  const eta = useAppStore(selectEtaFormatted);
-  const shinyCount = useAppStore(selectShinyCount);
 
   const total = progress?.totalAdvances ?? draftParams.maxAdvances ?? 0;
   const done = progress?.processedAdvances ?? 0;
@@ -45,12 +40,12 @@ export const GenerationRunCard: React.FC = () => {
   const canStart = status === 'idle' || status === 'completed' || status === 'error';
 
   return (
-    <Card className={`py-2 flex flex-col ${isStack ? '' : 'h-full min-h-64'}`} role="region" aria-labelledby="gen-run-title">
+    <Card className="flex flex-col" role="region" aria-labelledby="gen-run-title">
       <StandardCardHeader
         icon={<ChartBar size={20} className="opacity-80" />}
         title={<span id="gen-run-title">Generation Run</span>}
       />
-  <StandardCardContent className="gap-3" noScroll={isStack}>
+      <StandardCardContent className="gap-3" noScroll={isStack}>
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
           <div className="text-destructive text-xs space-y-0.5" role="alert" aria-live="polite">
@@ -95,26 +90,16 @@ export const GenerationRunCard: React.FC = () => {
             Status: {status}{lastCompletion ? ` (${lastCompletion.reason})` : ''}
           </div>
         </div>
-        {/* Progress Row */}
-        <div className="flex items-center justify-between gap-2">
-          <Badge variant="outline" className="text-xs" aria-label="Progress percentage">
-            {pct ? pct.toFixed(1) : '0.0'}%
-          </Badge>
-          <div className="text-[11px] text-muted-foreground font-mono">{done}/{total} adv</div>
+        {/* Progress */}
+        <div className="space-y-1" aria-label="Generation progress">
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+            <span>{pct ? `${pct.toFixed(1)}%` : '0.0%'}</span>
+            <span>{done}/{total} adv</span>
+          </div>
+          <Progress value={Math.max(0, Math.min(100, pct))} aria-label="Generation progress bar" />
         </div>
-        {/* Metrics */}
-        <MetricsGrid
-          columns="grid-cols-2 md:grid-cols-5"
-          items={[
-            { label: 'Results', value: results.length },
-            { label: 'Shiny', value: shinyCount },
-            { label: 'Throughput', value: throughput ? `${throughput.toFixed(1)} adv/s` : '--' },
-            { label: 'ETA', value: eta ?? '--:--' },
-            { label: 'Status', value: status },
-          ]}
-        />
         <div className="sr-only" aria-live="polite">
-          {status}. {done} of {total} advances. {shinyCount} shiny. ETA {eta ?? 'unknown'}.
+          {status}. {done} of {total} advances. {pct ? pct.toFixed(1) : '0.0'} percent complete.
         </div>
       </StandardCardContent>
     </Card>

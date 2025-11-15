@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PanelCard } from '@/components/ui/panel-card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -89,15 +89,13 @@ export function TargetSeedsCard() {
   ];
 
   return (
-    <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full min-h-64'}`}>
-      <CardHeader className="pb-0 flex-shrink-0">
-        {/* タイトルのみを表示し、その下に操作ボタンをまとめて配置 */}
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Target size={20} className="opacity-80" />
-          Target Seeds
-        </CardTitle>
+    <>
+      <PanelCard
+      icon={<Target size={20} className="opacity-80" />}
+      title="Target Seeds"
+      headerActions={
         <div
-          className="mt-2 grid grid-cols-4 gap-2"
+          className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full"
           role="group"
           aria-label="Target Seeds operations"
         >
@@ -130,8 +128,10 @@ export function TargetSeedsCard() {
             Clear
           </Button>
         </div>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col min-h-0 space-y-2 overflow-y-auto">
+      }
+      className={isStack ? 'max-h-96' : 'min-h-64'}
+      fullHeight={!isStack}
+    >
         <p className="text-xs text-muted-foreground flex-shrink-0">
           Supports hex format with or without 0x prefix. One seed per line.
         </p>
@@ -185,7 +185,7 @@ export function TargetSeedsCard() {
             </AlertDescription>
           </Alert>
         )}
-      </CardContent>
+      </PanelCard>
 
       {/* Template Selection Dialog */}
       <TemplateSelectionDialog
@@ -193,6 +193,6 @@ export function TargetSeedsCard() {
         onOpenChange={setIsTemplateDialogOpen}
         onApplyTemplate={handleApplyTemplate}
       />
-    </Card>
+    </>
   );
 }

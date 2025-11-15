@@ -13,7 +13,7 @@ import { ProfileCard } from '@/components/profile/ProfileCard';
  * GenerationPanel (Phase1 / Layout Refactor)
  * 案A: デスクトップ/タブレットは 2カラム (左=設定/制御/進捗, 右=結果)。
  * モバイル幅では従来どおり縦積みにフォールバック (後続PhaseでAccordion化予定)。
- * - 右カラム上部に sticky header を置く前提だが、Phase1では土台のみ。
+ * - SearchPanel と同基準のレイアウトスケールを用い、PCは2カラム構成を維持。
  */
 export const GenerationPanel: React.FC = () => {
   const { isStack, uiScale } = useResponsiveLayout();
@@ -50,33 +50,29 @@ export const GenerationPanel: React.FC = () => {
 
   // デスクトップ: 2カラム (左: 制御+パラメータ 固定幅clamp / 右: 結果エリア)
   return (
-    <div className="flex flex-col gap-3 h-full min-h-0 w-full overflow-hidden">
+    <div className={`flex flex-col ${sizes.gap} h-full min-h-0 min-w-fit overflow-hidden`}>
       <div className="flex-none">
         <ProfileCard />
       </div>
-      <div className="flex gap-3 flex-1 min-h-0 w-full overflow-hidden">
+      <div className={`flex ${sizes.gap} flex-1 min-h-0 min-w-fit overflow-hidden`}>
         {/* Left Column */}
         <div
-          className="flex flex-col gap-3 min-h-0"
+          className={`flex flex-col ${sizes.gap} min-h-0 overflow-y-auto`}
           style={{
             width: LEFT_COLUMN_WIDTH_CLAMP,
             flex: `0 0 ${LEFT_COLUMN_WIDTH_CLAMP}`
           }}
         >
-          <GenerationRunCard />
-          <GenerationParamsCard />
+          <div className="flex-none">
+            <GenerationRunCard />
+          </div>
+          <div className="flex-1 min-h-0">
+            <GenerationParamsCard />
+          </div>
         </div>
         {/* Right Column */}
-        <div className="flex flex-col gap-3 min-h-0 overflow-hidden flex-1">
-          <div
-            className={[
-              'flex flex-col gap-2',
-              'sticky top-0 z-10 backdrop-blur bg-background/90 border-b border-border/50 p-1 rounded-md',
-            ].join(' ')}
-            role="region"
-            aria-label="Generation results controls"
-            data-testid="gen-results-sticky"
-          >
+        <div className={`flex flex-col flex-1 min-w-0 min-h-0 overflow-y-auto ${sizes.gap}`}>
+          <div className="flex-none">
             <GenerationResultsControlCard />
           </div>
           <div className="flex-1 min-h-0">

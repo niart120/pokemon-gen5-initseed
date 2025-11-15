@@ -1,6 +1,6 @@
 import { Funnel } from '@phosphor-icons/react';
 import { Button } from '../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { PanelCard } from '@/components/ui/panel-card';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
@@ -32,30 +32,30 @@ export function ResultsControlCard({
   const { searchResults, clearSearchResults } = useAppStore();
 
   return (
-    <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full'} gap-2`}>
-      <CardHeader className="pb-0 flex-shrink-0">
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Funnel size={20} className="opacity-80" />
-            Results Control
-          </div>
-          <div className="flex gap-2">
-            <ExportButton 
-              results={convertedResults}
-              disabled={filteredResultsCount === 0}
-            />
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={clearSearchResults}
-              disabled={searchResults.length === 0}
-            >
-              Clear Results
-            </Button>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 flex-1 min-h-0 flex flex-col overflow-hidden">
+    <PanelCard
+      icon={<Funnel size={20} className="opacity-80" />}
+      title="Results Control"
+      headerActions={
+        <div className="flex gap-2">
+          <ExportButton 
+            results={convertedResults}
+            disabled={filteredResultsCount === 0}
+          />
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            onClick={clearSearchResults}
+            disabled={searchResults.length === 0}
+          >
+            Clear Results
+          </Button>
+        </div>
+      }
+      className={isStack ? 'max-h-96' : undefined}
+      fullHeight={!isStack}
+      scrollMode="parent"
+      contentClassName="overflow-hidden"
+    >
         {/* Filters */}
         <div className="flex gap-4 items-end flex-shrink-0">
           <div className="flex-1">
@@ -83,7 +83,6 @@ export function ResultsControlCard({
             </Select>
           </div>
         </div>
-      </CardContent>
-    </Card>
+    </PanelCard>
   );
 }

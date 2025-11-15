@@ -1,6 +1,5 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
-import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
+import { PanelCard } from '@/components/ui/panel-card';
 import { Separator } from '@/components/ui/separator';
 import { Gear } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
@@ -100,9 +99,8 @@ export function SearchParamsCard() {
   };
 
   return (
-    <Card className="py-2 flex flex-col h-full gap-2">
-      <StandardCardHeader icon={<Gear size={20} className="opacity-80" />} title="Search Filters" />
-      <StandardCardContent>
+    <>
+      <PanelCard icon={<Gear size={20} className="opacity-80" />} title="Search Filters">
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -149,7 +147,7 @@ export function SearchParamsCard() {
             )}
           </div>
         </div>
-      </StandardCardContent>
+      </PanelCard>
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -299,8 +297,8 @@ export function SearchParamsCard() {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </Card>
+            </DialogContent>
+          </Dialog>
+        </>
   );
 }
