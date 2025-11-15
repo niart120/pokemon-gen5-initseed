@@ -4,7 +4,7 @@ import { PanelCard } from '@/components/ui/panel-card';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
-import { ExportButton } from './ExportButton';
+import { SearchExportButton } from './SearchExportButton';
 import { useAppStore } from '../../../store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -56,7 +56,7 @@ export function ResultsControlCard({
       title={title}
       headerActions={
         <div className="flex gap-2">
-          <ExportButton 
+          <SearchExportButton 
             results={convertedResults}
             disabled={filteredResultsCount === 0}
           />
