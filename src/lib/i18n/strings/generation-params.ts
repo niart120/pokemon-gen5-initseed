@@ -9,7 +9,7 @@ export const generationParamsPanelTitle: LocaleText = {
 
 export const generationParamsSectionTitles = {
   target: {
-    ja: 'ターゲット',
+    ja: '目標',
     en: 'Target',
   } satisfies LocaleText,
   encounter: {
@@ -119,7 +119,7 @@ export const generationParamsStopOnCapLabel: LocaleText = {
 
 export const generationParamsScreenReaderAnnouncement: LocaleText = {
   ja: '生成パラメータ設定です。生成の実行中は編集できません。',
-  en: 'Generation parameters configuration. Editing disabled while generation is active.',
+  en: 'Generation parameters configuration. Editing is disabled while generation is active.',
 };
 
 export const generationParamsAbilityOptionLabels: LocaleMap<Record<AbilityModeValue, string>> = {

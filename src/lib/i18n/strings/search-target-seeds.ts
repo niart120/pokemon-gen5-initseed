@@ -7,12 +7,12 @@ const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
 };
 
 export const targetSeedsPanelTitle: LocaleText = {
-  ja: 'ターゲットSeed',
+  ja: '目標Seed',
   en: 'Target Seeds',
 };
 
 export const targetSeedsAriaLabel: LocaleText = {
-  ja: 'ターゲットSeedの操作',
+  ja: '目標Seedの操作',
   en: 'Target seeds operations',
 };
 

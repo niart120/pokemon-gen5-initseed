@@ -88,14 +88,14 @@ export function formatSearchControlMaxWorkersLabel(maxWorkers: number, locale: S
 
 export function formatSearchControlMissingTargetsAlert(locale: SupportedLocale): string {
   return locale === 'ja'
-    ? '検索を開始する前にターゲットSeedを追加してください。'
-    : 'Please add target seeds before starting the search.';
+    ? '検索を開始する前に目標Seedを追加してください。'
+    : 'Add target seeds before starting the search.';
 }
 
 export function formatSearchControlNoMatchesAlert(totalSteps: number, locale: SupportedLocale): string {
   const steps = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]).format(totalSteps);
   if (locale === 'ja') {
-    return `検索が完了しました。${steps}通りを調べましたが一致するSeedは見つかりませんでした。\n\n次の点を確認してください:\n- 日付範囲を広げる\n- Timer0/VCountの範囲を見直す\n- ターゲットSeedの形式を確認する\n\n詳細なデバッグ情報はブラウザのコンソールを参照してください。`;
+    return `検索が完了しました。${steps}通りを調べましたが一致するSeedは見つかりませんでした。\n\n次の点を確認してください:\n- 日付範囲を広げる\n- Timer0/VCountの範囲を見直す\n- 目標Seedの形式を確認する\n\n詳細なデバッグ情報はブラウザのコンソールを参照してください。`;
   }
   return `Search completed. No matches found in ${steps} combinations.\n\nTry:\n- Expanding the date range\n- Checking Timer0/VCount ranges\n- Verifying target seed format\n\nCheck browser console for detailed debug information.`;
 }

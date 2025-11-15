@@ -272,7 +272,7 @@ mod wasm_tests {
         let total_calculations =
             range_seconds as u64 * timer0_range * vcount_range * target_seeds.len() as u64;
         let output = format!(
-            "探索範囲: {}秒 × Timer0({}) × VCount({}) × ターゲット({}) = {} 計算",
+            "探索範囲: {}秒 × Timer0({}) × VCount({}) × 目標({}) = {} 計算",
             range_seconds,
             timer0_range,
             vcount_range,
@@ -318,7 +318,7 @@ mod wasm_tests {
                     let (h0, h1, _h2, _h3, _h4) = calculate_pokemon_sha1(&message);
                     let seed = calculate_pokemon_seed_from_hash(h0, h1);
 
-                    // ターゲットSeedとマッチング
+                    // 目標Seedとマッチング
                     for &target in &target_seeds {
                         if seed == target {
                             matches_found += 1;

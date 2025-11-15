@@ -321,7 +321,7 @@ impl IntegratedSeedSearcher {
     ) -> js_sys::Array {
         let results = js_sys::Array::new();
 
-        // Target seedsをBTreeSetに変換して最適化されたルックアップを実現
+        // Target seedsをBTreeSetに変換して最適化されたルックアップを構築
         let target_set: BTreeSet<u32> = target_seeds.iter().cloned().collect();
 
         // 開始日時をUnix時間に変換（ループ外で1回のみ実行）
@@ -360,7 +360,7 @@ impl IntegratedSeedSearcher {
                         let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(&message);
                         let seed = crate::sha1::calculate_pokemon_seed_from_hash(h0, h1);
 
-                        // ターゲットSeedマッチ時のみ日時とハッシュを生成
+                        // 目標Seedマッチ時のみ日時とハッシュを生成
                         let hash_values = HashValues { h0, h1, h2, h3, h4 };
                         let params = SearchParams { timer0, vcount };
                         self.check_and_add_result(
