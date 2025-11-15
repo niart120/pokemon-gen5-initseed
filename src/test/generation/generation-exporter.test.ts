@@ -33,17 +33,44 @@ describe('generation-exporter', () => {
     const lines = csv.split('\n');
     expect(lines[0].split(',')[0]).toBe('Advance');
     expect(lines.length).toBe(11); // header + 10 rows
-  const headers = lines[0].split(',');
-  expect(headers).toContain('NatureName');
-  expect(headers.indexOf('NatureName')).toBe(headers.indexOf('NatureId') + 1);
-  // 列数: v2拡張で speciesName/abilityName/genderResolved/level 追加済 (例: 20列)
-  expect(headers.length).toBe(20);
-  // 1行目データ整合: pidHex/seedHex が 0x + lower-case
-  const firstData = lines[1].split(',');
-  const seedHex = firstData[1];
-  const pidHex = firstData[3];
-  expect(seedHex).toMatch(/^0x[0-9a-f]{1,16}$/);
-  expect(pidHex).toMatch(/^0x[0-9a-f]{8}$/);
+    const headers = lines[0].split(',');
+    expect(headers).toEqual([
+      'Advance',
+      'NeedleDirection',
+      'NeedleDirectionValue',
+      'SpeciesName',
+      'AbilityName',
+      'Gender',
+      'NatureName',
+      'ShinyLabel',
+      'Level',
+      'HP',
+      'Attack',
+      'Defense',
+      'SpecialAttack',
+      'SpecialDefense',
+      'Speed',
+      'SeedHex',
+      'PIDHex',
+    ]);
+    expect(headers).not.toContain('SeedDec');
+    // 1行目データ整合: seedHex/pidHex が 0x + lower-case
+    const firstData = lines[1].split(',');
+    const seedHex = firstData[15];
+    const pidHex = firstData[16];
+    expect(seedHex).toMatch(/^0x[0-9a-f]{1,16}$/);
+    expect(pidHex).toMatch(/^0x[0-9a-f]{8}$/);
+  });
+
+  it('includes advanced CSV columns when requested', () => {
+    const csv = exportGenerationResults(samples.slice(0, 1), {
+      format: 'csv',
+      includeAdvancedFields: true,
+    });
+    const headers = csv.split('\n')[0].split(',');
+    expect(headers).toContain('SeedDec');
+    expect(headers).toContain('PIDDec');
+    expect(headers).toContain('LevelRandDec');
   });
 
   it('exports JSON with totalResults=10', () => {
@@ -57,8 +84,8 @@ describe('generation-exporter', () => {
     const txt = exportGenerationResults(samples, { format: 'txt' });
     expect(txt).toContain('Result #1');
     expect(txt).toContain('Total Results: 10');
-  // NatureName 行追加確認
-  expect(txt).toMatch(/NatureName:\s+\w+/);
+    expect(txt).toMatch(/NeedleDirection:/);
+    expect(txt).toMatch(/NatureName:\s+\w+/);
   });
 
   it('handles empty array', () => {

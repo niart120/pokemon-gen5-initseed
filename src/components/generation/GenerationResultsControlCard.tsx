@@ -11,7 +11,7 @@ import { natureName } from '@/lib/utils/format-display';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import type { ShinyFilterMode, StatRangeFilters } from '@/store/generation-store';
-import { selectResolvedResults } from '@/store/generation-store';
+import { selectFilteredDisplayRows, selectResolvedResults } from '@/store/generation-store';
 import { getGeneratedSpeciesById } from '@/data/species/generated';
 import type { StatKey } from '@/lib/utils/pokemon-stats';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -67,9 +67,28 @@ export const GenerationResultsControlCard: React.FC = () => {
   const results = useAppStore((state) => state.results);
   const clearResults = useAppStore((state) => state.clearResults);
   const encounterTable = useAppStore((state) => state.encounterTable);
+  const genderRatios = useAppStore((state) => state.genderRatios);
+  const abilityCatalog = useAppStore((state) => state.abilityCatalog);
+  const version = useAppStore((state) => (state.params?.version ?? state.draftParams.version ?? 'B') as 'B' | 'W' | 'B2' | 'W2');
+  const baseSeed = useAppStore((state) => {
+    if (state.params?.baseSeed !== undefined) return state.params.baseSeed;
+    const hex = state.draftParams.baseSeedHex;
+    if (typeof hex === 'string') {
+      const normalized = hex.trim();
+      if (normalized !== '') {
+        try {
+          return BigInt('0x' + normalized.replace(/^0x/i, ''));
+        } catch {
+          return undefined;
+        }
+      }
+    }
+    return undefined;
+  });
   const statsAvailable = useAppStore((state) => Boolean(state.params?.baseSeed));
 
   const resolvedResults = useAppStore((state: AppStoreState) => selectResolvedResults(state));
+  const filteredRows = useAppStore((state: AppStoreState) => selectFilteredDisplayRows(state, locale));
 
   const { isStack } = useResponsiveLayout();
 
@@ -366,7 +385,15 @@ export const GenerationResultsControlCard: React.FC = () => {
             <ArrowCounterClockwise size={14} />
             {resetFiltersLabel}
           </Button>
-          <GenerationExportButton results={results} disabled={!results.length} />
+          <GenerationExportButton
+            rows={filteredRows}
+            encounterTable={encounterTable}
+            genderRatios={genderRatios}
+            abilityCatalog={abilityCatalog}
+            version={version}
+            baseSeed={baseSeed}
+            disabled={filteredRows.length === 0}
+          />
           <Button
             size="sm"
             variant="destructive"

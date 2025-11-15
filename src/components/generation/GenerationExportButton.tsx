@@ -3,9 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Download, Copy, Check } from '@phosphor-icons/react';
 import { exportGenerationResults } from '@/lib/export/generation-exporter';
-import type { GenerationResult } from '@/types/generation';
+import type { EncounterTable } from '@/data/encounter-tables';
+import type { GenderRatio } from '@/types/pokemon-raw';
+import type { FilteredGenerationDisplayRow } from '@/store/generation-store';
+import type { GenerationParams } from '@/types/generation';
 import { useLocale } from '@/lib/i18n/locale-context';
 import {
   formatGenerationExportSummary,
@@ -16,22 +20,39 @@ import {
   generationExportDownloadLabel,
   generationExportFormatLabel,
   generationExportFormatOptions,
+  generationExportAdditionalDataLabel,
+  generationExportIncludeAdvancedLabel,
 } from '@/lib/i18n/strings/generation-export';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 
 type ExportFormat = 'csv' | 'json' | 'txt';
 
 interface GenerationExportButtonProps {
-  results: GenerationResult[];
+  rows: FilteredGenerationDisplayRow[];
+  encounterTable?: EncounterTable;
+  genderRatios?: Map<number, GenderRatio>;
+  abilityCatalog?: Map<number, string[]>;
+  version: GenerationParams['version'];
+  baseSeed?: bigint;
   disabled?: boolean;
 }
 
-export function GenerationExportButton({ results, disabled = false }: GenerationExportButtonProps) {
+export function GenerationExportButton({
+  rows,
+  encounterTable,
+  genderRatios,
+  abilityCatalog,
+  version,
+  baseSeed,
+  disabled = false,
+}: GenerationExportButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [format, setFormat] = useState<ExportFormat>('csv');
+  const [includeAdvanced, setIncludeAdvanced] = useState(false);
   const [copied, setCopied] = useState(false);
   const locale = useLocale();
-  const triggerLabel = formatGenerationExportTriggerLabel(results.length, locale);
+  const rowCount = rows.length;
+  const triggerLabel = formatGenerationExportTriggerLabel(rowCount, locale);
   const dialogTitle = resolveLocaleValue(generationExportDialogTitle, locale);
   const formatLabel = resolveLocaleValue(generationExportFormatLabel, locale);
   const formatLabels = {
@@ -42,11 +63,21 @@ export function GenerationExportButton({ results, disabled = false }: Generation
   const downloadLabel = resolveLocaleValue(generationExportDownloadLabel, locale);
   const copyLabel = resolveLocaleValue(generationExportCopyLabel, locale);
   const copiedLabel = resolveLocaleValue(generationExportCopiedLabel, locale);
-  const summaryText = formatGenerationExportSummary(results.length, locale);
+  const additionalDataLabel = resolveLocaleValue(generationExportAdditionalDataLabel, locale);
+  const includeAdvancedLabel = resolveLocaleValue(generationExportIncludeAdvancedLabel, locale);
+  const summaryText = formatGenerationExportSummary(rowCount, locale);
 
   const handleExport = async (download: boolean) => {
     try {
-      const content = exportGenerationResults(results, { format });
+      const rawResults = rows.map((row) => row.raw);
+      const content = exportGenerationResults(rawResults, { format, includeAdvancedFields: includeAdvanced }, {
+        encounterTable,
+        genderRatios,
+        abilityCatalog,
+        locale,
+        version,
+        baseSeed,
+      });
       if (download) {
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
@@ -67,12 +98,20 @@ export function GenerationExportButton({ results, disabled = false }: Generation
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) {
+          setCopied(false);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button
           variant="outline"
           size="sm"
-          disabled={disabled || results.length === 0}
+          disabled={disabled || rowCount === 0}
           className="gap-2"
         >
           <Download size={16} />
@@ -97,6 +136,19 @@ export function GenerationExportButton({ results, disabled = false }: Generation
               </SelectContent>
             </Select>
           </div>
+            <div className="space-y-3">
+              <Label>{additionalDataLabel}</Label>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="generation-include-advanced"
+                  checked={includeAdvanced}
+                  onCheckedChange={(checked) => setIncludeAdvanced(Boolean(checked))}
+                />
+                <Label htmlFor="generation-include-advanced" className="text-sm font-normal">
+                  {includeAdvancedLabel}
+                </Label>
+              </div>
+            </div>
           <div className="text-sm text-muted-foreground">{summaryText}</div>
           <div className="flex gap-2">
             <Button onClick={() => handleExport(true)} className="flex-1 gap-2">

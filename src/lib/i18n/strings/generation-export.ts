@@ -51,6 +51,16 @@ export const generationExportCopiedLabel: LocaleText = {
   en: 'Copied!',
 };
 
+export const generationExportAdditionalDataLabel: LocaleText = {
+  ja: '追加情報を含める',
+  en: 'Include Additional Data',
+};
+
+export const generationExportIncludeAdvancedLabel: LocaleText = {
+  ja: '詳細列を含める(開発者向け)',
+  en: 'Include additional columns (for developers)',
+};
+
 export function formatGenerationExportTriggerLabel(resultCount: number, locale: SupportedLocale): string {
   const base = resolveLocaleValue(generationExportTriggerLabel, locale);
   const formatter = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]);
