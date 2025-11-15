@@ -5,25 +5,25 @@ type ProfileTimerFieldKey = 'timer0Min' | 'timer0Max' | 'vcountMin' | 'vcountMax
 
 export const profileTimerFieldLabels: Record<ProfileTimerFieldKey, LocaleText> = {
   timer0Min: {
-    ja: 'Timer0 最小値',
-    en: 'Timer0 Min',
+    ja: 'Timer0(Min)',
+    en: 'Timer0(Min)',
   },
   timer0Max: {
-    ja: 'Timer0 最大値',
-    en: 'Timer0 Max',
+    ja: 'Timer0(Max)',
+    en: 'Timer0(Max)',
   },
   vcountMin: {
-    ja: 'VCount 最小値',
-    en: 'VCount Min',
+    ja: 'VCount(Min)',
+    en: 'VCount(Min)',
   },
   vcountMax: {
-    ja: 'VCount 最大値',
-    en: 'VCount Max',
+    ja: 'VCount(Max)',
+    en: 'VCount(Max)',
   },
 };
 
 export const profileTimerAutoLabel: LocaleText = {
-  ja: '自動',
+  ja: 'Auto',
   en: 'Auto',
 };
 

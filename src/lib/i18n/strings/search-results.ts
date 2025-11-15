@@ -7,13 +7,13 @@ const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
 };
 
 export const searchResultsTitle: LocaleText = {
-  ja: '検索結果',
-  en: 'Search Results',
+  ja: 'Results',
+  en: 'Results',
 };
 
 export const searchResultsInitialMessage: LocaleText = {
   ja: '検索結果はまだありません。検索を実行するとここに表示されます。',
-  en: 'No search results yet. Run a search to see results here.',
+  en: 'No results yet. Run a search to see results here.',
 };
 
 export const searchResultsFilteredEmptyMessage: LocaleText = {
@@ -31,7 +31,7 @@ export const searchResultsHeaders = {
     en: 'LCG Seed',
   } satisfies LocaleText,
   dateTime: {
-    ja: '日時',
+    ja: 'Date/Time',
     en: 'Date/Time',
   } satisfies LocaleText,
   mtSeed: {
@@ -64,8 +64,8 @@ export const detailsButtonLabel: LocaleText = {
 };
 
 export const resultDetailsTitle: LocaleText = {
-  ja: 'Seedの詳細',
-  en: 'Seed Result Details',
+  ja: 'Seed Details',
+  en: 'Seed Details',
 };
 
 export const lcgSeedLabel: LocaleText = {
@@ -79,7 +79,7 @@ export const mtSeedLabel: LocaleText = {
 };
 
 export const dateTimeLabel: LocaleText = {
-  ja: '日時',
+  ja: 'Date/Time',
   en: 'Date/Time',
 };
 
@@ -99,22 +99,22 @@ export const romLabel: LocaleText = {
 };
 
 export const hardwareLabel: LocaleText = {
-  ja: 'ハードウェア',
+  ja: 'Hardware',
   en: 'Hardware',
 };
 
 export const keyInputLabel: LocaleText = {
-  ja: 'キー入力',
+  ja: 'Key Input',
   en: 'Key Input',
 };
 
 export const sha1HashLabel: LocaleText = {
-  ja: 'SHA-1ハッシュ',
+  ja: 'SHA-1 Hash',
   en: 'SHA-1 Hash',
 };
 
 export const generatedMessageLabel: LocaleText = {
-  ja: '生成メッセージ',
+  ja: 'Generated Message',
   en: 'Generated Message',
 };
 
@@ -154,8 +154,8 @@ export const keyInputUnavailableLabel: LocaleText = {
 };
 
 export const keyInputNoneLabel: LocaleText = {
-  ja: 'キーなし',
-  en: 'No keys',
+  ja: '-',
+  en: '-',
 };
 
 export const keyInputJoiner: LocaleText = {
@@ -166,13 +166,13 @@ export const keyInputJoiner: LocaleText = {
 export function formatResultCount(count: number, locale: SupportedLocale): string {
   const formatter = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]);
   const value = formatter.format(count);
-  return locale === 'ja' ? `${value}件` : `${value} result${count === 1 ? '' : 's'}`;
+  return `${value} result${count === 1 ? '' : 's'}`;
 }
 
 export function formatSearchDuration(durationMs: number, locale: SupportedLocale): string {
   const seconds = durationMs / 1000;
   const formatted = seconds.toFixed(1);
-  return locale === 'ja' ? `検索完了 ${formatted}秒` : `Search completed in ${formatted}s`;
+  return `Search completed in ${formatted}s`;
 }
 
 export function formatResultDateTime(date: Date, locale: SupportedLocale): string {

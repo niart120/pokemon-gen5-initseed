@@ -4,18 +4,18 @@ import { resolveLocaleValue, type LocaleMap, type LocaleText } from './types';
 export type SearchResultsSortKey = 'datetime' | 'seed' | 'timer0' | 'vcount';
 
 export const searchResultsControlTitle: LocaleText = {
-  ja: '結果コントロール',
-  en: 'Results Control',
+  ja: 'Filter',
+  en: 'Filter',
 };
 
 export const searchResultsControlClearButton: LocaleText = {
-  ja: '結果をクリア',
+  ja: 'Clear Results',
   en: 'Clear Results',
 };
 
 export const searchResultsControlFilterLabel: LocaleText = {
-  ja: 'Seedフィルタ',
-  en: 'Filter by Seed',
+  ja: 'Seed',
+  en: 'Seed',
 };
 
 export const searchResultsControlFilterPlaceholder: LocaleText = {
@@ -35,7 +35,7 @@ export const searchResultsControlSortPlaceholder: LocaleText = {
 
 export const searchResultsControlSortOptionLabels: LocaleMap<Record<SearchResultsSortKey, string>> = {
   ja: {
-    datetime: '日時',
+    datetime: 'Date/Time',
     seed: 'MT Seed',
     timer0: 'Timer0',
     vcount: 'VCount',

@@ -250,7 +250,7 @@ src/
 │       │   ├── EncounterSettingsCard.tsx # エンカウント設定
 │       │   ├── WildEncounterForm.tsx   # 野生エンカウントフォーム
 │       │   ├── StaticEncounterForm.tsx # 固定シンボルフォーム
-│       │   ├── RoamingEncounterForm.tsx # 徘徊ポケモンフォーム
+│       │   ├── RoamerEncounterForm.tsx # 徘徊ポケモンフォーム
 │       │   └── GenerationRangeCard.tsx # 生成範囲設定
 │       ├── results/
 │       │   ├── ResultsTable.tsx        # 結果テーブル

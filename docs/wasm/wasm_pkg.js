@@ -272,7 +272,7 @@ export const EncounterType = Object.freeze({
     /**
      * 徘徊ポケモン（ドキュメント仕様準拠）
      */
-    Roaming: 20, "20": "Roaming",
+    Roamer: 20, "20": "Roamer",
 });
 /**
  * ゲームモード列挙型（仕様書準拠）
@@ -1436,7 +1436,7 @@ export class PIDCalculator {
      * @returns {number}
      */
     static generate_wild_pid(r1, tid, sid) {
-        const ret = wasm.pidcalculator_generate_roaming_pid(r1, tid, sid);
+        const ret = wasm.pidcalculator_generate_roamer_pid(r1, tid, sid);
         return ret >>> 0;
     }
     /**
@@ -1456,7 +1456,7 @@ export class PIDCalculator {
      * @returns {number}
      */
     static generate_static_pid(r1, tid, sid) {
-        const ret = wasm.pidcalculator_generate_roaming_pid(r1, tid, sid);
+        const ret = wasm.pidcalculator_generate_roamer_pid(r1, tid, sid);
         return ret >>> 0;
     }
     /**
@@ -1475,8 +1475,8 @@ export class PIDCalculator {
      * @param {number} sid
      * @returns {number}
      */
-    static generate_roaming_pid(r1, tid, sid) {
-        const ret = wasm.pidcalculator_generate_roaming_pid(r1, tid, sid);
+    static generate_roamer_pid(r1, tid, sid) {
+        const ret = wasm.pidcalculator_generate_roamer_pid(r1, tid, sid);
         return ret >>> 0;
     }
     /**
@@ -1738,7 +1738,7 @@ export class PokemonGenerator {
      * BW/BW2準拠 バッチ生成（offsetのみ）
      *
      * # Arguments
-     * * `base_seed` - 列挙の基準Seed（初期Seed）
+     * * `base_seed` - 列挙の初期Seed
      * * `offset` - 最初の生成までの前進数（ゲーム内不定消費を含めた開始位置）
      * * `count` - 生成数（0なら空）
      * * `config` - BW準拠設定

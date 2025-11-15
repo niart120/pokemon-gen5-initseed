@@ -43,7 +43,7 @@ impl PIDCalculator {
     
     // 徘徊ポケモン（20）: PID = r1[n] (XOR処理無し、固定シンボルと同様)
     // イベント発生時に個体決定され、以降のエンカウントでは同じ個体が出現
-    pub fn generate_roaming_pid(r1: u32) -> u32 {
+    pub fn generate_roamer_pid(r1: u32) -> u32 {
         r1
     }
     

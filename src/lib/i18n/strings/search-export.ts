@@ -8,7 +8,7 @@ const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
 
 export const searchExportDialogTitle: LocaleText = {
   ja: '検索結果のエクスポート',
-  en: 'Export Search Results',
+  en: 'Export Results',
 };
 
 export const searchExportFormatLabel: LocaleText = {
@@ -27,8 +27,8 @@ export const searchExportFormatOptions = {
     en: 'CSV (Comma Separated Values)',
   } satisfies LocaleText,
   json: {
-    ja: 'JSON (JavaScript オブジェクト表記)',
-    en: 'JSON (JavaScript Object Notation)',
+    ja: 'JSON',
+    en: 'JSON',
   } satisfies LocaleText,
   txt: {
     ja: 'TXT (プレーンテキスト)',
@@ -52,8 +52,8 @@ export const searchExportIncludeHashLabel: LocaleText = {
 };
 
 export const searchExportIncludeMessageLabel: LocaleText = {
-  ja: 'メッセージデータを含める (技術向け)',
-  en: 'Include raw message data (technical)',
+  ja: 'メッセージデータを含める (開発者向け)',
+  en: 'Include raw message data (for developers)',
 };
 
 export const searchExportDownloadLabel: LocaleText = {
@@ -72,17 +72,15 @@ export const searchExportCopiedLabel: LocaleText = {
 };
 
 export function formatSearchExportTriggerLabel(count: number, locale: SupportedLocale): string {
-  const base = locale === 'ja' ? 'エクスポート' : 'Export';
   const formatter = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]);
-  const suffix = locale === 'ja' ? ` (${formatter.format(count)}件)` : ` (${formatter.format(count)})`;
-  return `${base}${suffix}`;
+  return `Export (${formatter.format(count)})`;
 }
 
 export function formatSearchExportSummary(count: number, locale: SupportedLocale): string {
   const formatter = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]);
   const formattedCount = formatter.format(count);
   if (locale === 'ja') {
-    return `結果 ${formattedCount} 件をエクスポート`;
+    return `${formattedCount} 件をエクスポート`;
   }
   return `Exporting ${formattedCount} result${count === 1 ? '' : 's'}`;
 }

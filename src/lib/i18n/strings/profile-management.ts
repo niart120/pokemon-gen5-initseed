@@ -2,7 +2,7 @@ import { resolveLocaleValue, type LocaleText } from './types';
 import type { SupportedLocale } from '@/types/i18n';
 
 export const profileManagementSelectLabel: LocaleText = {
-  ja: 'プロファイル',
+  ja: 'Profile',
   en: 'Profile',
 };
 
@@ -23,21 +23,21 @@ export const profileManagementImportCurrentLabel: LocaleText = {
 
 export const profileManagementButtons = {
   rename: {
-    ja: '名前変更',
+    ja: 'Rename',
     en: 'Rename',
   } satisfies LocaleText,
   save: {
-    ja: '保存',
+    ja: 'Save',
     en: 'Save',
   } satisfies LocaleText,
   delete: {
-    ja: '削除',
+    ja: 'Delete',
     en: 'Delete',
   } satisfies LocaleText,
 } as const;
 
 export const profileManagementDirtyBadge: LocaleText = {
-  ja: '未保存',
+  ja: 'Unsaved',
   en: 'Unsaved',
 };
 

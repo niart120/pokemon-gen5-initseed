@@ -33,17 +33,17 @@ type HeaderDefinition = {
 const HEADER_DEFINITIONS: Record<HeaderKey, HeaderDefinition> = {
   advance: {
     label: {
-      ja: '消費',
+      ja: 'Adv',
       en: 'Adv',
     },
     sr: {
-      ja: '',
+      ja: 'advance',
       en: 'advance',
     },
   },
   direction: {
     label: {
-      ja: '針',
+      ja: 'Dir',
       en: 'Dir',
     },
   },
@@ -55,31 +55,31 @@ const HEADER_DEFINITIONS: Record<HeaderKey, HeaderDefinition> = {
   },
   species: {
     label: {
-      ja: 'ポケモン',
+      ja: 'Species',
       en: 'Species',
     },
   },
   ability: {
     label: {
-      ja: '特性',
+      ja: 'Ability',
       en: 'Ability',
     },
   },
   gender: {
     label: {
-      ja: '性別',
+      ja: 'Gender',
       en: 'Gender',
     },
   },
   nature: {
     label: {
-      ja: '性格',
+      ja: 'Nature',
       en: 'Nature',
     },
   },
   shiny: {
     label: {
-      ja: '色違い',
+      ja: 'Shiny',
       en: 'Shiny',
     },
   },
@@ -97,31 +97,31 @@ const HEADER_DEFINITIONS: Record<HeaderKey, HeaderDefinition> = {
   },
   attack: {
     label: {
-      ja: 'Atk',
+      ja: 'A',
       en: 'Atk',
     },
   },
   defense: {
     label: {
-      ja: 'Def',
+      ja: 'B',
       en: 'Def',
     },
   },
   specialAttack: {
     label: {
-      ja: 'SpA',
+      ja: 'C',
       en: 'SpA',
     },
   },
   specialDefense: {
     label: {
-      ja: 'SpD',
+      ja: 'D',
       en: 'SpD',
     },
   },
   speed: {
     label: {
-      ja: 'Spe',
+      ja: 'S',
       en: 'Spe',
     },
   },
@@ -145,17 +145,17 @@ export const generationResultsTableCaption: LocaleText = {
 };
 
 export const generationResultsTableUnknownLabel: LocaleText = {
-  ja: '不明',
+  ja: 'Unknown',
   en: 'Unknown',
 };
 
 export const generationResultsTableFilteredLabel: LocaleText = {
-  ja: '結果',
+  ja: 'Results',
   en: 'Results',
 };
 
 export const generationResultsTableTotalLabel: LocaleText = {
-  ja: '総件数',
+  ja: 'Total',
   en: 'Total',
 };
 
@@ -171,12 +171,8 @@ export function resolveGenerationResultsTableHeaders(locale: SupportedLocale): R
 }
 
 export function formatGenerationResultsTableTitle(filteredCount: number, totalCount: number, locale: SupportedLocale): string {
-  const formatter = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]);
   const filteredLabel = resolveLocaleValue(generationResultsTableFilteredLabel, locale);
-  const totalLabel = resolveLocaleValue(generationResultsTableTotalLabel, locale);
-  const filteredText = formatter.format(filteredCount);
-  const totalText = formatter.format(totalCount);
-  return `${filteredLabel} (${filteredText}) / ${totalLabel} ${totalText}`;
+  return `${filteredLabel}`;
 }
 
 export function formatGenerationResultsTableAnnouncement(filteredCount: number, totalCount: number, locale: SupportedLocale): string {

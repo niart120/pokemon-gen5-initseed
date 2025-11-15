@@ -85,7 +85,7 @@ export enum EncounterType {
   /**
    * 徘徊ポケモン（ドキュメント仕様準拠）
    */
-  Roaming = 20,
+  Roamer = 20,
 }
 /**
  * ゲームモード列挙型（仕様書準拠）
@@ -666,7 +666,7 @@ export class PIDCalculator {
    * # Returns
    * 生成されたPID（ID補正適用後）
    */
-  static generate_roaming_pid(r1: number, tid: number, sid: number): number;
+  static generate_roamer_pid(r1: number, tid: number, sid: number): number;
   /**
    * BW/BW2準拠 イベントポケモンのPID生成
    * 32bit乱数 ^ 0x10000（ID補正なし - 先頭特性無効）
@@ -818,7 +818,7 @@ export class PokemonGenerator {
    * BW/BW2準拠 バッチ生成（offsetのみ）
    *
    * # Arguments
-   * * `base_seed` - 列挙の基準Seed（初期Seed）
+   * * `base_seed` - 列挙の初期Seed
    * * `offset` - 最初の生成までの前進数（ゲーム内不定消費を含めた開始位置）
    * * `count` - 生成数（0なら空）
    * * `config` - BW準拠設定
@@ -1124,7 +1124,7 @@ export interface InitOutput {
   readonly personalityrng_distance_from: (a: number, b: bigint) => bigint;
   readonly pidcalculator_generate_base_pid: (a: number) => number;
   readonly pidcalculator_apply_id_correction: (a: number, b: number, c: number) => number;
-  readonly pidcalculator_generate_roaming_pid: (a: number, b: number, c: number) => number;
+  readonly pidcalculator_generate_roamer_pid: (a: number, b: number, c: number) => number;
   readonly pidcalculator_generate_gift_pid: (a: number, b: number) => number;
   readonly pidcalculator_generate_egg_pid: (a: number, b: number) => number;
   readonly shinychecker_is_shiny: (a: number, b: number, c: number) => number;

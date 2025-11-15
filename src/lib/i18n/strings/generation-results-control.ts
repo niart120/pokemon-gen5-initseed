@@ -13,8 +13,8 @@ enum FieldKey {
 }
 
 export const generationResultsControlTitle: LocaleText = {
-  ja: '結果フィルター',
-  en: 'Results Control',
+  ja: 'Filter',
+  en: 'Filter',
 };
 
 export const generationResultsControlFiltersHeading: LocaleText = {
@@ -23,12 +23,12 @@ export const generationResultsControlFiltersHeading: LocaleText = {
 };
 
 export const generationResultsControlResetFiltersLabel: LocaleText = {
-  ja: 'フィルターをリセット',
+  ja: 'Reset Filters',
   en: 'Reset Filters',
 };
 
 export const generationResultsControlClearResultsLabel: LocaleText = {
-  ja: '結果をクリア',
+  ja: 'Clear Results',
   en: 'Clear Results',
 };
 
@@ -54,11 +54,11 @@ export const generationResultsControlFieldLabels: LocaleMap<Record<FieldKey, str
 export const generationResultsControlStatLabels: LocaleMap<Record<StatKey, string>> = {
   ja: {
     hp: 'HP',
-    attack: 'Atk',
-    defense: 'Def',
-    specialAttack: 'SpA',
-    specialDefense: 'SpD',
-    speed: 'Spe',
+    attack: 'A',
+    defense: 'B',
+    specialAttack: 'C',
+    specialDefense: 'D',
+    speed: 'S',
   },
   en: {
     hp: 'HP',

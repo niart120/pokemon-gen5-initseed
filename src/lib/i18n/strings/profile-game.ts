@@ -25,7 +25,7 @@ export const profileGameFieldLabels: Record<ProfileGameFieldKey, LocaleText> = {
     en: 'Shiny Charm',
   },
   memoryLink: {
-    ja: 'メモリーリンク',
+    ja: 'おもいでリンク',
     en: 'Memory Link',
   },
 };

@@ -201,7 +201,7 @@ impl PokemonGenerator {
             EncounterType::StaticSymbol => Self::generate_static_symbol(seed, config),
 
             // 徘徊
-            EncounterType::Roaming => Self::generate_roaming(seed, config),
+            EncounterType::Roamer => Self::generate_roamer(seed, config),
 
             // イベント系（御三家・化石）
             EncounterType::StaticStarter
@@ -274,7 +274,7 @@ impl PokemonGenerator {
     }
 
     /// 徘徊生成
-    fn generate_roaming(seed: u64, config: &BWGenerationConfig) -> RawPokemonData {
+    fn generate_roamer(seed: u64, config: &BWGenerationConfig) -> RawPokemonData {
         let mut rng = PersonalityRNG::new(seed);
 
         // 徘徊はシンクロ無効
@@ -282,7 +282,7 @@ impl PokemonGenerator {
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
         let pid = Self::finalize_pid_with_shiny_rules(&mut rng, config, pid_base, |base| {
-            PIDCalculator::generate_roaming_pid(base, config.tid, config.sid)
+            PIDCalculator::generate_roamer_pid(base, config.tid, config.sid)
         });
 
         // 性格生成（徘徊はシンクロ無効なので通常性格のみ）
@@ -565,7 +565,7 @@ impl PokemonGenerator {
     /// BW/BW2準拠 バッチ生成（offsetのみ）
     ///
     /// # Arguments
-    /// * `base_seed` - 列挙の基準Seed（初期Seed）
+    /// * `base_seed` - 列挙の初期Seed
     /// * `offset` - 最初の生成までの前進数（ゲーム内不定消費を含めた開始位置）
     /// * `count` - 生成数（0なら空）
     /// * `config` - BW準拠設定
@@ -721,7 +721,7 @@ impl PokemonGenerator {
             EncounterType::StaticStarter => 11,
             EncounterType::StaticFossil => 12,
             EncounterType::StaticEvent => 13,
-            EncounterType::Roaming => 20,
+            EncounterType::Roamer => 20,
         }
     }
 

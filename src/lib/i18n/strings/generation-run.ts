@@ -9,8 +9,8 @@ const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
 };
 
 export const generationRunPanelTitle: LocaleText = {
-  ja: '生成実行',
-  en: 'Generation Run',
+  ja: 'Generation Control',
+  en: 'Generation Control',
 };
 
 export const generationRunControlsLabel: LocaleText = {
@@ -19,57 +19,57 @@ export const generationRunControlsLabel: LocaleText = {
 };
 
 export const generationRunProgressLabel: LocaleText = {
-  ja: '生成進捗',
+  ja: 'Generation progress',
   en: 'Generation progress',
 };
 
 export const generationRunProgressBarLabel: LocaleText = {
-  ja: '生成進捗バー',
+  ja: 'Generation progress bar',
   en: 'Generation progress bar',
 };
 
 export const generationRunStatusPrefix: LocaleText = {
-  ja: 'ステータス:',
+  ja: 'Status:',
   en: 'Status:',
 };
 
 export const generationRunAdvanceUnit: LocaleText = {
-  ja: '消費',
+  ja: 'Adv',
   en: 'adv',
 };
 
 export const generationRunButtonLabels = {
   start: {
-    ja: '開始',
-    en: 'Start',
+    ja: 'Generate',
+    en: 'Generate',
   } satisfies LocaleText,
   starting: {
-    ja: '起動中...',
-    en: 'Starting...',
+    ja: 'Generating...',
+    en: 'Generating...',
   } satisfies LocaleText,
   pause: {
-    ja: '一時停止',
+    ja: 'Pause',
     en: 'Pause',
   } satisfies LocaleText,
   resume: {
-    ja: '再開',
+    ja: 'Resume',
     en: 'Resume',
   } satisfies LocaleText,
   stop: {
-    ja: '停止',
+    ja: 'Stop',
     en: 'Stop',
   } satisfies LocaleText,
 };
 
 export const generationRunStatusLabels: LocaleMap<Record<GenerationStatus, string>> = {
   ja: {
-    idle: '待機中',
-    starting: '準備中',
-    running: '実行中',
-    paused: '一時停止中',
-    stopping: '停止処理中',
-    completed: '完了',
-    error: 'エラー',
+    idle: 'Idle',
+    starting: 'Starting',
+    running: 'Running',
+    paused: 'Paused',
+    stopping: 'Stopping',
+    completed: 'Completed',
+    error: 'Error',
   },
   en: {
     idle: 'Idle',
@@ -84,11 +84,11 @@ export const generationRunStatusLabels: LocaleMap<Record<GenerationStatus, strin
 
 export const generationRunCompletionReasonLabels: LocaleMap<Record<GenerationCompletion['reason'], string>> = {
   ja: {
-    'max-advances': '最大消費数到達',
-    'max-results': '結果件数上限到達',
-    'first-shiny': '最初の色違いで停止',
-    stopped: 'ユーザー停止',
-    error: 'エラー終了',
+    'max-advances': 'Reached max advances',
+    'max-results': 'Reached max results',
+    'first-shiny': 'Stopped at first shiny',
+    stopped: 'Stopped by user',
+    error: 'Error',
   },
   en: {
     'max-advances': 'Reached max advances',

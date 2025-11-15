@@ -2,17 +2,17 @@ import type { SupportedLocale } from '@/types/i18n';
 import { type LocaleText } from './types';
 
 export const searchParamsPanelTitle: LocaleText = {
-  ja: '検索フィルター',
-  en: 'Search Filters',
+  ja: 'Search Parameters',
+  en: 'Search Parameters',
 };
 
 export const searchParamsStartDateLabel: LocaleText = {
-  ja: '開始日',
+  ja: '開始',
   en: 'Start Date',
 };
 
 export const searchParamsEndDateLabel: LocaleText = {
-  ja: '終了日',
+  ja: '終了',
   en: 'End Date',
 };
 
@@ -27,7 +27,7 @@ export const searchParamsKeyInputLabel: LocaleText = {
 };
 
 export const searchParamsConfigureButtonLabel: LocaleText = {
-  ja: '設定',
+  ja: 'Configure',
   en: 'Configure',
 };
 
@@ -37,12 +37,12 @@ export const searchParamsDialogTitle: LocaleText = {
 };
 
 export const searchParamsResetButtonLabel: LocaleText = {
-  ja: 'すべてリセット',
-  en: 'Reset All',
+  ja: 'Reset',
+  en: 'Reset',
 };
 
 export const searchParamsApplyButtonLabel: LocaleText = {
-  ja: '適用',
+  ja: 'Apply',
   en: 'Apply',
 };
 

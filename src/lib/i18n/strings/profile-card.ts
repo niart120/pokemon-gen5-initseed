@@ -4,17 +4,17 @@ import type { SupportedLocale } from '@/types/i18n';
 type ProfileSectionKey = 'profileManagement' | 'romHardware' | 'timer0Vcount' | 'gameState';
 
 export const profileCardTitle: LocaleText = {
-  ja: 'デバイスプロファイル',
-  en: 'Device Profile',
+  ja: 'Profile',
+  en: 'Profile',
 };
 
 const profileSectionTitles: Record<ProfileSectionKey, LocaleText> = {
   profileManagement: {
-    ja: 'プロファイル管理',
+    ja: 'Profile Management',
     en: 'Profile Management',
   },
   romHardware: {
-    ja: 'ROM / ハードウェア',
+    ja: 'ROM & Hardware',
     en: 'ROM & Hardware',
   },
   timer0Vcount: {
@@ -22,7 +22,7 @@ const profileSectionTitles: Record<ProfileSectionKey, LocaleText> = {
     en: 'Timer0 / VCount',
   },
   gameState: {
-    ja: 'ゲーム状態',
+    ja: 'Game State',
     en: 'Game State',
   },
 };

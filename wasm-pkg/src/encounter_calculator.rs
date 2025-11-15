@@ -41,7 +41,7 @@ pub enum EncounterType {
     /// イベント配布 - シンクロ無効
     StaticEvent = 13,
     /// 徘徊ポケモン（ドキュメント仕様準拠）
-    Roaming = 20,
+    Roamer = 20,
 }
 
 /// 砂煙出現内容の種類
@@ -147,7 +147,7 @@ impl EncounterCalculator {
             EncounterType::StaticStarter => 0, // 御三家は常にスロット0
             EncounterType::StaticFossil => 0, // 化石は常にスロット0
             EncounterType::StaticEvent => 0,  // イベント配布は常にスロット0
-            EncounterType::Roaming => 0,      // 徘徊ポケモンは常にスロット0
+            EncounterType::Roamer => 0,      // 徘徊ポケモンは常にスロット0
         }
     }
 
@@ -241,7 +241,7 @@ impl EncounterCalculator {
                 // イベント配布：1スロット（0のみ）
                 0
             }
-            EncounterType::Roaming => {
+            EncounterType::Roamer => {
                 // 徘徊ポケモン：1スロット（0のみ）
                 0
             }
@@ -806,7 +806,7 @@ mod tests {
                         | EncounterType::StaticStarter
                         | EncounterType::StaticFossil
                         | EncounterType::StaticEvent
-                        | EncounterType::Roaming => 0,
+                        | EncounterType::Roamer => 0,
                     };
 
                     assert!(

@@ -7,7 +7,7 @@ const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
 };
 
 export const targetSeedsPanelTitle: LocaleText = {
-  ja: '目標Seed',
+  ja: 'Target Seeds',
   en: 'Target Seeds',
 };
 
@@ -17,28 +17,28 @@ export const targetSeedsAriaLabel: LocaleText = {
 };
 
 export const targetSeedsTemplateButtonLabel: LocaleText = {
-  ja: 'テンプレート',
+  ja: 'Template',
   en: 'Template',
 };
 
 export const targetSeedsImportButtonLabel: LocaleText = {
-  ja: 'インポート',
+  ja: 'Import',
   en: 'Import',
 };
 
 export const targetSeedsExportButtonLabel: LocaleText = {
-  ja: 'エクスポート',
+  ja: 'Export',
   en: 'Export',
 };
 
 export const targetSeedsClearButtonLabel: LocaleText = {
-  ja: 'クリア',
+  ja: 'Clear',
   en: 'Clear',
 };
 
 export const targetSeedsSupportsHexHint: LocaleText = {
-  ja: '0xプレフィックスの有無を問わず16進数をサポート。1行に1つのSeedを入力してください。',
-  en: 'Supports hex format with or without 0x prefix. Enter one seed per line.',
+  ja: '1行に1つのSeedを入力してください。0xプレフィックスの有無は任意です。',
+  en: 'Enter one seed per line. Supports hex format with or without 0x prefix.',
 };
 
 export const targetSeedsPlaceholderHeading: LocaleText = {
@@ -47,7 +47,7 @@ export const targetSeedsPlaceholderHeading: LocaleText = {
 };
 
 export const targetSeedsValidSeedsLabel: LocaleText = {
-  ja: '有効なSeed',
+  ja: 'Valid Seeds',
   en: 'Valid Seeds',
 };
 

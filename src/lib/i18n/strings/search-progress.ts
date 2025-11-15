@@ -7,7 +7,7 @@ const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
 };
 
 export const searchProgressTitle: LocaleText = {
-  ja: '検索進捗',
+  ja: 'Search Progress',
   en: 'Search Progress',
 };
 
@@ -17,72 +17,72 @@ export const searchProgressReadyMessage: LocaleText = {
 };
 
 export const searchProgressProgressLabel: LocaleText = {
-  ja: '進捗',
+  ja: 'Progress',
   en: 'Progress',
 };
 
 export const searchProgressMatchesLabel: LocaleText = {
-  ja: '一致数',
+  ja: 'Matches',
   en: 'Matches',
 };
 
 export const searchProgressTimeElapsedLabel: LocaleText = {
-  ja: '経過時間',
+  ja: 'Elapsed',
   en: 'Elapsed',
 };
 
 export const searchProgressTimeRemainingLabel: LocaleText = {
-  ja: '残り時間',
+  ja: 'Remaining',
   en: 'Remaining',
 };
 
 export const searchProgressTimeSpeedLabel: LocaleText = {
-  ja: '速度',
+  ja: 'Speed',
   en: 'Speed',
 };
 
 export const searchProgressWorkerBadgeLabel: LocaleText = {
-  ja: 'ワーカー',
+  ja: 'Workers',
   en: 'Workers',
 };
 
 const searchProgressWorkerSummaryTemplate: LocaleText = {
-  ja: 'ワーカー: 稼働 {active} / 完了 {completed}',
+  ja: 'Workers: {active} active, {completed} completed',
   en: 'Workers: {active} active, {completed} completed',
 };
 
 const searchProgressWorkerTotalTemplate: LocaleText = {
-  ja: '総数: {total}',
+  ja: 'Total: {total}',
   en: 'Total: {total}',
 };
 
 export const searchProgressWorkerListLabel: LocaleText = {
-  ja: '個別ワーカー進捗',
+  ja: 'Individual Worker Progress',
   en: 'Individual Worker Progress',
 };
 
 export const searchProgressWorkerToggleLabel: LocaleText = {
-  ja: 'ワーカー詳細の表示切替',
+  ja: 'Toggle worker details',
   en: 'Toggle worker details',
 };
 
 export const searchProgressWorkerOverviewLabel: LocaleText = {
-  ja: 'ワーカー概要',
+  ja: 'Worker Overview',
   en: 'Worker Overview',
 };
 
 const searchProgressWorkerOverviewSuffix: LocaleText = {
-  ja: '（{count} ワーカー）',
+  ja: ' ({count} workers)',
   en: ' ({count} workers)',
 };
 
 const searchProgressWorkerOverviewMatchesTemplate: LocaleText = {
-  ja: '総一致数: {matches}',
+  ja: 'Total Matches: {matches}',
   en: 'Total Matches: {matches}',
 };
 
 const searchProgressWorkerFooterTemplate: LocaleText = {
-  ja: '稼働: {running} / 完了: {completed} / 合計一致数: {matches}',
+  ja: 'Running: {running}, Completed: {completed}, Total Matches: {matches}',
   en: 'Running: {running}, Completed: {completed}, Total Matches: {matches}',
 };
 
@@ -93,11 +93,11 @@ const searchProgressWorkerCompletionTemplate: LocaleText = {
 
 export const searchProgressWorkerStatusLabels: LocaleMap<Record<'initializing' | 'running' | 'paused' | 'completed' | 'error', string>> = {
   ja: {
-    initializing: '初期化',
-    running: '実行中',
-    paused: '一時停止',
-    completed: '完了',
-    error: 'エラー',
+    initializing: 'Init',
+    running: 'Run',
+    paused: 'Pause',
+    completed: 'Done',
+    error: 'Error',
   },
   en: {
     initializing: 'Init',

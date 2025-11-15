@@ -12,22 +12,22 @@ export const profileRenameDialogDescription: LocaleText = {
 };
 
 export const profileRenameFieldLabel: LocaleText = {
-  ja: 'プロファイル名',
+  ja: 'Profile Name',
   en: 'Profile Name',
 };
 
 export const profileRenameFieldPlaceholder: LocaleText = {
-  ja: 'マイプロファイル',
+  ja: 'My Profile',
   en: 'My profile',
 };
 
 export const profileRenameCancelButton: LocaleText = {
-  ja: 'キャンセル',
+  ja: 'Cancel',
   en: 'Cancel',
 };
 
 export const profileRenameSubmitButton: LocaleText = {
-  ja: '名前を変更',
+  ja: 'Rename',
   en: 'Rename',
 };
 

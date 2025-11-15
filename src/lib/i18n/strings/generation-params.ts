@@ -3,7 +3,7 @@ import type { LocaleMap, LocaleText } from './types';
 type AbilityModeValue = 'none' | 'sync' | 'compound';
 
 export const generationParamsPanelTitle: LocaleText = {
-  ja: '生成パラメータ',
+  ja: 'Generation Parameters',
   en: 'Generation Parameters',
 };
 
@@ -23,7 +23,7 @@ export const generationParamsSectionTitles = {
 };
 
 export const generationParamsBaseSeedLabel: LocaleText = {
-  ja: '基準Seed',
+  ja: '初期Seed',
   en: 'Base Seed',
 };
 

@@ -7,12 +7,12 @@ const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
 };
 
 export const searchControlPanelTitle: LocaleText = {
-  ja: '検索制御',
+  ja: 'Search Control',
   en: 'Search Control',
 };
 
 export const searchControlWakeLockLabel: LocaleText = {
-  ja: '画面をオンのまま維持',
+  ja: 'Keep Screen On',
   en: 'Keep Screen On',
 };
 
@@ -23,11 +23,11 @@ export const searchControlExecutionModeAriaLabel: LocaleText = {
 
 export const searchControlExecutionModeLabels = {
   cpuParallel: {
-    ja: 'CPU 並列',
+    ja: 'CPU Parallel',
     en: 'CPU Parallel',
   } satisfies LocaleText,
   cpuSingle: {
-    ja: 'CPU 単体',
+    ja: 'CPU Single',
     en: 'CPU Single',
   } satisfies LocaleText,
   gpu: {
@@ -49,41 +49,41 @@ export const searchControlExecutionModeHints = {
 
 export const searchControlButtonLabels = {
   start: {
-    ja: '検索を開始',
-    en: 'Start Search',
+    ja: 'Search',
+    en: 'Search',
   } satisfies LocaleText,
   pause: {
-    ja: '一時停止',
+    ja: 'Pause',
     en: 'Pause',
   } satisfies LocaleText,
   resume: {
-    ja: '再開',
+    ja: 'Resume',
     en: 'Resume',
   } satisfies LocaleText,
   stop: {
-    ja: '停止',
+    ja: 'Stop',
     en: 'Stop',
   } satisfies LocaleText,
 } as const;
 
 export const searchControlWorkerThreadsLabel: LocaleText = {
-  ja: 'ワーカースレッド',
+  ja: 'Worker Threads',
   en: 'Worker Threads',
 };
 
 export const searchControlWorkerMinLabel: LocaleText = {
-  ja: '1ワーカー',
+  ja: '1 worker',
   en: '1 worker',
 };
 
 export function formatSearchControlCpuCoresLabel(cores: number, locale: SupportedLocale): string {
   const formatted = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]).format(cores);
-  return locale === 'ja' ? `CPUコア: ${formatted}` : `CPU cores: ${formatted}`;
+  return `CPU cores: ${formatted}`;
 }
 
 export function formatSearchControlMaxWorkersLabel(maxWorkers: number, locale: SupportedLocale): string {
   const formatted = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]).format(maxWorkers);
-  return locale === 'ja' ? `最大 ${formatted}` : `${formatted} max`;
+  return `${formatted} max`;
 }
 
 export function formatSearchControlMissingTargetsAlert(locale: SupportedLocale): string {

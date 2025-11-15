@@ -3,19 +3,19 @@ import type { SupportedLocale } from '@/types/i18n';
 
 export const profileRomLabels = {
   version: {
-    ja: 'バージョン',
+    ja: 'Version',
     en: 'Version',
   } satisfies LocaleText,
   region: {
-    ja: 'リージョン',
+    ja: 'Region',
     en: 'Region',
   } satisfies LocaleText,
   hardware: {
-    ja: 'ハードウェア',
+    ja: 'Hardware',
     en: 'Hardware',
   } satisfies LocaleText,
   macAddress: {
-    ja: 'MACアドレス',
+    ja: 'MAC Address',
     en: 'MAC Address',
   } satisfies LocaleText,
 } as const;

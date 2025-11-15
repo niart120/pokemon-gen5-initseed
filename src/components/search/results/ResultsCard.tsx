@@ -90,7 +90,7 @@ export function ResultsCard({
               <TableHeader>
                 <TableRow className="h-9">
                   <TableHead className="w-12 px-1 text-center">{resolveLocaleValue(searchResultsHeaders.action, locale)}</TableHead>
-                  <TableHead className="px-2 font-mono text-[11px] whitespace-nowrap min-w-[120px]">
+                  <TableHead className="px-2 cursor-pointer select-none">
                     {resolveLocaleValue(searchResultsHeaders.lcgSeed, locale)}
                   </TableHead>
                   <TableHead 

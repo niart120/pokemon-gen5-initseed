@@ -49,7 +49,7 @@
 1. **PIDCalculator実装（pid-shiny-checker.md）**
    - generate_wild_pid(): 野生エンカウント（r1[n] ^ 0x00010000）
    - generate_static_pid(): 固定シンボル・ギフト（r1[n]）
-   - generate_roaming_pid(): 徘徊ポケモン（r1[n]）
+   - generate_roamer_pid(): 徘徊ポケモン（r1[n]）
 2. **ShinyChecker実装**
    - is_shiny(): 色違い判定（(TID ^ SID ^ PID_high ^ PID_low) < 8）
    - get_shiny_value(): 色違い値計算
