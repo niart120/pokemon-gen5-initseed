@@ -1,11 +1,10 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MagnifyingGlass, Info, Gear, Sparkle } from '@phosphor-icons/react';
+import { MagnifyingGlass, Info, Sparkle } from '@phosphor-icons/react';
 import { GenerationPanel } from './GenerationPanel';
 import { useAppStore } from '@/store/app-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { SearchPanel } from './SearchPanel';
-import { OptionPanel } from './OptionPanel';
 import { HelpPanel } from './HelpPanel';
 
 export function MainContent() {
@@ -28,10 +27,6 @@ export function MainContent() {
               <Sparkle size={16} />
               Generation
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2">
-              <Gear size={16} />
-              Option
-            </TabsTrigger>
             <TabsTrigger value="help" className="flex items-center gap-2">
               <Info size={16} />
               Help
@@ -44,10 +39,6 @@ export function MainContent() {
 
           <TabsContent value="generation" className="flex-1 min-h-0 overflow-hidden">
             <GenerationPanel />
-          </TabsContent>
-
-          <TabsContent value="history" className="flex-1 min-h-0 overflow-hidden">
-            <OptionPanel />
           </TabsContent>
 
           <TabsContent value="help" className="flex-1 min-h-0 overflow-hidden">
