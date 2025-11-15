@@ -55,7 +55,7 @@ export function ProfileManagementSection({
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1">
-        <Label htmlFor="profile-select" className="text-xs">Profile </Label> 
+        <Label htmlFor="profile-select" className="text-xs">Profile</Label>
         <Select value={activeProfileId} onValueChange={onSelectProfile}>
           <SelectTrigger id="profile-select" className="h-9">
             <SelectValue placeholder="プロファイルを選択" />
@@ -81,7 +81,8 @@ export function ProfileManagementSection({
         onOpenChange={handleRenameOpenChange}
         onRename={onProfileNameChange}
       />
-      {dirty && <Badge variant="secondary">not saved</Badge>}
+      
+      {dirty && <Badge variant="secondary">未保存</Badge>}
     </div>
   );
 }

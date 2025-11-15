@@ -1,7 +1,7 @@
 import React from 'react';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 interface GameStateSectionProps {
   tid: string;
@@ -62,41 +62,58 @@ export function GameStateSection({
           className="h-9"
         />
       </div>
-      <div className="flex items-center gap-2">
-        <Checkbox
-          id="profile-new-game"
-          checked={newGame}
-          onCheckedChange={(value) => onNewGameToggle(Boolean(value))}
-        />
-        <Label htmlFor="profile-new-game" className="text-xs">New Game</Label>
-      </div>
-      <div className="flex items-center gap-2">
-        <Checkbox
-          id="profile-with-save"
-          checked={withSave}
-          onCheckedChange={(value) => onWithSaveToggle(Boolean(value))}
-          disabled={withSaveDisabled}
-        />
-        <Label htmlFor="profile-with-save" className="text-xs">With Save</Label>
-      </div>
-      <div className="flex items-center gap-2">
-        <Checkbox
-          id="profile-shiny"
-          checked={shinyCharm}
-          onCheckedChange={(value) => onShinyCharmToggle(Boolean(value))}
-          disabled={shinyCharmDisabled}
-        />
-        <Label htmlFor="profile-shiny" className="text-xs">Shiny Charm</Label>
-      </div>
-      <div className="flex items-center gap-2">
-        <Checkbox
-          id="profile-memory-link"
-          checked={memoryLink}
-          onCheckedChange={(value) => onMemoryLinkToggle(Boolean(value))}
-          disabled={memoryLinkDisabled}
-        />
-        <Label htmlFor="profile-memory-link" className="text-xs">Memory Link</Label>
-      </div>
+      <ToggleField
+        id="profile-new-game"
+        label="New Game"
+        checked={newGame}
+        onChange={onNewGameToggle}
+      />
+      <ToggleField
+        id="profile-with-save"
+        label="With Save"
+        checked={withSave}
+        onChange={onWithSaveToggle}
+        disabled={withSaveDisabled}
+      />
+      <ToggleField
+        id="profile-shiny"
+        label="Shiny Charm"
+        checked={shinyCharm}
+        onChange={onShinyCharmToggle}
+        disabled={shinyCharmDisabled}
+      />
+      <ToggleField
+        id="profile-memory-link"
+        label="Memory Link"
+        checked={memoryLink}
+        onChange={onMemoryLinkToggle}
+        disabled={memoryLinkDisabled}
+      />
+    </div>
+  );
+}
+
+interface ToggleFieldProps {
+  id: string;
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+}
+
+function ToggleField({ id, label, checked, onChange, disabled = false }: ToggleFieldProps) {
+  const labelClasses = `text-xs${disabled ? ' text-muted-foreground' : ''}`;
+
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <Label htmlFor={id} className={labelClasses}>{label}</Label>
+      <Switch
+        id={id}
+        checked={checked}
+        onCheckedChange={(value) => onChange(Boolean(value))}
+        disabled={disabled}
+        aria-label={label}
+      />
     </div>
   );
 }

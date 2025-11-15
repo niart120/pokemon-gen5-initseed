@@ -1,4 +1,5 @@
 import React from 'react';
+import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -11,6 +12,7 @@ interface Timer0VCountSectionProps {
   timer0Max: string;
   vcountMin: string;
   vcountMax: string;
+  onAutoToggle: (checked: boolean) => void;
   onTimerHexChange: (field: TimerRangeField, value: string) => void;
   onTimerHexBlur: (field: TimerRangeField) => void;
   onVCountHexChange: (field: VCountRangeField, value: string) => void;
@@ -23,6 +25,7 @@ export function Timer0VCountSection({
   timer0Max,
   vcountMin,
   vcountMax,
+  onAutoToggle,
   onTimerHexChange,
   onTimerHexBlur,
   onVCountHexChange,
@@ -76,6 +79,15 @@ export function Timer0VCountSection({
           disabled={timer0Auto}
           className="h-9 w-full min-w-0 px-2 font-mono text-xs"
           placeholder="0x0"
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <Label htmlFor="profile-timer-auto" className="text-xs">Auto</Label>
+        <Switch
+          id="profile-timer-auto"
+          checked={timer0Auto}
+          onCheckedChange={(value) => onAutoToggle(Boolean(value))}
+          aria-label="Toggle timer auto settings"
         />
       </div>
     </div>

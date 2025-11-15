@@ -7,7 +7,6 @@ import type { Hardware, ROMRegion, ROMVersion } from '@/types/rom';
 import { useProfileCardForm } from '@/components/profile/hooks/useProfileCardForm';
 import { CollapsedSection } from '@/components/profile/sections/CollapsedSection';
 import { RomHardwareSection } from '@/components/profile/sections/RomHardwareSection';
-import { Timer0VCountAutoToggle } from '@/components/profile/sections/Timer0VCountAutoToggle';
 import { Timer0VCountSection } from '@/components/profile/sections/Timer0VCountSection';
 import { GameStateSection } from '@/components/profile/sections/GameStateSection';
 import { ProfileManagementSection } from '@/components/profile/sections/ProfileManagementSection';
@@ -73,13 +72,6 @@ export function ProfileCard() {
     />
   );
 
-  const timerAutoToggle = (
-    <Timer0VCountAutoToggle
-      checked={timer.timer0Auto}
-      onChange={timer.onAutoToggle}
-    />
-  );
-
   const timerSection = (
     <Timer0VCountSection
       timer0Auto={timer.timer0Auto}
@@ -87,21 +79,12 @@ export function ProfileCard() {
       timer0Max={timer.timer0Max}
       vcountMin={timer.vcountMin}
       vcountMax={timer.vcountMax}
+      onAutoToggle={timer.onAutoToggle}
       onTimerHexChange={timer.onTimerHexChange}
       onTimerHexBlur={timer.onTimerHexBlur}
       onVCountHexChange={timer.onVCountHexChange}
       onVCountHexBlur={timer.onVCountHexBlur}
     />
-  );
-
-  const stackedTimerContent = (
-    <>
-      <div className="flex items-center justify-between">
-        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Timer0 / VCount</div>
-        {timerAutoToggle}
-      </div>
-      {timerSection}
-    </>
   );
 
   const gameSection = (
@@ -163,7 +146,7 @@ export function ProfileCard() {
                 isOpen={sectionOpen.timer}
                 onToggle={toggleSection}
               >
-                {stackedTimerContent}
+                {timerSection}
               </CollapsedSection>
               <CollapsedSection
                 sectionKey="game"
@@ -186,10 +169,7 @@ export function ProfileCard() {
                 {romSection}
               </section>
               <section className="space-y-3" aria-labelledby="profile-timer">
-                <div className="flex items-center justify-between">
-                  <h4 id="profile-timer" className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">Timer0 / VCount</h4>
-                  {timerAutoToggle}
-                </div>
+                <h4 id="profile-timer" className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">Timer0 / VCount</h4>
                 {timerSection}
               </section>
               <section className="space-y-3" aria-labelledby="profile-game">
