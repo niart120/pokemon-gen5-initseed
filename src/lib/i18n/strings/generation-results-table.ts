@@ -1,5 +1,5 @@
 import type { SupportedLocale } from '@/types/i18n';
-import { resolveLocaleValue, type LocaleMap, type LocaleText } from './types';
+import { resolveLocaleValue, type LocaleText } from './types';
 
 const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
   ja: 'ja-JP',

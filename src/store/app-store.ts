@@ -495,7 +495,6 @@ export const useAppStore = create<AppStore>()(
       // UI state
       activeTab: 'search',
       setActiveTab: (tab) => {
-        console.log('[debug] setActiveTab called', tab);
         set({ activeTab: tab });
       },
       

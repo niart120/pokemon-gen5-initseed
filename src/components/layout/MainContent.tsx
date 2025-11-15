@@ -45,6 +45,14 @@ export function MainContent() {
           <TabsContent value="generation" className="flex-1 min-h-0 overflow-hidden">
             <GenerationPanel />
           </TabsContent>
+
+          <TabsContent value="history" className="flex-1 min-h-0 overflow-hidden">
+            <OptionPanel />
+          </TabsContent>
+
+          <TabsContent value="help" className="flex-1 min-h-0 overflow-hidden">
+            <HelpPanel />
+          </TabsContent>
         </Tabs>
       </div>
     </main>

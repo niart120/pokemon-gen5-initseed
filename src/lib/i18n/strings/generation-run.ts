@@ -143,8 +143,11 @@ export function formatGenerationRunAdvancesDisplay(
 
 export function formatGenerationRunPercentDisplay(pct: number, locale: SupportedLocale): string {
   const value = Number.isFinite(pct) ? pct : 0;
-  const rounded = value.toFixed(1);
-  return `${rounded}%`;
+  const formatter = new Intl.NumberFormat(BCP47_BY_LOCALE[locale], {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  return `${formatter.format(value)}%`;
 }
 
 export function formatGenerationRunScreenReaderSummary(
