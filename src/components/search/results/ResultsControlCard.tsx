@@ -1,4 +1,4 @@
-import { Funnel } from '@phosphor-icons/react';
+import { Funnel, Trash } from '@phosphor-icons/react';
 import { Button } from '../../ui/button';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Input } from '../../ui/input';
@@ -65,7 +65,9 @@ export function ResultsControlCard({
             size="sm" 
             onClick={clearSearchResults}
             disabled={searchResults.length === 0}
+            className="gap-1"
           >
+            <Trash size={14} />
             {clearLabel}
           </Button>
         </div>
