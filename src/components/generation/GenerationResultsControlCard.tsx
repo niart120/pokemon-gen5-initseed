@@ -1,18 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { Card } from '@/components/ui/card';
-import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
+import { PanelCard } from '@/components/ui/panel-card';
 import { useAppStore } from '@/store/app-store';
-import { exportGenerationResults } from '@/lib/export/generation-exporter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { FunnelSimple, DownloadSimple, Trash, ArrowsDownUp } from '@phosphor-icons/react';
+import { FunnelSimple, Trash, ArrowsDownUp } from '@phosphor-icons/react';
 import { getGeneratedSpeciesById } from '@/data/species/generated';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
+import { cn } from '@/lib/utils/cn';
+import { GenerationExportButton } from './GenerationExportButton';
 
 // === Precomputed species options (Gen5: 1..649) ===
 // 1回だけ構築し再利用。検索で使う正規化済み文字列を保持。
@@ -106,41 +106,69 @@ export const GenerationResultsControlCard: React.FC = () => {
     const max = advMax === '' ? undefined : Number(advMax);
     applyFilters({ advanceRange: (min==null && max==null)? undefined : { min, max } });
   };
-  const onExport = (format: 'csv'|'json'|'txt') => {
-    const blob = new Blob([exportGenerationResults(results, { format })], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `generation-results.${format}`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
   const { isStack } = useResponsiveLayout();
   return (
-    <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full min-h-64'}`} aria-labelledby="gen-results-control-title" role="region">
-      <StandardCardHeader icon={<FunnelSimple size={20} className="opacity-80" />} title={<span id="gen-results-control-title">Results Control</span>} />
-      <StandardCardContent noScroll={isStack}>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Export and utility buttons">
-          <Button size="sm" variant="outline" disabled={!results.length} onClick={()=>onExport('csv')}><DownloadSimple size={14}/>CSV</Button>
-          <Button size="sm" variant="outline" disabled={!results.length} onClick={()=>onExport('json')}><DownloadSimple size={14}/>JSON</Button>
-          <Button size="sm" variant="outline" disabled={!results.length} onClick={()=>onExport('txt')}><DownloadSimple size={14}/>TXT</Button>
-          <Button size="sm" variant="destructive" disabled={!results.length} onClick={clearResults}><Trash size={14}/>Clear</Button>
-          <Button size="sm" variant="ghost" onClick={resetGenerationFilters}>Reset</Button>
+    <PanelCard
+      icon={<FunnelSimple size={20} className="opacity-80" />}
+      title={<span id="gen-results-control-title">Results Control</span>}
+      headerActions={
+        <div className="flex flex-wrap items-center gap-2">
+          <GenerationExportButton results={results} disabled={!results.length} />
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={!results.length}
+            onClick={clearResults}
+            className="gap-1"
+          >
+            <Trash size={14} />
+            Clear Results
+          </Button>
+        </div>
+      }
+      className={cn('flex flex-col', isStack ? 'w-full' : 'h-full min-h-64')}
+      fullHeight={!isStack}
+      scrollMode={isStack ? 'parent' : 'content'}
+      contentClassName="space-y-4 text-xs"
+      aria-labelledby="gen-results-control-title"
+      role="region"
+    >
+      <Separator />
+      <form onSubmit={e=> e.preventDefault()} className="flex flex-col gap-4" aria-describedby="results-filter-hint">
+        <div className="flex justify-end">
+          <Button type="button" size="sm" variant="ghost" onClick={resetGenerationFilters}>
+            Reset Filters
+          </Button>
         </div>
         <Separator />
-        <form onSubmit={e=> e.preventDefault()} className="flex flex-col gap-4 text-xs" aria-describedby="results-filter-hint">
-          {/* Primary filters & sorting */}
-          <fieldset className="space-y-3" aria-labelledby="gf-primary-label" role="group">
+        {/* Primary filters & sorting */}
+        <fieldset className="space-y-3" aria-labelledby="gf-primary-label" role="group">
             <div id="gf-primary-label" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">Primary</div>
-            <div className="flex flex-wrap gap-4 items-center">
+            <div
+              className={cn(
+                'flex flex-wrap gap-4 items-center',
+                isStack && 'flex-col items-stretch gap-3'
+              )}
+            >
               <div className="flex items-center gap-2">
                 <Checkbox id="shiny-only" aria-labelledby="lbl-shiny-only" checked={filters.shinyOnly} onCheckedChange={v=>applyFilters({ shinyOnly: Boolean(v) })} />
                 <Label id="lbl-shiny-only" htmlFor="shiny-only" className="text-xs">Shiny Only</Label>
               </div>
-              <div className="flex items-center gap-2" aria-label="Sort controls">
+              <div
+                className={cn(
+                  'flex items-center gap-2',
+                  isStack && 'flex-col items-stretch gap-2 w-full'
+                )}
+                aria-label="Sort controls"
+              >
                 <span id="sort-field-label" className="sr-only">Sort field</span>
                 <Select value={filters.sortField} onValueChange={v=>applyFilters({ sortField: v as typeof filters.sortField })}>
-                  <SelectTrigger id="sort-field" size="sm" className="w-[110px]" aria-labelledby="sort-field sort-field-label">
+                  <SelectTrigger
+                    id="sort-field"
+                    size="sm"
+                    className={isStack ? 'w-full' : 'w-[110px]'}
+                    aria-labelledby="sort-field sort-field-label"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -153,10 +181,19 @@ export const GenerationResultsControlCard: React.FC = () => {
                     <SelectItem value="level">Level*</SelectItem>
                   </SelectContent>
                 </Select>
-                <ArrowsDownUp size={14} className="opacity-50" aria-hidden="true" />
+                <ArrowsDownUp
+                  size={14}
+                  className={cn('opacity-50', isStack && 'hidden')}
+                  aria-hidden="true"
+                />
                 <span id="sort-order-label" className="sr-only">Sort order</span>
                 <Select value={filters.sortOrder} onValueChange={v=>applyFilters({ sortOrder: v as typeof filters.sortOrder })}>
-                  <SelectTrigger id="sort-order" size="sm" className="w-[80px]" aria-labelledby="sort-order sort-order-label">
+                  <SelectTrigger
+                    id="sort-order"
+                    size="sm"
+                    className={isStack ? 'w-full' : 'w-[80px]'}
+                    aria-labelledby="sort-order sort-order-label"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -167,108 +204,199 @@ export const GenerationResultsControlCard: React.FC = () => {
               </div>
               <div className="flex items-center gap-1" aria-label="Advance range filter">
                 <Label htmlFor="adv-min" className="sr-only">Advance minimum</Label>
-                <Input id="adv-min" value={advMin} onChange={e=>setAdvMin(e.target.value)} placeholder="min" className="h-8 w-20" inputMode="numeric" aria-describedby="adv-range-hint" />
+                <Input
+                  id="adv-min"
+                  value={advMin}
+                  onChange={e=>setAdvMin(e.target.value)}
+                  placeholder="min"
+                  className="h-8 w-20"
+                  inputMode="numeric"
+                  aria-describedby="adv-range-hint"
+                />
                 <Label htmlFor="adv-max" className="sr-only">Advance maximum</Label>
-                <Input id="adv-max" value={advMax} onChange={e=>setAdvMax(e.target.value)} placeholder="max" className="h-8 w-20" inputMode="numeric" aria-describedby="adv-range-hint" />
-                <Button type="button" size="sm" variant="secondary" onClick={onApplyAdvRange}>Set</Button>
+                <Input
+                  id="adv-max"
+                  value={advMax}
+                  onChange={e=>setAdvMax(e.target.value)}
+                  placeholder="max"
+                  className="h-8 w-20"
+                  inputMode="numeric"
+                  aria-describedby="adv-range-hint"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={onApplyAdvRange}
+                >
+                  Set
+                </Button>
                 <span id="adv-range-hint" className="sr-only">Set minimum and/or maximum advance indices</span>
               </div>
             </div>
           </fieldset>
-          <Separator />
-          {/* Species / Ability / Gender / Level filters */}
-          <fieldset className="space-y-3" aria-labelledby="gf-species-label" role="group">
-            <div id="gf-species-label" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">Pokemon Filters</div>
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-2" aria-label="Species filter selector">
-                <div className="flex items-center gap-2">
-                  <Label id="lbl-filter-species" className="text-[11px]" htmlFor="filter-species">Species</Label>
-                  <Select value="" onValueChange={v=> { const id = Number(v); if (id>0) addSpecies(id); }}>
-                    <SelectTrigger id="filter-species" className="h-8 w-44" aria-labelledby="lbl-filter-species filter-species">
-                      <SelectValue placeholder="Add species" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-72">
-                      {speciesSelectItems.map(item => (
-                        <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedSpeciesIds.length>0 && (
-                    <Button type="button" size="sm" variant="secondary" onClick={()=> applyFilters({ speciesIds: undefined, abilityIndices: undefined, genders: undefined })}>Clear</Button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto border rounded p-1 bg-muted/30" aria-label="Selected species list">
-                  {selectedSpeciesIds.length === 0 && <span className="text-[10px] text-muted-foreground">none</span>}
-                  {selectedSpeciesIds.map(id => {
-                    const s = getGeneratedSpeciesById(id);
-                    const displayName = locale === 'ja' ? (s?.names.ja || String(id)) : (s?.names.en || String(id));
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={()=>removeSpecies(id)}
-                        className="text-[10px] px-1 py-[2px] rounded bg-secondary hover:bg-secondary/70"
-                        aria-label={`Remove ${displayName}`}
-                      >
-                        {displayName} ×
-                      </button>
-                    );
-                  })}
-                </div>
+        <Separator />
+        {/* Species / Ability / Gender / Level filters */}
+        <fieldset className="space-y-3" aria-labelledby="gf-species-label" role="group">
+          <div id="gf-species-label" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">Pokemon Filters</div>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2" aria-label="Species filter selector">
+              <div
+                className={cn(
+                  'flex items-center gap-2',
+                  isStack && 'flex-col items-stretch gap-2'
+                )}
+              >
+                <Label id="lbl-filter-species" className="text-[11px]" htmlFor="filter-species">Species</Label>
+                <Select value="" onValueChange={v=> { const id = Number(v); if (id>0) addSpecies(id); }}>
+                  <SelectTrigger
+                    id="filter-species"
+                    className={cn('h-8', isStack ? 'w-full' : 'w-44')}
+                    aria-labelledby="lbl-filter-species filter-species"
+                  >
+                    <SelectValue placeholder="Add species" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {speciesSelectItems.map(item => (
+                      <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedSpeciesIds.length>0 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={()=> applyFilters({ speciesIds: undefined, abilityIndices: undefined, genders: undefined })}
+                    className={cn(isStack && 'w-full')}
+                  >
+                    Clear
+                  </Button>
+                )}
               </div>
-              {/* Ability & Gender shown only when species selected */}
-              {selectedSpeciesIds.length>0 && (
-                <div className="flex flex-wrap gap-4">
-                  <div className="flex items-center gap-2" aria-label="Ability indices filter">
-                    {availableAbilityIndices.map(idx => (
-                      <label key={idx} className="flex items-center gap-1 text-[11px] cursor-pointer">
-                        <Checkbox checked={Boolean(filters.abilityIndices?.includes(idx))} onCheckedChange={()=>toggleAbilityIndex(idx)} />
-                        <span>{idx===0?'通常1': idx===1?'通常2':'隠れ'}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-2" aria-label="Gender filter">
-                    {genderOptions.map(g => (
-                      <label key={g} className="flex items-center gap-1 text-[11px] cursor-pointer">
-                        <Checkbox checked={Boolean(filters.genders?.includes(g))} onCheckedChange={()=>toggleGender(g)} />
-                        <span>{g==='N'? '性別不明':'性別'+g}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Level range always visible */}
-              <div className="flex items-center gap-1" aria-label="Level range filter">
-                <Label htmlFor="lvl-min" className="sr-only">Level minimum</Label>
-                <Input id="lvl-min" value={lvlMin} onChange={e=>setLvlMin(e.target.value)} placeholder="Lv min" className="h-8 w-20" inputMode="numeric" />
-                <Label htmlFor="lvl-max" className="sr-only">Level maximum</Label>
-                <Input id="lvl-max" value={lvlMax} onChange={e=>setLvlMax(e.target.value)} placeholder="Lv max" className="h-8 w-20" inputMode="numeric" />
-                <Button type="button" size="sm" variant="secondary" onClick={applyLevelRange}>Set</Button>
+              <div
+                className="flex flex-wrap gap-1 max-h-20 overflow-y-auto border rounded p-1 bg-muted/30"
+                aria-label="Selected species list"
+              >
+                {selectedSpeciesIds.length === 0 && <span className="text-[10px] text-muted-foreground">none</span>}
+                {selectedSpeciesIds.map(id => {
+                  const s = getGeneratedSpeciesById(id);
+                  const displayName = locale === 'ja' ? (s?.names.ja || String(id)) : (s?.names.en || String(id));
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={()=>removeSpecies(id)}
+                      className="text-[10px] px-1 py-[2px] rounded bg-secondary hover:bg-secondary/70"
+                      aria-label={`Remove ${displayName}`}
+                    >
+                      {displayName} ×
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          </fieldset>
-          <Separator />
-          {/* Secondary filters */}
-            <fieldset className="space-y-3" aria-labelledby="gf-secondary-label" role="group">
-              <div id="gf-secondary-label" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">Secondary</div>
-              <div className="flex flex-wrap gap-6 items-center">
-                <div className="flex items-center gap-2" aria-label="Nature ID list filter">
-                  <Label htmlFor="nature-input" className="sr-only">Nature IDs (comma separated)</Label>
-                  <Input id="nature-input" value={natureInput} onChange={e=>setNatureInput(e.target.value)} placeholder="1,2,6" className="h-8 w-40" aria-describedby="nature-hint" />
-                  <Button type="button" size="sm" variant="secondary" onClick={onApplyNature}>Apply</Button>
-                  <span id="nature-hint" className="sr-only">Enter nature IDs 0 to 24 separated by commas</span>
+            {/* Ability & Gender shown only when species selected */}
+            {selectedSpeciesIds.length>0 && (
+              <div className={cn('flex flex-wrap gap-4', isStack && 'flex-col items-stretch gap-2')}>
+                <div className="flex items-center gap-2" aria-label="Ability indices filter">
+                  {availableAbilityIndices.map(idx => (
+                    <label key={idx} className="flex items-center gap-1 text-[11px] cursor-pointer">
+                      <Checkbox checked={Boolean(filters.abilityIndices?.includes(idx))} onCheckedChange={()=>toggleAbilityIndex(idx)} />
+                      <span>{idx===0?'通常1': idx===1?'通常2':'隠れ'}</span>
+                    </label>
+                  ))}
                 </div>
-                <div className="flex items-center gap-2" aria-label="Shiny type list filter">
-                  <Label htmlFor="shiny-types-input" className="sr-only">Shiny types (comma separated)</Label>
-                  <Input id="shiny-types-input" value={shinyTypesInput} onChange={e=>setShinyTypesInput(e.target.value)} placeholder="1,2" className="h-8 w-28" aria-describedby="shiny-types-hint" />
-                  <Button type="button" size="sm" variant="secondary" onClick={onApplyShinyTypes}>Apply</Button>
-                  <span id="shiny-types-hint" className="sr-only">Enter shiny type codes 0 normal 1 square 2 star separated by commas</span>
+                <div className="flex items-center gap-2" aria-label="Gender filter">
+                  {genderOptions.map(g => (
+                    <label key={g} className="flex items-center gap-1 text-[11px] cursor-pointer">
+                      <Checkbox checked={Boolean(filters.genders?.includes(g))} onCheckedChange={()=>toggleGender(g)} />
+                      <span>{g==='N'? '性別不明':'性別'+g}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
-            </fieldset>
-  </form>
-  <div id="results-filter-hint" className="sr-only" aria-live="polite">Results filtering controls configured.</div>
-      </StandardCardContent>
-    </Card>
+            )}
+            {/* Level range always visible */}
+            <div className="flex items-center gap-1" aria-label="Level range filter">
+              <Label htmlFor="lvl-min" className="sr-only">Level minimum</Label>
+              <Input
+                id="lvl-min"
+                value={lvlMin}
+                onChange={e=>setLvlMin(e.target.value)}
+                placeholder="Lv min"
+                className="h-8 w-20"
+                inputMode="numeric"
+              />
+              <Label htmlFor="lvl-max" className="sr-only">Level maximum</Label>
+              <Input
+                id="lvl-max"
+                value={lvlMax}
+                onChange={e=>setLvlMax(e.target.value)}
+                placeholder="Lv max"
+                className="h-8 w-20"
+                inputMode="numeric"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={applyLevelRange}
+              >
+                Set
+              </Button>
+            </div>
+          </div>
+        </fieldset>
+        <Separator />
+        {/* Secondary filters */}
+        <fieldset className="space-y-3" aria-labelledby="gf-secondary-label" role="group">
+          <div id="gf-secondary-label" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">Secondary</div>
+          <div className="flex flex-wrap gap-6 items-center">
+            <div className="flex items-center gap-2" aria-label="Nature ID list filter">
+              <Label htmlFor="nature-input" className="sr-only">Nature IDs (comma separated)</Label>
+              <Input
+                id="nature-input"
+                value={natureInput}
+                onChange={e=>setNatureInput(e.target.value)}
+                placeholder="1,2,6"
+                className="h-8 w-40"
+                aria-describedby="nature-hint"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={onApplyNature}
+              >
+                Apply
+              </Button>
+              <span id="nature-hint" className="sr-only">Enter nature IDs 0 to 24 separated by commas</span>
+            </div>
+            <div className="flex items-center gap-2" aria-label="Shiny type list filter">
+              <Label htmlFor="shiny-types-input" className="sr-only">Shiny types (comma separated)</Label>
+              <Input
+                id="shiny-types-input"
+                value={shinyTypesInput}
+                onChange={e=>setShinyTypesInput(e.target.value)}
+                placeholder="1,2"
+                className="h-8 w-28"
+                aria-describedby="shiny-types-hint"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={onApplyShinyTypes}
+              >
+                Apply
+              </Button>
+              <span id="shiny-types-hint" className="sr-only">Enter shiny type codes 0 normal 1 square 2 star separated by commas</span>
+            </div>
+          </div>
+        </fieldset>
+        <div id="results-filter-hint" className="sr-only" aria-live="polite">Results filtering controls configured.</div>
+      </form>
+    </PanelCard>
   );
 };
