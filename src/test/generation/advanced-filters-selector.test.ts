@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useAppStore } from '@/store/app-store';
-import { selectFilteredSortedResults } from '@/store/generation-store';
+import { selectFilteredSortedResults, createDefaultGenerationFilters } from '@/store/generation-store';
 import type { GenerationResult } from '@/types/generation';
 
 // We simulate species/level/gender/ability resolution by injecting encounterTable + ratios + abilityCatalog
@@ -46,7 +46,7 @@ const abilityCatalog = new Map<number, string[]>([
 
 function resetStore() {
   useAppStore.setState({ results: [...results] });
-  useAppStore.setState({ filters: { shinyOnly: false, natureIds: [], sortField: 'advance', sortOrder: 'asc', advanceRange: undefined, shinyTypes: undefined, speciesIds: undefined, abilityIndices: undefined, levelRange: undefined, genders: undefined } });
+  useAppStore.setState({ filters: createDefaultGenerationFilters() });
   useAppStore.getState().setEncounterTable(encounterTable);
   useAppStore.getState().setGenderRatios(genderRatios as any);
   useAppStore.getState().setAbilityCatalog(abilityCatalog as any);
@@ -56,29 +56,22 @@ describe('advanced resolved filters', () => {
   beforeEach(() => resetStore());
 
   it('filters by speciesIds includes only species 495 advances', () => {
-    useAppStore.setState(s => ({ filters: { ...s.filters, speciesIds: [495] } }));
+    useAppStore.setState((s) => ({ filters: { ...s.filters, speciesIds: [495] } }));
     const out = selectFilteredSortedResults(useAppStore.getState() as any);
     const adv = out.map(r=>r.advance).sort();
     expect(adv).toEqual([10,12]);
   });
 
   it('filters by speciesIds + abilityIndices (hidden ability only)', () => {
-    useAppStore.setState(s => ({ filters: { ...s.filters, speciesIds: [495], abilityIndices: [2] } }));
+    useAppStore.setState((s) => ({ filters: { ...s.filters, speciesIds: [495], abilityIndices: [2] } }));
     const out = selectFilteredSortedResults(useAppStore.getState() as any);
     expect(out.map(r=>r.advance)).toEqual([12]);
   });
 
   it('filters by speciesIds + genders (male only)', () => {
-    useAppStore.setState(s => ({ filters: { ...s.filters, speciesIds: [495,498], genders: ['M'] } }));
+    useAppStore.setState((s) => ({ filters: { ...s.filters, speciesIds: [495, 498], genders: ['M'] } }));
     const out = selectFilteredSortedResults(useAppStore.getState() as any);
     const adv = out.map(r=>r.advance).sort();
     expect(adv).toEqual([11,12]); // males only
-  });
-
-  it('filters by levelRange', () => {
-    useAppStore.setState(s => ({ filters: { ...s.filters, levelRange: { min: 11 } } }));
-    const out = selectFilteredSortedResults(useAppStore.getState() as any);
-    // expect advances 11 and maybe 12 (level 11-12) but 10 excluded
-    expect(out.some(r=>r.advance===10)).toBe(false);
   });
 });

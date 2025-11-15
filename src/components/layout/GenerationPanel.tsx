@@ -50,15 +50,16 @@ export const GenerationPanel: React.FC = () => {
 
   // デスクトップ: 2カラム (左: 制御+パラメータ 固定幅clamp / 右: 結果エリア)
   return (
-    <div className={`flex flex-col ${sizes.gap} h-full min-h-0 min-w-fit overflow-hidden`}>
+    <div className={`flex flex-col ${sizes.gap} max-w-full h-full min-h-0 min-w-fit overflow-hidden`}>
       <div className="flex-none">
         <ProfileCard />
       </div>
-      <div className={`flex ${sizes.gap} flex-1 min-h-0 min-w-fit overflow-hidden`}>
+      <div className={`flex ${sizes.gap} max-w-full flex-1 min-h-0 min-w-fit overflow-hidden`}>
         {/* Left Column */}
         <div
-          className={`flex flex-col ${sizes.gap} min-h-0 overflow-y-auto`}
+          className={`flex-1 flex flex-col ${sizes.gap} min-w-0 overflow-y-auto`}
           style={{
+            minHeight: 0,
             width: LEFT_COLUMN_WIDTH_CLAMP,
             flex: `0 0 ${LEFT_COLUMN_WIDTH_CLAMP}`
           }}
@@ -71,7 +72,7 @@ export const GenerationPanel: React.FC = () => {
           </div>
         </div>
         {/* Right Column */}
-        <div className={`flex flex-col flex-1 min-w-0 min-h-0 overflow-y-auto ${sizes.gap}`}>
+        <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
           <div className="flex-none">
             <GenerationResultsControlCard />
           </div>

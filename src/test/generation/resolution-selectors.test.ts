@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { selectResolvedResults, selectUiReadyResults } from '@/store/generation-store';
+import { selectResolvedResults, selectUiReadyResults, createDefaultGenerationFilters } from '@/store/generation-store';
 import type { GenerationSlice } from '@/store/generation-store';
 import type { GenerationResult } from '@/types/generation';
 
@@ -21,7 +21,7 @@ function makeState(results: GenerationResult[]): Partial<GenerationSlice> & { re
     results,
     lastCompletion: null,
     error: null,
-    filters: { shinyOnly: false, natureIds: [], sortField: 'advance', sortOrder: 'asc', advanceRange: undefined, shinyTypes: undefined },
+    filters: createDefaultGenerationFilters(),
     metrics: {},
     internalFlags: { receivedAnyBatch: false },
     encounterTable: dummyEncounterTable as any,

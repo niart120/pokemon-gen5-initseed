@@ -7,8 +7,8 @@ import type { DeviceProfile, DeviceProfileDraft } from '../types/profile';
 import { createDefaultDeviceProfile, createDeviceProfile, applyDeviceProfileDraft } from '../types/profile';
 import { DEMO_TARGET_SEEDS } from '../data/default-seeds';
 
-import type { GenerationSlice } from './generation-store';
-import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS } from './generation-store';
+import type { GenerationSlice, GenerationFilters } from './generation-store';
+import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS, createDefaultGenerationFilters } from './generation-store';
 import { DEFAULT_LOCALE } from '@/types/i18n';
 
 export type SearchExecutionMode = 'gpu' | 'cpu-parallel' | 'cpu-single';
@@ -212,6 +212,49 @@ function mergeDraftParams(restored: Partial<GenerationSlice['draftParams']> | un
   return merged;
 }
 
+function normalizeRestoredFilters(input: unknown): GenerationFilters {
+  const defaults = createDefaultGenerationFilters();
+  if (!input || typeof input !== 'object') {
+    return defaults;
+  }
+
+  const candidate = input as Partial<GenerationFilters> & Record<string, unknown>;
+  if (typeof candidate.shinyMode === 'string') {
+    return {
+      sortField: typeof candidate.sortField === 'string' ? candidate.sortField : defaults.sortField,
+      sortOrder: candidate.sortOrder === 'desc' ? 'desc' : 'asc',
+      shinyMode: candidate.shinyMode === 'shiny' || candidate.shinyMode === 'non-shiny' ? candidate.shinyMode : 'all',
+      speciesIds: Array.isArray(candidate.speciesIds) ? [...candidate.speciesIds] : [],
+      natureIds: Array.isArray(candidate.natureIds) ? [...candidate.natureIds] : [],
+      abilityIndices: Array.isArray(candidate.abilityIndices) ? [...candidate.abilityIndices] as (0 | 1 | 2)[] : [],
+      genders: Array.isArray(candidate.genders) ? [...candidate.genders] as ('M' | 'F' | 'N')[] : [],
+      levelRange: candidate.levelRange ? { ...candidate.levelRange } : undefined,
+      statRanges: candidate.statRanges ? { ...candidate.statRanges } : {},
+    };
+  }
+
+  const legacy = input as Record<string, unknown>;
+  const shinyOnly = Boolean(legacy.shinyOnly);
+  let shinyMode: 'all' | 'shiny' | 'non-shiny' = shinyOnly ? 'shiny' : 'all';
+  const shinyTypes = Array.isArray(legacy.shinyTypes) ? legacy.shinyTypes as number[] : [];
+  if (shinyTypes.length === 1) {
+    if (shinyTypes[0] === 0) shinyMode = 'non-shiny';
+    else shinyMode = 'shiny';
+  }
+
+  return {
+    sortField: typeof legacy.sortField === 'string' ? legacy.sortField as GenerationFilters['sortField'] : defaults.sortField,
+    sortOrder: legacy.sortOrder === 'desc' ? 'desc' : 'asc',
+    shinyMode,
+    speciesIds: Array.isArray(legacy.speciesIds) ? [...legacy.speciesIds as number[]] : [],
+    natureIds: Array.isArray(legacy.natureIds) ? [...legacy.natureIds as number[]] : [],
+    abilityIndices: Array.isArray(legacy.abilityIndices) ? [...legacy.abilityIndices as (0 | 1 | 2)[]] : [],
+    genders: Array.isArray(legacy.genders) ? [...legacy.genders as ('M' | 'F' | 'N')[]] : [],
+    levelRange: undefined,
+    statRanges: {},
+  };
+}
+
 function reviveGenerationMinimal(obj: unknown): Partial<GenerationSlice> {
   if (!obj || typeof obj !== 'object') return {};
   const o = obj as Partial<PersistedGenerationMinimal>;
@@ -224,7 +267,7 @@ function reviveGenerationMinimal(obj: unknown): Partial<GenerationSlice> {
     status: normalizedStatus,
     lastCompletion: o.lastCompletion ?? null,
     error: o.error ?? null,
-    filters: o.filters ?? { shinyOnly: false, natureIds: [] },
+    filters: normalizeRestoredFilters(o.filters),
     metrics: normalizedStatus === 'idle' ? {} : (o.metrics ?? {}),
     internalFlags: normalizedStatus === 'idle'
       ? { receivedAnyBatch: false }
@@ -451,7 +494,10 @@ export const useAppStore = create<AppStore>()(
 
       // UI state
       activeTab: 'search',
-      setActiveTab: (tab) => set({ activeTab: tab }),
+      setActiveTab: (tab) => {
+        console.log('[debug] setActiveTab called', tab);
+        set({ activeTab: tab });
+      },
       
       // Wake Lock settings for preventing screen sleep on mobile devices
       wakeLockEnabled: false,

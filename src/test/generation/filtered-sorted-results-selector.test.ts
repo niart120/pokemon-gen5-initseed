@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useAppStore } from '@/store/app-store';
-import { selectFilteredSortedResults } from '@/store/generation-store';
+import { selectFilteredSortedResults, createDefaultGenerationFilters } from '@/store/generation-store';
 
 // サンプル GenerationResult データ
 const baseResults = [
@@ -12,7 +12,7 @@ const baseResults = [
 
 function reset() {
   useAppStore.setState({ results: [...baseResults] });
-  useAppStore.setState({ filters: { shinyOnly: false, natureIds: [], sortField: 'advance', sortOrder: 'asc', advanceRange: undefined, shinyTypes: undefined } });
+  useAppStore.setState({ filters: createDefaultGenerationFilters() });
 }
 
 describe('selectFilteredSortedResults', () => {
@@ -23,16 +23,16 @@ describe('selectFilteredSortedResults', () => {
     expect(out.map(r => r.advance)).toEqual([1,2,5,8]);
   });
 
-  it('shinyOnly filters non-shiny', () => {
-    useAppStore.setState(s => ({ filters: { ...s.filters, shinyOnly: true } }));
+  it('shinyMode filters shiny only', () => {
+    useAppStore.setState((s) => ({ filters: { ...s.filters, shinyMode: 'shiny' } }));
     const out = selectFilteredSortedResults(useAppStore.getState() as any);
     expect(out.map(r => r.advance)).toEqual([2,8]);
   });
 
-  it('shinyTypes subset filter', () => {
-    useAppStore.setState(s => ({ filters: { ...s.filters, shinyTypes: [1] } }));
+  it('shinyMode filters non-shiny only', () => {
+    useAppStore.setState((s) => ({ filters: { ...s.filters, shinyMode: 'non-shiny' } }));
     const out = selectFilteredSortedResults(useAppStore.getState() as any);
-    expect(out.map(r => r.shiny_type)).toEqual([1]);
+    expect(out.map(r => r.advance)).toEqual([1,5]);
   });
 
   it('natureIds filter + pid desc sort', () => {
@@ -40,12 +40,6 @@ describe('selectFilteredSortedResults', () => {
     const out = selectFilteredSortedResults(useAppStore.getState() as any);
     expect(out.length).toBe(3);
     expect(out.map(r => r.pid >>> 0)).toEqual([0xBBBB0003, 0xAAAA0001, 0x00000002]);
-  });
-
-  it('advanceRange bounds', () => {
-    useAppStore.setState(s => ({ filters: { ...s.filters, advanceRange: { min: 2, max: 5 } } }));
-    const out = selectFilteredSortedResults(useAppStore.getState() as any);
-    expect(out.map(r => r.advance)).toEqual([2,5]);
   });
 
   it('memoization stable reference', () => {
