@@ -1,8 +1,8 @@
 import type { LocaleText } from './types';
 
 export const anyOptionLabel: LocaleText = {
-  ja: '-',
-  en: 'Any',
+  ja: '',
+  en: '',
 };
 
 export const localeOptionLabels: LocaleText = {
