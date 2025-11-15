@@ -169,7 +169,7 @@ export function formatResultCount(count: number, locale: SupportedLocale): strin
   return `${value} result${count === 1 ? '' : 's'}`;
 }
 
-export function formatSearchDuration(durationMs: number, locale: SupportedLocale): string {
+export function formatSearchDuration(durationMs: number, _locale: SupportedLocale): string {
   const seconds = durationMs / 1000;
   const formatted = seconds.toFixed(1);
   return `Search completed in ${formatted}s`;
