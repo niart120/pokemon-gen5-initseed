@@ -20,6 +20,11 @@ export interface ResolvedTimePlan {
   firstCombinationDate: Date;
 }
 
+interface DailyWindowBounds {
+  startSecond: number;
+  endSecondExclusive: number;
+}
+
 export function resolveTimePlan(conditions: SearchConditions): ResolvedTimePlan {
   const timeRange = conditions.timeRange;
   if (!timeRange) {
@@ -120,6 +125,115 @@ export function getDateFromTimePlan(plan: WebGpuTimePlan, timeIndex: number): Da
   return new Date(totalMs);
 }
 
+export function countAllowedSecondsInInterval(
+  plan: WebGpuTimePlan,
+  startTimestampMs: number,
+  endTimestampMsExclusive: number
+): number {
+  if (endTimestampMsExclusive <= startTimestampMs) {
+    return 0;
+  }
+
+  const bounds = getDailyWindowBounds(plan);
+  let cursor = startTimestampMs;
+  let total = 0;
+
+  while (cursor < endTimestampMsExclusive) {
+    const { dayStartMs, dayEndMs } = getDayBounds(plan, cursor);
+    const segmentEnd = Math.min(dayEndMs, endTimestampMsExclusive);
+
+    const segmentStartSecond = Math.max(0, Math.floor((cursor - dayStartMs) / MS_PER_SECOND));
+    const segmentEndSecondExclusive = Math.max(
+      segmentStartSecond,
+      Math.min(SECONDS_PER_DAY, Math.ceil((segmentEnd - dayStartMs) / MS_PER_SECOND))
+    );
+
+    const overlapStart = Math.max(segmentStartSecond, bounds.startSecond);
+    const overlapEndExclusive = Math.min(segmentEndSecondExclusive, bounds.endSecondExclusive);
+
+    if (overlapStart < overlapEndExclusive) {
+      total += overlapEndExclusive - overlapStart;
+    }
+
+    cursor = segmentEnd;
+  }
+
+  return total;
+}
+
+export function advanceByAllowedSeconds(
+  plan: WebGpuTimePlan,
+  startTimestampMs: number,
+  endTimestampMsExclusive: number,
+  targetAllowedSeconds: number
+): {
+  endTimestampMs: number;
+  countedSeconds: number;
+  lastAllowedTimestampMs?: number;
+} {
+  if (endTimestampMsExclusive <= startTimestampMs) {
+    return { endTimestampMs: endTimestampMsExclusive, countedSeconds: 0 };
+  }
+
+  const desired = Math.max(0, targetAllowedSeconds);
+  const bounds = getDailyWindowBounds(plan);
+  let cursor = startTimestampMs;
+  let counted = 0;
+  let lastAllowed: number | undefined;
+
+  while (cursor < endTimestampMsExclusive) {
+    const { dayStartMs, dayEndMs } = getDayBounds(plan, cursor);
+    const segmentEnd = Math.min(dayEndMs, endTimestampMsExclusive);
+
+    const segmentStartSecond = Math.max(0, Math.floor((cursor - dayStartMs) / MS_PER_SECOND));
+    const segmentEndSecondExclusive = Math.max(
+      segmentStartSecond,
+      Math.min(SECONDS_PER_DAY, Math.ceil((segmentEnd - dayStartMs) / MS_PER_SECOND))
+    );
+
+    const overlapStartSecond = Math.max(segmentStartSecond, bounds.startSecond);
+    const overlapEndSecondExclusive = Math.min(segmentEndSecondExclusive, bounds.endSecondExclusive);
+
+    if (overlapStartSecond < overlapEndSecondExclusive) {
+      const overlapStartMs = dayStartMs + overlapStartSecond * MS_PER_SECOND;
+      const available = overlapEndSecondExclusive - overlapStartSecond;
+      const needed = desired > 0 ? Math.min(available, desired - counted) : available;
+
+      if (needed > 0) {
+        counted += needed;
+        lastAllowed = overlapStartMs + (needed - 1) * MS_PER_SECOND;
+        const consumedEndMs = overlapStartMs + needed * MS_PER_SECOND;
+
+        if (desired > 0 && counted >= desired) {
+          return {
+            endTimestampMs: consumedEndMs,
+            countedSeconds: counted,
+            lastAllowedTimestampMs: lastAllowed,
+          };
+        }
+
+        cursor = Math.max(consumedEndMs, segmentEnd);
+        continue;
+      }
+    }
+
+    cursor = segmentEnd;
+  }
+
+  return {
+    endTimestampMs: cursor,
+    countedSeconds: counted,
+    lastAllowedTimestampMs: lastAllowed,
+  };
+}
+
+export function isDateWithinTimePlan(date: Date, plan: WebGpuTimePlan): boolean {
+  const secondOfDay =
+    date.getHours() * SECONDS_PER_HOUR + date.getMinutes() * SECONDS_PER_MINUTE + date.getSeconds();
+  const bounds = getDailyWindowBounds(plan);
+  return secondOfDay >= bounds.startSecond && secondOfDay < bounds.endSecondExclusive;
+}
+
 function validateFieldRange(
   label: string,
   range: TimeFieldRange | undefined,
@@ -144,5 +258,25 @@ function validateFieldRange(
     start,
     end,
     count: end - start + 1,
+  };
+}
+
+function getDailyWindowBounds(plan: WebGpuTimePlan): DailyWindowBounds {
+  const startSecond =
+    plan.hourRangeStart * SECONDS_PER_HOUR +
+    plan.minuteRangeStart * SECONDS_PER_MINUTE +
+    plan.secondRangeStart;
+
+  const endSecondExclusive = Math.min(startSecond + plan.combosPerDay, SECONDS_PER_DAY);
+  return { startSecond, endSecondExclusive };
+}
+
+function getDayBounds(plan: WebGpuTimePlan, timestampMs: number): { dayStartMs: number; dayEndMs: number } {
+  const relativeMs = timestampMs - plan.startDayTimestampMs;
+  const dayIndex = Math.floor(relativeMs / MS_PER_DAY);
+  const dayStartMs = plan.startDayTimestampMs + dayIndex * MS_PER_DAY;
+  return {
+    dayStartMs,
+    dayEndMs: dayStartMs + MS_PER_DAY,
   };
 }
