@@ -114,6 +114,51 @@ export function formatSearchControlStartErrorAlert(error: string, locale: Suppor
     : `Failed to start search: ${error}`;
 }
 
+const searchControlProfileSyncDialogTexts = {
+  title: {
+    ja: 'プロフィールを保存して検索を開始',
+    en: 'Save profile before search',
+  } satisfies LocaleText,
+  description: {
+    ja: 'ProfilePanel の変更を検索条件に反映するため、保存してから検索を開始します。',
+    en: 'Save the pending ProfilePanel changes so they are applied to the search conditions.',
+  } satisfies LocaleText,
+  cancel: {
+    ja: 'キャンセル',
+    en: 'Cancel',
+  } satisfies LocaleText,
+  confirm: {
+    ja: '保存して検索',
+    en: 'Save and search',
+  } satisfies LocaleText,
+  validationError: {
+    ja: 'プロフィールの入力内容に不備があります。修正してから再度検索を実行してください。',
+    en: 'Profile inputs contain validation errors. Please fix them before starting the search.',
+  } satisfies LocaleText,
+  missingProfile: {
+    ja: '有効なプロフィールが選択されていません。',
+    en: 'No active profile is selected.',
+  } satisfies LocaleText,
+} as const;
+
+export function resolveSearchControlProfileSyncDialog(locale: SupportedLocale): {
+  title: string;
+  description: string;
+  cancel: string;
+  confirm: string;
+  validationError: string;
+  missingProfile: string;
+} {
+  return {
+    title: resolveLocaleValue(searchControlProfileSyncDialogTexts.title, locale),
+    description: resolveLocaleValue(searchControlProfileSyncDialogTexts.description, locale),
+    cancel: resolveLocaleValue(searchControlProfileSyncDialogTexts.cancel, locale),
+    confirm: resolveLocaleValue(searchControlProfileSyncDialogTexts.confirm, locale),
+    validationError: resolveLocaleValue(searchControlProfileSyncDialogTexts.validationError, locale),
+    missingProfile: resolveLocaleValue(searchControlProfileSyncDialogTexts.missingProfile, locale),
+  };
+}
+
 export function resolveSearchControlButtonLabel(
   key: keyof typeof searchControlButtonLabels,
   locale: SupportedLocale,

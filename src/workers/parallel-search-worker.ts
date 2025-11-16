@@ -49,6 +49,14 @@ let calculator: SeedCalculator;
 
 const TARGET_OPERATIONS_PER_SUB_CHUNK = 1_000_000;
 
+function sanitizeTargetSeeds(payload: ParallelWorkerRequest['targetSeeds']): number[] {
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+
+  return payload.filter((seed): seed is number => typeof seed === 'number' && Number.isFinite(seed));
+}
+
 /**
  * MACアドレスを Uint8Array(6) に変換
  * - number[] や string[]("0x12"/"12"/"12") を受け付ける
@@ -145,6 +153,9 @@ async function processChunk(
 
   } catch (error) {
     console.error(`❌ Worker ${searchState.workerId}: Processing error:`, error);
+    if (error instanceof Error && error.stack) {
+      console.error(`Worker ${searchState.workerId} stack trace:`, error.stack);
+    }
     postMessage({
       type: 'ERROR',
       workerId: searchState.workerId,
@@ -483,6 +494,18 @@ self.onmessage = async (event: MessageEvent<ParallelWorkerRequest>) => {
         return;
       }
 
+      const normalizedTargetSeeds = sanitizeTargetSeeds(targetSeeds);
+      if (normalizedTargetSeeds.length === 0) {
+        const errorMessage = 'No valid target seeds were provided to the parallel worker.';
+        console.error(`❌ Worker ${searchState.workerId}: ${errorMessage}`, { targetSeeds });
+        postMessage({
+          type: 'ERROR',
+          workerId: searchState.workerId,
+          error: errorMessage
+        } as ParallelWorkerResponse);
+        return;
+      }
+
       searchState.chunk = chunk;
       searchState.isRunning = true;
       searchState.shouldStop = false;
@@ -493,7 +516,7 @@ self.onmessage = async (event: MessageEvent<ParallelWorkerRequest>) => {
 
       try {
         await initializeCalculator();
-        await processChunk(conditions, targetSeeds);
+        await processChunk(conditions, normalizedTargetSeeds);
       } catch (error) {
         postMessage({
           type: 'ERROR',

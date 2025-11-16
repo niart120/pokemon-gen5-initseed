@@ -191,20 +191,29 @@ export class SearchWorkerManager {
     callbacks: SearchCallbacks
   ): boolean {
     this.callbacks = callbacks;
+
+    const normalizedTargetSeeds = this.normalizeTargetSeeds(targetSeeds);
+    if (normalizedTargetSeeds.length === 0) {
+      const errorMessage = 'Target seed list is empty or invalid. Please configure at least one seed before starting the search.';
+      console.error(errorMessage, { targetSeeds });
+      this.callbacks.onError(errorMessage);
+      return false;
+    }
+
     this.lastRequest = {
       conditions,
-      targetSeeds: [...targetSeeds],
+      targetSeeds: [...normalizedTargetSeeds],
     };
 
     if (shouldUseWebGpuSearch()) {
-      const gpuStarted = this.tryStartGpuSearch(conditions, targetSeeds);
+      const gpuStarted = this.tryStartGpuSearch(conditions, normalizedTargetSeeds);
       if (gpuStarted) {
         return true;
       }
       console.warn('WebGPU search could not be started. Falling back to CPU mode.');
     }
 
-    return this.startCpuSearchInternal(conditions, targetSeeds, callbacks);
+    return this.startCpuSearchInternal(conditions, normalizedTargetSeeds, callbacks);
   }
 
   /**
@@ -353,6 +362,14 @@ export class SearchWorkerManager {
     this.callbacks = null;
     this.activeMode = 'cpu-parallel';
     this.lastRequest = null;
+  }
+
+  private normalizeTargetSeeds(seeds: number[] | undefined | null): number[] {
+    if (!Array.isArray(seeds)) {
+      return [];
+    }
+
+    return seeds.filter((seed) => typeof seed === 'number' && Number.isFinite(seed));
   }
 }
 

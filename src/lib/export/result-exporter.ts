@@ -62,7 +62,7 @@ export class ResultExporter {
     results.forEach(result => {
       const row = [
         `0x${result.seed.toString(16).padStart(8, '0')}`,
-        result.datetime.toISOString(),
+        this.formatLocalDateTime(result.datetime),
         `0x${result.timer0.toString(16).padStart(4, '0')}`,
         `0x${result.vcount.toString(16).padStart(2, '0')}`,
         result.romVersion,
@@ -120,7 +120,7 @@ export class ResultExporter {
         } = {
           seed: `0x${result.seed.toString(16).padStart(8, '0')}`,
           seedDecimal: result.seed,
-          dateTime: result.datetime.toISOString(),
+          dateTime: this.formatLocalDateTime(result.datetime),
           timer0: `0x${result.timer0.toString(16).padStart(4, '0')}`,
           timer0Decimal: result.timer0,
           vcount: `0x${result.vcount.toString(16).padStart(2, '0')}`,
@@ -209,6 +209,25 @@ export class ResultExporter {
     }
 
     return '';
+  }
+
+  private static formatLocalDateTime(date: Date): string {
+    const year = date.getFullYear();
+    const month = ResultExporter.padNumber(date.getMonth() + 1);
+    const day = ResultExporter.padNumber(date.getDate());
+    const hour = ResultExporter.padNumber(date.getHours());
+    const minute = ResultExporter.padNumber(date.getMinutes());
+    const second = ResultExporter.padNumber(date.getSeconds());
+    const offsetMinutes = date.getTimezoneOffset();
+    const offsetSign = offsetMinutes <= 0 ? '+' : '-';
+    const absOffset = Math.abs(offsetMinutes);
+    const offsetHours = ResultExporter.padNumber(Math.floor(absOffset / 60));
+    const offsetRemainder = ResultExporter.padNumber(absOffset % 60);
+    return `${year}-${month}-${day} ${hour}:${minute}:${second} GMT${offsetSign}${offsetHours}:${offsetRemainder}`;
+  }
+
+  private static padNumber(value: number): string {
+    return value.toString().padStart(2, '0');
   }
 
   /**
