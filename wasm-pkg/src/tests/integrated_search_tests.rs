@@ -445,8 +445,8 @@ mod native_tests {
     const DOWN: u32 = 1 << 7;
     const R: u32 = 1 << 8;
     const L: u32 = 1 << 9;
-    const X: u32 = 1 << 10;
-    const Y: u32 = 1 << 11;
+    // const X: u32 = 1 << 10;
+    // const Y: u32 = 1 << 11;
 
     /// XOR 0x2FFFする前の生のキーコードをXOR後のキーコードに変換
     fn raw_to_xored(raw: u32) -> u32 {
