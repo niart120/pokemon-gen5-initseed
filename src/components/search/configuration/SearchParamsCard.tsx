@@ -18,10 +18,14 @@ import {
   searchParamsConfigureButtonLabel,
   searchParamsDialogTitle,
   searchParamsEndDateLabel,
+  searchParamsHourLabel,
   searchParamsKeyInputLabel,
+  searchParamsMinuteLabel,
   searchParamsPanelTitle,
   searchParamsResetButtonLabel,
+  searchParamsSecondLabel,
   searchParamsStartDateLabel,
+  searchParamsTimeRangeLabel,
 } from '@/lib/i18n/strings/search-params';
 
 export function SearchParamsCard() {
@@ -114,6 +118,67 @@ export function SearchParamsCard() {
 
   const keyJoiner = locale === 'ja' ? '、' : ', ';
 
+  const timeFieldConfigs = [
+    {
+      key: 'hour' as const,
+      label: resolveLocaleValue(searchParamsHourLabel, locale),
+      min: 0,
+      max: 23,
+    },
+    {
+      key: 'minute' as const,
+      label: resolveLocaleValue(searchParamsMinuteLabel, locale),
+      min: 0,
+      max: 59,
+    },
+    {
+      key: 'second' as const,
+      label: resolveLocaleValue(searchParamsSecondLabel, locale),
+      min: 0,
+      max: 59,
+    },
+  ];
+
+  const handleTimeRangeChange = (
+    field: (typeof timeFieldConfigs)[number]['key'],
+    edge: 'start' | 'end',
+    rawValue: string,
+  ) => {
+    if (!rawValue) return;
+    const numeric = Number.parseInt(rawValue, 10);
+    if (Number.isNaN(numeric)) return;
+
+    const { min, max } = timeFieldConfigs.find((config) => config.key === field)!;
+    const clamped = Math.min(Math.max(numeric, min), max);
+
+    const currentRange = searchConditions.timeRange[field];
+    const nextRange = {
+      ...currentRange,
+      [edge]: clamped,
+    };
+
+    if (nextRange.start > nextRange.end) {
+      if (edge === 'start') {
+        nextRange.end = clamped;
+      } else {
+        nextRange.start = clamped;
+      }
+    }
+
+    setSearchConditions({
+      timeRange: {
+        ...searchConditions.timeRange,
+        [field]: nextRange,
+      },
+    });
+  };
+
+  const timeInputClassName = 'h-8 w-11 px-0 text-center text-sm';
+
+  const handleTimeInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    event.currentTarget.select();
+  };
+
   return (
     <>
       <PanelCard
@@ -153,6 +218,46 @@ export function SearchParamsCard() {
           </div>
           <div className="text-xs text-muted-foreground">
             {formatSearchParamsCurrentRange(startDate, endDate, locale)}
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">
+              {resolveLocaleValue(searchParamsTimeRangeLabel, locale)}
+            </Label>
+            <div className="flex items-center gap-0 overflow-x-auto">
+              {timeFieldConfigs.map((config) => {
+                const range = searchConditions.timeRange[config.key];
+                return (
+                  <div key={config.key} className="flex items-center gap-0 whitespace-nowrap">
+                    <span className="text-xs text-muted-foreground w-8 text-right">
+                      {config.label}
+                    </span>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min={config.min}
+                      max={config.max}
+                      value={range.start}
+                      aria-label={`${config.label} ${locale === 'ja' ? '最小' : 'min'}`}
+                      className={timeInputClassName}
+                      onFocus={handleTimeInputFocus}
+                      onChange={(event) => handleTimeRangeChange(config.key, 'start', event.target.value)}
+                    />
+                    <span className="text-xs text-muted-foreground">~</span>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min={config.min}
+                      max={config.max}
+                      value={range.end}
+                      aria-label={`${config.label} ${locale === 'ja' ? '最大' : 'max'}`}
+                      className={timeInputClassName}
+                      onFocus={handleTimeInputFocus}
+                      onChange={(event) => handleTimeRangeChange(config.key, 'end', event.target.value)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
           <Separator />
           <div className="space-y-3">
