@@ -157,18 +157,36 @@ export function SearchParamsCard() {
       [edge]: clamped,
     };
 
-    if (nextRange.start > nextRange.end) {
-      if (edge === 'start') {
-        nextRange.end = clamped;
-      } else {
-        nextRange.start = clamped;
-      }
-    }
-
     setSearchConditions({
       timeRange: {
         ...searchConditions.timeRange,
         [field]: nextRange,
+      },
+    });
+  };
+
+  const handleTimeRangeBlur = (
+    field: (typeof timeFieldConfigs)[number]['key'],
+    edge: 'start' | 'end',
+  ) => {
+    const range = searchConditions.timeRange[field];
+    if (range.start <= range.end) return;
+
+    const correctedRange =
+      edge === 'start'
+        ? {
+            ...range,
+            end: range.start,
+          }
+        : {
+            ...range,
+            start: range.end,
+          };
+
+    setSearchConditions({
+      timeRange: {
+        ...searchConditions.timeRange,
+        [field]: correctedRange,
       },
     });
   };
@@ -241,6 +259,7 @@ export function SearchParamsCard() {
                       className={timeInputClassName}
                       onFocus={handleTimeInputFocus}
                       onChange={(event) => handleTimeRangeChange(config.key, 'start', event.target.value)}
+                      onBlur={() => handleTimeRangeBlur(config.key, 'start')}
                     />
                     <span className="text-xs text-muted-foreground">~</span>
                     <Input
@@ -253,6 +272,7 @@ export function SearchParamsCard() {
                       className={timeInputClassName}
                       onFocus={handleTimeInputFocus}
                       onChange={(event) => handleTimeRangeChange(config.key, 'end', event.target.value)}
+                      onBlur={() => handleTimeRangeBlur(config.key, 'end')}
                     />
                   </div>
                 );
