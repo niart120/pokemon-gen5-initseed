@@ -3,7 +3,7 @@
  * 並列検索の調整・監視・結果統合を担当
  */
 
-import { ChunkCalculator } from './chunk-calculator';
+import { calculateOptimalChunks } from './chunk-calculator';
 import type { SearchConditions, InitialSeedResult } from '../../types/search';
 import type { AggregatedProgress, WorkerChunk, WorkerProgress, ParallelWorkerRequest, ParallelWorkerResponse } from '../../types/parallel';
 import type { MultiWorkerSearchCallbacks, TimerState } from '../../types/callbacks';
@@ -111,7 +111,7 @@ export class MultiWorkerSearchManager {
 
     try {
       // チャンク分割計算
-      const chunks = ChunkCalculator.calculateOptimalChunks(
+      const chunks = calculateOptimalChunks(
         conditions, 
         this.maxWorkers
       );

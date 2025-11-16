@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MultiWorkerSearchManager, SearchCallbacks } from '../lib/search/multi-worker-manager';
-import { ChunkCalculator } from '../lib/search/chunk-calculator';
+import { calculateOptimalChunks } from '../lib/search/chunk-calculator';
 import type { SearchConditions } from '../types/search';
 import { initWasmForTesting } from './wasm-loader';
 
@@ -79,10 +79,10 @@ describe('Phase 5: 並列処理テスト', () => {
       expect(manager).toBeDefined();
     });
 
-    it('ChunkCalculatorが正しく時刻範囲を分割できる', () => {
+    it('calculateOptimalChunksが正しく時刻範囲を分割できる', () => {
       const conditions = createTestConditions({ hours: 2 });
       
-      const chunks = ChunkCalculator.calculateOptimalChunks(conditions, 4);
+      const chunks = calculateOptimalChunks(conditions, 4);
       
       expect(chunks).toBeDefined();
       expect(chunks.length).toBeGreaterThan(0);
@@ -95,17 +95,6 @@ describe('Phase 5: 並列処理テスト', () => {
         expect(chunk.endDateTime).toBeInstanceOf(Date);
         expect(chunk.startDateTime.getTime()).toBeLessThan(chunk.endDateTime.getTime());
       });
-    });
-
-    it('LoadBalanceScoreを正しく計算できる', () => {
-      const conditions = createTestConditions({ hours: 1 });
-      
-      const chunks = ChunkCalculator.calculateOptimalChunks(conditions, 4);
-      const metrics = ChunkCalculator.evaluateChunkDistribution(chunks);
-      
-      expect(metrics.loadBalanceScore).toBeGreaterThanOrEqual(0);
-      expect(metrics.loadBalanceScore).toBeLessThanOrEqual(100);
-      expect(metrics.totalChunks).toBe(chunks.length);
     });
   });
 
@@ -204,9 +193,9 @@ describe('Phase 5: 並列処理テスト', () => {
         }
       };
       
-      // ChunkCalculatorが無効な条件を処理する際の動作を確認
+      // calculateOptimalChunksが無効な条件を処理する際の動作を確認
       // 実装によってはエラーを投げない場合もあるので、少なくとも処理は完了することを確認
-      const result = ChunkCalculator.calculateOptimalChunks(invalidConditions, 4);
+      const result = calculateOptimalChunks(invalidConditions, 4);
       
       // 結果が少なくとも配列であることを確認（無効な条件でも空配列を返す可能性）
       expect(Array.isArray(result)).toBe(true);
@@ -238,12 +227,12 @@ describe('Phase 5: 並列処理テスト', () => {
     it('様々な時刻範囲での分割テスト', () => {
       // 短い範囲（1時間）
       const shortConditions = createTestConditions({ hours: 1 });
-      const shortChunks = ChunkCalculator.calculateOptimalChunks(shortConditions, 4);
+      const shortChunks = calculateOptimalChunks(shortConditions, 4);
       expect(shortChunks.length).toBeGreaterThan(0);
       
       // 長い範囲（24時間）
       const longConditions = createTestConditions({ hours: 24 });
-      const longChunks = ChunkCalculator.calculateOptimalChunks(longConditions, 4);
+      const longChunks = calculateOptimalChunks(longConditions, 4);
       expect(longChunks.length).toBeGreaterThan(0);
       
       // 長い範囲の方がより多くのチャンクに分割されることを確認
@@ -255,22 +244,8 @@ describe('Phase 5: 並列処理テスト', () => {
   describe('Task 5.1: パフォーマンス検証 (functional, non-timing)', () => {
     it('チャンク分割が実行され結果が得られる', () => {
       const conditions = createTestConditions({ hours: 24 });
-      const chunks = ChunkCalculator.calculateOptimalChunks(conditions, 8);
+      const chunks = calculateOptimalChunks(conditions, 8);
       expect(chunks.length).toBeGreaterThan(0);
-    });
-
-    it('大量のWorkerでの分割処理', () => {
-      const conditions = createTestConditions({ hours: 12 });
-      
-      // 大量のWorker（16個）での分割
-      const chunks = ChunkCalculator.calculateOptimalChunks(conditions, 16);
-      
-      expect(chunks.length).toBeGreaterThan(0);
-      expect(chunks.length).toBeLessThanOrEqual(16);
-      
-      // 負荷バランスの計算
-      const metrics = ChunkCalculator.evaluateChunkDistribution(chunks);
-      expect(metrics.loadBalanceScore).toBeGreaterThan(0);
     });
   });
 

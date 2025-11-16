@@ -7,192 +7,79 @@ import type { SearchConditions } from '../../types/search';
 import type { WorkerChunk } from '../../types/parallel';
 import { countValidKeyCombinations } from '@/lib/utils/key-input';
 
-export interface ChunkMetrics {
-  totalChunks: number;
-  averageChunkSize: number;
-  estimatedTimePerChunk: number;
-  memoryPerChunk: number;
-  loadBalanceScore: number; // 0-100, 100が最適
-}
+const getOperationsPerSecond = (conditions: SearchConditions): number => {
+  const timer0Count =
+    conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1;
+  const vcountCount =
+    conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1;
+  const keyCombinationCount = countValidKeyCombinations(conditions.keyInput);
+  return Math.max(1, timer0Count * vcountCount * keyCombinationCount);
+};
 
-export class ChunkCalculator {
-  private static getOperationsPerSecond(conditions: SearchConditions): number {
-    const timer0Count =
-      conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1;
-    const vcountCount =
-      conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1;
-    const keyCombinationCount = countValidKeyCombinations(conditions.keyInput);
-    return Math.max(1, timer0Count * vcountCount * keyCombinationCount);
-  }
+const estimateOperations = (
+  startDate: Date,
+  endDate: Date,
+  operationsPerSecond: number
+): number => {
+  const seconds = Math.floor((endDate.getTime() - startDate.getTime()) / 1000) + 1;
+  return Math.max(1, seconds * operationsPerSecond);
+};
 
-  /**
-   * 最適なチャンク分割を計算
-   */
-  static calculateOptimalChunks(
-    conditions: SearchConditions,
-    maxWorkers: number = navigator.hardwareConcurrency || 4
-  ): WorkerChunk[] {
-    const searchSpaceAnalysis = this.analyzeSearchSpace(conditions);
-    
-    // 時刻範囲が支配的な場合は時刻ベース分割
-    const chunks = searchSpaceAnalysis.timeRangeDominant 
-      ? this.createTimeBasedChunks(conditions, maxWorkers)
-      : this.createTimeBasedChunks(conditions, maxWorkers);
+export function calculateOptimalChunks(
+  conditions: SearchConditions,
+  maxWorkers: number = navigator.hardwareConcurrency || 4
+): WorkerChunk[] {
+  const operationsPerSecond = getOperationsPerSecond(conditions);
+  const startDate = new Date(
+    conditions.dateRange.startYear,
+    conditions.dateRange.startMonth - 1,
+    conditions.dateRange.startDay,
+    conditions.dateRange.startHour,
+    conditions.dateRange.startMinute,
+    conditions.dateRange.startSecond
+  );
 
-    return chunks;
-  }
+  const endDate = new Date(
+    conditions.dateRange.endYear,
+    conditions.dateRange.endMonth - 1,
+    conditions.dateRange.endDay,
+    conditions.dateRange.endHour,
+    conditions.dateRange.endMinute,
+    conditions.dateRange.endSecond
+  );
 
-  /**
-   * 時刻ベース分割
-   */
-  private static createTimeBasedChunks(
-    conditions: SearchConditions,
-    workerCount: number
-  ): WorkerChunk[] {
-    const operationsPerSecond = this.getOperationsPerSecond(conditions);
-    const startDate = new Date(
-      conditions.dateRange.startYear,
-      conditions.dateRange.startMonth - 1,
-      conditions.dateRange.startDay,
-      conditions.dateRange.startHour,
-      conditions.dateRange.startMinute,
-      conditions.dateRange.startSecond
-    );
-    
-    const endDate = new Date(
-      conditions.dateRange.endYear,
-      conditions.dateRange.endMonth - 1,
-      conditions.dateRange.endDay,
-      conditions.dateRange.endHour,
-      conditions.dateRange.endMinute,
-      conditions.dateRange.endSecond
-    );
+  const totalSeconds = Math.floor((endDate.getTime() - startDate.getTime()) / 1000) + 1;
+  const secondsPerWorker = Math.ceil(totalSeconds / maxWorkers);
+  const baseStartMs = startDate.getTime();
+  const endMs = endDate.getTime();
 
-    const totalSeconds = Math.floor((endDate.getTime() - startDate.getTime()) / 1000) + 1;
-    const secondsPerWorker = Math.ceil(totalSeconds / workerCount);
-    
-    const chunks: WorkerChunk[] = [];
-    
-    for (let i = 0; i < workerCount; i++) {
-      const chunkStartTime = startDate.getTime() + i * secondsPerWorker * 1000;
-      const chunkEndTime = Math.min(
-        startDate.getTime() + (i + 1) * secondsPerWorker * 1000 - 1000,
-        endDate.getTime()
-      );
+  const chunks: WorkerChunk[] = [];
 
-      // 有効な時刻範囲があるチャンクのみ追加
-      if (chunkStartTime <= endDate.getTime()) {
-        const chunkStartDate = new Date(chunkStartTime);
-        const chunkEndDate = new Date(chunkEndTime);
-        
-        const estimatedOperations = this.estimateOperations(
-          chunkStartDate,
-          chunkEndDate,
-          operationsPerSecond
-        );
-
-        chunks.push({
-          workerId: i,
-          startDateTime: chunkStartDate,
-          endDateTime: chunkEndDate,
-          timer0Range: conditions.timer0VCountConfig.timer0Range,
-          vcountRange: conditions.timer0VCountConfig.vcountRange,
-          estimatedOperations
-        });
-      }
-    }
-    
-    return chunks;
-  }
-
-  /**
-   * 操作数推定
-   */
-  private static estimateOperations(
-    startDate: Date,
-    endDate: Date,
-    operationsPerSecond: number
-  ): number {
-    const seconds = Math.floor((endDate.getTime() - startDate.getTime()) / 1000) + 1;
-    return Math.max(1, seconds * operationsPerSecond);
-  }
-
-  /**
-   * 検索空間分析
-   */
-  private static analyzeSearchSpace(conditions: SearchConditions): {
-    timeRangeDominant: boolean;
-    totalOperations: number;
-  } {
-    const totalSeconds = this.getTotalSeconds(conditions.dateRange);
-    const timer0Count = conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1;
-    const vcountCount = conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1;
-    
-    const operationsPerSecond = timer0Count * vcountCount * countValidKeyCombinations(conditions.keyInput);
-    const totalOperations = totalSeconds * operationsPerSecond;
-    
-    // 時刻範囲が他の次元より大きい場合は時刻優位
-    const timeRangeDominant = totalSeconds > Math.max(timer0Count, vcountCount) * 10;
-    
-    return {
-      timeRangeDominant,
-      totalOperations
-    };
-  }
-
-  /**
-   * 総秒数計算
-   */
-  private static getTotalSeconds(dateRange: Pick<SearchConditions, 'dateRange'>['dateRange']): number {
-    const startDate = new Date(
-      dateRange.startYear,
-      dateRange.startMonth - 1,
-      dateRange.startDay,
-      dateRange.startHour,
-      dateRange.startMinute,
-      dateRange.startSecond
-    );
-    
-    const endDate = new Date(
-      dateRange.endYear,
-      dateRange.endMonth - 1,
-      dateRange.endDay,
-      dateRange.endHour,
-      dateRange.endMinute,
-      dateRange.endSecond
-    );
-    
-    return Math.floor((endDate.getTime() - startDate.getTime()) / 1000) + 1;
-  }
-
-  /**
-   * チャンク分散品質評価
-   */
-  static evaluateChunkDistribution(chunks: WorkerChunk[]): ChunkMetrics {
-    if (chunks.length === 0) {
-      return {
-        totalChunks: 0,
-        averageChunkSize: 0,
-        estimatedTimePerChunk: 0,
-        memoryPerChunk: 0,
-        loadBalanceScore: 0
-      };
+  for (let i = 0; i < maxWorkers; i++) {
+    const chunkStartMs = baseStartMs + i * secondsPerWorker * 1000;
+    if (chunkStartMs > endMs) {
+      break;
     }
 
-    const operations = chunks.map(chunk => chunk.estimatedOperations);
-    const averageOperations = operations.reduce((sum, ops) => sum + ops, 0) / operations.length;
-    
-    // 負荷分散スコア (分散が小さいほど高得点)
-    const variance = operations.reduce((sum, ops) => sum + Math.pow(ops - averageOperations, 2), 0) / operations.length;
-    const coefficientOfVariation = Math.sqrt(variance) / averageOperations;
-    const loadBalanceScore = Math.max(0, 100 - coefficientOfVariation * 100);
+    const chunkEndMs = Math.min(chunkStartMs + secondsPerWorker * 1000 - 1000, endMs);
+    const chunkStartDate = new Date(chunkStartMs);
+    const chunkEndDate = new Date(chunkEndMs);
 
-    return {
-      totalChunks: chunks.length,
-      averageChunkSize: averageOperations,
-      estimatedTimePerChunk: averageOperations / 1000000, // 推定値
-      memoryPerChunk: 50, // MB
-      loadBalanceScore: Math.round(loadBalanceScore)
-    };
+    const estimatedOps = estimateOperations(
+      chunkStartDate,
+      chunkEndDate,
+      operationsPerSecond
+    );
+
+    chunks.push({
+      workerId: i,
+      startDateTime: chunkStartDate,
+      endDateTime: chunkEndDate,
+      timer0Range: conditions.timer0VCountConfig.timer0Range,
+      vcountRange: conditions.timer0VCountConfig.vcountRange,
+      estimatedOperations: estimatedOps
+    });
   }
+
+  return chunks;
 }
