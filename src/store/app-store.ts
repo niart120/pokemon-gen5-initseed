@@ -150,7 +150,7 @@ const defaultSearchExecutionMode: SearchExecutionMode = isWebGpuAvailable
   : 'cpu-parallel';
 
 const defaultParallelSearchSettings: ParallelSearchSettings = {
-  maxWorkers: navigator.hardwareConcurrency || 4,
+  maxWorkers: detectedHardwareConcurrency || 4,
   chunkStrategy: 'time-based',
 };
 

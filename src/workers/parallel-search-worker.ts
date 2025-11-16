@@ -484,7 +484,7 @@ self.onmessage = async (event: MessageEvent<ParallelWorkerRequest>) => {
   }
 
   switch (type) {
-    case 'START_SEARCH':
+    case 'START_SEARCH': {
       if (!conditions || !targetSeeds || !chunk) {
         postMessage({
           type: 'ERROR',
@@ -510,7 +510,7 @@ self.onmessage = async (event: MessageEvent<ParallelWorkerRequest>) => {
       searchState.isRunning = true;
       searchState.shouldStop = false;
       searchState.isPaused = false;
-      
+
       // Start accurate timer for elapsed time calculation
       startTimer();
 
@@ -527,6 +527,7 @@ self.onmessage = async (event: MessageEvent<ParallelWorkerRequest>) => {
         searchState.isRunning = false;
       }
       break;
+    }
 
     case 'PAUSE_SEARCH':
       searchState.isPaused = true;
