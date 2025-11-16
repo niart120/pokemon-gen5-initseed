@@ -425,7 +425,7 @@ export class IntegratedSeedSearcher {
   /**
    * コンストラクタ: 固定パラメータの事前計算
    */
-  constructor(mac: Uint8Array, nazo: Uint32Array, hardware: string, key_input_mask: number, frame: number);
+  constructor(mac: Uint8Array, nazo: Uint32Array, hardware: string, key_input_mask: number, frame: number, hour_start: number, hour_end: number, minute_start: number, minute_end: number, second_start: number, second_end: number);
   /**
    * 統合Seed探索メイン関数
    * 日時範囲とTimer0/VCount範囲を指定して一括探索
@@ -1070,7 +1070,7 @@ export interface InitOutput {
   readonly searchresult_vcount: (a: number) => number;
   readonly searchresult_key_code: (a: number) => number;
   readonly __wbg_integratedseedsearcher_free: (a: number, b: number) => void;
-  readonly integratedseedsearcher_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+  readonly integratedseedsearcher_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number) => void;
   readonly integratedseedsearcher_search_seeds_integrated: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => number;
   readonly integratedseedsearcher_search_seeds_integrated_simd: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => number;
   readonly __wbg_tidsidresult_free: (a: number, b: number) => void;
