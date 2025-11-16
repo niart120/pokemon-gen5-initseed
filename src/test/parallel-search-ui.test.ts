@@ -20,23 +20,14 @@ describe('Phase 4: 並列検索UI統合テスト', () => {
   });
 
   describe('並列検索設定ストア', () => {
-    it('並列検索の有効/無効を切り替えできる', () => {
+    it('検索実行モードをCPU/GPU間で切り替えできる', () => {
       const store = useAppStore.getState();
-      
-      // 明示的にシングルモードへ
-      store.setSearchExecutionMode('cpu-single');
 
-      // 有効化すると並列モードへ遷移
-      store.setParallelSearchEnabled(true);
-      const enabledState = useAppStore.getState();
-      expect(enabledState.parallelSearchSettings.enabled).toBe(true);
-      expect(enabledState.searchExecutionMode).toBe('cpu-parallel');
+      store.setSearchExecutionMode('cpu-parallel');
+      expect(useAppStore.getState().searchExecutionMode).toBe('cpu-parallel');
 
-      // 無効化すると単一CPUモードへ戻る
-      store.setParallelSearchEnabled(false);
-      const disabledState = useAppStore.getState();
-      expect(disabledState.parallelSearchSettings.enabled).toBe(false);
-      expect(disabledState.searchExecutionMode).toBe('cpu-single');
+      store.setSearchExecutionMode('gpu');
+      expect(useAppStore.getState().searchExecutionMode).toBe('gpu');
     });
 
     it('Worker数を適切に設定できる', () => {
@@ -60,12 +51,11 @@ describe('Phase 4: 並列検索UI統合テスト', () => {
     it('検索設定の状態管理が正しく動作する', () => {
       const store = useAppStore.getState();
       
-      // 並列検索を有効化し、Worker数を設定
-      store.setParallelSearchEnabled(true);
+      // 並列検索モードに切り替え、Worker数を設定
+      store.setSearchExecutionMode('cpu-parallel');
       store.setMaxWorkers(4);
       
       const state = useAppStore.getState();
-      expect(state.parallelSearchSettings.enabled).toBe(true);
       expect(state.parallelSearchSettings.maxWorkers).toBe(4);
       expect(state.searchExecutionMode).toBe('cpu-parallel');
     });

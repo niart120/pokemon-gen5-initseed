@@ -17,7 +17,7 @@
 | レイヤ | 主なモジュール | 概要 |
 | --- | --- | --- |
 | UI (React + Zustand) | `src/components`, `src/store` | 検索条件・結果 UI、Zustand ストア |
-| 検索コア | `src/lib/core`, `src/workers/search-worker*.ts` | wasm-bindgen 経由で `IntegratedSeedSearcher` を実行 |
+| 検索コア | `src/lib/core`, `src/workers/parallel-search-worker.ts`, `src/workers/search-worker-webgpu.ts` | wasm-bindgen 経由で `IntegratedSeedSearcher` を実行 |
 | Generation | `src/lib/generation`, `src/workers/generation-worker.ts` | Seed列挙・Pokemon Resolver |
 | データ管理 | `src/data/encounters`, `src/data/species` | Encounter テーブル・種族データのローダ |
 | Rust / wasm | `wasm-pkg/src/*.rs` | SHA-1 SIMD、Encounter 計算、Pokemon Generator 等 |

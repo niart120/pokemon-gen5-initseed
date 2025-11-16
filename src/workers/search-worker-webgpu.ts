@@ -3,7 +3,7 @@
 import { buildSearchContext } from '@/lib/webgpu/seed-search/message-encoder';
 import { createWebGpuSeedSearchRunner, isWebGpuSeedSearchSupported } from '@/lib/webgpu/seed-search/runner';
 import type { WebGpuRunRequest, WebGpuRunnerCallbacks } from '@/lib/webgpu/seed-search/types';
-import type { WorkerRequest, WorkerResponse } from './search-worker';
+import type { WorkerRequest, WorkerResponse } from '@/types/worker';
 
 const ctx: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobalScope;
 

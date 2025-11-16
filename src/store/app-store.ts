@@ -11,7 +11,7 @@ import type { GenerationSlice, GenerationFilters } from './generation-store';
 import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS, createDefaultGenerationFilters } from './generation-store';
 import { DEFAULT_LOCALE } from '@/types/i18n';
 
-export type SearchExecutionMode = 'gpu' | 'cpu-parallel' | 'cpu-single';
+export type SearchExecutionMode = 'gpu' | 'cpu-parallel';
 
 interface AppStore extends GenerationSlice {
   profiles: DeviceProfile[];
@@ -57,7 +57,6 @@ interface AppStore extends GenerationSlice {
 
   // Parallel search settings
   parallelSearchSettings: ParallelSearchSettings;
-  setParallelSearchEnabled: (enabled: boolean) => void;
   setMaxWorkers: (count: number) => void;
   setChunkStrategy: (strategy: ParallelSearchSettings['chunkStrategy']) => void;
 
@@ -148,12 +147,9 @@ const isWebGpuAvailable = typeof navigator !== 'undefined'
 
 const defaultSearchExecutionMode: SearchExecutionMode = isWebGpuAvailable
   ? 'gpu'
-  : detectedHardwareConcurrency > 1
-    ? 'cpu-parallel'
-    : 'cpu-single';
+  : 'cpu-parallel';
 
 const defaultParallelSearchSettings: ParallelSearchSettings = {
-  enabled: defaultSearchExecutionMode === 'cpu-parallel',
   maxWorkers: navigator.hardwareConcurrency || 4,
   chunkStrategy: 'time-based',
 };
@@ -467,18 +463,6 @@ export const useAppStore = create<AppStore>()(
 
       // Parallel search settings
       parallelSearchSettings: defaultParallelSearchSettings,
-      setParallelSearchEnabled: (enabled) =>
-        set((state) => {
-          const nextMode: SearchExecutionMode = enabled
-            ? 'cpu-parallel'
-            : state.searchExecutionMode === 'cpu-parallel'
-              ? 'cpu-single'
-              : state.searchExecutionMode;
-          return {
-            parallelSearchSettings: { ...state.parallelSearchSettings, enabled },
-            searchExecutionMode: nextMode,
-          };
-        }),
       setMaxWorkers: (count) =>
         set((state) => ({
           parallelSearchSettings: { ...state.parallelSearchSettings, maxWorkers: count },
@@ -505,13 +489,9 @@ export const useAppStore = create<AppStore>()(
       // Search execution mode
       searchExecutionMode: defaultSearchExecutionMode,
       setSearchExecutionMode: (mode) =>
-        set((state) => ({
+        set({
           searchExecutionMode: mode,
-          parallelSearchSettings: {
-            ...state.parallelSearchSettings,
-            enabled: mode === 'cpu-parallel',
-          },
-        })),
+        }),
       
       // Raw target seed input
       targetSeedInput: DEMO_TARGET_SEEDS.map(s => '0x' + s.toString(16).padStart(8, '0')).join('\n'),

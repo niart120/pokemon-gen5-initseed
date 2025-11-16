@@ -6,7 +6,7 @@
 
 import type { SearchConditions, InitialSeedResult } from '../../types/search';
 import type { AggregatedProgress } from '../../types/parallel';
-import type { WorkerRequest, WorkerResponse } from '../../workers/search-worker';
+import type { WorkerRequest, WorkerResponse } from '@/types/worker';
 import { MultiWorkerSearchManager } from './multi-worker-manager';
 import type { SingleWorkerSearchCallbacks } from '../../types/callbacks';
 import { shouldUseWebGpuSearch } from './search-mode';
@@ -18,39 +18,13 @@ export type SearchCallbacks = SingleWorkerSearchCallbacks<InitialSeedResult> & {
 };
 
 export class SearchWorkerManager {
-  private worker: Worker | null = null;
   private gpuWorker: Worker | null = null;
   private callbacks: SearchCallbacks | null = null;
-  private singleWorkerMode: boolean = true;
   private multiWorkerManager: MultiWorkerSearchManager | null = null;
-  private activeMode: 'cpu-single' | 'cpu-parallel' | 'gpu' = 'cpu-single';
+  private activeMode: 'cpu-parallel' | 'gpu' = 'cpu-parallel';
   private lastRequest: { conditions: SearchConditions; targetSeeds: number[] } | null = null;
 
   constructor() {
-    this.initializeWorker();
-  }
-
-  private initializeWorker() {
-    try {
-      // Create worker with Vite's URL constructor
-      this.worker = new Worker(
-        new URL('../../workers/search-worker.ts', import.meta.url),
-        { type: 'module' }
-      );
-
-      this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-        this.processWorkerResponse(event.data, 'cpu');
-      };
-
-      this.worker.onerror = (error) => {
-        console.error('Worker error:', error);
-        this.callbacks?.onError('Worker error occurred');
-      };
-
-    } catch (error) {
-      console.error('Failed to initialize search worker:', error);
-      this.worker = null;
-    }
   }
 
   private initializeGpuWorker(): void {
@@ -65,7 +39,7 @@ export class SearchWorkerManager {
       );
 
       this.gpuWorker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-        this.processWorkerResponse(event.data, 'gpu');
+        this.processWorkerResponse(event.data);
       };
 
       this.gpuWorker.onerror = (error) => {
@@ -78,7 +52,7 @@ export class SearchWorkerManager {
     }
   }
 
-  private processWorkerResponse(response: WorkerResponse, origin: 'cpu' | 'gpu'): void {
+  private processWorkerResponse(response: WorkerResponse): void {
     if (!this.callbacks) return;
 
     switch (response.type) {
@@ -111,11 +85,7 @@ export class SearchWorkerManager {
         break;
 
       case 'ERROR':
-        if (origin === 'gpu') {
-          this.handleGpuFailure(response.error || 'WebGPU search failed', response.errorCode);
-          return;
-        }
-        this.callbacks.onError(response.error || 'Unknown error');
+        this.handleGpuFailure(response.error || 'WebGPU search failed', response.errorCode);
         break;
 
       case 'PAUSED':
@@ -152,8 +122,10 @@ export class SearchWorkerManager {
 
     try {
       const store = useAppStore.getState();
-      const fallbackMode: SearchExecutionMode = this.isParallelSearchAvailable() ? 'cpu-parallel' : 'cpu-single';
-      store.setSearchExecutionMode(fallbackMode);
+      const fallbackMode: SearchExecutionMode = 'cpu-parallel';
+      if (this.isParallelSearchAvailable()) {
+        store.setSearchExecutionMode(fallbackMode);
+      }
     } catch (storeError) {
       console.warn('Failed to update execution mode after WebGPU failure:', storeError);
     }
@@ -179,35 +151,12 @@ export class SearchWorkerManager {
     targetSeeds: number[],
     callbacks: SearchCallbacks
   ): boolean {
-    if (!this.singleWorkerMode) {
-      this.activeMode = 'cpu-parallel';
-      return this.startParallelSearch(conditions, targetSeeds, callbacks);
-    }
-
-    if (!this.worker) {
-      this.initializeWorker();
-    }
-
-    if (!this.worker) {
-      callbacks.onError('Worker not available. Falling back to main thread.');
+    if (!this.isParallelSearchAvailable()) {
+      callbacks.onError('Parallel CPU search is not available in this environment.');
       return false;
     }
 
-    const request: WorkerRequest = {
-      type: 'START_SEARCH',
-      conditions,
-      targetSeeds
-    };
-
-    try {
-      this.worker.postMessage(request);
-      this.activeMode = 'cpu-single';
-      return true;
-    } catch (error) {
-      console.error('Failed to start CPU search worker:', error);
-      callbacks.onError('Failed to start CPU search worker');
-      return false;
-    }
+    return this.startParallelSearch(conditions, targetSeeds, callbacks);
   }
 
   private tryStartGpuSearch(
@@ -322,11 +271,8 @@ export class SearchWorkerManager {
 
     } catch (error) {
       console.error('Failed to start parallel search:', error);
-      callbacks.onError('Failed to start parallel search. Falling back to single worker mode.');
-      
-      // フォールバック: 単一Workerモードに切り替え
-      this.singleWorkerMode = true;
-      return this.startCpuSearchInternal(conditions, targetSeeds, callbacks);
+      callbacks.onError('Failed to start parallel search.');
+      return false;
     }
   }
 
@@ -337,11 +283,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (!this.singleWorkerMode && this.multiWorkerManager) {
+    if (this.multiWorkerManager) {
       this.multiWorkerManager.pauseAll();
-    } else if (this.worker) {
-      const request: WorkerRequest = { type: 'PAUSE_SEARCH' };
-      this.worker.postMessage(request);
     }
   }
 
@@ -352,11 +295,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (!this.singleWorkerMode && this.multiWorkerManager) {
+    if (this.multiWorkerManager) {
       this.multiWorkerManager.resumeAll();
-    } else if (this.worker) {
-      const request: WorkerRequest = { type: 'RESUME_SEARCH' };
-      this.worker.postMessage(request);
     }
   }
 
@@ -367,22 +307,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (!this.singleWorkerMode && this.multiWorkerManager) {
+    if (this.multiWorkerManager) {
       this.multiWorkerManager.terminateAll();
-    } else if (this.worker) {
-      const request: WorkerRequest = { type: 'STOP_SEARCH' };
-      this.worker.postMessage(request);
-    }
-  }
-
-  /**
-   * 並列検索モードの設定
-   */
-  public setParallelMode(enabled: boolean): void {
-    this.singleWorkerMode = !enabled;
-    
-    if (enabled && !this.multiWorkerManager) {
-      this.multiWorkerManager = new MultiWorkerSearchManager();
     }
   }
 
@@ -410,14 +336,7 @@ export class SearchWorkerManager {
    * 並列検索の利用可能性確認
    */
   public isParallelSearchAvailable(): boolean {
-    return (navigator.hardwareConcurrency ?? 1) > 1;
-  }
-
-  /**
-   * 現在のモード取得
-   */
-  public isParallelMode(): boolean {
-    return !this.singleWorkerMode;
+    return typeof Worker !== 'undefined';
   }
 
   public terminate() {
@@ -431,17 +350,9 @@ export class SearchWorkerManager {
       this.gpuWorker = null;
     }
 
-    if (this.worker) {
-      this.worker.terminate();
-      this.worker = null;
-    }
     this.callbacks = null;
-    this.activeMode = 'cpu-single';
+    this.activeMode = 'cpu-parallel';
     this.lastRequest = null;
-  }
-
-  public isWorkerAvailable(): boolean {
-    return this.worker !== null || this.gpuWorker !== null;
   }
 }
 

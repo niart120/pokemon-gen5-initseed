@@ -26,10 +26,6 @@ export const searchControlExecutionModeLabels = {
     ja: 'CPU Parallel',
     en: 'CPU Parallel',
   } satisfies LocaleText,
-  cpuSingle: {
-    ja: 'CPU Single',
-    en: 'CPU Single',
-  } satisfies LocaleText,
   gpu: {
     ja: 'GPU',
     en: 'GPU',

@@ -61,8 +61,7 @@ export function SearchControlCard() {
   useEffect(() => {
     const workerManager = getSearchWorkerManager();
     workerManager.setMaxWorkers(parallelSearchSettings.maxWorkers);
-    workerManager.setParallelMode(parallelSearchSettings.enabled);
-  }, [parallelSearchSettings.maxWorkers, parallelSearchSettings.enabled]);
+  }, [parallelSearchSettings.maxWorkers]);
 
   // Wake Lock自動管理のセットアップ
   useEffect(() => {
@@ -120,9 +119,6 @@ export function SearchControlCard() {
     try {
       // Get the worker manager
       const workerManager = getSearchWorkerManager();
-
-      // Set parallel mode based on settings
-      workerManager.setParallelMode(searchExecutionMode === 'cpu-parallel');
       
       // Start search with worker
       await workerManager.startSearch(
@@ -238,11 +234,6 @@ export function SearchControlCard() {
         : undefined,
     },
     {
-      value: 'cpu-single',
-      label: resolveSearchControlExecutionModeLabel('cpuSingle', locale),
-      disabled: false,
-    },
-    {
       value: 'gpu',
       label: resolveSearchControlExecutionModeLabel('gpu', locale),
       disabled: !isWebGpuAvailable,
@@ -272,13 +263,15 @@ export function SearchControlCard() {
   };
 
   useEffect(() => {
-    if (!isWebGpuAvailable && searchExecutionMode === 'gpu') {
-      setSearchExecutionMode(isParallelAvailable ? 'cpu-parallel' : 'cpu-single');
+    if (searchExecutionMode === 'gpu' && !isWebGpuAvailable) {
+      if (isParallelAvailable) {
+        setSearchExecutionMode('cpu-parallel');
+      }
       return;
     }
 
-    if (!isParallelAvailable && searchExecutionMode === 'cpu-parallel') {
-      setSearchExecutionMode('cpu-single');
+    if (searchExecutionMode === 'cpu-parallel' && !isParallelAvailable && isWebGpuAvailable) {
+      setSearchExecutionMode('gpu');
     }
   }, [isWebGpuAvailable, isParallelAvailable, searchExecutionMode, setSearchExecutionMode]);
 
