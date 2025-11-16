@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { SeedCalculator } from '@/lib/core/seed-calculator';
 import { buildSearchContext } from '@/lib/webgpu/seed-search/message-encoder';
+import { getDateFromTimePlan } from '@/lib/webgpu/seed-search/time-plan';
 import { DEFAULT_HOST_MEMORY_LIMIT_BYTES, DOUBLE_BUFFER_SET_COUNT } from '@/lib/webgpu/seed-search/constants';
 import {
   createWebGpuSeedSearchRunner,
@@ -61,7 +62,7 @@ function computeSampleSeeds(
     const rangeSeconds = Math.max(1, segment.rangeSeconds);
     for (let timer0 = segment.timer0Min; timer0 <= segment.timer0Max; timer0 += 1) {
       for (let offset = 0; offset < rangeSeconds; offset += 1) {
-        const datetime = new Date(context.startTimestampMs + offset * 1000);
+        const datetime = getDateFromTimePlan(context.timePlan, offset);
   const message = sampleSeedCalculator.generateMessage(conditions, timer0, segment.vcount, datetime, segment.keyCode);
         const { seed } = sampleSeedCalculator.calculateSeed(message);
         seeds.push(seed);
@@ -76,8 +77,15 @@ function computeSampleSeeds(
 }
 
 function buildSearchConditions(rangeSeconds: number, timer0Range: { min: number; max: number }): SearchConditions {
-  const start = new Date(2012, 5, 12, 10, 15, 0);
-  const end = new Date(start.getTime() + Math.max(0, rangeSeconds - 1) * 1000);
+  const baseStart = new Date(2012, 5, 12, 10, 15, 0);
+  const secondsPerDayBlock = Math.max(1, Math.min(rangeSeconds, 24 * 60 * 60));
+  const dayCount = Math.max(1, Math.ceil(rangeSeconds / secondsPerDayBlock));
+
+  const perDayStart = secondsPerDayBlock >= 24 * 60 * 60
+    ? new Date(baseStart.getFullYear(), baseStart.getMonth(), baseStart.getDate(), 0, 0, 0)
+    : baseStart;
+  const perDayEnd = new Date(perDayStart.getTime() + Math.max(0, secondsPerDayBlock - 1) * 1000);
+  const endDateForRange = new Date(perDayStart.getTime() + (dayCount - 1) * 24 * 60 * 60 * 1000);
 
   return {
     romVersion: 'W2',
@@ -91,18 +99,23 @@ function buildSearchConditions(rangeSeconds: number, timer0Range: { min: number;
       vcountRange: { min: 0x60, max: 0x60 },
     },
     dateRange: {
-      startYear: start.getFullYear(),
-      endYear: end.getFullYear(),
-      startMonth: start.getMonth() + 1,
-      endMonth: end.getMonth() + 1,
-      startDay: start.getDate(),
-      endDay: end.getDate(),
-      startHour: start.getHours(),
-      endHour: end.getHours(),
-      startMinute: start.getMinutes(),
-      endMinute: end.getMinutes(),
-      startSecond: start.getSeconds(),
-      endSecond: end.getSeconds(),
+      startYear: perDayStart.getFullYear(),
+      endYear: endDateForRange.getFullYear(),
+      startMonth: perDayStart.getMonth() + 1,
+      endMonth: endDateForRange.getMonth() + 1,
+      startDay: perDayStart.getDate(),
+      endDay: endDateForRange.getDate(),
+      startHour: perDayStart.getHours(),
+      endHour: perDayStart.getHours(),
+      startMinute: perDayStart.getMinutes(),
+      endMinute: perDayStart.getMinutes(),
+      startSecond: perDayStart.getSeconds(),
+      endSecond: perDayStart.getSeconds(),
+    },
+    timeRange: {
+      hour: { start: perDayStart.getHours(), end: perDayEnd.getHours() },
+      minute: { start: perDayStart.getMinutes(), end: perDayEnd.getMinutes() },
+      second: { start: perDayStart.getSeconds(), end: perDayEnd.getSeconds() },
     },
   };
 }

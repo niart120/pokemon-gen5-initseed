@@ -4,6 +4,17 @@
 
 import type { ROMVersion, ROMRegion, Hardware } from './rom';
 
+export interface TimeFieldRange {
+  start: number;
+  end: number;
+}
+
+export interface DailyTimeRange {
+  hour: TimeFieldRange;
+  minute: TimeFieldRange;
+  second: TimeFieldRange;
+}
+
 export interface SearchConditions {
   romVersion: ROMVersion;
   romRegion: ROMRegion;
@@ -20,6 +31,7 @@ export interface SearchConditions {
       max: number;
     };
   };
+  timeRange: DailyTimeRange;
   
   dateRange: {
     startYear: number;

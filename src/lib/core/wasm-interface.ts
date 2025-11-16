@@ -26,7 +26,13 @@ export interface WasmModule {
     nazo: Uint32Array,
     hardware: string,
     key_input: number,
-    frame: number
+    frame: number,
+    hourStart: number,
+    hourEnd: number,
+    minuteStart: number,
+    minuteEnd: number,
+    secondStart: number,
+    secondEnd: number
   ) => {
     search_seeds_integrated_simd(
       year_start: number,

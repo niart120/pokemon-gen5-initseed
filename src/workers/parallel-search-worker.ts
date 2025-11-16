@@ -186,13 +186,24 @@ async function processChunkWithWasm(
   };
   const frameValue = HARDWARE_FRAME_VALUES[conditions.hardware] || 8;
 
+  const timeRange = conditions.timeRange;
+  const hourRange = timeRange?.hour ?? { start: 0, end: 23 };
+  const minuteRange = timeRange?.minute ?? { start: 0, end: 59 };
+  const secondRange = timeRange?.second ?? { start: 0, end: 59 };
+
   // WebAssembly searcher作成
   const searcher = new wasmModule.IntegratedSeedSearcher(
     toMacUint8Array(conditions.macAddress as unknown as Array<number | string>),
     new Uint32Array(params.nazo),
     conditions.hardware,
     conditions.keyInput,
-    frameValue
+    frameValue,
+    hourRange.start,
+    hourRange.end,
+    minuteRange.start,
+    minuteRange.end,
+    secondRange.start,
+    secondRange.end
   );
 
   // Target seed配列のJIT変換を一度だけ実施してコストを削減

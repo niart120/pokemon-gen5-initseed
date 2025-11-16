@@ -26,6 +26,13 @@ struct GeneratedConfig {
   groups_per_dispatch : u32,
   configured_workgroup_size : u32,
   candidate_capacity : u32,
+  day_count : u32,
+  hour_range_start : u32,
+  hour_range_count : u32,
+  minute_range_start : u32,
+  minute_range_count : u32,
+  second_range_start : u32,
+  second_range_count : u32,
 };
 
 struct TargetSeedBuffer {
@@ -208,14 +215,24 @@ fn sha1_generate(
 
     let timer0 = config.timer0_min + timer0_index;
     let vcount = config.vcount_min + vcount_index;
+    let safe_hour_count = max(config.hour_range_count, 1u);
+    let safe_minute_count = max(config.minute_range_count, 1u);
+    let safe_second_count = max(config.second_range_count, 1u);
+    let combos_per_day = safe_hour_count * safe_minute_count * safe_second_count;
 
-    let total_seconds = config.start_second_of_day + second_offset;
-    let day_offset = total_seconds / 86400u;
-    let seconds_of_day = total_seconds - day_offset * 86400u;
+    let day_offset = second_offset / combos_per_day;
+    let remainder_after_day = second_offset - day_offset * combos_per_day;
 
-    let hour = seconds_of_day / 3600u;
-    let minute = (seconds_of_day % 3600u) / 60u;
-    let second = seconds_of_day % 60u;
+    let entries_per_hour = safe_minute_count * safe_second_count;
+    let hour_index = remainder_after_day / entries_per_hour;
+    let remainder_after_hour = remainder_after_day - hour_index * entries_per_hour;
+    let minute_index = remainder_after_hour / safe_second_count;
+    let second_index = remainder_after_hour - minute_index * safe_second_count;
+
+    let hour = config.hour_range_start + hour_index;
+    let minute = config.minute_range_start + minute_index;
+    let second = config.second_range_start + second_index;
+    let seconds_of_day = hour * 3600u + minute * 60u + second;
 
     var year = config.start_year;
     var day_of_year = config.start_day_of_year + day_offset;

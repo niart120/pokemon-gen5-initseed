@@ -49,6 +49,11 @@ describe('MultiWorkerSearchManager', () => {
       startSecond: 0,
       endSecond: 59
     },
+    timeRange: {
+      hour: { start: 0, end: 1 },
+      minute: { start: 0, end: 59 },
+      second: { start: 0, end: 59 },
+    },
     keyInput: 0,
     macAddress: [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]
   };

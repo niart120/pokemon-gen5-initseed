@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { SearchConditions, InitialSeedResult, TargetSeedList, SearchProgress, SearchPreset } from '../types/search';
+import type {
+  SearchConditions,
+  InitialSeedResult,
+  TargetSeedList,
+  SearchProgress,
+  SearchPreset,
+  DailyTimeRange,
+} from '../types/search';
 import type { GenerationParamsHex } from '@/types/generation';
 import type { ParallelSearchSettings, AggregatedProgress } from '../types/parallel';
 import type { DeviceProfile, DeviceProfileDraft } from '../types/profile';
@@ -90,6 +97,12 @@ interface AppStore extends GenerationSlice {
 
 const defaultDeviceProfile = createDefaultDeviceProfile();
 
+const createFullDayTimeRange = (): DailyTimeRange => ({
+  hour: { start: 0, end: 23 },
+  minute: { start: 0, end: 59 },
+  second: { start: 0, end: 59 },
+});
+
 const defaultSearchConditions: SearchConditions = {
   romVersion: defaultDeviceProfile.romVersion,
   romRegion: defaultDeviceProfile.romRegion,
@@ -121,6 +134,8 @@ const defaultSearchConditions: SearchConditions = {
     startSecond: 0,
     endSecond: 59,
   },
+
+  timeRange: createFullDayTimeRange(),
   
   keyInput: 0x0000, // Default: no key input
   macAddress: Array.from(defaultDeviceProfile.macAddress),
@@ -599,6 +614,17 @@ export const useAppStore = create<AppStore>()(
           merged.activeProfileId = current.activeProfileId;
         } else if (!merged.activeProfileId || !merged.profiles.some((p) => p.id === merged.activeProfileId)) {
           merged.activeProfileId = merged.profiles[0]?.id ?? null;
+        }
+        if (!merged.searchConditions) {
+          merged.searchConditions = {
+            ...current.searchConditions,
+            timeRange: createFullDayTimeRange(),
+          } as SearchConditions;
+        } else if (!merged.searchConditions.timeRange) {
+          merged.searchConditions = {
+            ...merged.searchConditions,
+            timeRange: createFullDayTimeRange(),
+          } as SearchConditions;
         }
         return merged;
       },

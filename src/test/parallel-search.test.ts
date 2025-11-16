@@ -46,16 +46,18 @@ describe('Phase 5: 並列処理テスト', () => {
     vi.restoreAllMocks();
   });
 
-  const createTestConditions = (timeRange: { hours: number }): SearchConditions => ({
-    romVersion: 'B2',
-    romRegion: 'JPN',
-    hardware: 'DS',
-    timer0VCountConfig: {
-    useAutoConfiguration: false,
-    timer0Range: { min: 3193, max: 3194 },
-    vcountRange: { min: 160, max: 167 }
-  },
-    dateRange: {
+  const createTestConditions = (timeRange: { hours: number }): SearchConditions => {
+    const hourEnd = Math.min(Math.max(timeRange.hours, 0), 23);
+    return {
+      romVersion: 'B2',
+      romRegion: 'JPN',
+      hardware: 'DS',
+      timer0VCountConfig: {
+        useAutoConfiguration: false,
+        timer0Range: { min: 3193, max: 3194 },
+        vcountRange: { min: 160, max: 167 },
+      },
+      dateRange: {
       startYear: 2013,
       endYear: 2013,
       startMonth: 1,
@@ -63,15 +65,21 @@ describe('Phase 5: 並列処理テスト', () => {
       startDay: 1,
       endDay: 1,
       startHour: 0,
-      endHour: timeRange.hours,
+      endHour: hourEnd,
       startMinute: 0,
       endMinute: 59,
       startSecond: 0,
-      endSecond: 59
-    },
-    keyInput: 0,
-    macAddress: [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]
-  });
+        endSecond: 59,
+      },
+      timeRange: {
+        hour: { start: 0, end: hourEnd },
+        minute: { start: 0, end: 59 },
+        second: { start: 0, end: 59 },
+      },
+      keyInput: 0,
+      macAddress: [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC],
+    };
+  };
 
   describe('Task 5.1: 基本機能テスト', () => {
     it('MultiWorkerSearchManagerインスタンスを正常に作成できる', () => {

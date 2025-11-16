@@ -5,7 +5,15 @@ import type { SearchConditions } from '@/types/search';
 
 const REAL_DATE = Date;
 
-function createSearchConditions(dateRange: SearchConditions['dateRange']): SearchConditions {
+function createSearchConditions(
+  dateRange: SearchConditions['dateRange'],
+  options?: { timeRange?: SearchConditions['timeRange'] }
+): SearchConditions {
+  const timeRange = options?.timeRange ?? {
+    hour: { start: dateRange.startHour, end: dateRange.endHour },
+    minute: { start: dateRange.startMinute, end: dateRange.endMinute },
+    second: { start: dateRange.startSecond, end: dateRange.endSecond },
+  };
   return {
     romVersion: 'B',
     romRegion: 'JPN',
@@ -16,6 +24,7 @@ function createSearchConditions(dateRange: SearchConditions['dateRange']): Searc
       vcountRange: { min: 0x60, max: 0x60 },
     },
     dateRange,
+    timeRange,
     keyInput: 0,
     macAddress: [0x00, 0x1B, 0x2C, 0x3D, 0x4E, 0x5F],
   };

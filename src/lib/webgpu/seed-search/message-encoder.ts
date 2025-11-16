@@ -3,6 +3,7 @@ import { hasImpossibleKeyCombination, KEY_CODE_BASE } from '@/lib/utils/key-inpu
 import type { Hardware } from '@/types/rom';
 import type { SearchConditions } from '@/types/search';
 import type { GpuSha1WorkloadConfig, WebGpuSearchContext, WebGpuSegment } from './types';
+import { resolveTimePlan } from './time-plan';
 
 const EPOCH_2000_MS = Date.UTC(2000, 0, 1, 0, 0, 0);
 const GX_STAT = 0x06000000;
@@ -55,14 +56,8 @@ function generateKeyCodes(keyInputMask: number): number[] {
 }
 
 export function buildSearchContext(conditions: SearchConditions): WebGpuSearchContext {
-  const startDate = buildDate(
-    conditions.dateRange.startYear,
-    conditions.dateRange.startMonth,
-    conditions.dateRange.startDay,
-    conditions.dateRange.startHour,
-    conditions.dateRange.startMinute,
-    conditions.dateRange.startSecond
-  );
+  const { plan: timePlan, firstCombinationDate } = resolveTimePlan(conditions);
+  const startDate = firstCombinationDate;
 
   const endDate = buildDate(
     conditions.dateRange.endYear,
@@ -82,20 +77,11 @@ export function buildSearchContext(conditions: SearchConditions): WebGpuSearchCo
 
   const startEpochMs = calculateEpoch2000TimestampMs(
     conditions.dateRange.startYear,
-    conditions.dateRange.startMonth,
+    conditions.dateRange.startMonth - 1,
     conditions.dateRange.startDay,
-    conditions.dateRange.startHour,
-    conditions.dateRange.startMinute,
-    conditions.dateRange.startSecond
-  );
-
-  const endEpochMs = calculateEpoch2000TimestampMs(
-    conditions.dateRange.endYear,
-    conditions.dateRange.endMonth,
-    conditions.dateRange.endDay,
-    conditions.dateRange.endHour,
-    conditions.dateRange.endMinute,
-    conditions.dateRange.endSecond
+    timePlan.hourRangeStart,
+    timePlan.minuteRangeStart,
+    timePlan.secondRangeStart
   );
 
   const startSecondsSince2000 = Math.floor((startEpochMs - EPOCH_2000_MS) / 1000);
@@ -103,7 +89,7 @@ export function buildSearchContext(conditions: SearchConditions): WebGpuSearchCo
     throw new Error('2000年より前の日時は指定できません');
   }
 
-  const rangeSeconds = Math.floor((endEpochMs - startEpochMs) / 1000) + 1;
+  const rangeSeconds = timePlan.dayCount * timePlan.combosPerDay;
   if (rangeSeconds <= 0) {
     throw new Error('探索秒数が0秒以下です');
   }
@@ -151,6 +137,13 @@ export function buildSearchContext(conditions: SearchConditions): WebGpuSearchCo
         startDayOfYear: startDayOfYear >>> 0,
         startSecondOfDay: startSecondOfDay >>> 0,
         startDayOfWeek: startDayOfWeek >>> 0,
+        dayCount: timePlan.dayCount >>> 0,
+        hourRangeStart: timePlan.hourRangeStart >>> 0,
+        hourRangeCount: timePlan.hourRangeCount >>> 0,
+        minuteRangeStart: timePlan.minuteRangeStart >>> 0,
+        minuteRangeCount: timePlan.minuteRangeCount >>> 0,
+        secondRangeStart: timePlan.secondRangeStart >>> 0,
+        secondRangeCount: timePlan.secondRangeCount >>> 0,
       };
 
       segments.push({
@@ -176,9 +169,10 @@ export function buildSearchContext(conditions: SearchConditions): WebGpuSearchCo
     conditions,
     startDate,
     startTimestampMs: startDate.getTime(),
-      rangeSeconds,
+    rangeSeconds,
     totalMessages,
     segments,
+    timePlan,
   };
 }
 
@@ -188,13 +182,13 @@ function buildDate(year: number, month: number, day: number, hour: number, minut
 
 function calculateEpoch2000TimestampMs(
   year: number,
-  month: number,
+  zeroBasedMonth: number,
   day: number,
   hour: number,
   minute: number,
   second: number
 ): number {
-  return Date.UTC(year, month - 1, day, hour, minute, second, 0);
+  return Date.UTC(year, zeroBasedMonth, day, hour, minute, second, 0);
 }
 
 function resolveRomParameters(conditions: SearchConditions) {

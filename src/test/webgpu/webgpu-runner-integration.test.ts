@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SeedCalculator } from '@/lib/core/seed-calculator';
 import { buildSearchContext } from '@/lib/webgpu/seed-search/message-encoder';
+import { getDateFromTimePlan } from '@/lib/webgpu/seed-search/time-plan';
 import {
   createWebGpuSeedSearchRunner,
   isWebGpuSeedSearchSupported,
@@ -28,7 +29,7 @@ function enumerateCpuBaseline(conditions: SearchConditions, context: WebGpuSearc
     const rangeSeconds = Math.max(1, segment.rangeSeconds);
     for (let timer0 = segment.timer0Min; timer0 <= segment.timer0Max; timer0 += 1) {
       for (let secondOffset = 0; secondOffset < rangeSeconds; secondOffset += 1) {
-        const datetime = new Date(context.startTimestampMs + secondOffset * 1000);
+        const datetime = getDateFromTimePlan(context.timePlan, secondOffset);
   const message = calculator.generateMessage(conditions, timer0, segment.vcount, datetime, segment.keyCode);
         const { seed } = calculator.calculateSeed(message);
         entries.push({ seed, timer0, vcount: segment.vcount, datetime });
@@ -76,6 +77,11 @@ describeWebGpu('webgpu seed search runner integration', () => {
           endMinute: 15,
           startSecond: 0,
           endSecond: 5,
+        },
+        timeRange: {
+          hour: { start: 10, end: 10 },
+          minute: { start: 15, end: 15 },
+          second: { start: 0, end: 5 },
         },
         keyInput: 0x0000,
         macAddress: [0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e],

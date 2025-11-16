@@ -56,7 +56,7 @@ mod wasm_tests {
         let mac = [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC];
         let nazo = [0x02215f10, 0x01000000, 0xc0000000, 0x00007fff, 0x00000000];
 
-        let searcher = IntegratedSeedSearcher::new(&mac, &nazo, "DS", 5, 8);
+        let searcher = IntegratedSeedSearcher::new(&mac, &nazo, "DS", 5, 8, 0, 23, 0, 59, 0, 59);
         assert!(searcher.is_ok());
     }
 
@@ -65,7 +65,7 @@ mod wasm_tests {
         let mac = [0x12, 0x34, 0x56, 0x78, 0x9A]; // 5 bytes instead of 6
         let nazo = [0x02215f10, 0x01000000, 0xc0000000, 0x00007fff, 0x00000000];
 
-        let result = IntegratedSeedSearcher::new(&mac, &nazo, "DS", 5, 8);
+        let result = IntegratedSeedSearcher::new(&mac, &nazo, "DS", 5, 8, 0, 23, 0, 59, 0, 59);
         assert!(result.is_err());
     }
 
@@ -74,7 +74,7 @@ mod wasm_tests {
         let mac = [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC];
         let nazo = [0x02215f10, 0x01000000, 0xc0000000, 0x00007fff]; // 4 elements instead of 5
 
-        let result = IntegratedSeedSearcher::new(&mac, &nazo, "DS", 5, 8);
+        let result = IntegratedSeedSearcher::new(&mac, &nazo, "DS", 5, 8, 0, 23, 0, 59, 0, 59);
         assert!(result.is_err());
     }
 
@@ -83,7 +83,7 @@ mod wasm_tests {
         let mac = [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC];
         let nazo = [0x02215f10, 0x01000000, 0xc0000000, 0x00007fff, 0x00000000];
 
-        let result = IntegratedSeedSearcher::new(&mac, &nazo, "INVALID", 5, 8);
+        let result = IntegratedSeedSearcher::new(&mac, &nazo, "INVALID", 5, 8, 0, 23, 0, 59, 0, 59);
         assert!(result.is_err());
     }
 
