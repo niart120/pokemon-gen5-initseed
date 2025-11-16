@@ -219,7 +219,7 @@ pub(crate) fn generate_key_codes(key_input_mask: u32) -> Vec<u32> {
             continue;
         }
 
-        // 押されているビットが0、押されていないビットが1の状態を0x2FFFとXOR
+        // 押されているビットが1、押されていないビットが0の状態を0x2FFFとXOR
         let key_code = combination ^ 0x2FFF;
         key_codes.push(key_code);
     }

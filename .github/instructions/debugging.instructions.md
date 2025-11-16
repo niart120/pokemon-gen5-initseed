@@ -6,7 +6,7 @@ applyTo: "**"
 
 ## 基本デバッグ手順
 1. ブラウザ開発者ツール (F12) でConsole/Networkタブ確認
-2. Workerログ（`search-worker.ts` / `parallel-search-worker.ts`）の進捗・エラー出力確認
+2. Workerログ（`parallel-search-worker.ts` / `search-worker-webgpu.ts`）の進捗・エラー出力確認
 3. Rust側ログ (`console_log!`) 確認
 
 ## 新テストシステムでのデバッグ

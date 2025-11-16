@@ -161,3 +161,48 @@ export function formatGenerationRunScreenReaderSummary(
   }
   return `${status}. ${advances}. ${percent} complete.`;
 }
+
+const generationRunProfileSyncDialogTexts = {
+  title: {
+    ja: 'プロフィールを保存して生成を開始',
+    en: 'Save profile before generation',
+  } satisfies LocaleText,
+  description: {
+    ja: 'ProfilePanel の変更を生成条件に反映するため、保存してから生成を開始します。',
+    en: 'Save the pending ProfilePanel changes so they are applied to the generation conditions.',
+  } satisfies LocaleText,
+  cancel: {
+    ja: 'キャンセル',
+    en: 'Cancel',
+  } satisfies LocaleText,
+  confirm: {
+    ja: '保存して生成',
+    en: 'Save and generate',
+  } satisfies LocaleText,
+  validationError: {
+    ja: 'プロフィールの入力内容に不備があります。修正してから再度生成を実行してください。',
+    en: 'Profile inputs contain validation errors. Please fix them before starting generation.',
+  } satisfies LocaleText,
+  missingProfile: {
+    ja: '有効なプロフィールが選択されていません。',
+    en: 'No active profile is selected.',
+  } satisfies LocaleText,
+} as const;
+
+export function resolveGenerationRunProfileSyncDialog(locale: SupportedLocale): {
+  title: string;
+  description: string;
+  cancel: string;
+  confirm: string;
+  validationError: string;
+  missingProfile: string;
+} {
+  return {
+    title: resolveLocaleValue(generationRunProfileSyncDialogTexts.title, locale),
+    description: resolveLocaleValue(generationRunProfileSyncDialogTexts.description, locale),
+    cancel: resolveLocaleValue(generationRunProfileSyncDialogTexts.cancel, locale),
+    confirm: resolveLocaleValue(generationRunProfileSyncDialogTexts.confirm, locale),
+    validationError: resolveLocaleValue(generationRunProfileSyncDialogTexts.validationError, locale),
+    missingProfile: resolveLocaleValue(generationRunProfileSyncDialogTexts.missingProfile, locale),
+  };
+}

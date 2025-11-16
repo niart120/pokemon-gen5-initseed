@@ -33,6 +33,7 @@ import type { ProfileFormState, SectionKey, SectionState } from './profileFormTy
 import { buildDraftFromCurrentState } from './profileDraftBuilder';
 import { useProfileSections } from './useProfileSections';
 import { useMacAddressInput } from './useMacAddressInput';
+import { useProfileFormStore } from '@/store/profile-form-store';
 
 export type { SectionKey, SectionState, ProfileFormState } from './profileFormTypes';
 
@@ -160,13 +161,50 @@ export function useProfileCardForm(): UseProfileCardFormResult {
   const [dirty, setDirty] = React.useState(false);
   const { isStack } = useResponsiveLayout();
 
+  const externalDirty = useProfileFormStore((state) => state.isDirty);
+  const setProfileFormStoreDirty = useProfileFormStore((state) => state.setDirty);
+  const setProfileFormStoreDraft = useProfileFormStore((state) => state.setDraft);
+  const resetProfileFormStore = useProfileFormStore((state) => state.reset);
+
   const { sectionOpen, toggleSection } = useProfileSections(isStack);
+
+  const validationLabels = React.useMemo(
+    () => ({
+      timer0Min: timer0MinLabel,
+      timer0Max: timer0MaxLabel,
+      vcountMin: vcountMinLabel,
+      vcountMax: vcountMaxLabel,
+      tid: tidLabel,
+      sid: sidLabel,
+    }),
+    [timer0MinLabel, timer0MaxLabel, vcountMinLabel, vcountMaxLabel, tidLabel, sidLabel],
+  );
 
   React.useEffect(() => {
     if (!dirty && activeProfile) {
       setForm(profileToForm(deviceProfileToDraft(activeProfile)));
     }
   }, [activeProfile, dirty]);
+
+  React.useEffect(() => {
+    if (!externalDirty && dirty) {
+      setDirty(false);
+    }
+  }, [dirty, externalDirty]);
+
+  React.useEffect(() => {
+    if (!dirty) {
+      resetProfileFormStore();
+      return;
+    }
+    const { draft, validationErrors } = formToDraft(form, locale, validationLabels);
+    setProfileFormStoreDirty(true);
+    setProfileFormStoreDraft(draft, validationErrors);
+  }, [dirty, form, locale, validationLabels, resetProfileFormStore, setProfileFormStoreDirty, setProfileFormStoreDraft]);
+
+  React.useEffect(() => () => {
+    resetProfileFormStore();
+  }, [resetProfileFormStore]);
 
   const {
     macInputRefs,

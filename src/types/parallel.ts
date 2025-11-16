@@ -12,7 +12,6 @@ export interface WorkerChunk {
 }
 
 export interface ParallelSearchSettings {
-  enabled: boolean;
   maxWorkers: number;
   chunkStrategy: 'time-based' | 'hybrid' | 'auto';
 }

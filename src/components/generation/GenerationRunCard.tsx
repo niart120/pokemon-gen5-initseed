@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Square, ChartBar } from '@phosphor-icons/react';
@@ -17,8 +17,14 @@ import {
   generationRunProgressBarLabel,
   generationRunProgressLabel,
   generationRunStatusPrefix,
+  resolveGenerationRunProfileSyncDialog,
 } from '@/lib/i18n/strings/generation-run';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useProfileFormStore } from '@/store/profile-form-store';
+import { deviceProfileToDraft } from '@/types/profile';
+import { areDeviceProfileDraftsEqual } from '@/lib/utils/profile-draft';
+import type { DeviceProfileDraft } from '@/types/profile';
 
 // Control + Progress 統合カード (Phase1 experimental)
 export const GenerationRunCard: React.FC = () => {
@@ -33,6 +39,9 @@ export const GenerationRunCard: React.FC = () => {
     lastCompletion,
     draftParams,
     progress,
+    profiles,
+    activeProfileId,
+    updateProfile,
   } = useAppStore();
 
   const locale = useLocale();
@@ -40,29 +49,124 @@ export const GenerationRunCard: React.FC = () => {
   const done = progress?.processedAdvances ?? 0;
   const pct = total > 0 ? (done / total) * 100 : 0;
 
-  const handleStart = useCallback(async () => {
-    validateDraft();
-    if (validationErrors.length === 0) {
-      await startGeneration();
+  const profileDirty = useProfileFormStore((state) => state.isDirty);
+  const profileDraft = useProfileFormStore((state) => state.draft);
+  const profileValidationErrors = useProfileFormStore((state) => state.validationErrors);
+  const [profileSyncDialogOpen, setProfileSyncDialogOpen] = useState(false);
+  const profileSyncPromiseResolveRef = useRef<((value: boolean) => void) | null>(null);
+  const pendingProfileDraftRef = useRef<DeviceProfileDraft | null>(null);
+  const profileSyncCloseActionRef = useRef<'confirm' | 'cancel' | null>(null);
+
+  const activeProfile = useMemo(() => {
+    if (!profiles.length) {
+      return null;
     }
-  }, [validateDraft, validationErrors, startGeneration]);
+    if (activeProfileId) {
+      const found = profiles.find((profile) => profile.id === activeProfileId);
+      if (found) {
+        return found;
+      }
+    }
+    return profiles[0];
+  }, [activeProfileId, profiles]);
+
+  const profileSyncDialogText = useMemo(() => resolveGenerationRunProfileSyncDialog(locale), [locale]);
 
   const { isStack } = useResponsiveLayout();
   const isStarting = status === 'starting';
   const isRunning = status === 'running';
   const isPaused = status === 'paused';
-  const canStart = status === 'idle' || status === 'completed' || status === 'error';
+  const resolveProfileSyncRequest = useCallback((result: boolean) => {
+    if (profileSyncPromiseResolveRef.current) {
+      profileSyncPromiseResolveRef.current(result);
+      profileSyncPromiseResolveRef.current = null;
+    }
+    pendingProfileDraftRef.current = null;
+  }, []);
 
-  const title = resolveLocaleValue(generationRunPanelTitle, locale);
-  const controlsLabel = resolveLocaleValue(generationRunControlsLabel, locale);
-  const progressLabel = resolveLocaleValue(generationRunProgressLabel, locale);
-  const progressBarLabel = resolveLocaleValue(generationRunProgressBarLabel, locale);
+  const handleProfileSyncCancel = useCallback(() => {
+    profileSyncCloseActionRef.current = 'cancel';
+    setProfileSyncDialogOpen(false);
+    resolveProfileSyncRequest(false);
+  }, [resolveProfileSyncRequest]);
+
+  const handleProfileSyncConfirm = useCallback(() => {
+    const draft = pendingProfileDraftRef.current;
+    if (!draft || !activeProfile) {
+      profileSyncCloseActionRef.current = 'cancel';
+      setProfileSyncDialogOpen(false);
+      resolveProfileSyncRequest(false);
+      return;
+    }
+    profileSyncCloseActionRef.current = 'confirm';
+    updateProfile(activeProfile.id, draft);
+    useProfileFormStore.getState().reset();
+    setProfileSyncDialogOpen(false);
+    resolveProfileSyncRequest(true);
+  }, [activeProfile, resolveProfileSyncRequest, updateProfile]);
+
+  const handleProfileSyncDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) {
+        setProfileSyncDialogOpen(true);
+        return;
+      }
+      if (profileSyncCloseActionRef.current) {
+        profileSyncCloseActionRef.current = null;
+        return;
+      }
+      handleProfileSyncCancel();
+    },
+    [handleProfileSyncCancel],
+  );
+
+  const ensureProfileSyncedBeforeGeneration = useCallback(async (): Promise<boolean> => {
+    if (!profileDirty) {
+      return true;
+    }
+    if (!profileDraft) {
+      const message = profileValidationErrors[0] ?? profileSyncDialogText.validationError;
+      alert(message);
+      return false;
+    }
+    if (!activeProfile) {
+      alert(profileSyncDialogText.missingProfile);
+      return false;
+    }
+    const currentDraft = deviceProfileToDraft(activeProfile);
+    if (areDeviceProfileDraftsEqual(profileDraft, currentDraft)) {
+      return true;
+    }
+    pendingProfileDraftRef.current = profileDraft;
+    profileSyncCloseActionRef.current = null;
+    setProfileSyncDialogOpen(true);
+    return await new Promise<boolean>((resolve) => {
+      profileSyncPromiseResolveRef.current = resolve;
+    });
+  }, [activeProfile, profileDirty, profileDraft, profileSyncDialogText, profileValidationErrors]);
+
+  const handleStart = useCallback(async () => {
+    const ready = await ensureProfileSyncedBeforeGeneration();
+    if (!ready) {
+      return;
+    }
+    validateDraft();
+    if (validationErrors.length === 0) {
+      await startGeneration();
+    }
+  }, [ensureProfileSyncedBeforeGeneration, startGeneration, validateDraft, validationErrors.length]);
+
+  const canStart = status === 'idle' || status === 'completed' || status === 'error';
   const statusPrefix = resolveLocaleValue(generationRunStatusPrefix, locale);
   const startLabel = resolveLocaleValue(generationRunButtonLabels.start, locale);
   const startingLabel = resolveLocaleValue(generationRunButtonLabels.starting, locale);
   const pauseLabel = resolveLocaleValue(generationRunButtonLabels.pause, locale);
   const resumeLabel = resolveLocaleValue(generationRunButtonLabels.resume, locale);
   const stopLabel = resolveLocaleValue(generationRunButtonLabels.stop, locale);
+  const title = resolveLocaleValue(generationRunPanelTitle, locale);
+  const controlsLabel = resolveLocaleValue(generationRunControlsLabel, locale);
+  const progressLabel = resolveLocaleValue(generationRunProgressLabel, locale);
+  const progressBarLabel = resolveLocaleValue(generationRunProgressBarLabel, locale);
 
   const statusDisplay = formatGenerationRunStatusDisplay(status, lastCompletion?.reason ?? null, locale);
   const advancesDisplay = formatGenerationRunAdvancesDisplay(done, total, locale);
@@ -70,7 +174,8 @@ export const GenerationRunCard: React.FC = () => {
   const screenReaderSummary = formatGenerationRunScreenReaderSummary(statusDisplay, advancesDisplay, percentDisplay, locale);
 
   return (
-    <PanelCard
+    <>
+      <PanelCard
       icon={<ChartBar size={20} className="opacity-80" />}
       title={<span id="gen-run-title">{title}</span>}
       fullHeight={false}
@@ -134,6 +239,24 @@ export const GenerationRunCard: React.FC = () => {
         <div className="sr-only" aria-live="polite">
           {screenReaderSummary}
         </div>
-    </PanelCard>
+      </PanelCard>
+
+      <Dialog open={profileSyncDialogOpen} onOpenChange={handleProfileSyncDialogOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{profileSyncDialogText.title}</DialogTitle>
+            <DialogDescription>{profileSyncDialogText.description}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={handleProfileSyncCancel}>
+              {profileSyncDialogText.cancel}
+            </Button>
+            <Button onClick={handleProfileSyncConfirm}>
+              {profileSyncDialogText.confirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };

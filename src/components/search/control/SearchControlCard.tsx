@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -14,6 +14,7 @@ import { isWebGpuSupported } from '@/lib/search/search-mode';
 import { isWakeLockSupported, requestWakeLock, releaseWakeLock, setupAutoWakeLockManagement } from '@/lib/utils/wake-lock';
 import type { InitialSeedResult } from '../../../types/search';
 import type { SearchExecutionMode } from '@/store/app-store';
+import type { DeviceProfileDraft } from '@/types/profile';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import {
@@ -25,6 +26,7 @@ import {
   formatSearchControlSearchErrorAlert,
   formatSearchControlStartErrorAlert,
   resolveSearchControlButtonLabel,
+  resolveSearchControlProfileSyncDialog,
   resolveSearchControlExecutionModeHint,
   resolveSearchControlExecutionModeLabel,
   searchControlExecutionModeAriaLabel,
@@ -33,6 +35,10 @@ import {
   searchControlWorkerMinLabel,
   searchControlWorkerThreadsLabel,
 } from '@/lib/i18n/strings/search-control';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useProfileFormStore } from '@/store/profile-form-store';
+import { deviceProfileToDraft } from '@/types/profile';
+import { areDeviceProfileDraftsEqual } from '@/lib/utils/profile-draft';
 
 export function SearchControlCard() {
   const { isStack } = useResponsiveLayout();
@@ -54,15 +60,39 @@ export function SearchControlCard() {
     setWakeLockEnabled,
     searchExecutionMode,
     setSearchExecutionMode,
+    profiles,
+    activeProfileId,
+    updateProfile,
   } = useAppStore();
   const locale = useLocale();
+  const profileDirty = useProfileFormStore((state) => state.isDirty);
+  const profileDraft = useProfileFormStore((state) => state.draft);
+  const profileValidationErrors = useProfileFormStore((state) => state.validationErrors);
+  const [profileSyncDialogOpen, setProfileSyncDialogOpen] = useState(false);
+  const profileSyncPromiseResolveRef = useRef<((value: boolean) => void) | null>(null);
+  const pendingProfileDraftRef = useRef<DeviceProfileDraft | null>(null);
+  const profileSyncCloseActionRef = useRef<'confirm' | 'cancel' | null>(null);
+
+  const activeProfile = useMemo(() => {
+    if (!profiles.length) {
+      return null;
+    }
+    if (activeProfileId) {
+      const found = profiles.find((profile) => profile.id === activeProfileId);
+      if (found) {
+        return found;
+      }
+    }
+    return profiles[0];
+  }, [activeProfileId, profiles]);
+
+  const profileSyncDialogText = useMemo(() => resolveSearchControlProfileSyncDialog(locale), [locale]);
 
   // ワーカー数設定を初期化時に同期
   useEffect(() => {
     const workerManager = getSearchWorkerManager();
     workerManager.setMaxWorkers(parallelSearchSettings.maxWorkers);
-    workerManager.setParallelMode(parallelSearchSettings.enabled);
-  }, [parallelSearchSettings.maxWorkers, parallelSearchSettings.enabled]);
+  }, [parallelSearchSettings.maxWorkers]);
 
   // Wake Lock自動管理のセットアップ
   useEffect(() => {
@@ -108,102 +138,163 @@ export function SearchControlCard() {
     workerManager.stopSearch();
   };
 
+  const resolveProfileSyncRequest = useCallback((result: boolean) => {
+    if (profileSyncPromiseResolveRef.current) {
+      profileSyncPromiseResolveRef.current(result);
+      profileSyncPromiseResolveRef.current = null;
+    }
+    pendingProfileDraftRef.current = null;
+  }, []);
+
+  const handleProfileSyncCancel = useCallback(() => {
+    profileSyncCloseActionRef.current = 'cancel';
+    setProfileSyncDialogOpen(false);
+    resolveProfileSyncRequest(false);
+  }, [resolveProfileSyncRequest]);
+
+  const handleProfileSyncConfirm = useCallback(() => {
+    const draft = pendingProfileDraftRef.current;
+    if (!draft || !activeProfile) {
+      profileSyncCloseActionRef.current = 'cancel';
+      setProfileSyncDialogOpen(false);
+      resolveProfileSyncRequest(false);
+      return;
+    }
+    profileSyncCloseActionRef.current = 'confirm';
+    updateProfile(activeProfile.id, draft);
+    useProfileFormStore.getState().reset();
+    setProfileSyncDialogOpen(false);
+    resolveProfileSyncRequest(true);
+  }, [activeProfile, resolveProfileSyncRequest, updateProfile]);
+
+  const handleProfileSyncDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) {
+        setProfileSyncDialogOpen(true);
+        return;
+      }
+      if (profileSyncCloseActionRef.current) {
+        profileSyncCloseActionRef.current = null;
+        return;
+      }
+      handleProfileSyncCancel();
+    },
+    [handleProfileSyncCancel],
+  );
+
+  const ensureProfileSyncedBeforeSearch = useCallback(async (): Promise<boolean> => {
+    if (!profileDirty) {
+      return true;
+    }
+    if (!profileDraft) {
+      const message = profileValidationErrors[0] ?? profileSyncDialogText.validationError;
+      alert(message);
+      return false;
+    }
+    if (!activeProfile) {
+      alert(profileSyncDialogText.missingProfile);
+      return false;
+    }
+    const currentDraft = deviceProfileToDraft(activeProfile);
+    if (areDeviceProfileDraftsEqual(profileDraft, currentDraft)) {
+      return true;
+    }
+    pendingProfileDraftRef.current = profileDraft;
+    profileSyncCloseActionRef.current = null;
+    setProfileSyncDialogOpen(true);
+    return await new Promise<boolean>((resolve) => {
+      profileSyncPromiseResolveRef.current = resolve;
+    });
+  }, [activeProfile, profileDirty, profileDraft, profileSyncDialogText, profileValidationErrors, setProfileSyncDialogOpen]);
+
+  const performSearchStart = useCallback(async () => {
+    clearSearchResults();
+    startSearch();
+
+    try {
+      const workerManager = getSearchWorkerManager();
+
+      await workerManager.startSearch(searchConditions, targetSeeds.seeds, {
+        onProgress: (progress) => {
+          useAppStore.getState().setSearchProgress({
+            currentStep: progress.currentStep,
+            totalSteps: progress.totalSteps,
+            elapsedTime: progress.elapsedTime,
+            estimatedTimeRemaining: progress.estimatedTimeRemaining,
+            matchesFound: progress.matchesFound,
+            currentDateTime: progress.currentDateTime,
+          });
+        },
+        onParallelProgress: (aggregatedProgress) => {
+          setParallelProgress(aggregatedProgress);
+        },
+        onResult: (result: InitialSeedResult) => {
+          addSearchResult(result);
+        },
+        onComplete: (message: string) => {
+          console.warn('Search completed:', message);
+          const currentProgress = useAppStore.getState().searchProgress;
+          const currentParallelProgress = useAppStore.getState().parallelProgress;
+          const finalElapsedTime = currentParallelProgress?.totalElapsedTime || currentProgress.elapsedTime;
+          useAppStore.getState().setLastSearchDuration(finalElapsedTime);
+          completeSearch();
+          const matchesFound = useAppStore.getState().searchProgress.matchesFound;
+          const totalSteps = useAppStore.getState().searchProgress.totalSteps;
+          setTimeout(() => {
+            if (matchesFound === 0) {
+              alert(formatSearchControlNoMatchesAlert(totalSteps, locale));
+            }
+          }, 100);
+        },
+        onError: (error: string) => {
+          console.error('Search error:', error);
+          alert(formatSearchControlSearchErrorAlert(error, locale));
+          stopSearch();
+          resetSearchWorkerManager();
+        },
+        onPaused: () => {
+          console.warn('Search paused by worker');
+        },
+        onResumed: () => {
+          console.warn('Search resumed by worker');
+        },
+        onStopped: () => {
+          console.warn('Search stopped by worker');
+          stopSearch();
+        },
+      });
+    } catch (error) {
+      console.error('Failed to start worker search:', error);
+      const message = error instanceof Error ? error.message : locale === 'ja' ? '不明なエラー' : 'Unknown error';
+      alert(formatSearchControlStartErrorAlert(message, locale));
+      setParallelProgress(null);
+      stopSearch();
+      resetSearchWorkerManager();
+    }
+  }, [
+    addSearchResult,
+    clearSearchResults,
+    completeSearch,
+    locale,
+    searchConditions,
+    setParallelProgress,
+    startSearch,
+    stopSearch,
+    targetSeeds.seeds,
+  ]);
+
   const handleStartSearch = async () => {
     if (targetSeeds.seeds.length === 0) {
       alert(formatSearchControlMissingTargetsAlert(locale));
       return;
     }
 
-    clearSearchResults();
-    startSearch();
-
-    try {
-      // Get the worker manager
-      const workerManager = getSearchWorkerManager();
-
-      // Set parallel mode based on settings
-      workerManager.setParallelMode(searchExecutionMode === 'cpu-parallel');
-      
-      // Start search with worker
-      await workerManager.startSearch(
-        searchConditions,
-        targetSeeds.seeds,
-        {
-          onProgress: (progress) => {
-            useAppStore.getState().setSearchProgress({
-              currentStep: progress.currentStep,
-              totalSteps: progress.totalSteps,
-              elapsedTime: progress.elapsedTime,
-              estimatedTimeRemaining: progress.estimatedTimeRemaining,
-              matchesFound: progress.matchesFound,
-              currentDateTime: progress.currentDateTime,
-            });
-          },
-          onParallelProgress: (aggregatedProgress) => {
-            // 並列検索の詳細進捗を保存
-            setParallelProgress(aggregatedProgress);
-          },
-          onResult: (result: InitialSeedResult) => {
-            addSearchResult(result);
-          },
-          onComplete: (message: string) => {
-            console.warn('Search completed:', message);
-            
-            // 検索時間を保存
-            const currentProgress = useAppStore.getState().searchProgress;
-            const currentParallelProgress = useAppStore.getState().parallelProgress;
-            const finalElapsedTime = currentParallelProgress?.totalElapsedTime || currentProgress.elapsedTime;
-            useAppStore.getState().setLastSearchDuration(finalElapsedTime);
-            
-            // 検索状態を停止
-            completeSearch();
-            
-            // ワーカーマネージャーは次回検索開始時にリセット（統計情報を保持）
-            // resetSearchWorkerManager(); ← 削除：統計表示を維持するため
-            
-            // その後でアラートを表示
-            const matchesFound = useAppStore.getState().searchProgress.matchesFound;
-            const totalSteps = useAppStore.getState().searchProgress.totalSteps;
-            
-            // 結果が0件の場合のみアラートを表示（状態更新の確実な完了を待つ）
-            setTimeout(() => {
-              if (matchesFound === 0) {
-                alert(formatSearchControlNoMatchesAlert(totalSteps, locale));
-              }
-              // 結果が見つかった場合はダイアログを表示しない（ユーザーは結果タブで確認可能）
-            }, 100);
-          },
-          onError: (error: string) => {
-            console.error('Search error:', error);
-            alert(formatSearchControlSearchErrorAlert(error, locale));
-            stopSearch();
-            // エラー時は即座にリセット（不正な状態を避けるため）
-            resetSearchWorkerManager();
-          },
-          onPaused: () => {
-            console.warn('Search paused by worker');
-          },
-          onResumed: () => {
-            console.warn('Search resumed by worker');
-          },
-          onStopped: () => {
-            console.warn('Search stopped by worker');
-            stopSearch();
-            // 停止時も統計情報保持（並列進捗も維持、次回検索開始時にリセット）
-            // setParallelProgress(null); ← 削除：統計表示を維持
-            // resetSearchWorkerManager(); ← 削除
-          }
-        }
-      );
-    } catch (error) {
-      console.error('Failed to start worker search:', error);
-      const message = error instanceof Error ? error.message : (locale === 'ja' ? '不明なエラー' : 'Unknown error');
-      alert(formatSearchControlStartErrorAlert(message, locale));
-      setParallelProgress(null);
-      stopSearch();
-      // 例外時は即座にリセット（不正な状態を避けるため）
-      resetSearchWorkerManager();
+    const isProfileReady = await ensureProfileSyncedBeforeSearch();
+    if (!isProfileReady) {
+      return;
     }
+
+    await performSearchStart();
   };
 
   const handleMaxWorkersChange = (values: number[]) => {
@@ -238,11 +329,6 @@ export function SearchControlCard() {
         : undefined,
     },
     {
-      value: 'cpu-single',
-      label: resolveSearchControlExecutionModeLabel('cpuSingle', locale),
-      disabled: false,
-    },
-    {
       value: 'gpu',
       label: resolveSearchControlExecutionModeLabel('gpu', locale),
       disabled: !isWebGpuAvailable,
@@ -272,13 +358,15 @@ export function SearchControlCard() {
   };
 
   useEffect(() => {
-    if (!isWebGpuAvailable && searchExecutionMode === 'gpu') {
-      setSearchExecutionMode(isParallelAvailable ? 'cpu-parallel' : 'cpu-single');
+    if (searchExecutionMode === 'gpu' && !isWebGpuAvailable) {
+      if (isParallelAvailable) {
+        setSearchExecutionMode('cpu-parallel');
+      }
       return;
     }
 
-    if (!isParallelAvailable && searchExecutionMode === 'cpu-parallel') {
-      setSearchExecutionMode('cpu-single');
+    if (searchExecutionMode === 'cpu-parallel' && !isParallelAvailable && isWebGpuAvailable) {
+      setSearchExecutionMode('gpu');
     }
   }, [isWebGpuAvailable, isParallelAvailable, searchExecutionMode, setSearchExecutionMode]);
 
@@ -293,7 +381,8 @@ export function SearchControlCard() {
 
   // 統一レイアウト: シンプルな検索制御
   return (
-    <PanelCard
+    <>
+      <PanelCard
       icon={<Play size={20} className="opacity-80" />} 
       title={resolveLocaleValue(searchControlPanelTitle, locale)}
       className={isStack ? 'max-h-96' : undefined}
@@ -427,6 +516,24 @@ export function SearchControlCard() {
             </>
           )}
         </div>
-    </PanelCard>
+      </PanelCard>
+
+      <Dialog open={profileSyncDialogOpen} onOpenChange={handleProfileSyncDialogOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{profileSyncDialogText.title}</DialogTitle>
+            <DialogDescription>{profileSyncDialogText.description}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={handleProfileSyncCancel}>
+              {profileSyncDialogText.cancel}
+            </Button>
+            <Button onClick={handleProfileSyncConfirm}>
+              {profileSyncDialogText.confirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
