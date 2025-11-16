@@ -147,7 +147,7 @@ impl EncounterCalculator {
             EncounterType::StaticStarter => 0, // 御三家は常にスロット0
             EncounterType::StaticFossil => 0, // 化石は常にスロット0
             EncounterType::StaticEvent => 0,  // イベント配布は常にスロット0
-            EncounterType::Roamer => 0,      // 徘徊ポケモンは常にスロット0
+            EncounterType::Roamer => 0,       // 徘徊ポケモンは常にスロット0
         }
     }
 

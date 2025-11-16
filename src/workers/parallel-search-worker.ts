@@ -7,6 +7,12 @@ import type { TimerState } from '../types/callbacks';
 import { SeedCalculator } from '../lib/core/seed-calculator';
 import { toMacUint8Array } from '@/lib/utils/mac-address';
 import { countValidKeyCombinations, keyMaskToKeyCode } from '@/lib/utils/key-input';
+import {
+  advanceByAllowedSeconds,
+  countAllowedSecondsInInterval,
+  isDateWithinTimePlan,
+  resolveTimePlan,
+} from '@/lib/webgpu/seed-search/time-plan';
 import type { SearchConditions, InitialSeedResult } from '../types/search';
 import type { ParallelWorkerRequest, ParallelWorkerResponse, WorkerChunk } from '../types/parallel';
 import type { Hardware } from '../types/rom';
@@ -186,13 +192,24 @@ async function processChunkWithWasm(
   };
   const frameValue = HARDWARE_FRAME_VALUES[conditions.hardware] || 8;
 
+  const timeRange = conditions.timeRange;
+  const hourRange = timeRange?.hour ?? { start: 0, end: 23 };
+  const minuteRange = timeRange?.minute ?? { start: 0, end: 59 };
+  const secondRange = timeRange?.second ?? { start: 0, end: 59 };
+
   // WebAssembly searcher作成
   const searcher = new wasmModule.IntegratedSeedSearcher(
     toMacUint8Array(conditions.macAddress as unknown as Array<number | string>),
     new Uint32Array(params.nazo),
     conditions.hardware,
     conditions.keyInput,
-    frameValue
+    frameValue,
+    hourRange.start,
+    hourRange.end,
+    minuteRange.start,
+    minuteRange.end,
+    secondRange.start,
+    secondRange.end
   );
 
   // Target seed配列のJIT変換を一度だけ実施してコストを削減
@@ -204,78 +221,91 @@ async function processChunkWithWasm(
     conditions.timer0VCountConfig.vcountRange.max - conditions.timer0VCountConfig.vcountRange.min + 1;
   const operationsPerSecond = timer0Count * vcountCount * Math.max(keyCombinationCount, 1);
 
+  const { plan } = resolveTimePlan(conditions);
+  const chunk = searchState.chunk!;
+  const chunkStartMs = chunk.startDateTime.getTime();
+  const chunkEndExclusiveMs = chunk.endDateTime.getTime() + 1000;
+  const totalAllowedSeconds = countAllowedSecondsInInterval(plan, chunkStartMs, chunkEndExclusiveMs);
+
   try {
-    const chunk = searchState.chunk!;
-    const startDate = chunk.startDateTime;
-    const endDate = chunk.endDateTime;
-    const rangeSeconds = Math.floor((endDate.getTime() - startDate.getTime()) / 1000) + 1;
-    const totalOperations = rangeSeconds * operationsPerSecond;
+    if (totalAllowedSeconds === 0) {
+      reportProgress(0, 0, 0, chunk.startDateTime.toISOString());
+      return [];
+    }
 
-    // 初期進捗報告
-    reportProgress(0, totalOperations, 0);
-
-    // サブチャンク分割 (5日上限、負荷に応じて短縮)
-    const rawSubChunkSeconds = Math.floor(TARGET_OPERATIONS_PER_SUB_CHUNK / Math.max(operationsPerSecond, 1));
-    const boundedSubChunkSeconds = Math.max(1, rawSubChunkSeconds);
-    const subChunkSeconds = Math.max(
-      1,
-      Math.min(rangeSeconds, Math.min(5 * 24 * 60 * 60, boundedSubChunkSeconds))
-    );
+    const totalOperations = totalAllowedSeconds * operationsPerSecond;
+    const rawAllowedSeconds = Math.floor(TARGET_OPERATIONS_PER_SUB_CHUNK / Math.max(operationsPerSecond, 1));
+    const desiredAllowedSeconds = Math.max(1, rawAllowedSeconds);
+    const maxSubChunkSeconds = 5 * 24 * 60 * 60;
     const allResults: InitialSeedResult[] = [];
     let processedOperations = 0;
+    let lastProcessedIso = chunk.startDateTime.toISOString();
 
-    for (let offset = 0; offset < rangeSeconds; offset += subChunkSeconds) {
-      // 停止チェック
+    // 初期進捗報告
+    reportProgress(0, totalOperations, 0, lastProcessedIso);
+
+    let subChunkStartMs = chunkStartMs;
+    while (subChunkStartMs < chunkEndExclusiveMs) {
       if (searchState.shouldStop) {
         break;
       }
-      
-      // 一時停止チェック
+
       if (searchState.isPaused) {
-        // 一時停止状態をUIに通知
         postMessage({
           type: 'PAUSED',
-          workerId: searchState.workerId
+          workerId: searchState.workerId,
         } as ParallelWorkerResponse);
-        
         while (searchState.isPaused && !searchState.shouldStop) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
         }
-        
-        // 再開時にUIに通知
         if (!searchState.shouldStop) {
           postMessage({
             type: 'RESUMED',
-            workerId: searchState.workerId
+            workerId: searchState.workerId,
           } as ParallelWorkerResponse);
         }
       }
-      
+
       if (searchState.shouldStop) {
         break;
       }
-      
-      const subChunkStart = new Date(startDate.getTime() + offset * 1000);
-      const subChunkEnd = new Date(Math.min(
-        startDate.getTime() + (offset + subChunkSeconds) * 1000,
-        endDate.getTime() + 1000
-      ));
-      const subChunkRange = Math.floor((subChunkEnd.getTime() - subChunkStart.getTime()) / 1000);
-      
-      if (subChunkRange <= 0) break;
 
-      // WebAssembly呼び出し前に非同期yield
-      await new Promise(resolve => setTimeout(resolve, 0));
-      
-      // WebAssembly呼び出し前の一時停止チェック
-      if (searchState.isPaused) {
-        while (searchState.isPaused && !searchState.shouldStop) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        if (searchState.shouldStop) break;
+      const maxSubChunkEndMs = Math.min(subChunkStartMs + maxSubChunkSeconds * 1000, chunkEndExclusiveMs);
+      const { endTimestampMs, countedSeconds, lastAllowedTimestampMs } = advanceByAllowedSeconds(
+        plan,
+        subChunkStartMs,
+        maxSubChunkEndMs,
+        desiredAllowedSeconds
+      );
+
+      if (endTimestampMs <= subChunkStartMs) {
+        break;
       }
 
-      // サブチャンクの統合検索実行（SIMD版）
+      if (countedSeconds === 0) {
+        subChunkStartMs = endTimestampMs;
+        continue;
+      }
+
+      const subChunkStart = new Date(subChunkStartMs);
+      const subChunkRange = Math.floor((endTimestampMs - subChunkStartMs) / 1000);
+
+      if (subChunkRange <= 0) {
+        subChunkStartMs = endTimestampMs;
+        continue;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      if (searchState.isPaused) {
+        while (searchState.isPaused && !searchState.shouldStop) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        if (searchState.shouldStop) {
+          break;
+        }
+      }
+
       const subResults = searcher.search_seeds_integrated_simd(
         subChunkStart.getFullYear(),
         subChunkStart.getMonth() + 1,
@@ -290,23 +320,27 @@ async function processChunkWithWasm(
         conditions.timer0VCountConfig.vcountRange.max,
         targetSeedArray
       );
-      
-      // WebAssembly呼び出し後に非同期yield
-      await new Promise(resolve => setTimeout(resolve, 0));
 
-  // サブチャンクの結果を統合
-  const wasmResults = subResults as unknown as WasmIntegratedResult[];
-  for (const result of wasmResults) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const wasmResults = subResults as unknown as WasmIntegratedResult[];
+      for (const result of wasmResults) {
         const resultDate = new Date(
-          result.year, 
-          result.month - 1, 
-          result.date, 
-          result.hour, 
-          result.minute, 
+          result.year,
+          result.month - 1,
+          result.date,
+          result.hour,
+          result.minute,
           result.second
         );
-        
-        const message = calculator.generateMessage(conditions, result.timer0, result.vcount, resultDate, result.keyCode);
+
+        const message = calculator.generateMessage(
+          conditions,
+          result.timer0,
+          result.vcount,
+          resultDate,
+          result.keyCode
+        );
         const { hash, lcgSeed } = calculator.calculateSeed(message);
 
         allResults.push({
@@ -323,14 +357,16 @@ async function processChunkWithWasm(
         });
       }
 
-      // サブチャンク完了後の進捗報告
-      const subChunkOperations = subChunkRange * operationsPerSecond;
-      processedOperations += subChunkOperations;
-      reportProgress(processedOperations, totalOperations, allResults.length);
+      processedOperations += countedSeconds * operationsPerSecond;
+      if (lastAllowedTimestampMs !== undefined) {
+        lastProcessedIso = new Date(lastAllowedTimestampMs).toISOString();
+      }
+      reportProgress(processedOperations, totalOperations, allResults.length, lastProcessedIso);
+
+      subChunkStartMs = endTimestampMs;
     }
 
     return allResults;
-    
   } finally {
     searcher.free(); // メモリ解放
   }
@@ -350,20 +386,28 @@ async function processChunkWithTypeScript(
   let operationsSinceProgress = 0;
   const fallbackKeyCode = keyMaskToKeyCode(conditions.keyInput);
   const keyCombinationCount = countValidKeyCombinations(conditions.keyInput);
-  
+  let lastProcessedIso = chunk.startDateTime.toISOString();
+
   const params = calculator.getROMParameters(conditions.romVersion, conditions.romRegion);
   if (!params) {
     throw new Error(`No ROM parameters found for ${conditions.romVersion} ${conditions.romRegion}`);
   }
 
+  const { plan } = resolveTimePlan(conditions);
   const startTime = chunk.startDateTime.getTime();
   const endTime = chunk.endDateTime.getTime();
-  const totalSeconds = Math.floor((endTime - startTime) / 1000) + 1;
-  // フォールバック実装は各 timer0 について実効 VCount を1つだけ評価するため、
-  // 実行される操作数は「秒数 × timer0 値の個数」とする
-  const totalOperations = totalSeconds *
-    (conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1) *
-    Math.max(keyCombinationCount, 1);
+  const endTimeExclusive = endTime + 1000;
+  const totalAllowedSeconds = countAllowedSecondsInInterval(plan, startTime, endTimeExclusive);
+  const timer0RangeCount =
+    conditions.timer0VCountConfig.timer0Range.max - conditions.timer0VCountConfig.timer0Range.min + 1;
+
+  if (totalAllowedSeconds === 0) {
+    reportProgress(0, 0, 0, chunk.startDateTime.toISOString());
+    return 0;
+  }
+
+  const totalOperations = totalAllowedSeconds * timer0RangeCount * Math.max(keyCombinationCount, 1);
+  reportProgress(0, totalOperations, 0, lastProcessedIso);
 
   // Timer0範囲をループ
   for (let timer0 = conditions.timer0VCountConfig.timer0Range.min; timer0 <= conditions.timer0VCountConfig.timer0Range.max; timer0++) {
@@ -373,7 +417,7 @@ async function processChunkWithTypeScript(
     const actualVCount = calculator.getVCountForTimer0(params, timer0);
     
     // 時刻範囲をループ
-    for (let timestamp = startTime; timestamp <= endTime; timestamp += 1000) {
+    for (let timestamp = startTime; timestamp < endTimeExclusive; timestamp += 1000) {
       if (searchState.shouldStop) break;
       
       // 一時停止処理
@@ -385,6 +429,12 @@ async function processChunkWithTypeScript(
       
       const currentDateTime = new Date(timestamp);
       
+      if (!isDateWithinTimePlan(currentDateTime, plan)) {
+        continue;
+      }
+
+      lastProcessedIso = currentDateTime.toISOString();
+
       try {
         // Seed計算
   const message = calculator.generateMessage(conditions, timer0, actualVCount, currentDateTime, fallbackKeyCode);
@@ -423,7 +473,7 @@ async function processChunkWithTypeScript(
         
         // 進捗報告と一時停止チェック (1000操作ごと)
         if (operationsSinceProgress >= 1000) {
-          reportProgress(processedOperations, totalOperations, matchesFound);
+          reportProgress(processedOperations, totalOperations, matchesFound, lastProcessedIso);
           operationsSinceProgress = 0;
           
           // 追加の一時停止チェック
@@ -444,7 +494,7 @@ async function processChunkWithTypeScript(
   }
   
   // 最終進捗報告
-  reportProgress(processedOperations, totalOperations, matchesFound);
+  reportProgress(processedOperations, totalOperations, matchesFound, lastProcessedIso);
   
   return matchesFound;
 }
@@ -452,7 +502,12 @@ async function processChunkWithTypeScript(
 /**
  * 進捗報告
  */
-function reportProgress(current: number, total: number, matches: number): void {
+function reportProgress(
+  current: number,
+  total: number,
+  matches: number,
+  currentDateTimeIso?: string
+): void {
   const elapsedTime = getElapsedTime();
   const progressRatio = current / total;
   const estimatedTimeRemaining = progressRatio > 0 ? 
@@ -467,7 +522,7 @@ function reportProgress(current: number, total: number, matches: number): void {
       elapsedTime,
       estimatedTimeRemaining,
       matchesFound: matches,
-      currentDateTime: searchState.chunk?.startDateTime.toISOString()
+      currentDateTime: currentDateTimeIso ?? searchState.chunk?.startDateTime.toISOString()
     }
   } as ParallelWorkerResponse);
 }

@@ -20,6 +20,81 @@ extern "C" {
 
 /// 2000年1月1日 00:00:00 UTCのUnix時間
 const EPOCH_2000_UNIX: i64 = 946684800;
+const SECONDS_PER_DAY: i64 = 86_400;
+
+#[derive(Clone, Copy)]
+struct DailyTimeRangeConfig {
+    hour_start: u32,
+    hour_end: u32,
+    minute_start: u32,
+    minute_end: u32,
+    second_start: u32,
+    second_end: u32,
+}
+
+impl DailyTimeRangeConfig {
+    fn new(
+        hour_start: u32,
+        hour_end: u32,
+        minute_start: u32,
+        minute_end: u32,
+        second_start: u32,
+        second_end: u32,
+    ) -> Result<Self, JsValue> {
+        fn validate(
+            label: &str,
+            start: u32,
+            end: u32,
+            min: u32,
+            max: u32,
+        ) -> Result<(u32, u32), JsValue> {
+            if start < min || end > max {
+                return Err(JsValue::from_str(&format!(
+                    "{label} range must be within {min}..={max}",
+                )));
+            }
+            if start > end {
+                return Err(JsValue::from_str(&format!(
+                    "{label} range start ({start}) must be <= end ({end})",
+                )));
+            }
+            Ok((start, end))
+        }
+
+        let (hour_start, hour_end) = validate("hour", hour_start, hour_end, 0, 23)?;
+        let (minute_start, minute_end) = validate("minute", minute_start, minute_end, 0, 59)?;
+        let (second_start, second_end) = validate("second", second_start, second_end, 0, 59)?;
+
+        Ok(DailyTimeRangeConfig {
+            hour_start,
+            hour_end,
+            minute_start,
+            minute_end,
+            second_start,
+            second_end,
+        })
+    }
+
+    fn combos_per_day(&self) -> u32 {
+        let hour_count = self.hour_end - self.hour_start + 1;
+        let minute_count = self.minute_end - self.minute_start + 1;
+        let second_count = self.second_end - self.second_start + 1;
+        hour_count * minute_count * second_count
+    }
+}
+
+fn build_allowed_second_mask(range: &DailyTimeRangeConfig) -> Box<[bool; 86400]> {
+    let mut mask = Box::new([false; 86400]);
+    for hour in range.hour_start..=range.hour_end {
+        for minute in range.minute_start..=range.minute_end {
+            for second in range.second_start..=range.second_end {
+                let idx = (hour * 3600 + minute * 60 + second) as usize;
+                mask[idx] = true;
+            }
+        }
+    }
+    mask
+}
 
 /// 検索パラメータ構造体（内部用）
 #[derive(Clone, Copy)]
@@ -145,6 +220,8 @@ pub struct IntegratedSeedSearcher {
 
     // 利用可能なキーコードのリスト（べき集合から生成）
     key_codes: Vec<u32>,
+
+    allowed_second_mask: Box<[bool; 86400]>,
 }
 
 /// 実機上で不可能なキー入力の組み合わせをチェックする
@@ -237,6 +314,12 @@ impl IntegratedSeedSearcher {
         hardware: &str,
         key_input_mask: u32,
         frame: u32,
+        hour_start: u32,
+        hour_end: u32,
+        minute_start: u32,
+        minute_end: u32,
+        second_start: u32,
+        second_end: u32,
     ) -> Result<IntegratedSeedSearcher, JsValue> {
         // バリデーション
         if mac.len() != 6 {
@@ -245,6 +328,21 @@ impl IntegratedSeedSearcher {
         if nazo.len() != 5 {
             return Err(JsValue::from_str("nazo must be 5 32-bit words"));
         }
+
+        let time_range = DailyTimeRangeConfig::new(
+            hour_start,
+            hour_end,
+            minute_start,
+            minute_end,
+            second_start,
+            second_end,
+        )?;
+        if time_range.combos_per_day() == 0 {
+            return Err(JsValue::from_str(
+                "time range combinations per day must be greater than zero",
+            ));
+        }
+        let allowed_second_mask = build_allowed_second_mask(&time_range);
 
         // Hardware type validation
         match hardware {
@@ -296,6 +394,7 @@ impl IntegratedSeedSearcher {
             hardware: hardware.to_string(),
             base_message,
             key_codes,
+            allowed_second_mask,
         })
     }
 
@@ -422,35 +521,54 @@ impl IntegratedSeedSearcher {
         // 外側ループ: Timer0とVCount
         for timer0 in timer0_min..=timer0_max {
             for vcount in vcount_min..=vcount_max {
+                let params = SearchParams { timer0, vcount };
                 // キー入力の全組み合わせをループ
                 for &key_code in &self.key_codes {
-                    for second_offset in (0..range_seconds).step_by(4) {
-                        let batch_size = std::cmp::min(4, range_seconds - second_offset);
+                    let mut messages = [0u32; 64]; // 4組 × 16ワード
+                    let mut seconds_batch = [0i64; 4];
+                    let mut batch_len = 0usize;
 
-                        if batch_size == 4 {
-                            // 4つの秒を並列処理
-                            let params = SearchParams { timer0, vcount };
+                    for second_offset in 0..range_seconds {
+                        let current_seconds_since_2000 =
+                            base_seconds_since_2000 + second_offset as i64;
+
+                        let (time_code, date_code) =
+                            match self.calculate_datetime_codes(current_seconds_since_2000) {
+                                Some(result) => result,
+                                None => continue,
+                            };
+
+                        let message =
+                            self.build_message(timer0, vcount, date_code, time_code, key_code);
+                        let base_idx = batch_len * 16;
+                        messages[base_idx..base_idx + 16].copy_from_slice(&message);
+                        seconds_batch[batch_len] = current_seconds_since_2000;
+                        batch_len += 1;
+
+                        if batch_len == 4 {
                             self.process_simd_batch(
-                                second_offset,
-                                base_seconds_since_2000,
+                                &messages,
+                                &seconds_batch,
+                                batch_len,
                                 &params,
                                 key_code,
                                 &target_set,
                                 &results,
                             );
-                        } else {
-                            // 残りの秒を個別処理
-                            let params = SearchParams { timer0, vcount };
-                            self.process_remaining_seconds(
-                                second_offset,
-                                batch_size,
-                                base_seconds_since_2000,
-                                &params,
-                                key_code,
-                                &target_set,
-                                &results,
-                            );
+                            batch_len = 0;
                         }
+                    }
+
+                    if batch_len > 0 {
+                        self.process_simd_batch(
+                            &messages,
+                            &seconds_batch,
+                            batch_len,
+                            &params,
+                            key_code,
+                            &target_set,
+                            &results,
+                        );
                     }
                 }
             }
@@ -459,121 +577,61 @@ impl IntegratedSeedSearcher {
         results
     }
 
-    /// SIMD バッチ処理（4つの秒を並列計算）
+    /// SIMD バッチ処理（最大4つの秒を並列計算）
     #[inline]
     fn process_simd_batch(
         &self,
-        second_offset: u32,
-        base_seconds_since_2000: i64,
+        messages: &[u32; 64],
+        seconds_batch: &[i64; 4],
+        batch_size: usize,
         params: &SearchParams,
         key_code: u32,
         target_seeds: &BTreeSet<u32>,
         results: &js_sys::Array,
     ) {
-        let mut messages = [0u32; 64]; // 4組 × 16ワード
-        let mut valid_messages = [true; 4];
-        let mut seconds_batch = [0i64; 4]; // 結果生成用
-
-        // Timer0/VCountの値を事前に計算（SIMD用）
-        let timer_vcount_value = (params.vcount << 16) | params.timer0;
-        let swapped_timer_vcount = crate::sha1::swap_bytes_32(timer_vcount_value);
-        let swapped_key_code = crate::sha1::swap_bytes_32(key_code);
-
-        // 4つのメッセージを準備
-        for i in 0..4 {
-            let current_second_offset = second_offset + i as u32;
-            let current_seconds_since_2000 = base_seconds_since_2000 + current_second_offset as i64;
-
-            let (time_code, date_code) =
-                match self.calculate_datetime_codes(current_seconds_since_2000) {
-                    Some(result) => result,
-                    None => {
-                        valid_messages[i] = false;
-                        continue;
-                    }
-                };
-
-            seconds_batch[i] = current_seconds_since_2000;
-
-            // メッセージを構築してバッチに追加（バイトスワップ済み値を使用）
-            let mut message = self.base_message;
-            message[5] = swapped_timer_vcount; // 事前計算済み
-            message[8] = date_code;
-            message[9] = time_code;
-            message[12] = swapped_key_code;
-
-            let base_idx = i * 16;
-            messages[base_idx..base_idx + 16].copy_from_slice(&message);
+        if batch_size == 0 {
+            return;
         }
 
-        // SIMD SHA-1計算を実行
-        let hash_results = crate::sha1_simd::calculate_pokemon_sha1_simd(&messages);
+        if batch_size == 4 {
+            // SIMD SHA-1計算を実行
+            let hash_results = crate::sha1_simd::calculate_pokemon_sha1_simd(messages);
 
-        // 各組の結果を処理
-        for i in 0..4 {
-            if !valid_messages[i] {
-                continue;
+            for i in 0..4 {
+                let h0 = hash_results[i * 5];
+                let h1 = hash_results[i * 5 + 1];
+                let h2 = hash_results[i * 5 + 2];
+                let h3 = hash_results[i * 5 + 3];
+                let h4 = hash_results[i * 5 + 4];
+                let seed = crate::sha1::calculate_pokemon_seed_from_hash(h0, h1);
+
+                let hash_values = HashValues { h0, h1, h2, h3, h4 };
+                self.check_and_add_result(
+                    seed,
+                    &hash_values,
+                    seconds_batch[i],
+                    key_code,
+                    params,
+                    target_seeds,
+                    results,
+                );
             }
+            return;
+        }
 
-            let h0 = hash_results[i * 5];
-            let h1 = hash_results[i * 5 + 1];
-            let h2 = hash_results[i * 5 + 2];
-            let h3 = hash_results[i * 5 + 3];
-            let h4 = hash_results[i * 5 + 4];
+        // バッチサイズが4未満の場合はスカラ計算にフォールバック
+        for i in 0..batch_size {
+            let mut single_message = [0u32; 16];
+            let base_idx = i * 16;
+            single_message.copy_from_slice(&messages[base_idx..base_idx + 16]);
+            let (h0, h1, h2, h3, h4) = crate::sha1::calculate_pokemon_sha1(&single_message);
             let seed = crate::sha1::calculate_pokemon_seed_from_hash(h0, h1);
 
-            // マッチ時のみ日時とハッシュを生成
             let hash_values = HashValues { h0, h1, h2, h3, h4 };
-            let params_for_result = SearchParams {
-                timer0: params.timer0,
-                vcount: params.vcount,
-            };
             self.check_and_add_result(
                 seed,
                 &hash_values,
                 seconds_batch[i],
-                key_code,
-                &params_for_result,
-                target_seeds,
-                results,
-            );
-        }
-    }
-
-    /// 端数秒の個別処理（非SIMD）
-    #[inline]
-    fn process_remaining_seconds(
-        &self,
-        second_offset: u32,
-        batch_size: u32,
-        base_seconds_since_2000: i64,
-        params: &SearchParams,
-        key_code: u32,
-        target_seeds: &BTreeSet<u32>,
-        results: &js_sys::Array,
-    ) {
-        for i in 0..batch_size {
-            let current_second_offset = second_offset + i;
-            let current_seconds_since_2000 = base_seconds_since_2000 + current_second_offset as i64;
-
-            let (time_code, date_code) =
-                match self.calculate_datetime_codes(current_seconds_since_2000) {
-                    Some(result) => result,
-                    None => continue,
-                };
-
-            // メッセージを構築してSHA-1計算
-            let message =
-                self.build_message(params.timer0, params.vcount, date_code, time_code, key_code);
-            let (h0, h1, h2, h3, h4) = crate::sha1::calculate_pokemon_sha1(&message);
-            let seed = crate::sha1::calculate_pokemon_seed_from_hash(h0, h1);
-
-            // マッチ時のみ日時とハッシュを生成
-            let hash_values = HashValues { h0, h1, h2, h3, h4 };
-            self.check_and_add_result(
-                seed,
-                &hash_values,
-                current_seconds_since_2000,
                 key_code,
                 params,
                 target_seeds,
@@ -589,13 +647,22 @@ impl IntegratedSeedSearcher {
             return None;
         }
 
-        let time_index = (seconds_since_2000 % 86400) as u32;
-        let date_index = (seconds_since_2000 / 86400) as u32;
+        let seconds_of_day = (seconds_since_2000 % SECONDS_PER_DAY) as u32;
+        if !self.is_second_allowed(seconds_of_day) {
+            return None;
+        }
+        let date_index = (seconds_since_2000 / SECONDS_PER_DAY) as u32;
 
-        let time_code = TimeCodeGenerator::get_time_code_for_hardware(time_index, &self.hardware);
+        let time_code =
+            TimeCodeGenerator::get_time_code_for_hardware(seconds_of_day, &self.hardware);
         let date_code = DateCodeGenerator::get_date_code(date_index);
 
         Some((time_code, date_code))
+    }
+
+    #[inline(always)]
+    fn is_second_allowed(&self, second_of_day: u32) -> bool {
+        self.allowed_second_mask[second_of_day as usize]
     }
 
     /// 結果表示用の日時を生成（マッチした場合のみ）

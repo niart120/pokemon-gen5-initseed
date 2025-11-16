@@ -187,10 +187,10 @@ export function useProfileCardForm(): UseProfileCardFormResult {
   }, [activeProfile, dirty]);
 
   React.useEffect(() => {
-    if (!externalDirty && dirty) {
+    if (!externalDirty) {
       setDirty(false);
     }
-  }, [dirty, externalDirty]);
+  }, [externalDirty]);
 
   React.useEffect(() => {
     if (!dirty) {

@@ -95,6 +95,11 @@ describe('WebAssembly計算ロジックテスト', () => {
         endMinute: 0,
         endSecond: 0
       },
+      timeRange: {
+        hour: { start: 0, end: 0 },
+        minute: { start: 0, end: 0 },
+        second: { start: 0, end: 0 },
+      },
       keyInput: 0,
       macAddress: [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB]
     }

@@ -26,6 +26,26 @@ export const searchParamsKeyInputLabel: LocaleText = {
   en: 'Key Input',
 };
 
+export const searchParamsTimeRangeLabel: LocaleText = {
+  ja: '時間範囲',
+  en: 'Time Window',
+};
+
+export const searchParamsHourLabel: LocaleText = {
+  ja: '時',
+  en: 'Hour',
+};
+
+export const searchParamsMinuteLabel: LocaleText = {
+  ja: '分',
+  en: 'Minute',
+};
+
+export const searchParamsSecondLabel: LocaleText = {
+  ja: '秒',
+  en: 'Second',
+};
+
 export const searchParamsConfigureButtonLabel: LocaleText = {
   ja: 'Configure',
   en: 'Configure',

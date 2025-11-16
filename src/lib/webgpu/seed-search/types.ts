@@ -1,6 +1,18 @@
 import type { SearchConditions, InitialSeedResult } from '@/types/search';
 import type { WorkerProgressMessage } from '@/types/callbacks';
 
+export interface WebGpuTimePlan {
+  dayCount: number;
+  combosPerDay: number;
+  hourRangeStart: number;
+  hourRangeCount: number;
+  minuteRangeStart: number;
+  minuteRangeCount: number;
+  secondRangeStart: number;
+  secondRangeCount: number;
+  startDayTimestampMs: number;
+}
+
 export interface GpuSha1WorkloadConfig {
   startSecondsSince2000: number;
   rangeSeconds: number;
@@ -20,6 +32,13 @@ export interface GpuSha1WorkloadConfig {
   startDayOfYear: number;
   startSecondOfDay: number;
   startDayOfWeek: number;
+  dayCount: number;
+  hourRangeStart: number;
+  hourRangeCount: number;
+  minuteRangeStart: number;
+  minuteRangeCount: number;
+  secondRangeStart: number;
+  secondRangeCount: number;
 }
 
 export interface WebGpuSegment {
@@ -42,6 +61,7 @@ export interface WebGpuSearchContext {
   rangeSeconds: number;
   totalMessages: number;
   segments: WebGpuSegment[];
+  timePlan: WebGpuTimePlan;
 }
 
 export interface WebGpuDispatchPlan {

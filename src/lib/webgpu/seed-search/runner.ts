@@ -24,6 +24,7 @@ import type {
   WebGpuSearchContext,
   WebGpuSegment,
 } from './types';
+import { getDateFromTimePlan } from './time-plan';
 
 interface DispatchContext {
   segment: WebGpuSegment;
@@ -32,7 +33,7 @@ interface DispatchContext {
   slotIndex: number;
 }
 
-const CONFIG_WORD_COUNT = 25;
+const CONFIG_WORD_COUNT = 32;
 const PROGRESS_INTERVAL_MS = 500;
 const YIELD_INTERVAL = 1024;
 const ZERO_MATCH_HEADER = new Uint32Array([0]);
@@ -748,21 +749,21 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
         }
       }
 
-    const recordOffset = MATCH_OUTPUT_HEADER_WORDS + i * MATCH_RECORD_WORDS;
-    const localMessageIndex = matchWords[recordOffset];
-    const messageIndex = dispatchBaseOffset + localMessageIndex;
+      const recordOffset = MATCH_OUTPUT_HEADER_WORDS + i * MATCH_RECORD_WORDS;
+      const localMessageIndex = matchWords[recordOffset];
+      const messageIndex = dispatchBaseOffset + localMessageIndex;
       const seed = matchWords[recordOffset + 1] >>> 0;
 
     const timer0Index = Math.floor(messageIndex / messagesPerTimer0);
     const remainderAfterTimer0 = messageIndex - timer0Index * messagesPerTimer0;
     const vcountIndex = Math.floor(remainderAfterTimer0 / messagesPerVcount);
-    const secondOffset = remainderAfterTimer0 - vcountIndex * messagesPerVcount;
+      const timeCombinationOffset = remainderAfterTimer0 - vcountIndex * messagesPerVcount;
 
       const timer0 = timer0Min + timer0Index;
-    const vcount = vcountMin + vcountIndex;
-    const datetime = new Date(context.startTimestampMs + secondOffset * 1000);
-  const keyCode = dispatchContext.segment.keyCode;
-  const message = state.seedCalculator.generateMessage(context.conditions, timer0, vcount, datetime, keyCode);
+      const vcount = vcountMin + vcountIndex;
+      const datetime = getDateFromTimePlan(context.timePlan, timeCombinationOffset);
+      const keyCode = dispatchContext.segment.keyCode;
+      const message = state.seedCalculator.generateMessage(context.conditions, timer0, vcount, datetime, keyCode);
       const { hash, seed: recalculatedSeed, lcgSeed } = state.seedCalculator.calculateSeed(message);
       if (recalculatedSeed !== seed) {
         console.warn('GPU/CPU seed mismatch detected', {
@@ -793,8 +794,8 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
       const finalTimer0Index = Math.floor(finalMessageIndex / messagesPerTimer0);
       const finalRemainderAfterTimer0 = finalMessageIndex - finalTimer0Index * messagesPerTimer0;
       const finalVcountIndex = Math.floor(finalRemainderAfterTimer0 / messagesPerVcount);
-      const finalSecondOffset = finalRemainderAfterTimer0 - finalVcountIndex * messagesPerVcount;
-      const lastDateTimeIso = new Date(context.startTimestampMs + finalSecondOffset * 1000).toISOString();
+      const finalTimeCombination = finalRemainderAfterTimer0 - finalVcountIndex * messagesPerVcount;
+      const lastDateTimeIso = getDateFromTimePlan(context.timePlan, finalTimeCombination).toISOString();
       progress.currentDateTime = lastDateTimeIso;
     }
 
@@ -843,9 +844,9 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
       throw new Error('config buffer not prepared');
     }
 
-    const safeRangeSeconds = Math.max(segment.config.rangeSeconds, 1);
+    const timeCombinationCount = Math.max(segment.config.rangeSeconds, 1);
     const safeVcountCount = Math.max(segment.config.vcountCount, 1);
-    const messagesPerVcount = safeRangeSeconds;
+    const messagesPerVcount = timeCombinationCount;
     const messagesPerTimer0 = messagesPerVcount * safeVcountCount;
 
     const baseTimer0Index = Math.floor(baseOffset / messagesPerTimer0);
@@ -877,6 +878,13 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
     data[22] = groupCount >>> 0;
     data[23] = state.workgroupSize >>> 0;
     data[24] = candidateCapacity >>> 0;
+    data[25] = segment.config.dayCount >>> 0;
+    data[26] = segment.config.hourRangeStart >>> 0;
+    data[27] = segment.config.hourRangeCount >>> 0;
+    data[28] = segment.config.minuteRangeStart >>> 0;
+    data[29] = segment.config.minuteRangeCount >>> 0;
+    data[30] = segment.config.secondRangeStart >>> 0;
+    data[31] = segment.config.secondRangeCount >>> 0;
   };
 
   const startTimer = (): void => {
