@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { GenerationWorkerManager } from '@/lib/generation/generation-worker-manager';
-import type { GenerationParams } from '@/types/generation';
+import type { GenerationParams, GenerationResultsPayload } from '@/types/generation';
 
 const NO_WORKER = typeof Worker === 'undefined';
 if (NO_WORKER) {
@@ -23,7 +23,6 @@ function params(overrides: Partial<GenerationParams> = {}): GenerationParams {
     stopOnCap: false,
     shinyCharm: false,
     isShinyLocked: false,
-    batchSize: 5000,
     newGame: true,
     withSave: true,
     memoryLink: false,
@@ -44,23 +43,20 @@ describe('GenerationWorkerManager', () => {
     const complete = waitForEvent(mgr.onComplete.bind(mgr), () => true);
     await mgr.start(params({ maxAdvances: 1000 }));
     await complete;
-    expect(mgr.getStatus() === 'completed' || mgr.getStatus() === 'idle').toBe(true);
+    expect(mgr.getStatus()).toBe('idle');
     const secondComplete = waitForEvent(mgr.onComplete.bind(mgr), () => true);
     await mgr.start(params({ maxAdvances: 1000 }));
     await secondComplete;
   });
 
-  it('pause/resume updates status', async () => {
+  it('emits results callbacks before completion', async () => {
     const mgr = new GenerationWorkerManager();
-    await mgr.start(params({ maxAdvances: 4000 }));
-  await waitForEvent<any>(mgr.onProgress.bind(mgr), (p: any) => p.processedAdvances > 0);
-    mgr.pause();
-    await new Promise(r => setTimeout(r, 120));
-    mgr.resume();
-    await new Promise(r => setTimeout(r, 120));
-    expect(mgr.isRunning()).toBe(true);
-    mgr.stop();
-    await waitForEvent(mgr.onStopped.bind(mgr), () => true).catch(() => undefined);
+    const results = waitForEvent<GenerationResultsPayload>(mgr.onResults.bind(mgr), payload => payload.results.length >= 0);
+    const completion = waitForEvent(mgr.onComplete.bind(mgr), () => true);
+    await mgr.start(params({ maxAdvances: 1200 }));
+    await results;
+    await completion;
+    expect(mgr.getStatus()).toBe('idle');
   });
 
   it('double start throws', async () => {
@@ -70,6 +66,16 @@ describe('GenerationWorkerManager', () => {
     try { await mgr.start(params()); } catch { threw = true; }
     expect(threw).toBe(true);
     mgr.stop();
+  });
+
+  it('stop transitions to stopped completion', async () => {
+    const mgr = new GenerationWorkerManager();
+    const completion = waitForEvent(mgr.onComplete.bind(mgr), () => true);
+    await mgr.start(params({ maxAdvances: 8000 }));
+    mgr.stop();
+    const result = await completion;
+    expect(result.reason).toBe('stopped');
+    expect(mgr.getStatus()).toBe('idle');
   });
 });
 }

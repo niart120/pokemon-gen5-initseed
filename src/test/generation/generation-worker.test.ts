@@ -1,89 +1,68 @@
 import { describe, it, expect } from 'vitest';
 
-// Node 環境では Worker 未定義のためスキップ（ブラウザ環境E2Eで補完）
 if (typeof Worker === 'undefined') {
-  describe.skip('generation-worker skeleton (no Worker in env)', () => {
+  describe.skip('generation-worker (no Worker support)', () => {
     it('skipped', () => { expect(true).toBe(true); });
   });
 } else {
-  // 実行可能環境でのみ以下を定義
+  function makeParams(maxAdvances = 3000) {
+    return {
+      baseSeed: 1n,
+      offset: 0n,
+      maxAdvances,
+      maxResults: 2000,
+      version: 'B' as const,
+      encounterType: 0,
+      tid: 1,
+      sid: 2,
+      syncEnabled: false,
+      syncNatureId: 0,
+      stopAtFirstShiny: false,
+      stopOnCap: false,
+      shinyCharm: false,
+      isShinyLocked: false,
+      newGame: true,
+      withSave: true,
+      memoryLink: false,
+    };
+  }
 
-function makeParams(maxAdvances = 3000) {
-  return {
-    baseSeed: 1n,
-    offset: 0n,
-    maxAdvances,
-    maxResults: 2000,
-    version: 'B' as const,
-    encounterType: 0,
-    tid: 1,
-    sid: 2,
-    syncEnabled: false,
-    syncNatureId: 0,
-    stopAtFirstShiny: false,
-    stopOnCap: false,
-    shinyCharm: false,
-    isShinyLocked: false,
-    batchSize: 5000,
-    newGame: true,
-    withSave: true,
-    memoryLink: false,
-  };
-}
+  function createWorker() {
+    return new Worker(new URL('@/workers/generation-worker.ts', import.meta.url), { type: 'module' });
+  }
 
-function createWorker() {
-  return new Worker(new URL('@/workers/generation-worker.ts', import.meta.url), { type: 'module' });
-}
+  function waitFor(worker: Worker, predicate: (msg: any)=>boolean, timeoutMs = 5000): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(()=>{ reject(new Error('timeout')); }, timeoutMs);
+      worker.addEventListener('message', (ev) => {
+        if (predicate(ev.data)) { clearTimeout(timer); resolve(ev.data); }
+      });
+    });
+  }
 
-function waitFor(worker: Worker, predicate: (msg: any)=>boolean, timeoutMs = 5000): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(()=>{ reject(new Error('timeout')); }, timeoutMs);
-    worker.addEventListener('message', (ev) => {
-      if (predicate(ev.data)) { clearTimeout(timer); resolve(ev.data); }
+  describe('generation-worker simplified protocol', () => {
+    it('emits RESULTS then COMPLETE', async () => {
+      const w = createWorker();
+      await waitFor(w, m => m.type === 'READY');
+      const params = { ...makeParams(200), maxResults: 50 };
+      w.postMessage({ type: 'START_GENERATION', params });
+      const resultsMsg = await waitFor(w, m => m.type === 'RESULTS');
+      expect(Array.isArray(resultsMsg.payload.results)).toBe(true);
+      const complete = await waitFor(w, m => m.type === 'COMPLETE');
+      expect(complete.payload.reason).toBe('max-advances');
+      expect(complete.payload.resultsCount).toBe(resultsMsg.payload.results.length);
+      w.terminate();
+    });
+
+    it('STOP request sets completion reason to stopped', async () => {
+      const w = createWorker();
+      await waitFor(w, m => m.type === 'READY');
+      w.postMessage({ type: 'START_GENERATION', params: makeParams(10_000) });
+      // issue stop almost immediately
+      w.postMessage({ type: 'STOP' });
+      const complete = await waitFor(w, m => m.type === 'COMPLETE');
+      expect(complete.payload.reason).toBe('stopped');
+      w.terminate();
     });
   });
-}
-
-describe('generation-worker skeleton', () => {
-  it('RUN → COMPLETE', async () => {
-    const w = createWorker();
-    await waitFor(w, m => m.type === 'READY');
-    const params = { ...makeParams(1000), stopOnCap: false };
-    w.postMessage({ type: 'START_GENERATION', params });
-    const complete = await waitFor(w, m => m.type === 'COMPLETE');
-    expect(complete.payload.reason).toBe('max-advances');
-    w.terminate();
-  });
-
-  it('PAUSE/RESUME progression', async () => {
-    const w = createWorker();
-    await waitFor(w, m => m.type === 'READY');
-    w.postMessage({ type: 'START_GENERATION', params: { ...makeParams(5000), stopOnCap: false } });
-  const firstProgress: any = await waitFor(w, m => m.type === 'PROGRESS' && m.payload.processedAdvances > 0);
-    w.postMessage({ type: 'PAUSE' });
-    await waitFor(w, m => m.type === 'PAUSED');
-    const pausedValue = firstProgress.payload.processedAdvances;
-    await new Promise(r => setTimeout(r, 120));
-    let increased = false;
-    w.addEventListener('message', ev => { if (ev.data.type === 'PROGRESS' && ev.data.payload.processedAdvances > pausedValue) increased = true; });
-    await new Promise(r => setTimeout(r, 120));
-    expect(increased).toBe(false);
-    w.postMessage({ type: 'RESUME' });
-    await waitFor(w, m => m.type === 'RESUMED');
-    const afterResume = await waitFor(w, m => m.type === 'PROGRESS' && m.payload.processedAdvances > pausedValue);
-    expect(afterResume.payload.processedAdvances).toBeGreaterThan(pausedValue);
-    w.terminate();
-  });
-
-  it('STOP produces STOPPED not COMPLETE', async () => {
-    const w = createWorker();
-    await waitFor(w, m => m.type === 'READY');
-    w.postMessage({ type: 'START_GENERATION', params: makeParams(10_000) });
-    await waitFor(w, m => m.type === 'PROGRESS');
-    w.postMessage({ type: 'STOP' });
-    const stopped = await waitFor(w, m => m.type === 'STOPPED');
-    expect(stopped.payload.reason).toBe('stopped');
-    w.terminate();
-  });
-});
 }
