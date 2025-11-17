@@ -192,7 +192,6 @@ interface PersistedGenerationMinimal {
   lastCompletion: AppStore['lastCompletion'];
   error: string | null;
   filters: AppStore['filters'];
-  metrics: AppStore['metrics'];
   internalFlags: AppStore['internalFlags'];
   staticEncounterId: AppStore['staticEncounterId'];
 }
@@ -204,7 +203,6 @@ function extractGenerationForPersist(state: AppStore): PersistedGenerationMinima
     lastCompletion: state.lastCompletion,
     error: state.error,
     filters: state.filters,
-    metrics: state.metrics,
     internalFlags: state.internalFlags,
     staticEncounterId: state.staticEncounterId ?? null,
   };
@@ -279,17 +277,16 @@ function reviveGenerationMinimal(obj: unknown): Partial<GenerationSlice> {
     lastCompletion: o.lastCompletion ?? null,
     error: o.error ?? null,
     filters: normalizeRestoredFilters(o.filters),
-    metrics: normalizedStatus === 'idle' ? {} : (o.metrics ?? {}),
     internalFlags: normalizedStatus === 'idle'
-      ? { receivedAnyBatch: false }
-      : (o.internalFlags ?? { receivedAnyBatch: false }),
+      ? { receivedResults: false }
+      : (o.internalFlags ?? { receivedResults: false }),
     staticEncounterId: o.staticEncounterId ?? null,
   };
 }
 
 function normalizeRestoredStatus(status: AppStore['status'] | undefined): AppStore['status'] {
   if (!status) return 'idle';
-  if (status === 'running' || status === 'starting' || status === 'paused' || status === 'stopping') {
+  if (status === 'running' || status === 'starting' || status === 'stopping') {
     return 'idle';
   }
   return status;
@@ -607,7 +604,6 @@ export const useAppStore = create<AppStore>()(
           parallelProgress: null,
           lastSearchDuration: null,
           results: current.results,
-          progress: current.progress,
         } as AppStore;
         if (!merged.profiles || merged.profiles.length === 0) {
           merged.profiles = current.profiles;

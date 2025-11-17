@@ -1,13 +1,15 @@
 import { GenerationWorkerManager } from '@/lib/generation/generation-worker-manager';
-import type { GenerationParams, GenerationProgress, GenerationCompletion, GenerationResultBatch, GenerationResult, GenerationParamsHex } from '@/types/generation';
+import type { GenerationParams, GenerationCompletion, GenerationResultsPayload, GenerationResult, GenerationParamsHex } from '@/types/generation';
 import { validateGenerationParams, hexParamsToGenerationParams, generationParamsToHex, requiresStaticSelection } from '@/types/generation';
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
 import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
 import type { DomainEncounterType } from '@/types/domain';
-import { resolveBatch, toUiReadyPokemon, type ResolutionContext, type ResolvedPokemonData, type UiReadyPokemonData } from '@/lib/generation/pokemon-resolver';
+import { resolveBatch, toUiReadyPokemon } from '@/lib/generation/pokemon-resolver';
+import type { ResolvedPokemonData, UiReadyPokemonData, SerializedResolutionContext } from '@/types/pokemon-resolved';
+import { buildResolutionContextFromSources } from '@/lib/initialization/build-resolution-context';
 
-export type GenerationStatus = 'idle' | 'starting' | 'running' | 'paused' | 'stopping' | 'completed' | 'error';
+export type GenerationStatus = 'idle' | 'starting' | 'running' | 'stopping' | 'completed' | 'error';
 
 export type ShinyFilterMode = 'all' | 'shiny' | 'non-shiny';
 
@@ -35,13 +37,12 @@ export interface GenerationSliceState {
   draftParams: Partial<GenerationParamsHex>;
   validationErrors: string[];
   status: GenerationStatus;
-  progress: GenerationProgress | null;
-  results: GenerationResult[]; // GenerationResult 型 (UnresolvedPokemonData + advance)
+  results: GenerationResult[];
+  resolvedResults: ResolvedPokemonData[];
   lastCompletion: GenerationCompletion | null;
   error: string | null;
   filters: GenerationFilters;
-  metrics: { startTime?: number; lastUpdateTime?: number; shinyCount?: number };
-  internalFlags: { receivedAnyBatch: boolean };
+  internalFlags: { receivedResults: boolean };
   // 解決用参照データ (任意設定)
   encounterTable?: EncounterTable;
   genderRatios?: Map<number, GenderRatio>;
@@ -60,8 +61,6 @@ export interface GenerationSliceActions {
   validateDraft: () => void;
   commitParams: () => boolean;
   startGeneration: () => Promise<boolean>;
-  pauseGeneration: () => void;
-  resumeGeneration: () => void;
   stopGeneration: () => void;
   clearResults: () => void;
   applyFilters: (partial: Partial<GenerationFilters>) => void;
@@ -72,10 +71,8 @@ export interface GenerationSliceActions {
   setAbilityCatalog: (catalog: Map<number, string[]> | undefined) => void;
   resetGenerationFilters: () => void;
   // 内部コールバック（manager から）
-  _onWorkerProgress: (p: GenerationProgress) => void;
-  _onWorkerBatch: (b: GenerationResultBatch) => void;
+  _onWorkerResults: (payload: GenerationResultsPayload) => void;
   _onWorkerComplete: (c: GenerationCompletion) => void;
-  _onWorkerStopped: (reason: string) => void;
   _onWorkerError: (err: string) => void;
 }
 
@@ -107,7 +104,6 @@ export const DEFAULT_GENERATION_DRAFT_PARAMS: GenerationParamsHex = {
   syncNatureId: 0,
   stopAtFirstShiny: false,
   stopOnCap: true,
-  batchSize: 10000,
   abilityMode: 'none',
   shinyCharm: false,
   isShinyLocked: false,
@@ -149,13 +145,12 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
   staticEncounterId: null,
   validationErrors: [],
   status: 'idle',
-  progress: null,
   results: [],
+  resolvedResults: [],
   lastCompletion: null,
   error: null,
   filters: createDefaultGenerationFilters(),
-  metrics: {},
-  internalFlags: { receivedAnyBatch: false },
+  internalFlags: { receivedResults: false },
   encounterTable: undefined,
   genderRatios: undefined,
   abilityCatalog: undefined,
@@ -287,13 +282,14 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
       return false;
     }
     const { status } = get();
-    if (status === 'running' || status === 'paused' || status === 'starting') return false;
+    if (status === 'running' || status === 'starting' || status === 'stopping') return false;
     if (!get().commitParams()) return false;
     const { params } = get();
     if (!params) return false;
-    set({ status: 'starting', progress: null, results: [], lastCompletion: null, error: null, metrics: { startTime: performance.now() } });
+    set({ status: 'starting', results: [], resolvedResults: [], lastCompletion: null, error: null, internalFlags: { receivedResults: false } });
     try {
-      await manager.start(params);
+      const resolutionContext = serializeResolutionContextForWorker(get());
+      await manager.start(params, { resolutionContext });
       set({ status: 'running' });
       return true;
     } catch (e) {
@@ -302,24 +298,14 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
       return false;
     }
   },
-  pauseGeneration: () => {
-    if (get().status !== 'running') return;
-    manager.pause();
-    set({ status: 'paused' });
-  },
-  resumeGeneration: () => {
-    if (get().status !== 'paused') return;
-    manager.resume();
-    set({ status: 'running' });
-  },
   stopGeneration: () => {
     const st = get().status;
-    if (st === 'running' || st === 'paused') {
-      set({ status: 'stopping' });
+    if (st === 'running' || st === 'stopping') {
+      if (st !== 'stopping') set({ status: 'stopping' });
       manager.stop();
     }
   },
-  clearResults: () => set({ results: [] }),
+  clearResults: () => set({ results: [], resolvedResults: [] }),
   applyFilters: (partial) => set((state: GenerationSlice) => {
     const current = state.filters;
     const nextSortField = partial.sortField ?? current.sortField;
@@ -381,12 +367,11 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
   resetGenerationFilters: () => set({ filters: createDefaultGenerationFilters() }),
   resetGenerationState: () => set({
     status: 'idle',
-    progress: null,
     results: [],
+    resolvedResults: [],
     lastCompletion: null,
     error: null,
-    metrics: {},
-    internalFlags: { receivedAnyBatch: false },
+    internalFlags: { receivedResults: false },
     encounterTable: undefined,
     genderRatios: undefined,
     abilityCatalog: undefined,
@@ -398,30 +383,24 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
   setGenderRatios: (ratios) => set({ genderRatios: ratios }),
   setAbilityCatalog: (catalog) => set({ abilityCatalog: catalog }),
 
-  _onWorkerProgress: (p) => {
-    set({ progress: p, metrics: { ...get().metrics, lastUpdateTime: performance.now() } });
-  },
-  _onWorkerBatch: (b) => {
-    set((state: GenerationSlice) => {
-      if (state.results.length >= (state.params?.maxResults || Infinity)) return state; // 変更なし
-      const capacityLeft = (state.params?.maxResults || Infinity) - state.results.length;
-      const slice = b.results.slice(0, capacityLeft);
-      let shinyAdd = 0;
-      for (let i = 0; i < slice.length; i++) if (slice[i].shiny_type !== 0) shinyAdd++;
-      const shinyCount = (state.metrics.shinyCount || 0) + shinyAdd;
-      return {
-        ...state,
-        results: state.results.concat(slice),
-        internalFlags: { receivedAnyBatch: true },
-        metrics: { ...state.metrics, shinyCount },
-      };
+  _onWorkerResults: (payload) => {
+    const state = get();
+    const resolvedList = Array.isArray(payload.resolved) && payload.resolved.length === payload.results.length
+      ? payload.resolved
+      : resolveBatch(payload.results, buildResolutionContextFromSources({
+        encounterTable: state.encounterTable,
+        genderRatios: state.genderRatios,
+        abilityCatalog: state.abilityCatalog,
+      }));
+    set({
+      results: payload.results,
+      resolvedResults: resolvedList,
+      internalFlags: { receivedResults: true },
     });
   },
   _onWorkerComplete: (c) => {
-    set({ status: 'completed', lastCompletion: c });
-  },
-  _onWorkerStopped: (_reason) => {
-    set({ status: 'idle' });
+    const nextStatus: GenerationStatus = c.reason === 'stopped' ? 'idle' : 'completed';
+    set({ status: nextStatus, lastCompletion: c });
   },
   _onWorkerError: (err) => {
     set({ status: 'error', error: err });
@@ -430,41 +409,30 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
 
 // マネージャーのイベントを slice にバインド（store 作成後に呼ばれる想定）
 export const bindGenerationManager = (get: () => GenerationSlice) => {
-  manager.onProgress(p => get()._onWorkerProgress(p));
-  manager.onResultBatch(b => get()._onWorkerBatch(b));
+  manager.onResults(payload => get()._onWorkerResults(payload));
   manager.onComplete(c => get()._onWorkerComplete(c));
-  manager.onStopped(r => get()._onWorkerStopped(r.reason));
   manager.onError(e => get()._onWorkerError(e));
 };
 
 export const getGenerationManager = () => manager;
 
-// --- Selectors (B1) ---
-export const selectThroughputEma = (s: GenerationSlice): number | null => {
-  const t = s.progress?.throughputEma ?? s.progress?.throughputRaw ?? s.progress?.throughput;
-  return typeof t === 'number' && isFinite(t) && t > 0 ? t : null;
-};
-
-export const selectEtaFormatted = (s: GenerationSlice): string | null => {
-  const p = s.progress;
-  if (!p) return null;
-  const ema = selectThroughputEma(s);
-  if (!ema) return null;
-  const remaining = (p.totalAdvances - p.processedAdvances);
-  if (!(remaining > 0)) return '00:00';
-  const sec = remaining / ema;
-  if (!isFinite(sec) || sec <= 0) return null;
-  const hrs = Math.floor(sec / 3600);
-  const mins = Math.floor((sec % 3600) / 60);
-  const secs = Math.floor(sec % 60);
-  if (hrs > 0) return `${hrs}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
-  return `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
-};
-
-export const selectShinyCount = (s: GenerationSlice): number => s.metrics.shinyCount || 0;
+function serializeResolutionContextForWorker(state: GenerationSlice): SerializedResolutionContext | undefined {
+  const { encounterTable, genderRatios, abilityCatalog } = state;
+  const hasTable = Boolean(encounterTable);
+  const hasRatios = Boolean(genderRatios && genderRatios.size > 0);
+  const hasAbilities = Boolean(abilityCatalog && abilityCatalog.size > 0);
+  if (!hasTable && !hasRatios && !hasAbilities) {
+    return undefined;
+  }
+  return {
+    encounterTable: encounterTable ?? undefined,
+    genderRatios: hasRatios ? Array.from((genderRatios ?? new Map()).entries()) : undefined,
+    abilityCatalog: hasAbilities ? Array.from((abilityCatalog ?? new Map()).entries()) : undefined,
+  };
+}
 
 function canBuildFullHex(d: Partial<GenerationParamsHex>): d is GenerationParamsHex {
-  const required: (keyof GenerationParamsHex)[] = ['baseSeedHex','offsetHex','maxAdvances','maxResults','version','encounterType','tid','sid','syncEnabled','syncNatureId','shinyCharm','isShinyLocked','stopAtFirstShiny','stopOnCap','batchSize','memoryLink','newGame','withSave'];
+  const required: (keyof GenerationParamsHex)[] = ['baseSeedHex','offsetHex','maxAdvances','maxResults','version','encounterType','tid','sid','syncEnabled','syncNatureId','shinyCharm','isShinyLocked','stopAtFirstShiny','stopOnCap','memoryLink','newGame','withSave'];
   return required.every(k => (d as Record<string, unknown>)[k] !== undefined);
 }
 
@@ -472,20 +440,17 @@ export function getCurrentHexParams(state: GenerationSlice): GenerationParamsHex
   return state.params ? generationParamsToHex(state.params) : null;
 }
 
-export interface FilteredGenerationDisplayRow {
-  raw: GenerationResult;
-  resolved?: ResolvedPokemonData;
-  ui?: UiReadyPokemonData;
-}
-
 type FilteredRowsCache = {
   resultsRef: GenerationResult[];
+  resolvedRef: ResolvedPokemonData[];
   filtersRef: GenerationFilters;
   encounterTableRef?: EncounterTable;
   genderRatiosRef?: Map<number, GenderRatio>;
   abilityCatalogRef?: Map<number, string[]>;
   locale: 'ja' | 'en';
-  rows: FilteredGenerationDisplayRow[];
+  baseSeedRef?: bigint;
+  versionRef: 'B' | 'W' | 'B2' | 'W2';
+  ui: UiReadyPokemonData[];
   raw: GenerationResult[];
 } | null;
 
@@ -506,6 +471,11 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
   };
 
   const cache = _filteredRowsCache;
+  const version = (s.params?.version ?? s.draftParams.version ?? 'B') as 'B' | 'W' | 'B2' | 'W2';
+  const baseSeed = s.params?.baseSeed;
+  const resolvedFromState = s.resolvedResults ?? [];
+  const requiresFallback = results.length > 0 && resolvedFromState.length !== results.length;
+
   if (
     cache &&
     cache.resultsRef === results &&
@@ -513,13 +483,23 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
     cache.encounterTableRef === encounterTable &&
     cache.genderRatiosRef === genderRatios &&
     cache.abilityCatalogRef === abilityCatalog &&
-    cache.locale === locale
+    cache.locale === locale &&
+    cache.versionRef === version &&
+    cache.baseSeedRef === baseSeed &&
+    (
+      (!requiresFallback && cache.resolvedRef === resolvedFromState) ||
+      (requiresFallback && cache.resolvedRef.length === results.length)
+    )
   ) {
     return cache;
   }
 
-  const resolved = selectResolvedResults(s);
-  const uiReady = selectUiReadyResults(s, locale);
+  let resolved = resolvedFromState;
+
+  if (requiresFallback) {
+    const context = buildResolutionContextFromSources({ encounterTable, genderRatios, abilityCatalog }) ?? {};
+    resolved = resolveBatch(results, context);
+  }
 
   const shinyMode = filters.shinyMode;
   const natureSet = filters.natureIds.length ? new Set(filters.natureIds) : null;
@@ -534,41 +514,42 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
   const levelRange = filters.levelRange;
   const hasLevelFilter = Boolean(levelRange && (levelRange.min != null || levelRange.max != null));
 
-  const rows: FilteredGenerationDisplayRow[] = [];
+  const entries: Array<{ raw: GenerationResult; ui: UiReadyPokemonData }> = [];
 
   for (let i = 0; i < results.length; i++) {
     const raw = results[i];
     const resolvedData = resolved[i];
-    const uiData = uiReady[i];
+    if (!resolvedData) continue;
+    const uiData = toUiReadyPokemon(resolvedData, { locale, version, baseSeed });
 
-    if (shinyMode === 'shiny' && raw.shiny_type === 0) continue;
-    if (shinyMode === 'non-shiny' && raw.shiny_type !== 0) continue;
-    if (natureSet && !natureSet.has(raw.nature)) continue;
+    if (shinyMode === 'shiny' && uiData.shinyType === 0) continue;
+    if (shinyMode === 'non-shiny' && uiData.shinyType !== 0) continue;
+    if (natureSet && !natureSet.has(uiData.natureId)) continue;
 
     if (speciesSet) {
-      const speciesId = resolvedData?.speciesId;
+      const speciesId = uiData.speciesId;
       if (!speciesId || !speciesSet.has(speciesId)) continue;
     }
 
     if (abilitySet) {
-      const abilityIndex = resolvedData?.abilityIndex;
+      const abilityIndex = uiData.abilityIndex;
       if (abilityIndex == null || !abilitySet.has(abilityIndex)) continue;
     }
 
     if (genderSet) {
-      const gender = resolvedData?.gender;
+      const gender = uiData.genderCode;
       if (!gender || !genderSet.has(gender)) continue;
     }
 
     if (hasLevelFilter) {
-      const level = resolvedData?.level;
+      const level = uiData.level;
       if (level == null) continue;
       if (levelRange?.min != null && level < levelRange.min) continue;
       if (levelRange?.max != null && level > levelRange.max) continue;
     }
 
     if (hasStatFilters) {
-      const stats = uiData?.stats;
+      const stats = uiData.stats;
       if (!stats) continue;
       let ok = true;
       for (const key of statKeys) {
@@ -587,48 +568,46 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
       if (!ok) continue;
     }
 
-    rows.push({ raw, resolved: resolvedData, ui: uiData });
+    entries.push({ raw, ui: uiData });
   }
 
   const field = filters.sortField ?? 'advance';
   const order = filters.sortOrder === 'desc' ? -1 : 1;
 
-  rows.sort((a, b) => {
-    const ar = a.raw;
-    const br = b.raw;
-    const aResolved = a.resolved;
-    const bResolved = b.resolved;
+  entries.sort((a, b) => {
+    const au = a.ui;
+    const bu = b.ui;
     let av: number;
     let bv: number;
     switch (field) {
       case 'pid':
-        av = ar.pid >>> 0;
-        bv = br.pid >>> 0;
+        av = au.pid >>> 0;
+        bv = bu.pid >>> 0;
         break;
       case 'nature':
-        av = ar.nature;
-        bv = br.nature;
+        av = au.natureId;
+        bv = bu.natureId;
         break;
       case 'shiny':
-        av = ar.shiny_type;
-        bv = br.shiny_type;
+        av = au.shinyType;
+        bv = bu.shinyType;
         break;
       case 'species':
-        av = aResolved?.speciesId ?? Number.MAX_SAFE_INTEGER;
-        bv = bResolved?.speciesId ?? Number.MAX_SAFE_INTEGER;
+        av = au.speciesId ?? Number.MAX_SAFE_INTEGER;
+        bv = bu.speciesId ?? Number.MAX_SAFE_INTEGER;
         break;
       case 'ability':
-        av = aResolved?.abilityIndex ?? Number.MAX_SAFE_INTEGER;
-        bv = bResolved?.abilityIndex ?? Number.MAX_SAFE_INTEGER;
+        av = au.abilityIndex ?? Number.MAX_SAFE_INTEGER;
+        bv = bu.abilityIndex ?? Number.MAX_SAFE_INTEGER;
         break;
       case 'level':
-        av = aResolved?.level ?? Number.MAX_SAFE_INTEGER;
-        bv = bResolved?.level ?? Number.MAX_SAFE_INTEGER;
+        av = au.level ?? Number.MAX_SAFE_INTEGER;
+        bv = bu.level ?? Number.MAX_SAFE_INTEGER;
         break;
       case 'advance':
       default:
-        av = ar.advance;
-        bv = br.advance;
+        av = au.advance;
+        bv = bu.advance;
         break;
     }
     if (av < bv) return -1 * order;
@@ -636,77 +615,33 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
     return 0;
   });
 
-  const raw = rows.map((entry) => entry.raw);
+  const ui = entries.map(entry => entry.ui);
+  const raw = entries.map(entry => entry.raw);
   const nextCache: NonNullable<FilteredRowsCache> = {
     resultsRef: results,
+    resolvedRef: resolved,
     filtersRef: filters,
     encounterTableRef: encounterTable,
     genderRatiosRef: genderRatios,
     abilityCatalogRef: abilityCatalog,
     locale,
-    rows,
+    versionRef: version,
+    baseSeedRef: baseSeed,
+    ui,
     raw,
   };
   _filteredRowsCache = nextCache;
   return nextCache;
 }
 
-export const selectFilteredDisplayRows = (s: GenerationSlice, locale: 'ja' | 'en' = 'ja'): FilteredGenerationDisplayRow[] => {
-  return computeFilteredRowsCache(s, locale).rows;
+export const selectFilteredDisplayRows = (s: GenerationSlice, locale: 'ja' | 'en' = 'ja'): UiReadyPokemonData[] => {
+  return computeFilteredRowsCache(s, locale).ui;
 };
 
 export const selectFilteredSortedResults = (s: GenerationSlice, locale: 'ja' | 'en' = 'ja') => {
   return computeFilteredRowsCache(s, locale).raw;
 };
 
-// ===== Resolution / UI adapters =====
-
-let _resolvedCache: {
-  resultsRef: GenerationResult[];
-  encounterTableRef?: EncounterTable;
-  genderRatiosRef?: Map<number, GenderRatio>;
-  abilityCatalogRef?: Map<number, string[]>;
-  output: ResolvedPokemonData[];
-} | null = null;
-
 export const selectResolvedResults = (s: GenerationSlice): ResolvedPokemonData[] => {
-  const { results, encounterTable, genderRatios, abilityCatalog } = s as GenerationSlice & { encounterTable?: EncounterTable; genderRatios?: Map<number, GenderRatio>; abilityCatalog?: Map<number, string[]> };
-  const cache = _resolvedCache;
-  if (cache && cache.resultsRef === results && cache.encounterTableRef === encounterTable && cache.genderRatiosRef === genderRatios && cache.abilityCatalogRef === abilityCatalog) {
-    return cache.output;
-  }
-  if (!results.length) {
-    _resolvedCache = { resultsRef: results, encounterTableRef: encounterTable, genderRatiosRef: genderRatios, abilityCatalogRef: abilityCatalog, output: [] };
-    return _resolvedCache.output;
-  }
-  const ctx: ResolutionContext = { encounterTable, genderRatios, abilityCatalog };
-  const resolved = resolveBatch(results, ctx);
-  _resolvedCache = { resultsRef: results, encounterTableRef: encounterTable, genderRatiosRef: genderRatios, abilityCatalogRef: abilityCatalog, output: resolved };
-  return resolved;
-};
-
-let _uiReadyCache: {
-  resolvedRef: ResolvedPokemonData[];
-  locale: string;
-  version: 'B' | 'W' | 'B2' | 'W2';
-  baseSeed: bigint | undefined;
-  output: UiReadyPokemonData[];
-} | null = null;
-
-export const selectUiReadyResults = (s: GenerationSlice, locale: 'ja' | 'en' = 'ja'): UiReadyPokemonData[] => {
-  const resolved = selectResolvedResults(s);
-  const version = (s.params?.version ?? s.draftParams.version ?? 'B') as 'B' | 'W' | 'B2' | 'W2';
-  const baseSeed = s.params?.baseSeed;
-  if (
-    _uiReadyCache &&
-    _uiReadyCache.resolvedRef === resolved &&
-    _uiReadyCache.locale === locale &&
-    _uiReadyCache.version === version &&
-    _uiReadyCache.baseSeed === baseSeed
-  ) {
-    return _uiReadyCache.output;
-  }
-  const out = resolved.map(r => toUiReadyPokemon(r, { locale, version, baseSeed }));
-  _uiReadyCache = { resolvedRef: resolved, locale, version, baseSeed, output: out };
-  return out;
+  return s.resolvedResults ?? [];
 };
