@@ -18,14 +18,9 @@ export const generationRunControlsLabel: LocaleText = {
   en: 'Generation execution controls',
 };
 
-export const generationRunProgressLabel: LocaleText = {
-  ja: 'Generation progress',
-  en: 'Generation progress',
-};
-
-export const generationRunProgressBarLabel: LocaleText = {
-  ja: 'Generation progress bar',
-  en: 'Generation progress bar',
+export const generationRunResultsLabel: LocaleText = {
+  ja: 'Generation results',
+  en: 'Generation results',
 };
 
 export const generationRunStatusPrefix: LocaleText = {
@@ -34,8 +29,8 @@ export const generationRunStatusPrefix: LocaleText = {
 };
 
 export const generationRunAdvanceUnit: LocaleText = {
-  ja: 'Adv',
-  en: 'adv',
+  ja: '件',
+  en: 'results',
 };
 
 export const generationRunButtonLabels = {
@@ -46,14 +41,6 @@ export const generationRunButtonLabels = {
   starting: {
     ja: 'Generating...',
     en: 'Generating...',
-  } satisfies LocaleText,
-  pause: {
-    ja: 'Pause',
-    en: 'Pause',
-  } satisfies LocaleText,
-  resume: {
-    ja: 'Resume',
-    en: 'Resume',
   } satisfies LocaleText,
   stop: {
     ja: 'Stop',
@@ -66,7 +53,6 @@ export const generationRunStatusLabels: LocaleMap<Record<GenerationStatus, strin
     idle: 'Idle',
     starting: 'Starting',
     running: 'Running',
-    paused: 'Paused',
     stopping: 'Stopping',
     completed: 'Completed',
     error: 'Error',
@@ -75,7 +61,6 @@ export const generationRunStatusLabels: LocaleMap<Record<GenerationStatus, strin
     idle: 'Idle',
     starting: 'Starting',
     running: 'Running',
-    paused: 'Paused',
     stopping: 'Stopping',
     completed: 'Completed',
     error: 'Error',

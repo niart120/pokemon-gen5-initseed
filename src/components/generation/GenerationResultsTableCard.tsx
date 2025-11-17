@@ -3,7 +3,7 @@ import { PanelCard } from '@/components/ui/panel-card';
 import { Table } from '@phosphor-icons/react';
 import { useAppStore } from '@/store/app-store';
 import { selectFilteredDisplayRows } from '@/store/generation-store';
-import { pidHex, natureName, shinyLabel, seedHex, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
+import { shinyLabel, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
 import {
@@ -74,35 +74,35 @@ export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProp
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ raw: r, ui: u }) => {
-              const needleDir = calculateNeedleDirection(r.seed);
-              const stats = u?.stats;
+            {rows.map((row) => {
+              const needleDir = calculateNeedleDirection(row.seed);
+              const stats = row.stats;
               const hpDisplay = stats ? stats.hp : '--';
               const atkDisplay = stats ? stats.attack : '--';
               const defDisplay = stats ? stats.defense : '--';
               const spaDisplay = stats ? stats.specialAttack : '--';
               const spdDisplay = stats ? stats.specialDefense : '--';
               const speDisplay = stats ? stats.speed : '--';
-              const natureDisplay = u?.natureName ?? natureName(r.nature, locale);
+              const natureDisplay = row.natureName;
               return (
-                <tr key={r.advance} className="odd:bg-background even:bg-muted/30">
-                  <td className="px-2 py-1 font-mono tabular-nums">{r.advance}</td>
+                <tr key={row.advance} className="odd:bg-background even:bg-muted/30">
+                  <td className="px-2 py-1 font-mono tabular-nums">{row.advance}</td>
                   <td className="px-2 py-1 text-center font-arrows">{needleDirectionArrow(needleDir)}</td>
                   <td className="px-2 py-1 font-mono tabular-nums">{needleDir}</td>
-                  <td className="px-2 py-1 truncate max-w-[120px]" title={u?.speciesName || unknownLabel}>{u?.speciesName || unknownLabel}</td>
-                  <td className="px-2 py-1 truncate max-w-[120px]" title={u?.abilityName || unknownLabel}>{u?.abilityName || unknownLabel}</td>
-                  <td className="px-2 py-1">{u?.gender || '?'}</td>
+                  <td className="px-2 py-1 truncate max-w-[120px]" title={row.speciesName || unknownLabel}>{row.speciesName || unknownLabel}</td>
+                  <td className="px-2 py-1 truncate max-w-[120px]" title={row.abilityName || unknownLabel}>{row.abilityName || unknownLabel}</td>
+                  <td className="px-2 py-1">{row.gender || '?'}</td>
                   <td className="px-2 py-1 whitespace-nowrap">{natureDisplay}</td>
-                  <td className="px-2 py-1">{shinyLabel(r.shiny_type, locale)}</td>
-                  <td className="px-2 py-1 tabular-nums">{u?.level ?? ''}</td>
+                  <td className="px-2 py-1">{shinyLabel(row.shinyType, locale)}</td>
+                  <td className="px-2 py-1 tabular-nums">{row.level ?? ''}</td>
                   <td className="px-2 py-1 font-mono tabular-nums text-right">{hpDisplay}</td>
                   <td className="px-2 py-1 font-mono tabular-nums text-right">{atkDisplay}</td>
                   <td className="px-2 py-1 font-mono tabular-nums text-right">{defDisplay}</td>
                   <td className="px-2 py-1 font-mono tabular-nums text-right">{spaDisplay}</td>
                   <td className="px-2 py-1 font-mono tabular-nums text-right">{spdDisplay}</td>
                   <td className="px-2 py-1 font-mono tabular-nums text-right">{speDisplay}</td>
-                  <td className="px-2 py-1 font-mono whitespace-nowrap">{seedHex(r.seed)}</td>
-                  <td className="px-2 py-1 font-mono whitespace-nowrap">{pidHex(r.pid)}</td>
+                  <td className="px-2 py-1 font-mono whitespace-nowrap">{row.seedHex}</td>
+                  <td className="px-2 py-1 font-mono whitespace-nowrap">{row.pidHex}</td>
                 </tr>
               );
             })}

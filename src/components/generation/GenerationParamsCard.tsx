@@ -91,7 +91,7 @@ export const GenerationParamsCard: React.FC = () => {
   const setEncounterTable = useAppStore(s => s.setEncounterTable);
   const setGenderRatios = useAppStore(s => s.setGenderRatios);
   const setAbilityCatalog = useAppStore(s => s.setAbilityCatalog);
-  const disabled = status === 'running' || status === 'paused' || status === 'starting';
+  const disabled = status === 'running' || status === 'starting' || status === 'stopping';
   const hexDraft: Partial<GenerationParamsHex> = draftParams;
 
   const localized = React.useMemo(() => {

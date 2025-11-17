@@ -8,8 +8,7 @@ import { Download, Copy, Check } from '@phosphor-icons/react';
 import { exportGenerationResults } from '@/lib/export/generation-exporter';
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
-import type { FilteredGenerationDisplayRow } from '@/store/generation-store';
-import type { GenerationParams } from '@/types/generation';
+import type { GenerationParams, GenerationResult } from '@/types/generation';
 import { useLocale } from '@/lib/i18n/locale-context';
 import {
   formatGenerationExportSummary,
@@ -28,7 +27,7 @@ import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 type ExportFormat = 'csv' | 'json' | 'txt';
 
 interface GenerationExportButtonProps {
-  rows: FilteredGenerationDisplayRow[];
+  rows: GenerationResult[];
   encounterTable?: EncounterTable;
   genderRatios?: Map<number, GenderRatio>;
   abilityCatalog?: Map<number, string[]>;
@@ -69,8 +68,7 @@ export function GenerationExportButton({
 
   const handleExport = async (download: boolean) => {
     try {
-      const rawResults = rows.map((row) => row.raw);
-      const content = exportGenerationResults(rawResults, { format, includeAdvancedFields: includeAdvanced }, {
+      const content = exportGenerationResults(rows, { format, includeAdvancedFields: includeAdvanced }, {
         encounterTable,
         genderRatios,
         abilityCatalog,
