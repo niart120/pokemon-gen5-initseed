@@ -91,7 +91,7 @@ const HEADER_DEFINITIONS: Record<HeaderKey, HeaderDefinition> = {
   },
   hp: {
     label: {
-      ja: 'HP',
+      ja: 'H',
       en: 'HP',
     },
   },
