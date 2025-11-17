@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { selectResolvedResults, selectUiReadyResults, createDefaultGenerationFilters } from '@/store/generation-store';
+import { selectResolvedResults, selectFilteredDisplayRows, createDefaultGenerationFilters } from '@/store/generation-store';
 import type { GenerationSlice } from '@/store/generation-store';
 import type { GenerationResult } from '@/types/generation';
+import { resolveBatch } from '@/lib/generation/pokemon-resolver';
+import type { ResolutionContext, ResolvedPokemonData } from '@/types/pokemon-resolved';
 
 // Minimal dummy encounter table
 const dummyEncounterTable = {
@@ -11,19 +13,18 @@ const dummyEncounterTable = {
   ],
 };
 
-function makeState(results: GenerationResult[]): Partial<GenerationSlice> & { results: GenerationResult[] } {
+function makeState(results: GenerationResult[]): Partial<GenerationSlice> & { results: GenerationResult[]; resolvedResults: ResolvedPokemonData[] } {
   return {
     params: null,
     draftParams: {},
     validationErrors: [],
     status: 'idle',
-    progress: null,
-    results,
+    results: results.map(result => ({ ...result })),
+    resolvedResults: [],
     lastCompletion: null,
     error: null,
     filters: createDefaultGenerationFilters(),
-    metrics: {},
-    internalFlags: { receivedAnyBatch: false },
+    internalFlags: { receivedResults: false },
     encounterTable: dummyEncounterTable as any,
     genderRatios: new Map([[1,{ threshold: 128, genderless: false }], [4,{ threshold: 256, genderless: true }]]),
     abilityCatalog: undefined,
@@ -37,16 +38,25 @@ describe('generation resolution selectors', () => {
       { seed: 2n, pid: 456, nature: 5, sync_applied: true, ability_slot: 1, gender_value: 200, encounter_slot_value: 1, encounter_type: 0, level_rand_value: 2000n, shiny_type: 2, advance: 1 },
     ];
     const state = makeState(results) as any;
-    const resolved = selectResolvedResults(state);
-    expect(resolved.length).toBe(2);
-    expect(resolved[0].speciesId).toBe(1);
-    expect(resolved[1].speciesId).toBe(4);
+    const ctx: ResolutionContext = {
+      encounterTable: dummyEncounterTable as any,
+      genderRatios: state.genderRatios,
+    };
+    const resolved = resolveBatch(results as any, ctx);
+    state.resolvedResults = resolved;
+    const selected = selectResolvedResults(state);
+    expect(selected.length).toBe(2);
+    expect(selected[0].speciesId).toBe(1);
+    expect(selected[1].speciesId).toBe(4);
     // gender: species 1 threshold 128 -> gender_value 10 => F
-    expect(resolved[0].gender).toBe('F');
+    expect(selected[0].gender).toBe('F');
     // species 4 genderless => 'N'
-    expect(resolved[1].gender).toBe('N');
-    const ui = selectUiReadyResults(state,'en');
-    expect(ui[0].speciesName).toBeDefined();
-    expect(ui[0].gender).toBe('F');
+    expect(selected[1].gender).toBe('N');
+    const rows = selectFilteredDisplayRows(state, 'en');
+    expect(rows).toHaveLength(2);
+    const first = rows[0]!;
+    expect(first.speciesName).toBeDefined();
+    expect(first.gender).toBe('F');
+    expect(first.advance).toBe(0);
   });
 });

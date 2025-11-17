@@ -8,17 +8,17 @@ describe('Generation Integration Scenarios (D1)', () => {
   if (!hasWorker) { expect(true).toBe(true); return; }
     // maxResults は validation で maxAdvances 以下が必須
     const p = baseParams({ maxAdvances: 3000, maxResults: 3000, stopAtFirstShiny: false, stopOnCap: true });
-    const { completion, progressSamples } = await runGenerationScenario(p);
+    const { completion, totalResults } = await runGenerationScenario(p);
     expect(completion.reason).toBe('max-advances');
     expect(completion.processedAdvances).toBe(3000);
     expect(completion.resultsCount).toBeLessThanOrEqual(p.maxResults);
-    expect(progressSamples).toBeGreaterThan(0);
+    expect(totalResults).toBe(completion.resultsCount);
   });
 
   it('Scenario 2: completes by max-results', async () => {
   if (!hasWorker) { expect(true).toBe(true); return; }
     // max-results を先に達成するように maxResults を小さく, maxAdvances は十分大きく
-    const p = baseParams({ maxAdvances: 20000, maxResults: 150, stopOnCap: true, stopAtFirstShiny: false, batchSize: 100 });
+    const p = baseParams({ maxAdvances: 20000, maxResults: 150, stopOnCap: true, stopAtFirstShiny: false });
     const { completion } = await runGenerationScenario(p);
     expect(completion.reason).toBe('max-results');
     expect(completion.resultsCount).toBe(p.maxResults);

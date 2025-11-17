@@ -11,7 +11,7 @@ import { natureName } from '@/lib/utils/format-display';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import type { ShinyFilterMode, StatRangeFilters } from '@/store/generation-store';
-import { selectFilteredDisplayRows, selectResolvedResults } from '@/store/generation-store';
+import { selectFilteredDisplayRows, selectFilteredSortedResults, selectResolvedResults } from '@/store/generation-store';
 import { getGeneratedSpeciesById } from '@/data/species/generated';
 import type { StatKey } from '@/lib/utils/pokemon-stats';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -89,6 +89,7 @@ export const GenerationResultsControlCard: React.FC = () => {
 
   const resolvedResults = useAppStore((state: AppStoreState) => selectResolvedResults(state));
   const filteredRows = useAppStore((state: AppStoreState) => selectFilteredDisplayRows(state, locale));
+  const filteredRawRows = useAppStore((state: AppStoreState) => selectFilteredSortedResults(state, locale));
 
   const { isStack } = useResponsiveLayout();
 
@@ -386,13 +387,13 @@ export const GenerationResultsControlCard: React.FC = () => {
             {resetFiltersLabel}
           </Button>
           <GenerationExportButton
-            rows={filteredRows}
+            rows={filteredRawRows}
             encounterTable={encounterTable}
             genderRatios={genderRatios}
             abilityCatalog={abilityCatalog}
             version={version}
             baseSeed={baseSeed}
-            disabled={filteredRows.length === 0}
+            disabled={filteredRawRows.length === 0}
           />
           <Button
             size="sm"

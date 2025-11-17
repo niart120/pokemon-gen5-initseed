@@ -3,37 +3,33 @@
 
 import {
   type GenerationParams,
-  type GenerationProgress,
   type GenerationWorkerRequest,
   type GenerationWorkerResponse,
-  type GenerationResultBatch,
+  type GenerationResultsPayload,
   type GenerationCompletion,
   type GenerationErrorCategory,
   validateGenerationParams,
   isGenerationWorkerResponse,
 } from '@/types/generation';
+import type { SerializedResolutionContext } from '@/types/pokemon-resolved';
 
-type ProgressCb = (p: GenerationProgress) => void;
-type BatchCb = (b: GenerationResultBatch) => void;
+type ResultsCb = (payload: GenerationResultsPayload) => void;
 type CompleteCb = (c: GenerationCompletion) => void;
 type ErrorCb = (msg: string, cat: GenerationErrorCategory, fatal: boolean) => void;
 
 interface CallbackRegistry {
-  progress: ProgressCb[];
-  batch: BatchCb[];
+  results: ResultsCb[];
   complete: CompleteCb[];
-  stopped: CompleteCb[]; // STOPPED payload は Completion のサブセット扱い
   error: ErrorCb[];
 }
 
 export class GenerationWorkerManager {
   private worker: Worker | null = null;
-  private callbacks: CallbackRegistry = { progress: [], batch: [], complete: [], stopped: [], error: [] };
-  private lastProgress: GenerationProgress | null = null;
+  private callbacks: CallbackRegistry = { results: [], complete: [], error: [] };
   private running = false;
-  private paused = false;
   private terminated = false;
   private currentRequestId: string | null = null;
+  private status: 'idle' | 'running' | 'stopping' = 'idle';
 
   constructor(
     private readonly createWorker: () => Worker = () =>
@@ -41,7 +37,7 @@ export class GenerationWorkerManager {
   ) {}
 
   // --- Public API ---
-  start(params: GenerationParams): Promise<void> {
+  start(params: GenerationParams, options?: { resolutionContext?: SerializedResolutionContext }): Promise<void> {
     if (this.running) {
       throw new Error('generation already running');
     }
@@ -55,29 +51,23 @@ export class GenerationWorkerManager {
     }
     this.ensureWorker();
     this.running = true;
-    this.paused = false;
+    this.status = 'running';
     const rid = this.generateRequestId();
     this.currentRequestId = rid;
 
-    const req: GenerationWorkerRequest = { type: 'START_GENERATION', params, requestId: rid };
+    const req: GenerationWorkerRequest = {
+      type: 'START_GENERATION',
+      params,
+      requestId: rid,
+      resolutionContext: options?.resolutionContext,
+    };
     this.worker!.postMessage(req);
     return Promise.resolve();
   }
 
-  pause(): void {
-    if (!this.running || this.paused) return;
-    const requestId = this.currentRequestId || undefined;
-    this.worker?.postMessage({ type: 'PAUSE', requestId } satisfies GenerationWorkerRequest);
-  }
-
-  resume(): void {
-    if (!this.running || !this.paused) return;
-    const requestId = this.currentRequestId || undefined;
-    this.worker?.postMessage({ type: 'RESUME', requestId } satisfies GenerationWorkerRequest);
-  }
-
   stop(): void {
     if (!this.running) return;
+    this.status = 'stopping';
     const requestId = this.currentRequestId || undefined;
     this.worker?.postMessage({ type: 'STOP', requestId } satisfies GenerationWorkerRequest);
   }
@@ -88,23 +78,19 @@ export class GenerationWorkerManager {
     }
     this.worker = null;
     this.running = false;
-    this.paused = false;
     this.terminated = true;
+    this.status = 'idle';
   }
 
-  onProgress(cb: ProgressCb) { this.callbacks.progress.push(cb); return this; }
-  onResultBatch(cb: BatchCb) { this.callbacks.batch.push(cb); return this; }
+  onResults(cb: ResultsCb) { this.callbacks.results.push(cb); return this; }
   onComplete(cb: CompleteCb) { this.callbacks.complete.push(cb); return this; }
-  onStopped(cb: CompleteCb) { this.callbacks.stopped.push(cb); return this; }
   onError(cb: ErrorCb) { this.callbacks.error.push(cb); return this; }
 
-  getStatus(): GenerationProgress['status'] | 'idle' {
-    return this.lastProgress?.status ?? 'idle';
+  getStatus(): 'idle' | 'running' | 'stopping' {
+    return this.status;
   }
-  getLastProgress() { return this.lastProgress; }
 
-  isRunning() { return this.running && !this.paused; }
-  isPaused() { return this.paused; }
+  isRunning() { return this.running; }
 
   // --- Internal ---
   private ensureWorker() {
@@ -123,35 +109,12 @@ export class GenerationWorkerManager {
     switch (msg.type) {
       case 'READY':
         break; // noop
-      case 'PROGRESS':
-        this.lastProgress = msg.payload;
-        this.callbacks.progress.forEach(cb => cb(msg.payload));
-        this.paused = msg.payload.status === 'paused';
+      case 'RESULTS':
+        this.callbacks.results.forEach(cb => cb(msg.payload));
         break;
-      case 'RESULT_BATCH':
-        this.callbacks.batch.forEach(cb => cb(msg.payload));
-        break;
-      case 'PAUSED':
-        this.paused = true;
-        break;
-      case 'RESUMED':
-        this.paused = false;
-        break;
-      case 'STOPPED': {
-        this.running = false;
-        this.paused = false;
-        if (this.lastProgress) {
-          this.lastProgress = { ...this.lastProgress, status: 'stopped' };
-        }
-        this.callbacks.stopped.forEach(cb => cb(msg.payload));
-        this.terminate();
-        break; }
       case 'COMPLETE': {
         this.running = false;
-        this.paused = false;
-        if (this.lastProgress) {
-          this.lastProgress = { ...this.lastProgress, status: 'completed' };
-        }
+        this.status = 'idle';
         this.callbacks.complete.forEach(cb => cb(msg.payload));
         this.terminate();
         break; }
@@ -159,7 +122,6 @@ export class GenerationWorkerManager {
         this.emitError(msg.message, msg.category, msg.fatal);
         if (msg.fatal) {
           this.running = false;
-          this.paused = false;
           this.terminate();
         }
         break;

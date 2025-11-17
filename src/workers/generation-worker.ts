@@ -1,42 +1,40 @@
-// Generation Worker (Phase3/4 skeleton)
-// 目的: プロトコル応答/状態遷移/進捗計測 + WASM 列挙
+// Generation Worker (simplified)
+// 目的: WASM 列挙と最小限の結果通知のみを担当
 
 import {
   type GenerationWorkerRequest,
   type GenerationWorkerResponse,
   type GenerationParams,
-  type GenerationProgress,
   type GenerationResult,
+  type GenerationResultsPayload,
+  type GenerationCompletion,
   validateGenerationParams,
-  FIXED_PROGRESS_INTERVAL_MS,
   deriveDomainGameMode,
 } from '@/types/generation';
 import { parseFromWasmRaw } from '@/lib/generation/raw-parser';
-import { initWasm, getWasm, isWasmReady } from '@/lib/core/wasm-interface';
+import { resolvePokemon } from '@/lib/generation/pokemon-resolver';
+import {
+  initWasm,
+  getWasm,
+  isWasmReady,
+  type BWGenerationConfigCtor,
+  type SeedEnumeratorCtor,
+  type SeedEnumeratorInstance,
+} from '@/lib/core/wasm-interface';
 import { domainGameModeToWasm } from '@/lib/core/mapping/game-mode';
 import { domainEncounterTypeToWasm } from '@/lib/core/mapping/encounter-type';
 import type { DomainEncounterType } from '@/types/domain';
+import type {
+  ResolutionContext,
+  SerializedResolutionContext,
+  ResolvedPokemonData,
+} from '@/types/pokemon-resolved';
 
-// WASM コンストラクタ最小型 (必要最小限のみ表現)
-interface BWGenerationConfigCtor {
-  new(
-    version: number,
-    encounterType: number,
-    tid: number,
-    sid: number,
-    syncEnabled: boolean,
-    syncNatureId: number,
-    isShinyLocked: boolean,
-    shinyCharm: boolean,
-  ): object;
-}
-interface SeedEnumeratorCtor { new(baseSeed: bigint, offset: bigint, count: number, config: object): SeedEnumeratorInstance; }
-interface SeedEnumeratorInstance { next_pokemon(): unknown; }
+type BWGenerationConfigInstance = InstanceType<BWGenerationConfigCtor>;
 
 let BWGenerationConfig: BWGenerationConfigCtor | undefined;
 let SeedEnumerator: SeedEnumeratorCtor | undefined;
 
-// BW/BW2 version string -> wasm GameVersion enum (wasm側: B=0,W=1,B2=2,W2=3)
 function versionToWasm(v: GenerationParams['version']): number {
   switch (v) {
     case 'B': return 0;
@@ -49,54 +47,24 @@ function versionToWasm(v: GenerationParams['version']): number {
 
 interface InternalState {
   params: GenerationParams | null;
-  progress: GenerationProgress;
-  startTime: number | null;
-  intervalId: number | null;
   enumerator: SeedEnumeratorInstance | null;
-  config: object | null;
-  emaThroughput: number | null;
-  pendingResults: GenerationResult[];
-  stopped: boolean;
-  batchIndex: number;
-  cumulativeResults: number;
-  shinyFound: boolean;
-  baseAdvance: number;
+  config: BWGenerationConfigInstance | null;
+  resolutionContext: ResolutionContext;
+  running: boolean;
+  stopRequested: boolean;
 }
-
-// self の型を拡張 (WebWorker lib 未設定環境でもコンパイル可能にする)
-const ctx = self as typeof self & { onclose?: () => void };
-const post = (message: GenerationWorkerResponse) => ctx.postMessage(message);
-
-const DEFAULT_PROGRESS_INTERVAL = FIXED_PROGRESS_INTERVAL_MS;
-const DUMMY_STEP = 1000;
-
-const blankProgress = (): GenerationProgress => ({
-  processedAdvances: 0,
-  totalAdvances: 0,
-  resultsCount: 0,
-  elapsedMs: 0,
-  throughput: 0,
-  throughputRaw: 0,
-  throughputEma: 0,
-  etaMs: 0,
-  status: 'idle',
-});
 
 const state: InternalState = {
   params: null,
-  progress: blankProgress(),
-  startTime: null,
-  intervalId: null,
   enumerator: null,
   config: null,
-  emaThroughput: null,
-  pendingResults: [],
-  stopped: false,
-  batchIndex: 0,
-  cumulativeResults: 0,
-  shinyFound: false,
-  baseAdvance: 0,
+  resolutionContext: {},
+  running: false,
+  stopRequested: false,
 };
+
+const ctx = self as typeof self & { onclose?: () => void };
+const post = (message: GenerationWorkerResponse) => ctx.postMessage(message);
 
 post({ type: 'READY', version: '1' });
 
@@ -106,16 +74,10 @@ ctx.onmessage = (ev: MessageEvent<GenerationWorkerRequest>) => {
     try {
       switch (msg.type) {
         case 'START_GENERATION':
-          await handleStart(msg.params);
-          break;
-        case 'PAUSE':
-          handlePause();
-          break;
-        case 'RESUME':
-          handleResume();
+          await handleStart(msg.params, msg.resolutionContext);
           break;
         case 'STOP':
-          handleStop();
+          state.stopRequested = true;
           break;
         default:
           break;
@@ -127,236 +89,203 @@ ctx.onmessage = (ev: MessageEvent<GenerationWorkerRequest>) => {
   })();
 };
 
-async function handleStart(params: GenerationParams) {
-  if (state.progress.status === 'running') return;
+async function handleStart(
+  params: GenerationParams,
+  serializedContext?: SerializedResolutionContext,
+) {
+  if (state.running) return;
   const errors = validateGenerationParams(params);
   if (errors.length) {
     post({ type: 'ERROR', message: errors.join(', '), category: 'VALIDATION', fatal: false });
     return;
   }
-  cleanupInterval();
-  state.params = params;
-  state.startTime = performance.now();
-  const baseAdvance = Number(params.offset);
-  const totalAdvances = params.maxAdvances - baseAdvance;
+  const totalAdvances = params.maxAdvances - Number(params.offset);
   if (totalAdvances <= 0) {
     post({ type: 'ERROR', message: 'maxAdvances must be greater than offset', category: 'VALIDATION', fatal: false });
     return;
   }
-  state.progress = {
-    processedAdvances: 0,
-    totalAdvances,
-    resultsCount: 0,
-    elapsedMs: 0,
-    throughput: 0,
-    throughputRaw: 0,
-    throughputEma: 0,
-    etaMs: 0,
-    status: 'running',
-  };
-  state.emaThroughput = null;
-  state.stopped = false;
-  state.pendingResults = [];
-  state.batchIndex = 0;
-  state.cumulativeResults = 0;
-  state.shinyFound = false;
+
+  state.params = params;
+  state.resolutionContext = hydrateResolutionContext(serializedContext);
+  state.stopRequested = false;
+  state.running = true;
+
   try {
-    if (!isWasmReady()) await initWasm();
-  const wasm = getWasm() as unknown as {
-    BWGenerationConfig: BWGenerationConfigCtor;
-    SeedEnumerator?: SeedEnumeratorCtor;
-    calculate_game_offset(initial_seed: bigint, mode: number): number;
-  };
-  BWGenerationConfig = wasm.BWGenerationConfig;
-  SeedEnumerator = wasm.SeedEnumerator;
-  if (!SeedEnumerator) throw new Error('SeedEnumerator not exposed');
-  const wasmEncounterType = domainEncounterTypeToWasm(params.encounterType as DomainEncounterType);
-    state.config = new BWGenerationConfig(
-      versionToWasm(params.version),
-      wasmEncounterType,
-      params.tid,
-      params.sid,
-      params.syncEnabled,
-      params.syncNatureId,
-      params.isShinyLocked,
-      params.shinyCharm,
-    );
-    const domainMode = deriveDomainGameMode(params);
-    const wasmMode = domainGameModeToWasm(domainMode);
-    const gameOffset = BigInt(wasm.calculate_game_offset(params.baseSeed, wasmMode));
-    const effectiveOffset = gameOffset + params.offset;
-    state.baseAdvance = baseAdvance;
-    state.enumerator = new SeedEnumerator(
-      params.baseSeed,
-      effectiveOffset,
-      totalAdvances,
-      state.config,
-    );
+    const enumerator = await prepareEnumerator(params, totalAdvances);
+    state.enumerator = enumerator;
+    const runOutcome = executeEnumeration(params, totalAdvances);
+    postResults(runOutcome.results, runOutcome.resolved);
+    post({ type: 'COMPLETE', payload: runOutcome.completion });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     post({ type: 'ERROR', message, category: 'WASM_INIT', fatal: true });
-    return;
+  } finally {
+    cleanupState();
   }
-  state.intervalId = setInterval(tick, DEFAULT_PROGRESS_INTERVAL) as unknown as number;
-  post({ type: 'PROGRESS', payload: { ...state.progress } });
 }
 
-function tick() {
-  if (!state.params || state.progress.status !== 'running') return;
-  if (state.stopped) return;
-  advanceEnumerationChunk();
-  const p = state.progress;
-  const now = performance.now();
-  p.elapsedMs = now - (state.startTime || now);
-  if (p.elapsedMs > 0) {
-    const raw = p.processedAdvances / (p.elapsedMs / 1000);
-    p.throughputRaw = raw;
-    const ALPHA = 0.2;
-    state.emaThroughput = state.emaThroughput == null ? raw : (ALPHA * raw + (1 - ALPHA) * state.emaThroughput);
-    p.throughputEma = state.emaThroughput;
-    p.throughput = raw; // 互換
-  }
-  const remaining = p.totalAdvances - p.processedAdvances;
-  const basis = p.throughputEma && p.throughputEma > 0 ? p.throughputEma : (p.throughputRaw || 0);
-  p.etaMs = basis > 0 ? (remaining / basis) * 1000 : 0;
-  post({ type: 'PROGRESS', payload: { ...p } });
-  if (p.processedAdvances >= p.totalAdvances) complete('max-advances');
+async function prepareEnumerator(params: GenerationParams, totalAdvances: number): Promise<SeedEnumeratorInstance> {
+  if (!isWasmReady()) await initWasm();
+  const wasm = getWasm();
+  BWGenerationConfig = wasm.BWGenerationConfig;
+  SeedEnumerator = wasm.SeedEnumerator;
+
+  const ConfigCtor = BWGenerationConfig;
+  const EnumeratorCtor = SeedEnumerator;
+  if (!ConfigCtor) throw new Error('BWGenerationConfig not exposed');
+  if (!EnumeratorCtor) throw new Error('SeedEnumerator not exposed');
+
+  const wasmEncounterType = domainEncounterTypeToWasm(params.encounterType as DomainEncounterType);
+  state.config = new ConfigCtor(
+    versionToWasm(params.version),
+    wasmEncounterType,
+    params.tid,
+    params.sid,
+    params.syncEnabled,
+    params.syncNatureId,
+    params.isShinyLocked,
+    params.shinyCharm,
+  );
+
+  const domainMode = deriveDomainGameMode(params);
+  const wasmMode = domainGameModeToWasm(domainMode);
+
+  return new EnumeratorCtor(
+    params.baseSeed,
+    params.offset,
+    totalAdvances,
+    state.config,
+    wasmMode,
+  );
 }
 
-function handlePause() {
-  if (state.progress.status !== 'running') return;
-  state.progress.status = 'paused';
-  cleanupInterval();
-  post({ type: 'PAUSED' });
-}
+function executeEnumeration(params: GenerationParams, totalAdvances: number) {
+  const offsetFallbackBase = Number(params.offset);
+  const results: GenerationResult[] = [];
+  const resolved: ResolvedPokemonData[] = [];
+  let processedAdvances = 0;
+  let shinyFound = false;
+  let reason: GenerationCompletion['reason'] | null = null;
+  let encounteredError = false;
 
-function handleResume() {
-  if (state.progress.status !== 'paused' || !state.params) return;
-  state.progress.status = 'running';
-  state.intervalId = setInterval(tick, DEFAULT_PROGRESS_INTERVAL) as unknown as number;
-  post({ type: 'RESUMED' });
-}
+  const startTime = performance.now();
 
-function handleStop() {
-  if (['idle', 'stopped', 'completed'].includes(state.progress.status)) return;
-  state.stopped = true;
-  cleanupInterval();
-  state.progress.status = 'stopped';
-  post({
-    type: 'STOPPED',
-    payload: {
-      reason: 'stopped',
-      processedAdvances: state.progress.processedAdvances,
-      resultsCount: state.progress.resultsCount,
-      elapsedMs: state.progress.elapsedMs,
-      shinyFound: false,
-    },
-  });
-}
+  if (!state.enumerator) {
+    encounteredError = true;
+  } else {
+    for (let i = 0; i < totalAdvances; i++) {
+      if (state.stopRequested) {
+        reason = 'stopped';
+        break;
+      }
+      const raw = state.enumerator.next_pokemon();
+      if (!raw) {
+        reason = 'max-advances';
+        break;
+      }
+      let unresolved;
+      try {
+        unresolved = parseFromWasmRaw(raw);
+      } catch {
+        encounteredError = true;
+        reason = 'error';
+        break;
+      }
+      const advanceVal = readAdvanceOrFallback(raw, offsetFallbackBase + i);
+      const result: GenerationResult = { ...unresolved, advance: advanceVal };
+      const isShiny = (result.shiny_type ?? 0) !== 0;
+      if (isShiny) shinyFound = true;
 
-function complete(reason: 'max-advances' | 'max-results' | 'first-shiny' | 'stopped' | 'error') {
-  cleanupInterval();
-  flushBatch(true);
-  state.progress.status = 'completed';
-  if (process.env.NODE_ENV !== 'production') {
-    if (state.cumulativeResults !== state.progress.resultsCount) {
-      console.error('[generation-worker] final results mismatch', {
-        cumulativeResults: state.cumulativeResults,
-        resultsCount: state.progress.resultsCount,
-      });
+      processedAdvances += 1;
+
+      if (results.length < params.maxResults) {
+        results.push(result);
+        resolved.push(resolvePokemon(result, state.resolutionContext));
+      }
+
+      if (params.stopAtFirstShiny && isShiny) {
+        reason = 'first-shiny';
+        break;
+      }
+      if (params.stopOnCap && results.length >= params.maxResults) {
+        reason = 'max-results';
+        break;
+      }
     }
   }
-  post({
-    type: 'COMPLETE',
-    payload: {
-      reason,
-      processedAdvances: state.progress.processedAdvances,
-      resultsCount: state.progress.resultsCount,
-      elapsedMs: state.progress.elapsedMs,
-      shinyFound: state.shinyFound,
-    },
-  });
-}
 
-function cleanupInterval() {
-  if (state.intervalId != null) {
-    clearInterval(state.intervalId);
-    state.intervalId = null;
+  if (!reason) {
+    if (state.stopRequested) reason = 'stopped';
+    else if (encounteredError) reason = 'error';
+    else reason = 'max-advances';
   }
+
+  const completion: GenerationCompletion = {
+    reason,
+    processedAdvances,
+    resultsCount: results.length,
+    elapsedMs: performance.now() - startTime,
+    shinyFound,
+  };
+
+  return { results, resolved, completion };
 }
 
-function advanceEnumerationChunk() {
-  if (!state.enumerator || !state.params) return;
-  const params = state.params;
-  const p = state.progress;
-  let steps = DUMMY_STEP;
-  const remainingNeeded = p.totalAdvances - p.processedAdvances;
-  if (remainingNeeded <= 0) return;
-  if (steps > remainingNeeded) steps = remainingNeeded;
+function postResults(results: GenerationResult[], resolved: ResolvedPokemonData[]) {
+  const payload: GenerationResultsPayload = {
+    results,
+    resolved: resolved.length ? resolved : undefined,
+  };
+  post({ type: 'RESULTS', payload });
+}
 
-  let produced = 0;
-  let earlyReason: 'first-shiny' | 'max-results' | null = null;
-  for (let i = 0; i < steps; i++) {
-    const raw = state.enumerator.next_pokemon();
-    if (!raw) break;
-    let unresolved;
+function readAdvanceOrFallback(raw: unknown, fallback: number): number {
+  if (!raw || typeof raw !== 'object') return fallback;
+  const getter = (raw as Record<string, unknown>).get_advance;
+  if (typeof getter === 'function') {
     try {
-      unresolved = parseFromWasmRaw(raw);
+      const value = getter.call(raw);
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+      if (typeof value === 'bigint') {
+        const asNumber = Number(value);
+        if (Number.isFinite(asNumber)) {
+          return asNumber;
+        }
+      }
     } catch {
-      complete('error');
-      return;
+      return fallback;
     }
-  const advanceVal = state.baseAdvance + p.processedAdvances + i;
-  const result: GenerationResult = { ...unresolved, advance: advanceVal };
-  const isShiny = (result.shiny_type ?? 0) !== 0;
-    if (isShiny && !state.shinyFound) state.shinyFound = true;
-    if (p.resultsCount < params.maxResults) {
-      state.pendingResults.push(result);
-      p.resultsCount += 1;
-    }
-    produced++;
-    if (state.pendingResults.length >= params.batchSize) flushBatch(false);
-    if (!earlyReason) {
-      if (params.stopAtFirstShiny && isShiny) earlyReason = 'first-shiny';
-      else if (params.stopOnCap && p.resultsCount >= params.maxResults) earlyReason = 'max-results';
-    }
-    if (earlyReason) break;
   }
-  p.processedAdvances += produced;
-  if (earlyReason) {
-    complete(earlyReason);
-    return;
-  }
-  if (p.processedAdvances >= p.totalAdvances) complete('max-advances');
+  return fallback;
 }
 
-function flushBatch(force: boolean) {
-  if (!state.params) return;
-  if (state.pendingResults.length === 0) return;
-  if (!force && state.pendingResults.length < state.params.batchSize) return;
-  const batch = state.pendingResults.splice(0, state.pendingResults.length);
-  state.batchIndex += 1;
-  state.cumulativeResults += batch.length;
-  if (process.env.NODE_ENV !== 'production') {
-    if (state.cumulativeResults > state.progress.resultsCount) {
-      console.error('[generation-worker] cumulativeResults exceeded resultsCount', {
-        cumulativeResults: state.cumulativeResults,
-        resultsCount: state.progress.resultsCount,
-        batchLength: batch.length,
-      });
-    }
+function hydrateResolutionContext(serialized?: SerializedResolutionContext): ResolutionContext {
+  if (!serialized) return {};
+  const ctx: ResolutionContext = {};
+  if (serialized.encounterTable) {
+    ctx.encounterTable = serialized.encounterTable;
   }
-  post({
-    type: 'RESULT_BATCH',
-    payload: {
-      batchIndex: state.batchIndex,
-      batchSize: batch.length,
-      results: batch,
-      cumulativeResults: state.cumulativeResults,
-    },
-  });
+  if (serialized.genderRatios) {
+    ctx.genderRatios = new Map(serialized.genderRatios);
+  }
+  if (serialized.abilityCatalog) {
+    ctx.abilityCatalog = new Map(serialized.abilityCatalog);
+  }
+  return ctx;
 }
 
-ctx.onclose = () => cleanupInterval();
+function cleanupState() {
+  state.running = false;
+  state.enumerator = null;
+  state.config = null;
+  state.params = null;
+  state.stopRequested = false;
+}
+
+ctx.onclose = () => {
+  cleanupState();
+};
 
 export {};

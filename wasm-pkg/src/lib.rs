@@ -22,5 +22,11 @@ pub use offset_calculator::{
 };
 pub use personality_rng::PersonalityRNG;
 pub use pid_shiny_checker::{PIDCalculator, ShinyChecker, ShinyType};
-pub use pokemon_generator::{BWGenerationConfig, PokemonGenerator, RawPokemonData, SeedEnumerator};
+pub use pokemon_generator::{
+    BWGenerationConfig,
+    EnumeratedPokemonData,
+    PokemonGenerator,
+    RawPokemonData,
+    SeedEnumerator,
+};
 pub use utils::{ArrayUtils, BitUtils, EndianUtils, NumberUtils, ValidationUtils};

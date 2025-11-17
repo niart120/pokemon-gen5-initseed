@@ -2,6 +2,9 @@
 /// ポケモンBW/BW2の性格・能力・エンカウント判定に使用される乱数エンジン
 use wasm_bindgen::prelude::*;
 
+const LCG_MULTIPLIER: u64 = 0x5D588B656C078965;
+const LCG_INCREMENT: u64 = 0x269EC3;
+
 /// PersonalityRNG構造体
 /// BW仕様64bit線形合同法: S[n+1] = S[n] * 0x5D588B656C078965 + 0x269EC3
 #[wasm_bindgen]
@@ -30,8 +33,8 @@ impl PersonalityRNG {
         // BW仕様線形合同法
         self.seed = self
             .seed
-            .wrapping_mul(0x5D588B656C078965)
-            .wrapping_add(0x269EC3);
+            .wrapping_mul(LCG_MULTIPLIER)
+            .wrapping_add(LCG_INCREMENT);
         (self.seed >> 32) as u32
     }
 
@@ -43,8 +46,8 @@ impl PersonalityRNG {
     pub fn next_u64(&mut self) -> u64 {
         self.seed = self
             .seed
-            .wrapping_mul(0x5D588B656C078965)
-            .wrapping_add(0x269EC3);
+            .wrapping_mul(LCG_MULTIPLIER)
+            .wrapping_add(LCG_INCREMENT);
         self.seed
     }
 
@@ -92,7 +95,7 @@ impl PersonalityRNG {
     /// # Returns
     /// 0x0からの進行度
     pub fn get_index(seed: u64) -> u64 {
-        Self::calc_index(seed, 0x5D588B656C078965, 0x269EC3, 64)
+        Self::calc_index(seed, LCG_MULTIPLIER, LCG_INCREMENT, 64)
     }
 
     /// 2つのSeed間の距離を計算
@@ -185,13 +188,8 @@ impl PersonalityRNG {
     /// ジャンプ後のSeed値
     pub fn jump_seed(seed: u64, steps: u64) -> u64 {
         // 単純実装（将来的にマトリックス演算で最適化可能）
-        let mut current_seed = seed;
-        for _ in 0..steps {
-            current_seed = current_seed
-                .wrapping_mul(0x5D588B656C078965)
-                .wrapping_add(0x269EC3);
-        }
-        current_seed
+        let (mul, add) = Self::lcg_affine_for_steps(steps);
+        Self::lcg_apply(seed, mul, add)
     }
 
     /// 内部使用用：Seedを1ステップだけ進める純関数
@@ -203,7 +201,30 @@ impl PersonalityRNG {
     /// 1ステップ進めた後のSeed
     #[inline]
     pub fn next_seed(seed: u64) -> u64 {
-        seed.wrapping_mul(0x5D588B656C078965).wrapping_add(0x269EC3)
+        seed.wrapping_mul(LCG_MULTIPLIER).wrapping_add(LCG_INCREMENT)
+    }
+
+    /// 線形合同法のアフィン変換をsteps分まとめて計算
+    pub fn lcg_affine_for_steps(steps: u64) -> (u64, u64) {
+        let (mut mul, mut add) = (1u64, 0u64);
+        let (mut cur_mul, mut cur_add) = (LCG_MULTIPLIER, LCG_INCREMENT);
+        let mut k = steps;
+        while k > 0 {
+            if (k & 1) == 1 {
+                add = add.wrapping_mul(cur_mul).wrapping_add(cur_add);
+                mul = mul.wrapping_mul(cur_mul);
+            }
+            cur_add = cur_add.wrapping_mul(cur_mul).wrapping_add(cur_add);
+            cur_mul = cur_mul.wrapping_mul(cur_mul);
+            k >>= 1;
+        }
+        (mul, add)
+    }
+
+    /// 線形合同法のアフィン変換を適用
+    #[inline]
+    pub fn lcg_apply(seed: u64, mul: u64, add: u64) -> u64 {
+        seed.wrapping_mul(mul).wrapping_add(add)
     }
 }
 
@@ -238,7 +259,7 @@ mod tests {
         let mut rng = PersonalityRNG::new(1);
 
         // 既知のSeed値での計算結果を検証
-        let expected_seed = 1u64.wrapping_mul(0x5D588B656C078965).wrapping_add(0x269EC3);
+        let expected_seed = 1u64.wrapping_mul(LCG_MULTIPLIER).wrapping_add(LCG_INCREMENT);
         let actual_value = rng.next();
         let expected_value = (expected_seed >> 32) as u32;
 

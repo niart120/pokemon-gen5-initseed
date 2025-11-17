@@ -12,9 +12,8 @@ describe('calculateGenerationStartSeed', () => {
   it('matches the first enumerated seed', async () => {
     const baseSeed = 0x1234_5678_9abc_def0n;
     const offset = 1024n;
-    const startSeed = await calculateGenerationStartSeed(baseSeed, offset);
 
-    const { BWGenerationConfig, GameVersion, SeedEnumerator } = getWasm();
+    const { BWGenerationConfig, GameVersion, GameMode, SeedEnumerator, calculate_game_offset } = getWasm();
     const config = new BWGenerationConfig(
       GameVersion.B2,
       domainEncounterTypeToWasm(DomainEncounterType.Normal),
@@ -25,7 +24,12 @@ describe('calculateGenerationStartSeed', () => {
       false,
       false,
     );
-    const enumerator = new SeedEnumerator(baseSeed, offset, 1, config);
+    const mode = GameMode.BwContinue;
+    const gameOffset = BigInt(calculate_game_offset(baseSeed, mode));
+    const totalOffset = offset + gameOffset;
+    const startSeed = await calculateGenerationStartSeed(baseSeed, totalOffset);
+
+    const enumerator = new SeedEnumerator(baseSeed, offset, 1, config, mode);
     const first = enumerator.next_pokemon();
     expect(first).toBeDefined();
     expect(first!.get_seed).toBe(startSeed);
