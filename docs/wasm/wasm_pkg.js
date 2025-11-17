@@ -841,6 +841,118 @@ export class EndianUtils {
     }
 }
 
+const EnumeratedPokemonDataFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_enumeratedpokemondata_free(ptr >>> 0, 1));
+
+export class EnumeratedPokemonData {
+
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(EnumeratedPokemonData.prototype);
+        obj.__wbg_ptr = ptr;
+        EnumeratedPokemonDataFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        EnumeratedPokemonDataFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_enumeratedpokemondata_free(ptr, 0);
+    }
+    /**
+     * @returns {bigint}
+     */
+    get get_advance() {
+        const ret = wasm.enumeratedpokemondata_get_advance(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * @returns {bigint}
+     */
+    get get_seed() {
+        const ret = wasm.enumeratedpokemondata_get_seed(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * @returns {number}
+     */
+    get get_pid() {
+        const ret = wasm.enumeratedpokemondata_get_pid(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_nature() {
+        const ret = wasm.enumeratedpokemondata_get_nature(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {boolean}
+     */
+    get get_sync_applied() {
+        const ret = wasm.enumeratedpokemondata_get_sync_applied(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_ability_slot() {
+        const ret = wasm.enumeratedpokemondata_get_ability_slot(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_gender_value() {
+        const ret = wasm.enumeratedpokemondata_get_gender_value(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_encounter_slot_value() {
+        const ret = wasm.enumeratedpokemondata_get_encounter_slot_value(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_encounter_type() {
+        const ret = wasm.enumeratedpokemondata_get_encounter_type(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {bigint}
+     */
+    get get_level_rand_value() {
+        const ret = wasm.enumeratedpokemondata_get_level_rand_value(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * @returns {number}
+     */
+    get get_shiny_type() {
+        const ret = wasm.enumeratedpokemondata_get_shiny_type(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * 任意: 元の RawPokemonData を複製して取得
+     * @returns {RawPokemonData}
+     */
+    into_raw() {
+        const ret = wasm.enumeratedpokemondata_into_raw(this.__wbg_ptr);
+        return RawPokemonData.__wrap(ret);
+    }
+}
+
 const ExtraResultFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_extraresult_free(ptr >>> 0, 1));
@@ -1280,7 +1392,7 @@ export class OffsetCalculator {
      * @returns {bigint}
      */
     get get_current_seed() {
-        const ret = wasm.offsetcalculator_get_current_seed(this.__wbg_ptr);
+        const ret = wasm.enumeratedpokemondata_get_advance(this.__wbg_ptr);
         return BigInt.asUintN(64, ret);
     }
     /**
@@ -1602,7 +1714,7 @@ export class PersonalityRNG {
      * @returns {bigint}
      */
     get current_seed() {
-        const ret = wasm.offsetcalculator_get_current_seed(this.__wbg_ptr);
+        const ret = wasm.enumeratedpokemondata_get_advance(this.__wbg_ptr);
         return BigInt.asUintN(64, ret);
     }
     /**
@@ -1805,7 +1917,7 @@ export class RawPokemonData {
      * @returns {bigint}
      */
     get get_seed() {
-        const ret = wasm.offsetcalculator_get_current_seed(this.__wbg_ptr);
+        const ret = wasm.enumeratedpokemondata_get_advance(this.__wbg_ptr);
         return BigInt.asUintN(64, ret);
     }
     /**
@@ -2034,31 +2146,32 @@ export class SeedEnumerator {
     /**
      * 列挙器を作成
      * @param {bigint} base_seed
-     * @param {bigint} offset
+     * @param {bigint} user_offset
      * @param {number} count
      * @param {BWGenerationConfig} config
+     * @param {GameMode} game_mode
      */
-    constructor(base_seed, offset, count, config) {
+    constructor(base_seed, user_offset, count, config, game_mode) {
         _assertClass(config, BWGenerationConfig);
-        const ret = wasm.seedenumerator_new(base_seed, offset, count, config.__wbg_ptr);
+        const ret = wasm.seedenumerator_new(base_seed, user_offset, count, config.__wbg_ptr, game_mode);
         this.__wbg_ptr = ret >>> 0;
         SeedEnumeratorFinalization.register(this, this.__wbg_ptr, this);
         return this;
     }
     /**
      * 次のポケモンを生成（残数0なら undefined を返す）
-     * @returns {RawPokemonData | undefined}
+     * @returns {EnumeratedPokemonData | undefined}
      */
     next_pokemon() {
         const ret = wasm.seedenumerator_next_pokemon(this.__wbg_ptr);
-        return ret === 0 ? undefined : RawPokemonData.__wrap(ret);
+        return ret === 0 ? undefined : EnumeratedPokemonData.__wrap(ret);
     }
     /**
      * 残数を取得
      * @returns {number}
      */
     get remaining() {
-        const ret = wasm.offsetcalculator_get_advances(this.__wbg_ptr);
+        const ret = wasm.enumeratedpokemondata_get_pid(this.__wbg_ptr);
         return ret >>> 0;
     }
 }

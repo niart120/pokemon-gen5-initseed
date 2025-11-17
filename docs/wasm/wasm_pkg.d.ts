@@ -390,6 +390,25 @@ export class EndianUtils {
    */
   static le32_to_be(value: number): number;
 }
+export class EnumeratedPokemonData {
+  private constructor();
+  free(): void;
+  /**
+   * 任意: 元の RawPokemonData を複製して取得
+   */
+  into_raw(): RawPokemonData;
+  readonly get_advance: bigint;
+  readonly get_seed: bigint;
+  readonly get_pid: number;
+  readonly get_nature: number;
+  readonly get_sync_applied: boolean;
+  readonly get_ability_slot: number;
+  readonly get_gender_value: number;
+  readonly get_encounter_slot_value: number;
+  readonly get_encounter_type: number;
+  readonly get_level_rand_value: bigint;
+  readonly get_shiny_type: number;
+}
 /**
  * Extra処理結果（BW2専用）
  */
@@ -874,11 +893,11 @@ export class SeedEnumerator {
   /**
    * 列挙器を作成
    */
-  constructor(base_seed: bigint, offset: bigint, count: number, config: BWGenerationConfig);
+  constructor(base_seed: bigint, user_offset: bigint, count: number, config: BWGenerationConfig, game_mode: GameMode);
   /**
    * 次のポケモンを生成（残数0なら undefined を返す）
    */
-  next_pokemon(): RawPokemonData | undefined;
+  next_pokemon(): EnumeratedPokemonData | undefined;
   /**
    * 残数を取得
    */
@@ -1101,7 +1120,6 @@ export interface InitOutput {
   readonly offsetcalculator_next_rand: (a: number) => number;
   readonly offsetcalculator_consume_random: (a: number, b: number) => void;
   readonly offsetcalculator_get_advances: (a: number) => number;
-  readonly offsetcalculator_get_current_seed: (a: number) => bigint;
   readonly offsetcalculator_reset: (a: number, b: bigint) => void;
   readonly offsetcalculator_calculate_tid_sid: (a: number) => number;
   readonly offsetcalculator_determine_front_residents: (a: number) => void;
@@ -1134,6 +1152,19 @@ export interface InitOutput {
   readonly shinychecker_shiny_probability: () => number;
   readonly shinychecker_shiny_probability_with_charm: (a: number) => number;
   readonly __wbg_rawpokemondata_free: (a: number, b: number) => void;
+  readonly __wbg_enumeratedpokemondata_free: (a: number, b: number) => void;
+  readonly enumeratedpokemondata_get_advance: (a: number) => bigint;
+  readonly enumeratedpokemondata_get_seed: (a: number) => bigint;
+  readonly enumeratedpokemondata_get_pid: (a: number) => number;
+  readonly enumeratedpokemondata_get_nature: (a: number) => number;
+  readonly enumeratedpokemondata_get_sync_applied: (a: number) => number;
+  readonly enumeratedpokemondata_get_ability_slot: (a: number) => number;
+  readonly enumeratedpokemondata_get_gender_value: (a: number) => number;
+  readonly enumeratedpokemondata_get_encounter_slot_value: (a: number) => number;
+  readonly enumeratedpokemondata_get_encounter_type: (a: number) => number;
+  readonly enumeratedpokemondata_get_level_rand_value: (a: number) => bigint;
+  readonly enumeratedpokemondata_get_shiny_type: (a: number) => number;
+  readonly enumeratedpokemondata_into_raw: (a: number) => number;
   readonly rawpokemondata_get_nature: (a: number) => number;
   readonly rawpokemondata_get_ability_slot: (a: number) => number;
   readonly rawpokemondata_get_gender_value: (a: number) => number;
@@ -1155,7 +1186,7 @@ export interface InitOutput {
   readonly pokemongenerator_generate_single_pokemon_bw: (a: bigint, b: number) => number;
   readonly pokemongenerator_calculate_generation_seed: (a: bigint, b: bigint) => bigint;
   readonly pokemongenerator_generate_pokemon_batch_bw: (a: number, b: bigint, c: bigint, d: number, e: number) => void;
-  readonly seedenumerator_new: (a: bigint, b: bigint, c: number, d: number) => number;
+  readonly seedenumerator_new: (a: bigint, b: bigint, c: number, d: number, e: number) => number;
   readonly seedenumerator_next_pokemon: (a: number) => number;
   readonly sha1_hash_batch: (a: number, b: number, c: number) => void;
   readonly endianutils_swap_bytes_16: (a: number) => number;
@@ -1198,6 +1229,7 @@ export interface InitOutput {
   readonly tidsidresult_get_advances_used: (a: number) => number;
   readonly searchresult_seed: (a: number) => number;
   readonly personalityrng_current_seed: (a: number) => bigint;
+  readonly offsetcalculator_get_current_seed: (a: number) => bigint;
   readonly rawpokemondata_get_seed: (a: number) => bigint;
   readonly rawpokemondata_get_pid: (a: number) => number;
   readonly seedenumerator_remaining: (a: number) => number;
