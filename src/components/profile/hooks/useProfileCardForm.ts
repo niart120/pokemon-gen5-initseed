@@ -255,17 +255,53 @@ export function useProfileCardForm(): UseProfileCardFormResult {
   );
 
   const handleRomVersionChange = React.useCallback((value: ROMVersion) => {
-    setForm((prev) => ({
-      ...prev,
-      romVersion: value,
-      memoryLink: enforceMemoryLink(prev.memoryLink, value, prev.withSave),
-      shinyCharm: enforceShinyCharm(prev.shinyCharm, value, prev.withSave),
-    }));
+    setForm((prev) => {
+      const next = {
+        ...prev,
+        romVersion: value,
+        memoryLink: enforceMemoryLink(prev.memoryLink, value, prev.withSave),
+        shinyCharm: enforceShinyCharm(prev.shinyCharm, value, prev.withSave),
+      };
+      // timer0Auto が有効な場合、新しいバージョンに基づいて timer0/VCount 範囲を更新
+      if (prev.timer0Auto) {
+        const range = getFullTimer0Range(value, prev.romRegion);
+        const vcounts = getValidVCounts(value, prev.romRegion);
+        if (range) {
+          next.timer0Min = toTimerHex(range.min);
+          next.timer0Max = toTimerHex(range.max);
+        }
+        if (vcounts.length > 0) {
+          const minV = Math.min(...vcounts);
+          const maxV = Math.max(...vcounts);
+          next.vcountMin = toVCountHex(minV);
+          next.vcountMax = toVCountHex(maxV);
+        }
+      }
+      return next;
+    });
     setDirty(true);
   }, []);
 
   const handleRomRegionChange = React.useCallback((value: ROMRegion) => {
-    setForm((prev) => ({ ...prev, romRegion: value }));
+    setForm((prev) => {
+      const next = { ...prev, romRegion: value };
+      // timer0Auto が有効な場合、新しいリージョンに基づいて timer0/VCount 範囲を更新
+      if (prev.timer0Auto) {
+        const range = getFullTimer0Range(prev.romVersion, value);
+        const vcounts = getValidVCounts(prev.romVersion, value);
+        if (range) {
+          next.timer0Min = toTimerHex(range.min);
+          next.timer0Max = toTimerHex(range.max);
+        }
+        if (vcounts.length > 0) {
+          const minV = Math.min(...vcounts);
+          const maxV = Math.max(...vcounts);
+          next.vcountMin = toVCountHex(minV);
+          next.vcountMax = toVCountHex(maxV);
+        }
+      }
+      return next;
+    });
     setDirty(true);
   }, []);
 

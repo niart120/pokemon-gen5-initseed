@@ -109,7 +109,7 @@ export function SearchPanel() {
     // スマートフォン・縦長画面: 縦スタック配置
     return (
       <>
-        <div className={`${sizes.gap} flex flex-col h-full overflow-y-auto overflow-x-hidden`}>
+        <div className={`${sizes.gap} flex flex-col overflow-y-auto overflow-x-hidden`}>
           <div className="flex-none">
             <ProfileCard />
           </div>
@@ -135,7 +135,7 @@ export function SearchPanel() {
               setSortField={setSortField}
             />
           </div>
-          <div className="flex-1 min-h-[200px]">
+          <div className="flex-none">
             <ResultsCard
               filteredAndSortedResults={filteredAndSortedResults}
               searchResultsLength={searchResults.length}
@@ -158,7 +158,7 @@ export function SearchPanel() {
   // PC: 3カラム配置（設定 | 検索制御・進捗 | 結果）
   return (
     <>
-      <div className={`flex flex-col ${sizes.gap} max-w-full h-full min-h-0 min-w-fit overflow-hidden`}>
+      <div className={`flex flex-col ${sizes.gap} max-w-full min-h-0 min-w-fit overflow-hidden`}>
         <div className="flex-none">
           <ProfileCard />
         </div>
