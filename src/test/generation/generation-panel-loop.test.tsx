@@ -6,6 +6,8 @@ import { GenerationResultsControlCard } from '@/components/generation/Generation
 import { GenerationResultsTableCard } from '@/components/generation/GenerationResultsTableCard';
 import { useAppStore } from '@/store/app-store';
 import { createDefaultGenerationFilters } from '@/store/generation-store';
+import { resolveBatch } from '@/lib/generation/pokemon-resolver';
+import type { ResolutionContext } from '@/types/pokemon-resolved';
 
 function ensureMatchMedia() {
   if (typeof window.matchMedia !== 'function') {
@@ -30,6 +32,7 @@ describe('GenerationPanel', () => {
     { advance: 5, shiny_type: 2, seed: 5n, pid: 0x00000005, nature: 7, sync_applied: false, ability_slot: 1, gender_value: 32, encounter_slot_value: 0, encounter_type: 0, level_rand_value: 0n },
     { advance: 10, shiny_type: 0, seed: 10n, pid: 0x0000000a, nature: 12, sync_applied: false, ability_slot: 2, gender_value: 128, encounter_slot_value: 0, encounter_type: 0, level_rand_value: 0n },
   ];
+  const resolutionContext: ResolutionContext = {};
 
   beforeEach(() => {
     ensureMatchMedia();
@@ -44,8 +47,10 @@ describe('GenerationPanel', () => {
       }) as typeof window.cancelAnimationFrame;
     }
     cleanup();
+    const resolvedResults = resolveBatch(sampleResults as any, resolutionContext);
     useAppStore.setState({
-      results: [...sampleResults],
+      results: sampleResults.map((entry) => ({ ...entry })),
+      resolvedResults,
       filters: createDefaultGenerationFilters(),
       encounterTable: undefined,
       genderRatios: undefined,

@@ -14,6 +14,7 @@ import type { EncounterTable as UiEncounterTable } from '@/data/encounter-tables
 import { getEncounterTable } from '@/data/encounter-tables';
 import type { DomainEncounterType } from '@/types/domain';
 import type { EncounterSpeciesEntryJson } from '@/data/encounters/schema';
+import type { GenderRatio } from '@/types/pokemon-raw';
 
 // Species/generated dataset adapters
 // For M1, we gather only what resolver uses immediately (gender ratios, ability names placeholder)
@@ -81,6 +82,20 @@ export function buildResolutionContext(opts: BuildContextOptions): ResolutionCon
 
   cache.set(key, ctx);
   return ctx;
+}
+
+export interface ResolutionContextSources {
+  encounterTable?: UiEncounterTable;
+  genderRatios?: Map<number, GenderRatio>;
+  abilityCatalog?: Map<number, string[]>;
+}
+
+export function buildResolutionContextFromSources(sources: ResolutionContextSources): ResolutionContext {
+  return {
+    encounterTable: sources.encounterTable,
+    genderRatios: sources.genderRatios,
+    abilityCatalog: sources.abilityCatalog,
+  };
 }
 
 /** Optional helper: enrich context lazily for a given speciesId */

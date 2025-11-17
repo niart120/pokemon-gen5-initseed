@@ -145,3 +145,8 @@ export function isWasmReady(): boolean {
 
 // Export alias type for consumers without importing wasm_pkg directly
 export type { WasmSearchResult };
+
+// 再利用しやすいよう wasm ctor/instance 型を公開
+export type BWGenerationConfigCtor = typeof WasmBWGenerationConfig;
+export type SeedEnumeratorCtor = typeof WasmSeedEnumerator;
+export type SeedEnumeratorInstance = InstanceType<SeedEnumeratorCtor>;

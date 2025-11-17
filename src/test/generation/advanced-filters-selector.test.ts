@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { useAppStore } from '@/store/app-store';
 import { selectFilteredSortedResults, createDefaultGenerationFilters } from '@/store/generation-store';
 import type { GenerationResult } from '@/types/generation';
+import { resolveBatch } from '@/lib/generation/pokemon-resolver';
+import type { ResolutionContext } from '@/types/pokemon-resolved';
 
 // We simulate species/level/gender/ability resolution by injecting encounterTable + ratios + abilityCatalog
 // For selector we only need resolved speciesId, level, gender, abilityIndex mapping.
@@ -45,8 +47,17 @@ const abilityCatalog = new Map<number, string[]>([
 ]);
 
 function resetStore() {
-  useAppStore.setState({ results: [...results] });
-  useAppStore.setState({ filters: createDefaultGenerationFilters() });
+  const ctx: ResolutionContext = {
+    encounterTable,
+    genderRatios: genderRatios as any,
+    abilityCatalog: abilityCatalog as any,
+  };
+  const resolved = resolveBatch(results as any, ctx);
+  useAppStore.setState({
+    results: results.map((entry) => ({ ...entry })),
+    resolvedResults: resolved,
+    filters: createDefaultGenerationFilters(),
+  });
   useAppStore.getState().setEncounterTable(encounterTable);
   useAppStore.getState().setGenderRatios(genderRatios as any);
   useAppStore.getState().setAbilityCatalog(abilityCatalog as any);

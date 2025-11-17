@@ -7,6 +7,8 @@ export interface UnresolvedPokemonData {
   seed: bigint;
   /** PID (32bit) */
   pid: number;
+  /** 列挙advance */
+  advance: number;
   /** 性格値 (0-24) */
   nature: number;
   /** シンクロ適用フラグ */
