@@ -108,7 +108,6 @@ export function SearchPanel() {
   if (isStack) {
     // スマートフォン・縦長画面: 縦スタック配置
     return (
-      <>
         <div className={`${sizes.gap} flex flex-col h-full overflow-y-auto overflow-x-hidden`}>
           <div className="flex-none">
             <ProfileCard />
@@ -135,7 +134,7 @@ export function SearchPanel() {
               setSortField={setSortField}
             />
           </div>
-          <div className="flex-1 min-h-[200px]">
+          <div className="flex-1 min-h-0">
             <ResultsCard
               filteredAndSortedResults={filteredAndSortedResults}
               searchResultsLength={searchResults.length}
@@ -145,13 +144,12 @@ export function SearchPanel() {
               onShowDetails={handleShowDetails}
             />
           </div>
-        </div>
-        <ResultDetailsDialog
+          <ResultDetailsDialog
           result={selectedResult}
           isOpen={isDetailsOpen}
           onOpenChange={setIsDetailsOpen}
         />
-      </>
+        </div>
     );
   }
 

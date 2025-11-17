@@ -11,7 +11,7 @@ export function MainContent() {
   const { activeTab, setActiveTab } = useAppStore();
   const { isStack } = useResponsiveLayout();
 
-  const overflowClasses = isStack ? 'overflow-y-auto overflow-x-hidden' : 'overflow-x-auto overflow-y-auto';
+  const overflowClasses = isStack ? 'overflow-y-auto overflow-x-hidden' : 'overflow-y-auto overflow-x-auto';
   const layoutClasses = 'flex flex-col';
 
   return (

@@ -11,7 +11,7 @@ import { natureName } from '@/lib/utils/format-display';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import type { ShinyFilterMode, StatRangeFilters } from '@/store/generation-store';
-import { selectFilteredDisplayRows, selectFilteredSortedResults, selectResolvedResults } from '@/store/generation-store';
+import { selectFilteredSortedResults, selectResolvedResults } from '@/store/generation-store';
 import { getGeneratedSpeciesById } from '@/data/species/generated';
 import type { StatKey } from '@/lib/utils/pokemon-stats';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -88,7 +88,6 @@ export const GenerationResultsControlCard: React.FC = () => {
   const statsAvailable = useAppStore((state) => Boolean(state.params?.baseSeed));
 
   const resolvedResults = useAppStore((state: AppStoreState) => selectResolvedResults(state));
-  const filteredRows = useAppStore((state: AppStoreState) => selectFilteredDisplayRows(state, locale));
   const filteredRawRows = useAppStore((state: AppStoreState) => selectFilteredSortedResults(state, locale));
 
   const { isStack } = useResponsiveLayout();
@@ -410,7 +409,6 @@ export const GenerationResultsControlCard: React.FC = () => {
       className="flex flex-col"
       fullHeight={false}
       scrollMode={isStack ? 'parent' : 'content'}
-      contentClassName="space-y-3 text-xs"
       aria-labelledby="gen-results-control-title"
       role="region"
     >
@@ -418,7 +416,7 @@ export const GenerationResultsControlCard: React.FC = () => {
         <fieldset className="space-y-2" aria-labelledby="gf-filters" role="group">
           <div id="gf-filters" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">{filtersHeading}</div>
           <div className={cn('grid gap-3 items-start', isStack ? 'grid-cols-1' : 'grid-cols-2')}>
-            <div className={cn('flex w-full gap-3', isStack ? 'flex-col' : 'flex-wrap items-end')}>
+            <div className={cn('grid gap-3 items-start', isStack ? 'grid-cols-3' : 'grid-cols-6')}>
               <div className="flex w-full flex-col gap-1 sm:w-auto">
                 <Label htmlFor="species-select" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.species}</Label>
                 <Select
@@ -502,9 +500,7 @@ export const GenerationResultsControlCard: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className={cn('flex w-full gap-3', isStack ? 'flex-col' : 'flex-wrap items-end')}>
-              <div className="flex w-full flex-col gap-1 sm:w-auto">
+              <div className="flex flex-col gap-1 sm:w-auto">
                 <Label htmlFor="level-filter" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.level}</Label>
                 <Input
                   id="level-filter"
@@ -514,12 +510,14 @@ export const GenerationResultsControlCard: React.FC = () => {
                   maxLength={3}
                   value={levelValue}
                   onChange={handleLevelValueChange}
-                  className="h-9 w-full px-2 text-right text-xs font-mono sm:w-16"
+                  className="h-9 w-16 px-2 text-right text-xs font-mono sm:w-16"
                   placeholder={anyLabel}
                   disabled={!statsAvailable}
                   aria-label={levelAriaLabel}
                 />
               </div>
+            </div>
+            <div className={`grid grid-cols-6 gap-1 items-end`}>
               {STAT_KEYS.map((stat) => {
                 const range = filters.statRanges[stat];
                 const value = range?.min != null ? String(range.min) : '';

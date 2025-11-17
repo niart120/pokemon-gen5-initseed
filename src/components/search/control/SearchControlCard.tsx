@@ -387,8 +387,6 @@ export function SearchControlCard() {
       title={resolveLocaleValue(searchControlPanelTitle, locale)}
       className={isStack ? 'max-h-96' : undefined}
       fullHeight={!isStack}
-      scrollMode="parent"
-      contentClassName="overflow-hidden"
     >
         <div className="space-y-2">
           {/* 検索制御ボタンと設定 */}

@@ -34,6 +34,7 @@
 */
 :root {
   --radius: 0.625rem;
+  --app-viewport-height: 100vh;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -179,7 +180,7 @@
 @layer base {
   /* Constrain scrolling to the app's main container */
   html, body {
-    height: 100%;
+    height: 100svh;
     overflow: hidden;
   }
 
@@ -195,5 +196,11 @@
 @layer utilities {
   .font-arrows {
     font-family: 'Noto Sans Symbols 2', 'Segoe UI Symbol', 'Noto Sans Symbols', 'Symbola', var(--font-family-mono, var(--font-family-sans));
+  }
+
+  .generation-panel input,
+  .generation-panel select,
+  .generation-panel textarea {
+    font-size: 16px;
   }
 }

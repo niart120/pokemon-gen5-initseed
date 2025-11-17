@@ -110,7 +110,6 @@ export function SearchProgressCard() {
       }
       className={isMobile ? 'max-h-96' : 'min-h-80'}
       fullHeight={!isMobile}
-      contentClassName="pt-0"
     >
         {/* 基本進捗表示 - 実行中・完了後も表示 */}
         {showBaseProgress && (

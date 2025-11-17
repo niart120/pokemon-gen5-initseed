@@ -115,7 +115,6 @@ export function ProfileCard() {
       icon={<DeviceMobileSpeaker size={20} className="opacity-80" />}
       title={resolveLocaleValue(profileCardTitle, locale)}
       fullHeight={false}
-      contentClassName="space-y-4"
     >
         {errors.length > 0 && (
           <>

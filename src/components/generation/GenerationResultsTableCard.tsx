@@ -15,9 +15,8 @@ import {
 } from '@/lib/i18n/strings/generation-results-table';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 
-interface GenerationResultsTableCardProps { parentManagesScroll?: boolean; }
 type AppStoreState = ReturnType<typeof useAppStore.getState>;
-export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProps> = ({ parentManagesScroll }) => {
+export const GenerationResultsTableCard: React.FC = () => {
   const locale = useLocale();
   const rows = useAppStore((state: AppStoreState) => selectFilteredDisplayRows(state, locale));
   const total = useAppStore(s => s.results.length);
@@ -30,14 +29,13 @@ export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProp
   // スクロール方針
   // - モバイル(isStack): カード内でスクロール(overflow-y-auto)にして、ドキュメント高さの膨張を防ぐ
   // - デスクトップ: 呼び出し元の指定を尊重（既定はfalseでカード内スクロール）
-  const effectiveParentManages = isStack ? false : !!parentManagesScroll;
   return (
     <PanelCard
       icon={<Table size={20} className="opacity-80" />}
       title={<span id="gen-results-table-title">{panelTitle}</span>}
       className={isStack ? 'max-h-96' : 'min-h-96'}
       fullHeight={!isStack}
-      scrollMode={effectiveParentManages ? 'parent' : 'content'}
+      scrollMode={isStack ? 'parent' : 'content'}
       padding="none"
       spacing="none"
       contentClassName="p-0"

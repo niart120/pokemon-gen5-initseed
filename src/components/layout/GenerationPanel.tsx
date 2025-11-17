@@ -15,7 +15,7 @@ import { ProfileCard } from '@/components/profile/ProfileCard';
  * モバイル幅では従来どおり縦積みにフォールバック (後続PhaseでAccordion化予定)。
  * - SearchPanel と同基準のレイアウトスケールを用い、PCは2カラム構成を維持。
  */
-export const GenerationPanel: React.FC = () => {
+export function GenerationPanel() {
   const { isStack, uiScale } = useResponsiveLayout();
 
   // スケールに応じたレスポンシブサイズ
@@ -40,8 +40,7 @@ export const GenerationPanel: React.FC = () => {
         <div className="flex-none">
           <GenerationResultsControlCard />
         </div>
-        {/* 結果テーブルは領域に収める（mainにスクロールを閉じ込める） */}
-        <div className="flex-1 min-h-[200px]">
+        <div className="flex-1 min-h-0">
           <GenerationResultsTableCard />
         </div>
       </div>

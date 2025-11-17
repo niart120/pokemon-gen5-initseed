@@ -171,9 +171,9 @@ export const GenerationRunCard: React.FC = () => {
       <PanelCard
       icon={<ChartBar size={20} className="opacity-80" />}
       title={<span id="gen-run-title">{title}</span>}
-      fullHeight={false}
+      className={isStack ? 'max-h-96' : undefined}
+      fullHeight={!isStack}
       scrollMode={isStack ? 'parent' : 'content'}
-      contentClassName="gap-3"
       role="region"
       aria-labelledby="gen-run-title"
     >
@@ -188,7 +188,7 @@ export const GenerationRunCard: React.FC = () => {
         {/* Controls */}
         <div className="flex items-center gap-2 flex-wrap" role="group" aria-label={controlsLabel}>
           {canStart && (
-            <Button size="sm" onClick={handleStart} disabled={isStarting} className="flex-1 min-w-[120px]" data-testid="gen-start-btn">
+            <Button size="sm" onClick={handleStart} disabled={isStarting} className="flex-1" data-testid="gen-start-btn">
               <Play size={16} className="mr-2" />
               {isStarting ? startingLabel : startLabel}
             </Button>

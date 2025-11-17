@@ -20,7 +20,7 @@ function App() {
 
   return (
     <LocaleProvider>
-      <div className="h-screen bg-background flex flex-col overflow-hidden pb-safe">
+      <div className="h-screen bg-background flex flex-col overflow-hidden pb-safe min-h-screen">
         <AppHeader />
         <MainContent />
         <AppFooter />
