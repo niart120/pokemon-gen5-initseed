@@ -4,14 +4,14 @@ import { validateGenerationParams, hexParamsToGenerationParams, generationParams
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
 import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
-import type { DomainEncounterType } from '@/types/domain';
+import { DomainShinyType, type DomainEncounterType } from '@/types/domain';
 import { resolveBatch, toUiReadyPokemon } from '@/lib/generation/pokemon-resolver';
 import type { ResolvedPokemonData, UiReadyPokemonData, SerializedResolutionContext } from '@/types/pokemon-resolved';
 import { buildResolutionContextFromSources } from '@/lib/initialization/build-resolution-context';
 
 export type GenerationStatus = 'idle' | 'starting' | 'running' | 'stopping' | 'completed' | 'error';
 
-export type ShinyFilterMode = 'all' | 'shiny' | 'non-shiny';
+export type ShinyFilterMode = 'all' | 'shiny' | 'star' | 'square' | 'non-shiny';
 
 export interface StatRange {
   min?: number;
@@ -522,8 +522,11 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
     if (!resolvedData) continue;
     const uiData = toUiReadyPokemon(resolvedData, { locale, version, baseSeed });
 
-    if (shinyMode === 'shiny' && uiData.shinyType === 0) continue;
-    if (shinyMode === 'non-shiny' && uiData.shinyType !== 0) continue;
+    const shinyType = uiData.shinyType ?? DomainShinyType.Normal;
+    if (shinyMode === 'shiny' && shinyType === DomainShinyType.Normal) continue;
+    if (shinyMode === 'non-shiny' && shinyType !== DomainShinyType.Normal) continue;
+    if (shinyMode === 'star' && shinyType !== DomainShinyType.Star) continue;
+    if (shinyMode === 'square' && shinyType !== DomainShinyType.Square) continue;
     if (natureSet && !natureSet.has(uiData.natureId)) continue;
 
     if (speciesSet) {

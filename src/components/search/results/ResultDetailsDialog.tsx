@@ -117,7 +117,7 @@ export function ResultDetailsDialog({
                     <Copy size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="space-y-1 text-left">
+                <TooltipContent side="top" className="space-y-1 text-left max-w-[90vw]">
                   {lcgTooltipEntries.map(entry => (
                     <div key={entry.label} className="space-y-0.5">
                       <div className="font-semibold leading-tight">{entry.label}</div>
@@ -142,7 +142,7 @@ export function ResultDetailsDialog({
                     <Copy size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="space-y-1 text-left">
+                <TooltipContent side="top" className="space-y-1 text-left max-w-[90vw]">
                   {mtTooltipEntries.map(entry => (
                     <div key={entry.label} className="space-y-0.5">
                       <div className="font-semibold leading-tight">{entry.label}</div>

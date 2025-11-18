@@ -35,6 +35,18 @@ describe('selectFilteredSortedResults', () => {
     expect(out.map(r => r.advance)).toEqual([1,5]);
   });
 
+  it('shinyMode filters star-only results', () => {
+    useAppStore.setState((s) => ({ filters: { ...s.filters, shinyMode: 'star' } }));
+    const out = selectFilteredSortedResults(useAppStore.getState() as any);
+    expect(out.map(r => r.advance)).toEqual([2]);
+  });
+
+  it('shinyMode filters square-only results', () => {
+    useAppStore.setState((s) => ({ filters: { ...s.filters, shinyMode: 'square' } }));
+    const out = selectFilteredSortedResults(useAppStore.getState() as any);
+    expect(out.map(r => r.advance)).toEqual([8]);
+  });
+
   it('natureIds filter + pid desc sort', () => {
     useAppStore.setState(s => ({ filters: { ...s.filters, natureIds: [1,3,7], sortField: 'pid', sortOrder: 'desc' } }));
     const out = selectFilteredSortedResults(useAppStore.getState() as any);

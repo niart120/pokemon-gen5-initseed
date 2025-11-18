@@ -171,15 +171,15 @@ export const GenerationRunCard: React.FC = () => {
       <PanelCard
       icon={<ChartBar size={20} className="opacity-80" />}
       title={<span id="gen-run-title">{title}</span>}
-      fullHeight={false}
+      className={isStack ? 'max-h-96' : undefined}
+      fullHeight={!isStack}
       scrollMode={isStack ? 'parent' : 'content'}
-      contentClassName="gap-3"
       role="region"
       aria-labelledby="gen-run-title"
     >
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
-          <div className="text-destructive text-xs space-y-0.5" role="alert" aria-live="polite">
+          <div className="text-destructive text-xs space-y-0.5" role="alert">
             {validationErrors.map((e, i) => (
               <div key={i}>{e}</div>
             ))}
@@ -188,7 +188,7 @@ export const GenerationRunCard: React.FC = () => {
         {/* Controls */}
         <div className="flex items-center gap-2 flex-wrap" role="group" aria-label={controlsLabel}>
           {canStart && (
-            <Button size="sm" onClick={handleStart} disabled={isStarting} className="flex-1 min-w-[120px]" data-testid="gen-start-btn">
+            <Button size="sm" onClick={handleStart} disabled={isStarting} className="flex-1" data-testid="gen-start-btn">
               <Play size={16} className="mr-2" />
               {isStarting ? startingLabel : startLabel}
             </Button>
@@ -199,7 +199,7 @@ export const GenerationRunCard: React.FC = () => {
               {stopLabel}
             </Button>
           )}
-          <div className="text-xs text-muted-foreground ml-auto" aria-live="polite">
+          <div className="text-xs text-muted-foreground ml-auto">
             {statusPrefix} {statusDisplay}
           </div>
         </div>
@@ -209,9 +209,6 @@ export const GenerationRunCard: React.FC = () => {
             <span>{percentDisplay}</span>
             <span>{advancesDisplay}</span>
           </div>
-        </div>
-        <div className="sr-only" aria-live="polite">
-          {screenReaderSummary}
         </div>
       </PanelCard>
 

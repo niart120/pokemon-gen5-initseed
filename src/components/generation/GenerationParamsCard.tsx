@@ -333,7 +333,7 @@ export const GenerationParamsCard: React.FC = () => {
     <PanelCard
       icon={<Gear size={20} className="opacity-80" />}
       title={<span id="gen-params-title">{localized.panelTitle}</span>}
-      className={isStack ? undefined : 'min-h-64'}
+      className={isStack ? 'max-h-200' : 'min-h-64'}
       fullHeight={!isStack}
       scrollMode={isStack ? 'parent' : 'content'}
       aria-labelledby="gen-params-title"
@@ -352,7 +352,7 @@ export const GenerationParamsCard: React.FC = () => {
                 <TooltipTrigger asChild>
                   <Input
                     id="base-seed"
-                    className="font-mono h-9 min-w-40"
+                    className="font-mono h-9"
                     disabled={disabled}
                     value={hexDraft.baseSeedHex ?? '0'}
                     onChange={e => {
@@ -375,7 +375,7 @@ export const GenerationParamsCard: React.FC = () => {
             ) : (
               <Input
                 id="base-seed"
-                className="font-mono h-9 min-w-40"
+                className="font-mono h-9"
                 disabled={disabled}
                 value={hexDraft.baseSeedHex ?? '0'}
                 onChange={e => {
@@ -541,9 +541,6 @@ export const GenerationParamsCard: React.FC = () => {
           </div>
         </div>
       </section>
-      <div className="sr-only" aria-live="polite">
-        {localized.messages.screenReader}
-      </div>
     </PanelCard>
   );
 };

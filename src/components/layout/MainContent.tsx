@@ -11,11 +11,11 @@ export function MainContent() {
   const { activeTab, setActiveTab } = useAppStore();
   const { isStack } = useResponsiveLayout();
 
-  const overflowClasses = isStack ? 'overflow-x-hidden overflow-y-auto' : 'overflow-x-auto overflow-y-auto';
+  const overflowClasses = isStack ? 'overflow-y-auto overflow-x-hidden' : 'overflow-y-auto overflow-x-auto';
   const layoutClasses = 'flex flex-col';
 
   return (
-    <main className={`px-2 sm:px-3 lg:px-3 xl:px-4 2xl:px-4 py-1 max-w-none flex-1 min-h-0 ${layoutClasses}`}>
+    <main className={`px-2 sm:px-3 lg:px-3 xl:px-4 2xl:px-4 py-1 max-w-none flex-1 min-h-0 ${layoutClasses} ${overflowClasses}`}>
       <div className="max-w-screen-2xl xl:max-w-[1700px] 2xl:max-w-[1900px] mx-auto w-full flex-1 flex flex-col min-w-0 min-h-0 gap-3">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-2 flex flex-col flex-1 min-h-0">
           <TabsList className="grid grid-cols-3 w-full max-w-6xl mx-auto flex-shrink-0 h-9">
@@ -33,15 +33,15 @@ export function MainContent() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="search" className={`flex-1 min-h-0 h-screen ${overflowClasses}`}>
+          <TabsContent value="search" className="flex-1 min-h-0 overflow-hidden">
             <SearchPanel />
           </TabsContent>
 
-          <TabsContent value="generation" className={`flex-1 min-h-0 h-screen ${overflowClasses}`}>
+          <TabsContent value="generation" className="flex-1 min-h-0 overflow-hidden">
             <GenerationPanel />
           </TabsContent>
 
-          <TabsContent value="help" className={`flex-1 min-h-0 h-screen ${overflowClasses}`}>
+          <TabsContent value="help" className="flex-1 min-h-0 overflow-hidden">
             <HelpPanel />
           </TabsContent>
         </Tabs>

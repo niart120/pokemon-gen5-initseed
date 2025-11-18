@@ -74,8 +74,6 @@ export function ResultsControlCard({
       }
       className={isStack ? 'max-h-96' : undefined}
       fullHeight={!isStack}
-      scrollMode="parent"
-      contentClassName="overflow-hidden"
     >
         {/* Filters */}
         <div className="flex gap-4 items-end flex-shrink-0">

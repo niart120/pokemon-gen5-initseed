@@ -53,7 +53,7 @@ export const generationResultsControlFieldLabels: LocaleMap<Record<FieldKey, str
 
 export const generationResultsControlStatLabels: LocaleMap<Record<StatKey, string>> = {
   ja: {
-    hp: 'HP',
+    hp: 'H',
     attack: 'A',
     defense: 'B',
     specialAttack: 'C',

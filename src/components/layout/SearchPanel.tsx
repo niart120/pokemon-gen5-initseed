@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAppStore } from '../../store/app-store';
 import {
   SearchParamsCard,
-  TargetSeedsCard
+  TargetSeedsCard,
 } from '../search/configuration';
 import { SearchControlCard, SearchProgressCard } from '../search/control';
 import { ResultsControlCard, ResultsCard, ResultDetailsDialog, type SortField } from '../search/results';
@@ -106,59 +106,56 @@ export function SearchPanel() {
   };
 
   if (isStack) {
-    // スマートフォン・縦長画面: 縦スタック配置
     return (
-      <>
-        <div className={`${sizes.gap} flex flex-col overflow-y-auto overflow-x-hidden`}>
-          <div className="flex-none">
-            <ProfileCard />
-          </div>
-          <div className="flex-none">
-            <SearchParamsCard />
-          </div>
-          <div className="flex-none">
-            <TargetSeedsCard />
-          </div>
-          <div className="flex-none">
-            <SearchControlCard />
-          </div>
-          <div className="flex-none">
-            <SearchProgressCard />
-          </div>
-          <div className="flex-none">
-            <ResultsControlCard
-              filteredResultsCount={filteredAndSortedResults.length}
-              convertedResults={convertToSearchResults}
-              filterSeed={filterSeed}
-              setFilterSeed={setFilterSeed}
-              sortField={sortField}
-              setSortField={setSortField}
-            />
-          </div>
-          <div className="flex-none">
-            <ResultsCard
-              filteredAndSortedResults={filteredAndSortedResults}
-              searchResultsLength={searchResults.length}
-              sortField={sortField}
-              sortOrder={sortOrder}
-              onSort={handleSort}
-              onShowDetails={handleShowDetails}
-            />
-          </div>
+      <div className={`${sizes.gap} flex flex-col h-full overflow-y-auto overflow-x-hidden`}>
+        <div className="flex-none">
+          <ProfileCard />
+        </div>
+        <div className="flex-none">
+          <SearchParamsCard />
+        </div>
+        <div className="flex-none">
+          <TargetSeedsCard />
+        </div>
+        <div className="flex-none">
+          <SearchControlCard />
+        </div>
+        <div className="flex-none">
+          <SearchProgressCard />
+        </div>
+        <div className="flex-none">
+          <ResultsControlCard
+            filteredResultsCount={filteredAndSortedResults.length}
+            convertedResults={convertToSearchResults}
+            filterSeed={filterSeed}
+            setFilterSeed={setFilterSeed}
+            sortField={sortField}
+            setSortField={setSortField}
+          />
+        </div>
+        <div className="flex-1 min-h-0">
+          <ResultsCard
+            filteredAndSortedResults={filteredAndSortedResults}
+            searchResultsLength={searchResults.length}
+            sortField={sortField}
+            sortOrder={sortOrder}
+            onSort={handleSort}
+            onShowDetails={handleShowDetails}
+          />
         </div>
         <ResultDetailsDialog
           result={selectedResult}
           isOpen={isDetailsOpen}
           onOpenChange={setIsDetailsOpen}
         />
-      </>
+      </div>
     );
   }
 
   // PC: 3カラム配置（設定 | 検索制御・進捗 | 結果）
   return (
     <>
-      <div className={`flex flex-col ${sizes.gap} max-w-full min-h-0 min-w-fit overflow-hidden`}>
+      <div className={`flex flex-col ${sizes.gap} max-w-full h-full min-h-0 min-w-fit overflow-hidden`}>
         <div className="flex-none">
           <ProfileCard />
         </div>
