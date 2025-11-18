@@ -47,7 +47,6 @@ interface AppStore extends GenerationSlice {
   // Search results
   searchResults: InitialSeedResult[];
   setSearchResults: (results: InitialSeedResult[]) => void;
-  addSearchResult: (result: InitialSeedResult) => void;
   clearSearchResults: () => void;
 
   // Search progress
@@ -432,13 +431,6 @@ export const useAppStore = create<AppStore>()(
       // Search results
       searchResults: [],
       setSearchResults: (results) => set({ searchResults: results }),
-      addSearchResult: (result) =>
-        set((state) => {
-          // 効率的な配列追加：スプレッド演算子による新配列作成を避ける
-          const newResults = state.searchResults.slice();
-          newResults.push(result);
-          return { searchResults: newResults };
-        }),
       clearSearchResults: () => set({ searchResults: [] }),
 
       // Search progress

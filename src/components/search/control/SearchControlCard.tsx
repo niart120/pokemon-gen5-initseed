@@ -51,7 +51,6 @@ export function SearchControlCard() {
   stopSearch,
   completeSearch,
     targetSeeds,
-    addSearchResult,
     clearSearchResults,
     parallelSearchSettings,
     setMaxWorkers,
@@ -72,6 +71,17 @@ export function SearchControlCard() {
   const profileSyncPromiseResolveRef = useRef<((value: boolean) => void) | null>(null);
   const pendingProfileDraftRef = useRef<DeviceProfileDraft | null>(null);
   const profileSyncCloseActionRef = useRef<'confirm' | 'cancel' | null>(null);
+  const bufferedResultsRef = useRef<InitialSeedResult[]>([]);
+
+  const resetBufferedResults = useCallback(() => {
+    bufferedResultsRef.current = [];
+  }, []);
+
+  const flushBufferedResults = useCallback(() => {
+    const snapshot = bufferedResultsRef.current;
+    useAppStore.getState().setSearchResults(snapshot.slice());
+    bufferedResultsRef.current = [];
+  }, []);
 
   const activeProfile = useMemo(() => {
     if (!profiles.length) {
@@ -208,6 +218,7 @@ export function SearchControlCard() {
   }, [activeProfile, profileDirty, profileDraft, profileSyncDialogText, profileValidationErrors, setProfileSyncDialogOpen]);
 
   const performSearchStart = useCallback(async () => {
+    resetBufferedResults();
     clearSearchResults();
     startSearch();
 
@@ -229,10 +240,11 @@ export function SearchControlCard() {
           setParallelProgress(aggregatedProgress);
         },
         onResult: (result: InitialSeedResult) => {
-          addSearchResult(result);
+          bufferedResultsRef.current.push(result);
         },
         onComplete: (message: string) => {
           console.warn('Search completed:', message);
+          flushBufferedResults();
           const currentProgress = useAppStore.getState().searchProgress;
           const currentParallelProgress = useAppStore.getState().parallelProgress;
           const finalElapsedTime = currentParallelProgress?.totalElapsedTime || currentProgress.elapsedTime;
@@ -251,6 +263,7 @@ export function SearchControlCard() {
           alert(formatSearchControlSearchErrorAlert(error, locale));
           stopSearch();
           resetSearchWorkerManager();
+          resetBufferedResults();
         },
         onPaused: () => {
           console.warn('Search paused by worker');
@@ -260,6 +273,7 @@ export function SearchControlCard() {
         },
         onStopped: () => {
           console.warn('Search stopped by worker');
+          flushBufferedResults();
           stopSearch();
         },
       });
@@ -270,12 +284,14 @@ export function SearchControlCard() {
       setParallelProgress(null);
       stopSearch();
       resetSearchWorkerManager();
+      resetBufferedResults();
     }
   }, [
-    addSearchResult,
     clearSearchResults,
     completeSearch,
+    flushBufferedResults,
     locale,
+    resetBufferedResults,
     searchConditions,
     setParallelProgress,
     startSearch,
