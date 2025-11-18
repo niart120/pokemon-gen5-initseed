@@ -754,9 +754,9 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
       const messageIndex = dispatchBaseOffset + localMessageIndex;
       const seed = matchWords[recordOffset + 1] >>> 0;
 
-    const timer0Index = Math.floor(messageIndex / messagesPerTimer0);
-    const remainderAfterTimer0 = messageIndex - timer0Index * messagesPerTimer0;
-    const vcountIndex = Math.floor(remainderAfterTimer0 / messagesPerVcount);
+      const timer0Index = Math.floor(messageIndex / messagesPerTimer0);
+      const remainderAfterTimer0 = messageIndex - timer0Index * messagesPerTimer0;
+      const vcountIndex = Math.floor(remainderAfterTimer0 / messagesPerVcount);
       const timeCombinationOffset = remainderAfterTimer0 - vcountIndex * messagesPerVcount;
 
       const timer0 = timer0Min + timer0Index;
