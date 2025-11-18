@@ -179,7 +179,7 @@ export const GenerationRunCard: React.FC = () => {
     >
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
-          <div className="text-destructive text-xs space-y-0.5" role="alert" aria-live="polite">
+          <div className="text-destructive text-xs space-y-0.5" role="alert">
             {validationErrors.map((e, i) => (
               <div key={i}>{e}</div>
             ))}
@@ -199,7 +199,7 @@ export const GenerationRunCard: React.FC = () => {
               {stopLabel}
             </Button>
           )}
-          <div className="text-xs text-muted-foreground ml-auto" aria-live="polite">
+          <div className="text-xs text-muted-foreground ml-auto">
             {statusPrefix} {statusDisplay}
           </div>
         </div>
@@ -209,9 +209,6 @@ export const GenerationRunCard: React.FC = () => {
             <span>{percentDisplay}</span>
             <span>{advancesDisplay}</span>
           </div>
-        </div>
-        <div className="sr-only" aria-live="polite">
-          {screenReaderSummary}
         </div>
       </PanelCard>
 

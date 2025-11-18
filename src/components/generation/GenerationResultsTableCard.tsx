@@ -1,6 +1,7 @@
 import React from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
-import { Table } from '@phosphor-icons/react';
+import { Table as TableIcon } from '@phosphor-icons/react';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAppStore } from '@/store/app-store';
 import { selectFilteredDisplayRows } from '@/store/generation-store';
 import { shinyLabel, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
@@ -31,7 +32,7 @@ export const GenerationResultsTableCard: React.FC = () => {
   // - デスクトップ: 呼び出し元の指定を尊重（既定はfalseでカード内スクロール）
   return (
     <PanelCard
-      icon={<Table size={20} className="opacity-80" />}
+      icon={<TableIcon size={20} className="opacity-80" />}
       title={<span id="gen-results-table-title">{panelTitle}</span>}
       className={isStack ? 'max-h-96' : 'min-h-96'}
       fullHeight={!isStack}
@@ -42,71 +43,78 @@ export const GenerationResultsTableCard: React.FC = () => {
       aria-labelledby="gen-results-table-title"
       role="region"
     >
-      <table className="min-w-full text-xs" aria-describedby="gen-results-table-desc">
-          <caption id="gen-results-table-desc" className="sr-only">{caption}</caption>
-          <thead className="sticky top-0 bg-muted text-[11px]">
-            <tr className="text-left">
-              <th scope="col" className="px-2 py-1 font-medium w-14">
-                {headers.advance.label}
-                {headers.advance.sr ? <span className="sr-only">{headers.advance.sr}</span> : null}
-              </th>
-              <th scope="col" className="px-2 py-1 font-medium w-10">{headers.direction.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium w-8">{headers.directionValue.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium min-w-[90px] w-32">{headers.species.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium min-w-[90px] w-32">{headers.ability.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium w-8">
-                {headers.gender.label}
-                {headers.gender.sr ? <span className="sr-only">{headers.gender.sr}</span> : null}
-              </th>
-              <th scope="col" className="px-2 py-1 font-medium w-24">{headers.nature.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium w-16">{headers.shiny.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium w-10">{headers.level.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.hp.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.attack.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.defense.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.specialAttack.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.specialDefense.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.speed.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium min-w-[120px] w-36">{headers.seed.label}</th>
-              <th scope="col" className="px-2 py-1 font-medium w-32">{headers.pid.label}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => {
-              const needleDir = calculateNeedleDirection(row.seed);
-              const stats = row.stats;
-              const hpDisplay = stats ? stats.hp : '--';
-              const atkDisplay = stats ? stats.attack : '--';
-              const defDisplay = stats ? stats.defense : '--';
-              const spaDisplay = stats ? stats.specialAttack : '--';
-              const spdDisplay = stats ? stats.specialDefense : '--';
-              const speDisplay = stats ? stats.speed : '--';
-              const natureDisplay = row.natureName;
-              return (
-                <tr key={row.advance} className="odd:bg-background even:bg-muted/30">
-                  <td className="px-2 py-1 font-mono tabular-nums">{row.advance}</td>
-                  <td className="px-2 py-1 text-center font-arrows">{needleDirectionArrow(needleDir)}</td>
-                  <td className="px-2 py-1 font-mono tabular-nums">{needleDir}</td>
-                  <td className="px-2 py-1 truncate max-w-[120px]" title={row.speciesName || unknownLabel}>{row.speciesName || unknownLabel}</td>
-                  <td className="px-2 py-1 truncate max-w-[120px]" title={row.abilityName || unknownLabel}>{row.abilityName || unknownLabel}</td>
-                  <td className="px-2 py-1">{row.gender || '?'}</td>
-                  <td className="px-2 py-1 whitespace-nowrap">{natureDisplay}</td>
-                  <td className="px-2 py-1">{shinyLabel(row.shinyType, locale)}</td>
-                  <td className="px-2 py-1 tabular-nums">{row.level ?? ''}</td>
-                  <td className="px-2 py-1 font-mono tabular-nums text-right">{hpDisplay}</td>
-                  <td className="px-2 py-1 font-mono tabular-nums text-right">{atkDisplay}</td>
-                  <td className="px-2 py-1 font-mono tabular-nums text-right">{defDisplay}</td>
-                  <td className="px-2 py-1 font-mono tabular-nums text-right">{spaDisplay}</td>
-                  <td className="px-2 py-1 font-mono tabular-nums text-right">{spdDisplay}</td>
-                  <td className="px-2 py-1 font-mono tabular-nums text-right">{speDisplay}</td>
-                  <td className="px-2 py-1 font-mono whitespace-nowrap">{row.seedHex}</td>
-                  <td className="px-2 py-1 font-mono whitespace-nowrap">{row.pidHex}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-      </table>
-      <div className="sr-only" aria-live="polite">{announcement}</div>
+      <div className="flex-1 min-h-0">
+        <Table className="min-w-full text-xs" aria-describedby="gen-results-table-desc">
+          <TableCaption id="gen-results-table-desc">
+            {caption}
+          </TableCaption>
+          <TableHeader className="sticky top-0 bg-muted text-[11px]">
+          <TableRow className="text-left border-0">
+            <TableHead scope="col" className="px-2 py-1 font-medium w-14">
+              {headers.advance.label}
+              {headers.advance.sr ? <span className="sr-only">{headers.advance.sr}</span> : null}
+            </TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium w-10">{headers.direction.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium w-8">{headers.directionValue.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium min-w-[90px] w-32">{headers.species.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium min-w-[90px] w-32">{headers.ability.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium w-8">
+              {headers.gender.label}
+              {headers.gender.sr ? <span className="sr-only">{headers.gender.sr}</span> : null}
+            </TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium w-24">{headers.nature.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium w-16">{headers.shiny.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium w-10">{headers.level.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.hp.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.attack.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.defense.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.specialAttack.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.specialDefense.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.speed.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium min-w-[120px] w-36">{headers.seed.label}</TableHead>
+            <TableHead scope="col" className="px-2 py-1 font-medium w-32">{headers.pid.label}</TableHead>
+          </TableRow>
+          </TableHeader>
+          <TableBody>
+          {rows.map((row) => {
+            const needleDir = calculateNeedleDirection(row.seed);
+            const stats = row.stats;
+            const hpDisplay = stats ? stats.hp : '--';
+            const atkDisplay = stats ? stats.attack : '--';
+            const defDisplay = stats ? stats.defense : '--';
+            const spaDisplay = stats ? stats.specialAttack : '--';
+            const spdDisplay = stats ? stats.specialDefense : '--';
+            const speDisplay = stats ? stats.speed : '--';
+            const natureDisplay = row.natureName;
+            return (
+              <TableRow key={row.advance} className="odd:bg-background even:bg-muted/30 border-0">
+                <TableCell className="px-2 py-1 font-mono tabular-nums">{row.advance}</TableCell>
+                <TableCell className="px-2 py-1 text-center font-arrows">{needleDirectionArrow(needleDir)}</TableCell>
+                <TableCell className="px-2 py-1 font-mono tabular-nums">{needleDir}</TableCell>
+                <TableCell className="px-2 py-1 truncate max-w-[120px]" title={row.speciesName || unknownLabel}>
+                  {row.speciesName || unknownLabel}
+                </TableCell>
+                <TableCell className="px-2 py-1 truncate max-w-[120px]" title={row.abilityName || unknownLabel}>
+                  {row.abilityName || unknownLabel}
+                </TableCell>
+                <TableCell className="px-2 py-1">{row.gender || '?'}</TableCell>
+                <TableCell className="px-2 py-1 whitespace-nowrap">{natureDisplay}</TableCell>
+                <TableCell className="px-2 py-1">{shinyLabel(row.shinyType, locale)}</TableCell>
+                <TableCell className="px-2 py-1 tabular-nums">{row.level ?? ''}</TableCell>
+                <TableCell className="px-2 py-1 font-mono tabular-nums text-right">{hpDisplay}</TableCell>
+                <TableCell className="px-2 py-1 font-mono tabular-nums text-right">{atkDisplay}</TableCell>
+                <TableCell className="px-2 py-1 font-mono tabular-nums text-right">{defDisplay}</TableCell>
+                <TableCell className="px-2 py-1 font-mono tabular-nums text-right">{spaDisplay}</TableCell>
+                <TableCell className="px-2 py-1 font-mono tabular-nums text-right">{spdDisplay}</TableCell>
+                <TableCell className="px-2 py-1 font-mono tabular-nums text-right">{speDisplay}</TableCell>
+                <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{row.seedHex}</TableCell>
+                <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{row.pidHex}</TableCell>
+              </TableRow>
+            );
+          })}
+          </TableBody>
+        </Table>
+      </div>
     </PanelCard>
   );
 };

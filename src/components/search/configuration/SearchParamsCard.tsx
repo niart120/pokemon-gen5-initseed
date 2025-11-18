@@ -214,7 +214,7 @@ export function SearchParamsCard() {
                 type="date"
                 min="2000-01-01"
                 max="2099-12-31"
-                className="h-9"
+                className="h-9 w-1/2"
                 value={startDate}
                 onChange={(event) => handleStartDateChange(event.target.value)}
               />
@@ -228,7 +228,7 @@ export function SearchParamsCard() {
                 type="date"
                 min="2000-01-01"
                 max="2099-12-31"
-                className="h-9"
+                className="h-9 w-1/2"
                 value={endDate}
                 onChange={(event) => handleEndDateChange(event.target.value)}
               />

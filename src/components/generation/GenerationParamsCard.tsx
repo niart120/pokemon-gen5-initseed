@@ -541,9 +541,6 @@ export const GenerationParamsCard: React.FC = () => {
           </div>
         </div>
       </section>
-      <div className="sr-only" aria-live="polite">
-        {localized.messages.screenReader}
-      </div>
     </PanelCard>
   );
 };
