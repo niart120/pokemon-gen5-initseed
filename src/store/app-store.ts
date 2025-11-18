@@ -14,9 +14,10 @@ import type { DeviceProfile, DeviceProfileDraft } from '../types/profile';
 import { createDefaultDeviceProfile, createDeviceProfile, applyDeviceProfileDraft } from '../types/profile';
 import { DEMO_TARGET_SEEDS } from '../data/default-seeds';
 
-import type { GenerationSlice, GenerationFilters } from './generation-store';
+import type { GenerationSlice, GenerationFilters, ShinyFilterMode } from './generation-store';
 import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS, createDefaultGenerationFilters } from './generation-store';
 import { DEFAULT_LOCALE } from '@/types/i18n';
+import { DomainShinyType } from '@/types/domain';
 
 export type SearchExecutionMode = 'gpu' | 'cpu-parallel';
 
@@ -221,6 +222,8 @@ function mergeDraftParams(restored: Partial<GenerationSlice['draftParams']> | un
   return merged;
 }
 
+const ALLOWED_SHINY_FILTER_MODES: ShinyFilterMode[] = ['all', 'shiny', 'star', 'square', 'non-shiny'];
+
 function normalizeRestoredFilters(input: unknown): GenerationFilters {
   const defaults = createDefaultGenerationFilters();
   if (!input || typeof input !== 'object') {
@@ -229,10 +232,13 @@ function normalizeRestoredFilters(input: unknown): GenerationFilters {
 
   const candidate = input as Partial<GenerationFilters> & Record<string, unknown>;
   if (typeof candidate.shinyMode === 'string') {
+    const normalizedShiny = ALLOWED_SHINY_FILTER_MODES.includes(candidate.shinyMode as ShinyFilterMode)
+      ? candidate.shinyMode as ShinyFilterMode
+      : 'all';
     return {
       sortField: typeof candidate.sortField === 'string' ? candidate.sortField : defaults.sortField,
       sortOrder: candidate.sortOrder === 'desc' ? 'desc' : 'asc',
-      shinyMode: candidate.shinyMode === 'shiny' || candidate.shinyMode === 'non-shiny' ? candidate.shinyMode : 'all',
+      shinyMode: normalizedShiny,
       speciesIds: Array.isArray(candidate.speciesIds) ? [...candidate.speciesIds] : [],
       natureIds: Array.isArray(candidate.natureIds) ? [...candidate.natureIds] : [],
       abilityIndices: Array.isArray(candidate.abilityIndices) ? [...candidate.abilityIndices] as (0 | 1 | 2)[] : [],
@@ -244,11 +250,19 @@ function normalizeRestoredFilters(input: unknown): GenerationFilters {
 
   const legacy = input as Record<string, unknown>;
   const shinyOnly = Boolean(legacy.shinyOnly);
-  let shinyMode: 'all' | 'shiny' | 'non-shiny' = shinyOnly ? 'shiny' : 'all';
+  let shinyMode: ShinyFilterMode = shinyOnly ? 'shiny' : 'all';
   const shinyTypes = Array.isArray(legacy.shinyTypes) ? legacy.shinyTypes as number[] : [];
   if (shinyTypes.length === 1) {
-    if (shinyTypes[0] === 0) shinyMode = 'non-shiny';
-    else shinyMode = 'shiny';
+    const shinyValue = shinyTypes[0];
+    if (shinyValue === DomainShinyType.Normal) {
+      shinyMode = 'non-shiny';
+    } else if (shinyValue === DomainShinyType.Star) {
+      shinyMode = 'star';
+    } else if (shinyValue === DomainShinyType.Square) {
+      shinyMode = 'square';
+    } else {
+      shinyMode = 'shiny';
+    }
   }
 
   return {

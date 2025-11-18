@@ -13,14 +13,18 @@ export const noGenderSelectionLabel: LocaleText = {
 
 export const shinyModeOptionLabels: LocaleMap<Record<ShinyFilterMode, string>> = {
   ja: {
-    all: '-',
-    shiny: '色違いのみ',
+    all: '指定なし',
+    shiny: '色違い (☆&◇)',
+    star: '色違い (☆)',
+    square: '色違い (◇)',
     'non-shiny': '通常色のみ',
   },
   en: {
     all: 'Any',
-    shiny: 'Shiny Only',
-    'non-shiny': 'Non-shiny Only',
+    shiny: 'Star & Square',
+    star: 'Star only',
+    square: 'Square only',
+    'non-shiny': 'Normal only',
   },
 };
 

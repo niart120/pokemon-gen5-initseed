@@ -3,12 +3,10 @@ import { PanelCard } from '@/components/ui/panel-card';
 import { useAppStore } from '@/store/app-store';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { FunnelSimple, Trash, ArrowCounterClockwise } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, CaretDown, Check, FunnelSimple, Trash } from '@phosphor-icons/react';
 import { GenerationExportButton } from './GenerationExportButton';
-import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils/cn';
 import { natureName } from '@/lib/utils/format-display';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import type { ShinyFilterMode, StatRangeFilters } from '@/store/generation-store';
 import { selectFilteredSortedResults, selectResolvedResults } from '@/store/generation-store';
@@ -37,6 +35,15 @@ import {
 } from '@/lib/i18n/strings/generation-results-control';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import type { SupportedLocale } from '@/types/i18n';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 
 type AppStoreState = ReturnType<typeof useAppStore.getState>;
 
@@ -46,6 +53,112 @@ interface AbilityMeta {
   options: Array<{ index: 0 | 1 | 2; label: string }>;
   available: Set<0 | 1 | 2>;
 }
+
+interface FilterOptionItem {
+  value: string;
+  label: string;
+  disabled?: boolean;
+}
+
+interface FilterPopoverFieldProps {
+  id: string;
+  label: string;
+  placeholder: string;
+  selectedValue?: string;
+  selectedLabel?: string;
+  options: FilterOptionItem[];
+  onSelect: (value: string) => void;
+  disabled?: boolean;
+  searchable?: boolean;
+  emptyLabel: string;
+  searchPlaceholder?: string;
+}
+
+const FilterPopoverField: React.FC<FilterPopoverFieldProps> = ({
+  id,
+  label,
+  placeholder,
+  selectedValue,
+  selectedLabel,
+  options,
+  onSelect,
+  disabled = false,
+  searchable = false,
+  emptyLabel,
+  searchPlaceholder,
+}) => {
+  const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (disabled && open) {
+      setOpen(false);
+    }
+  }, [disabled, open]);
+
+  const handleSelect = React.useCallback((value: string) => {
+    onSelect(value);
+    setOpen(false);
+  }, [onSelect]);
+
+  const displayText = selectedLabel && selectedValue && selectedValue !== 'any'
+    ? selectedLabel
+    : placeholder;
+
+  const isActive = Boolean(selectedLabel && selectedValue && selectedValue !== 'any');
+
+  return (
+    <div className="flex w-full flex-col gap-1">
+      <Label htmlFor={id} className="text-[11px] font-medium text-muted-foreground">{label}</Label>
+      <Popover open={open} onOpenChange={(next) => { if (!disabled) setOpen(next); }}>
+        <PopoverTrigger asChild>
+          <Button
+            id={id}
+            type="button"
+            variant="outline"
+            disabled={disabled}
+            aria-haspopup="listbox"
+            aria-expanded={open}
+            className={cn(
+              'h-10 w-full justify-between px-3 text-left text-sm font-medium',
+              !isActive && 'text-muted-foreground',
+              isActive && 'border-primary text-primary',
+            )}
+          >
+            <span className="truncate">{displayText}</span>
+            <CaretDown size={14} className="shrink-0 opacity-60" />
+          </Button>
+        </PopoverTrigger>
+        {!disabled && (
+          <PopoverContent className="w-[min(320px,90vw)] p-0" align="start">
+            <Command>
+              {searchable && (
+                <CommandInput placeholder={searchPlaceholder ?? ''} />
+              )}
+              <CommandList>
+                <CommandEmpty>{emptyLabel}</CommandEmpty>
+                <CommandGroup>
+                  {options.map((option) => (
+                    <CommandItem
+                      key={`${id}-${option.value}`}
+                      value={option.label || option.value}
+                      disabled={option.disabled}
+                      onSelect={() => handleSelect(option.value)}
+                    >
+                      <span className="truncate">{option.label}</span>
+                      {selectedValue === option.value && (
+                        <Check size={14} className="ml-2 shrink-0 text-primary" />
+                      )}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        )}
+      </Popover>
+    </div>
+  );
+};
 
 export const GenerationResultsControlCard: React.FC = () => {
   const locale = useLocale();
@@ -89,8 +202,6 @@ export const GenerationResultsControlCard: React.FC = () => {
 
   const resolvedResults = useAppStore((state: AppStoreState) => selectResolvedResults(state));
   const filteredRawRows = useAppStore((state: AppStoreState) => selectFilteredSortedResults(state, locale));
-
-  const { isStack } = useResponsiveLayout();
 
   const natureOptions = React.useMemo(
     () => Array.from({ length: 25 }, (_, id) => ({ id, label: natureName(id, optionLocale) })),
@@ -205,11 +316,13 @@ export const GenerationResultsControlCard: React.FC = () => {
     [computeAvailableGenders, filters.speciesIds],
   );
 
-  const shinyOptions = React.useMemo(() => {
+  const shinyOptions = React.useMemo<FilterOptionItem[]>(() => {
     const labels = resolveLocaleValue(shinyModeOptionLabels, optionLocale);
     return [
       { value: 'all', label: labels.all },
       { value: 'shiny', label: labels.shiny },
+      { value: 'star', label: labels.star },
+      { value: 'square', label: labels.square },
       { value: 'non-shiny', label: labels['non-shiny'] },
     ];
   }, [optionLocale]);
@@ -222,6 +335,23 @@ export const GenerationResultsControlCard: React.FC = () => {
       { value: 'N' as const, label: labels.N },
     ];
   }, [optionLocale]);
+
+  const commandEmptyLabel = optionLocale === 'ja' ? '候補が見つかりません' : 'No matches found';
+
+  const buildSearchPlaceholder = React.useCallback(
+    (targetLabel: string) => {
+      if (!targetLabel) {
+        return optionLocale === 'ja' ? '検索...' : 'Search...';
+      }
+      return optionLocale === 'ja'
+        ? `${targetLabel}を検索...`
+        : `Search ${targetLabel}...`;
+    },
+    [optionLocale],
+  );
+
+  const speciesSearchPlaceholder = buildSearchPlaceholder(fieldLabels.species);
+  const natureSearchPlaceholder = buildSearchPlaceholder(fieldLabels.nature);
 
   const handleShinyModeChange = React.useCallback(
     (value: string) => {
@@ -364,10 +494,80 @@ export const GenerationResultsControlCard: React.FC = () => {
     },
     [applyFilters, filters.levelRange],
   );
-
+  const speciesFieldDisabled = pokemonOptions.length === 0;
   const hasPokemonSelection = filters.speciesIds.length > 0;
   const abilityDisabled = !hasPokemonSelection || abilityMeta.options.length === 0;
   const genderDisabled = !hasPokemonSelection || availableGenders.size === 0;
+  const abilityPlaceholder = abilityDisabled ? noAbilitiesLabel : anyLabel;
+  const genderPlaceholder = genderDisabled ? noGendersLabel : anyLabel;
+
+  const speciesSelectedLabel = React.useMemo(() => {
+    if (!filters.speciesIds.length) return undefined;
+    const speciesId = filters.speciesIds[0];
+    return pokemonOptions.find((option) => option.id === speciesId)?.label;
+  }, [filters.speciesIds, pokemonOptions]);
+
+  const abilitySelectedLabel = filters.abilityIndices.length
+    ? abilityMeta.options.find((option) => option.index === filters.abilityIndices[0])?.label
+    : undefined;
+
+  const genderSelectedLabel = filters.genders.length
+    ? genderOptions.find((option) => option.value === filters.genders[0])?.label
+    : undefined;
+
+  const natureSelectedLabel = filters.natureIds.length
+    ? natureOptions.find((option) => option.id === filters.natureIds[0])?.label
+    : undefined;
+
+  const shinySelectedLabel = filters.shinyMode === 'all'
+    ? undefined
+    : shinyOptions.find((option) => option.value === filters.shinyMode)?.label;
+
+  const speciesFieldOptions = React.useMemo<FilterOptionItem[]>(() => [
+    { value: 'any', label: anyLabel, disabled: speciesFieldDisabled },
+    ...pokemonOptions.map((option) => ({ value: String(option.id), label: option.label })),
+  ], [anyLabel, pokemonOptions, speciesFieldDisabled]);
+
+  const abilityFieldOptions = React.useMemo<FilterOptionItem[]>(() => [
+    { value: 'any', label: anyLabel, disabled: abilityDisabled },
+    ...abilityMeta.options.map((option) => ({ value: String(option.index), label: option.label })),
+  ], [abilityDisabled, abilityMeta.options, anyLabel]);
+
+  const genderFieldOptions = React.useMemo<FilterOptionItem[]>(() => [
+    { value: 'any', label: anyLabel, disabled: genderDisabled },
+    ...genderOptions.map((option) => ({
+      value: option.value,
+      label: option.label,
+      disabled: !availableGenders.has(option.value),
+    })),
+  ], [anyLabel, availableGenders, genderDisabled, genderOptions]);
+
+  const natureFieldOptions = React.useMemo<FilterOptionItem[]>(() => [
+    { value: 'any', label: anyLabel },
+    ...natureOptions.map((option) => ({ value: String(option.id), label: option.label })),
+  ], [anyLabel, natureOptions]);
+
+  const numericFields = [
+    {
+      id: 'level-filter',
+      label: fieldLabels.level,
+      value: levelValue,
+      onChange: handleLevelValueChange,
+      ariaLabel: levelAriaLabel,
+    },
+    ...STAT_KEYS.map((stat) => {
+      const statLabel = statLabels[stat];
+      const range = filters.statRanges[stat];
+      const value = range?.min != null ? String(range.min) : '';
+      return {
+        id: `stat-${stat}`,
+        label: statLabel,
+        value,
+        onChange: handleStatValueChange(stat),
+        ariaLabel: formatGenerationResultsControlStatAria(statLabel, optionLocale),
+      };
+    }),
+  ];
 
   return (
     <PanelCard
@@ -408,139 +608,91 @@ export const GenerationResultsControlCard: React.FC = () => {
       }
       className="flex flex-col"
       fullHeight={false}
-      scrollMode={isStack ? 'parent' : 'content'}
       aria-labelledby="gen-results-control-title"
       role="region"
     >
-      <form onSubmit={(event) => event.preventDefault()} className="flex flex-col gap-3">
-        <fieldset className="space-y-2" aria-labelledby="gf-filters" role="group">
+      <form onSubmit={(event) => event.preventDefault()} className="flex flex-col gap-4">
+        <fieldset className="space-y-3" aria-labelledby="gf-filters" role="group">
           <div id="gf-filters" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">{filtersHeading}</div>
-          <div className={cn('grid gap-3 items-start', isStack ? 'grid-cols-1' : 'grid-cols-2')}>
-            <div className={cn('grid gap-3 items-start', isStack ? 'grid-cols-3' : 'grid-cols-6')}>
-              <div className="flex w-full flex-col gap-1 sm:w-auto">
-                <Label htmlFor="species-select" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.species}</Label>
-                <Select
-                  value={filters.speciesIds.length ? String(filters.speciesIds[0]) : 'any'}
-                  onValueChange={handleSpeciesSelect}
-                  disabled={pokemonOptions.length === 0}
-                >
-                  <SelectTrigger id="species-select" className="h-9">
-                    <SelectValue placeholder={anyLabel} />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    <SelectItem value="any">{anyLabel}</SelectItem>
-                    {pokemonOptions.map((option) => (
-                      <SelectItem key={option.id} value={String(option.id)}>{option.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex w-full flex-col gap-1 sm:w-auto">
-                <Label htmlFor="ability-select" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.ability}</Label>
-                <Select
-                  value={filters.abilityIndices.length ? String(filters.abilityIndices[0]) : 'any'}
-                  onValueChange={handleAbilitySelect}
-                  disabled={abilityDisabled}
-                >
-                  <SelectTrigger id="ability-select" className="h-9">
-                    <SelectValue placeholder={abilityDisabled ? noAbilitiesLabel : anyLabel} />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    <SelectItem value="any" disabled={abilityDisabled}>{anyLabel}</SelectItem>
-                    {abilityMeta.options.map((option) => (
-                      <SelectItem key={option.index} value={String(option.index)}>{option.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex w-full flex-col gap-1 sm:w-auto">
-                <Label htmlFor="gender-select" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.gender}</Label>
-                <Select
-                  value={filters.genders.length ? filters.genders[0] : 'any'}
-                  onValueChange={handleGenderSelect}
-                  disabled={genderDisabled}
-                >
-                  <SelectTrigger id="gender-select" className="h-9">
-                    <SelectValue placeholder={genderDisabled ? noGendersLabel : anyLabel} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="any" disabled={genderDisabled}>{anyLabel}</SelectItem>
-                    {genderOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value} disabled={!availableGenders.has(option.value)}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex w-full flex-col gap-1 sm:w-auto">
-                <Label htmlFor="nature-select" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.nature}</Label>
-                <Select value={filters.natureIds.length ? String(filters.natureIds[0]) : 'any'} onValueChange={handleNatureSelect}>
-                  <SelectTrigger id="nature-select" className="h-9">
-                    <SelectValue placeholder={anyLabel} />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    <SelectItem value="any">{anyLabel}</SelectItem>
-                    {natureOptions.map((option) => (
-                      <SelectItem key={option.id} value={String(option.id)}>{option.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex w-full flex-col gap-1 sm:w-auto">
-                <Label htmlFor="shiny-mode" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.shiny}</Label>
-                <Select value={filters.shinyMode} onValueChange={handleShinyModeChange}>
-                  <SelectTrigger id="shiny-mode" className="h-9">
-                    <SelectValue placeholder={anyLabel} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {shinyOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1 sm:w-auto">
-                <Label htmlFor="level-filter" className="text-[11px] font-medium text-muted-foreground">{fieldLabels.level}</Label>
-                <Input
-                  id="level-filter"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={3}
-                  value={levelValue}
-                  onChange={handleLevelValueChange}
-                  className="h-9 w-16 px-2 text-right text-xs font-mono sm:w-16"
-                  placeholder={anyLabel}
-                  disabled={!statsAvailable}
-                  aria-label={levelAriaLabel}
-                />
-              </div>
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              <FilterPopoverField
+                id="species-select"
+                label={fieldLabels.species}
+                placeholder={anyLabel}
+                selectedValue={filters.speciesIds.length ? String(filters.speciesIds[0]) : 'any'}
+                selectedLabel={speciesSelectedLabel}
+                options={speciesFieldOptions}
+                onSelect={handleSpeciesSelect}
+                disabled={speciesFieldDisabled}
+                searchable
+                emptyLabel={commandEmptyLabel}
+                searchPlaceholder={speciesSearchPlaceholder}
+              />
+              <FilterPopoverField
+                id="ability-select"
+                label={fieldLabels.ability}
+                placeholder={abilityPlaceholder}
+                selectedValue={filters.abilityIndices.length ? String(filters.abilityIndices[0]) : 'any'}
+                selectedLabel={abilitySelectedLabel}
+                options={abilityFieldOptions}
+                onSelect={handleAbilitySelect}
+                disabled={abilityDisabled}
+                emptyLabel={commandEmptyLabel}
+              />
+              <FilterPopoverField
+                id="gender-select"
+                label={fieldLabels.gender}
+                placeholder={genderPlaceholder}
+                selectedValue={filters.genders.length ? filters.genders[0] : 'any'}
+                selectedLabel={genderSelectedLabel}
+                options={genderFieldOptions}
+                onSelect={handleGenderSelect}
+                disabled={genderDisabled}
+                emptyLabel={commandEmptyLabel}
+              />
+              <FilterPopoverField
+                id="nature-select"
+                label={fieldLabels.nature}
+                placeholder={anyLabel}
+                selectedValue={filters.natureIds.length ? String(filters.natureIds[0]) : 'any'}
+                selectedLabel={natureSelectedLabel}
+                options={natureFieldOptions}
+                onSelect={handleNatureSelect}
+                searchable
+                emptyLabel={commandEmptyLabel}
+                searchPlaceholder={natureSearchPlaceholder}
+              />
+              <FilterPopoverField
+                id="shiny-mode"
+                label={fieldLabels.shiny}
+                placeholder={anyLabel}
+                selectedValue={filters.shinyMode}
+                selectedLabel={shinySelectedLabel}
+                options={shinyOptions}
+                onSelect={handleShinyModeChange}
+                emptyLabel={commandEmptyLabel}
+              />
             </div>
-            <div className={`grid grid-cols-6 gap-1 items-end`}>
-              {STAT_KEYS.map((stat) => {
-                const range = filters.statRanges[stat];
-                const value = range?.min != null ? String(range.min) : '';
-                const statLabel = statLabels[stat];
-                return (
-                  <div key={stat} className="flex w-full flex-col gap-1 sm:w-auto">
-                    <Label htmlFor={`stat-${stat}`} className="text-[11px] font-medium text-muted-foreground">{statLabel}</Label>
-                    <Input
-                      id={`stat-${stat}`}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={3}
-                      value={value}
-                      onChange={handleStatValueChange(stat)}
-                      className="h-9 w-full px-2 text-right text-xs font-mono sm:w-16"
-                      placeholder={anyLabel}
-                      disabled={!statsAvailable}
-                      aria-label={formatGenerationResultsControlStatAria(statLabel, optionLocale)}
-                    />
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-2 items-start gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+              {numericFields.map((field) => (
+                <div key={field.id} className="flex flex-col gap-1">
+                  <Label htmlFor={field.id} className="text-[11px] font-medium text-muted-foreground">{field.label}</Label>
+                  <Input
+                    id={field.id}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={3}
+                    value={field.value}
+                    onChange={field.onChange}
+                    className="h-10 w-full px-3 text-right text-xs font-mono"
+                    placeholder={anyLabel}
+                    disabled={!statsAvailable}
+                    aria-label={field.ariaLabel}
+                  />
+                </div>
+              ))}
             </div>
           </div>
         </fieldset>
