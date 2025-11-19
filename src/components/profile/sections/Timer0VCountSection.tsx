@@ -53,7 +53,7 @@ export function Timer0VCountSection({
           onChange={(event) => onTimerHexChange('timer0Min', event.target.value)}
           onBlur={() => onTimerHexBlur('timer0Min')}
           disabled={timer0Auto || disabled}
-          className="h-9 w-full min-w-0 px-2 font-mono text-xs"
+          className="h-9 w-full min-w-0 px-2 font-mono"
           placeholder="0x0"
         />
       </div>
@@ -67,7 +67,7 @@ export function Timer0VCountSection({
           onChange={(event) => onTimerHexChange('timer0Max', event.target.value)}
           onBlur={() => onTimerHexBlur('timer0Max')}
           disabled={timer0Auto || disabled}
-          className="h-9 w-full min-w-0 px-2 font-mono text-xs"
+          className="h-9 w-full min-w-0 px-2 font-mono"
           placeholder="0x0"
         />
       </div>
@@ -81,7 +81,7 @@ export function Timer0VCountSection({
           onChange={(event) => onVCountHexChange('vcountMin', event.target.value)}
           onBlur={() => onVCountHexBlur('vcountMin')}
           disabled={timer0Auto || disabled}
-          className="h-9 w-full min-w-0 px-2 font-mono text-xs"
+          className="h-9 w-full min-w-0 px-2 font-mono"
           placeholder="0x0"
         />
       </div>
@@ -95,7 +95,7 @@ export function Timer0VCountSection({
           onChange={(event) => onVCountHexChange('vcountMax', event.target.value)}
           onBlur={() => onVCountHexBlur('vcountMax')}
           disabled={timer0Auto || disabled}
-          className="h-9 w-full min-w-0 px-2 font-mono text-xs"
+          className="h-9 w-full min-w-0 px-2 font-mono"
           placeholder="0x0"
         />
       </div>

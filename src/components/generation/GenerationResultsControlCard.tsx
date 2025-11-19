@@ -694,7 +694,7 @@ export const GenerationResultsControlCard: React.FC = () => {
                   maxLength={3}
                   value={levelValue}
                   onChange={handleLevelValueChange}
-                  className="h-10 w-full px-3 text-right text-xs font-mono"
+                  className="h-10 w-full px-3 text-right font-mono"
                   placeholder={anyLabel}
                   disabled={!statsAvailable}
                   aria-label={levelAriaLabel}
@@ -704,7 +704,7 @@ export const GenerationResultsControlCard: React.FC = () => {
             <div className="flex flex-wrap gap-2">
               {statNumericFields.map((field) => (
                 <div key={field.id} className={cn(STAT_FIELD_BASE_CLASS, STAT_FIELD_WIDTH)}>
-                  <Label htmlFor={field.id} className="text-[11px] font-medium text-muted-foreground">{field.label}</Label>
+                  <Label htmlFor={field.id} className="text-xs font-medium text-muted-foreground">{field.label}</Label>
                   <Input
                     id={field.id}
                     type="text"
@@ -713,7 +713,7 @@ export const GenerationResultsControlCard: React.FC = () => {
                     maxLength={3}
                     value={field.value}
                     onChange={field.onChange}
-                    className="h-10 w-full px-3 text-right text-xs font-mono"
+                    className="h-10 w-full px-3 text-right font-mono"
                     placeholder={anyLabel}
                     disabled={!statsAvailable}
                     aria-label={field.ariaLabel}

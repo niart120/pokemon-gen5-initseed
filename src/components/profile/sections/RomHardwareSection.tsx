@@ -6,7 +6,7 @@ import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveProfileRomLabel, formatProfileMacSegmentAria } from '@/lib/i18n/strings/profile-rom-hardware';
 
 const MAC_SEGMENT_CLASS =
-  'h-9 w-7 min-w-[1rem] rounded-md border border-input bg-muted/40 px-1 text-center text-[11px] font-mono uppercase tracking-tight shadow-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/60';
+  'h-9 w-7 min-w-[1rem] rounded-md border border-input bg-muted/40 px-1 text-center font-mono uppercase tracking-tight shadow-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/60';
 
 interface HardwareOption {
   value: Hardware;

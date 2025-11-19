@@ -59,7 +59,7 @@ export const GenerationResultsTableCard: React.FC = () => {
           <TableCaption id="gen-results-table-desc">
             {caption}
           </TableCaption>
-          <TableHeader className="sticky top-0 bg-muted text-[11px]">
+          <TableHeader className="sticky top-0 bg-muted text-xs">
             <TableRow className="text-left border-0">
               <TableHead scope="col" className="px-2 py-1 font-medium w-14">
                 {headers.advance.label}

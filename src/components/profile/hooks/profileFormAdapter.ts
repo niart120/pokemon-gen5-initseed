@@ -30,15 +30,15 @@ export function canonicalizeHex(value: string, minDigits: number): string {
   if (!trimmed) return value;
   const parsed = parseHexInput(trimmed);
   if (parsed === null) return value;
-  return `0x${formatHexDisplay(parsed, minDigits)}`;
+  return formatHexDisplay(parsed, minDigits);
 }
 
 export function toTimerHex(value: number): string {
-  return `0x${formatHexDisplay(value, 4)}`;
+  return formatHexDisplay(value, 4);
 }
 
 export function toVCountHex(value: number): string {
-  return `0x${formatHexDisplay(value, 2)}`;
+  return formatHexDisplay(value, 2);
 }
 
 export function profileToForm(draft: DeviceProfileDraft): ProfileFormState {
