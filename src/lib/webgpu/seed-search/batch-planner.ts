@@ -1,9 +1,5 @@
-import {
-  DEFAULT_HOST_MEMORY_LIMIT_BYTES,
-  DEFAULT_WORKGROUP_SIZE,
-  DOUBLE_BUFFER_SET_COUNT,
-  MATCH_RECORD_BYTES,
-} from './constants';
+import { DOUBLE_BUFFER_SET_COUNT, MATCH_RECORD_BYTES } from './constants';
+import { estimateHostMemoryLimitBytes } from './environment';
 import type { WebGpuBatchPlan } from './types';
 import type { WebGpuDeviceContext } from './device-context';
 
@@ -23,17 +19,31 @@ export function createWebGpuBatchPlanner(
   context: WebGpuDeviceContext,
   options?: WebGpuBatchPlannerOptions
 ): WebGpuBatchPlanner {
-  const hostMemoryLimitBytes = options?.hostMemoryLimitBytes ?? DEFAULT_HOST_MEMORY_LIMIT_BYTES;
+  const hostMemoryLimitBytes = (() => {
+    if (
+      typeof options?.hostMemoryLimitBytes === 'number' &&
+      Number.isFinite(options.hostMemoryLimitBytes) &&
+      options.hostMemoryLimitBytes > 0
+    ) {
+      return Math.max(MATCH_RECORD_BYTES, Math.floor(options.hostMemoryLimitBytes));
+    }
+    return estimateHostMemoryLimitBytes();
+  })();
   const bufferSetCount = options?.bufferSetCount ?? DOUBLE_BUFFER_SET_COUNT;
   const hostMemoryLimitPerSlot = (() => {
     const provided = options?.hostMemoryLimitPerSlot;
     if (typeof provided === 'number' && Number.isFinite(provided) && provided > 0) {
-      return provided;
+      return Math.max(MATCH_RECORD_BYTES, Math.floor(provided));
     }
     const calculated = Math.floor(hostMemoryLimitBytes / bufferSetCount);
-    return Math.max(1, calculated);
+    return Math.max(MATCH_RECORD_BYTES, calculated);
   })();
-  const workgroupSize = options?.workgroupSize ?? DEFAULT_WORKGROUP_SIZE;
+  const workgroupSize = (() => {
+    if (typeof options?.workgroupSize === 'number' && Number.isFinite(options.workgroupSize) && options.workgroupSize > 0) {
+      return Math.floor(options.workgroupSize);
+    }
+    return context.getSupportedWorkgroupSize();
+  })();
   const maxMessagesOverride = typeof options?.maxMessagesOverride === 'number'
     ? Math.max(1, Math.floor(options.maxMessagesOverride))
     : null;

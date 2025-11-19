@@ -1,10 +1,9 @@
 import { SeedCalculator } from '@/lib/core/seed-calculator';
 import type { InitialSeedResult } from '@/types/search';
 import {
-  DEFAULT_HOST_MEMORY_LIMIT_BYTES,
-  DEFAULT_WORKGROUP_SIZE,
   DOUBLE_BUFFER_SET_COUNT,
   MATCH_OUTPUT_HEADER_WORDS,
+  MATCH_RECORD_BYTES,
   MATCH_RECORD_WORDS,
 } from './constants';
 import {
@@ -12,6 +11,7 @@ import {
   isWebGpuSupported as isDeviceWebGpuSupported,
   type WebGpuDeviceContext,
 } from './device-context';
+import { estimateHostMemoryLimitBytes } from './environment';
 import { createGeneratedPipeline } from './pipelines/pipeline-factory';
 import { createWebGpuBufferPool, type WebGpuBufferPool } from './buffers/buffer-pool';
 import { createWebGpuBatchPlanner, type WebGpuBatchPlanner } from './batch-planner';
@@ -94,9 +94,9 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
 
   const totalHostMemoryLimitBytes = (() => {
     if (typeof options?.hostMemoryLimitBytes === 'number' && Number.isFinite(options.hostMemoryLimitBytes) && options.hostMemoryLimitBytes > 0) {
-      return options.hostMemoryLimitBytes;
+      return Math.floor(options.hostMemoryLimitBytes);
     }
-    return DEFAULT_HOST_MEMORY_LIMIT_BYTES;
+    return estimateHostMemoryLimitBytes();
   })();
 
   const bufferSlotCount = resolveBufferSlotCount(options?.bufferSlots);
@@ -106,14 +106,17 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
       Number.isFinite(options.hostMemoryLimitPerSlotBytes) &&
       options.hostMemoryLimitPerSlotBytes > 0
     ) {
-      return options.hostMemoryLimitPerSlotBytes;
+      return Math.max(MATCH_RECORD_BYTES, Math.floor(options.hostMemoryLimitPerSlotBytes));
     }
     const calculated = Math.floor(totalHostMemoryLimitBytes / bufferSlotCount);
-    return Math.max(1, calculated);
+    return Math.max(MATCH_RECORD_BYTES, calculated);
   })();
 
   const state: RunnerState = {
-    workgroupSize: options?.workgroupSize ?? DEFAULT_WORKGROUP_SIZE,
+    workgroupSize:
+      typeof options?.workgroupSize === 'number' && Number.isFinite(options.workgroupSize) && options.workgroupSize > 0
+        ? Math.floor(options.workgroupSize)
+        : 0,
     bufferSlotCount,
     hostMemoryLimitBytes: totalHostMemoryLimitBytes,
     hostMemoryLimitPerSlotBytes,

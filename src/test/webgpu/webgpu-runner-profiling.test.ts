@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { SeedCalculator } from '@/lib/core/seed-calculator';
 import { buildSearchContext } from '@/lib/webgpu/seed-search/message-encoder';
 import { getDateFromTimePlan } from '@/lib/webgpu/seed-search/time-plan';
-import { DEFAULT_HOST_MEMORY_LIMIT_BYTES, DOUBLE_BUFFER_SET_COUNT } from '@/lib/webgpu/seed-search/constants';
+import { DOUBLE_BUFFER_SET_COUNT } from '@/lib/webgpu/seed-search/constants';
+import { estimateHostMemoryLimitBytes } from '@/lib/webgpu/seed-search/environment';
 import {
   createWebGpuSeedSearchRunner,
   isWebGpuSeedSearchSupported,
@@ -272,7 +273,8 @@ describeWebGpu('webgpu seed search profiling instrumentation', () => {
   it(
     'collects instrumentation spans from the production runner',
     async () => {
-      const defaultHostLimitPerSlot = DEFAULT_HOST_MEMORY_LIMIT_BYTES / DOUBLE_BUFFER_SET_COUNT;
+      const estimatedHostLimitBytes = estimateHostMemoryLimitBytes();
+      const defaultHostLimitPerSlot = estimatedHostLimitBytes / DOUBLE_BUFFER_SET_COUNT;
 
       for (const scenario of SCENARIOS) {
         for (const workgroup of WORKGROUP_CONFIGS) {
@@ -296,7 +298,7 @@ describeWebGpu('webgpu seed search profiling instrumentation', () => {
                 const instrumentation = new CollectingInstrumentation();
                 const hostMemoryLimitPerSlotBytes = defaultHostLimitPerSlot * hostMemory.perSlotMultiplier;
                 const adjustedHostLimitBytes = Math.max(
-                  DEFAULT_HOST_MEMORY_LIMIT_BYTES,
+                  estimatedHostLimitBytes,
                   hostMemoryLimitPerSlotBytes * bufferSlot.slots
                 );
                 const runnerOptions: WebGpuSeedSearchRunnerOptions = {

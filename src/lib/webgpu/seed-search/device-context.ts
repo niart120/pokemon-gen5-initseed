@@ -1,5 +1,3 @@
-import { DEFAULT_WORKGROUP_SIZE } from './constants';
-
 export interface WebGpuDeviceOptions {
   requiredFeatures?: GPUFeatureName[];
   requiredLimits?: GPUDeviceDescriptor['requiredLimits'];
@@ -56,11 +54,25 @@ export async function createWebGpuDeviceContext(options?: WebGpuDeviceOptions): 
     getLimits: () => device.limits,
     isLost: () => deviceLost,
     waitForLoss: () => lostPromise,
-    getSupportedWorkgroupSize: (targetSize: number = DEFAULT_WORKGROUP_SIZE) => {
+    getSupportedWorkgroupSize: (targetSize?: number) => {
       const limits = device.limits;
-      const maxInvocation = limits.maxComputeInvocationsPerWorkgroup ?? targetSize;
-      const maxX = limits.maxComputeWorkgroupSizeX ?? targetSize;
-      const resolved = Math.min(targetSize, maxInvocation, maxX);
+      const toPositiveLimit = (value: number | undefined): number => {
+        if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+          return Number.POSITIVE_INFINITY;
+        }
+        return Math.floor(value);
+      };
+
+      const invocationLimit = toPositiveLimit(limits.maxComputeInvocationsPerWorkgroup);
+      const dimensionLimit = toPositiveLimit(limits.maxComputeWorkgroupSizeX);
+      const defaultTarget = Math.min(invocationLimit, dimensionLimit);
+      const fallbackTarget = Number.isFinite(defaultTarget) && defaultTarget > 0 ? defaultTarget : 1;
+
+      const requestedSize = typeof targetSize === 'number' && Number.isFinite(targetSize) && targetSize > 0
+        ? Math.floor(targetSize)
+        : fallbackTarget;
+
+      const resolved = Math.min(requestedSize, fallbackTarget);
       if (resolved <= 0) {
         throw new Error('WebGPU workgroup size limits are invalid');
       }
