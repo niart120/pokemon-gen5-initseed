@@ -3,42 +3,59 @@ import rawBreakpoints from '@/config/breakpoints.json';
 
 const BREAKPOINTS = rawBreakpoints as Record<'sm' | 'md' | 'lg' | 'xl' | '2xl', number>;
 const BASE_BREAKPOINT = 'base' as const;
-type TailwindBreakpoint = keyof typeof BREAKPOINTS;
-type ResponsiveBreakpoint = TailwindBreakpoint | typeof BASE_BREAKPOINT;
+const BREAKPOINT_SEQUENCE = [
+  BASE_BREAKPOINT,
+  'sm',
+  'md',
+  'lg',
+  'xl',
+  '2xl'
+] as const;
+
+type ResponsiveBreakpoint = (typeof BREAKPOINT_SEQUENCE)[number];
 
 const MOBILE_BREAKPOINT = BREAKPOINTS.md;
-const STACK_PORTRAIT_BREAKPOINT = BREAKPOINTS.lg;
-const DESCENDING_BREAKPOINTS = (Object.entries(BREAKPOINTS) as Array<[
-  TailwindBreakpoint,
-  number
-]>).sort((a, b) => b[1] - a[1]);
+
+const STACK_STATE_BY_BREAKPOINT: Record<ResponsiveBreakpoint, boolean> = {
+  base: true,
+  sm: true,
+  md: false,
+  lg: false,
+  xl: false,
+  '2xl': false
+};
+
+const UI_SCALE_BY_BREAKPOINT: Record<ResponsiveBreakpoint, number> = {
+  base: 0.85,
+  sm: 0.9,
+  md: 1.0,
+  lg: 1.0,
+  xl: 1.1,
+  '2xl': 1.33
+};
+
+const getMinWidth = (breakpoint: ResponsiveBreakpoint): number => {
+  if (breakpoint === BASE_BREAKPOINT) {
+    return 0;
+  }
+  return BREAKPOINTS[breakpoint];
+};
 
 const resolveBreakpoint = (width: number): ResponsiveBreakpoint => {
-  for (const [breakpoint, minWidth] of DESCENDING_BREAKPOINTS) {
-    if (width >= minWidth) {
+  for (let index = BREAKPOINT_SEQUENCE.length - 1; index >= 0; index -= 1) {
+    const breakpoint = BREAKPOINT_SEQUENCE[index];
+    if (width >= getMinWidth(breakpoint)) {
       return breakpoint;
     }
   }
   return BASE_BREAKPOINT;
 };
 
-const calculateUiScale = (width: number): number => {
-  if (width <= 1366) {
-    return 0.85;
-  }
-  if (width <= 1920) {
-    return 1.0;
-  }
-  if (width <= 2048) {
-    return 1.1;
-  }
-  if (width <= 2560) {
-    return 1.33;
-  }
-  if (width <= 3840) {
-    return 1.5;
-  }
-  return Math.min(2.0, width / 1920);
+const getBreakpointMatches = (width: number): Record<ResponsiveBreakpoint, boolean> => {
+  return BREAKPOINT_SEQUENCE.reduce((acc, breakpoint) => {
+    acc[breakpoint] = width >= getMinWidth(breakpoint);
+    return acc;
+  }, {} as Record<ResponsiveBreakpoint, boolean>);
 };
 
 /**
@@ -113,16 +130,13 @@ export function useResponsiveLayout() {
     const width = parseInt(widthStr, 10);
     const height = parseInt(heightStr, 10);
     const breakpoint = resolveBreakpoint(width);
-    const isPortrait = height > width;
-    
-    // スタックレイアウト判定
-    const isStack = width < MOBILE_BREAKPOINT || (isPortrait && width < STACK_PORTRAIT_BREAKPOINT);
-    const uiScale = calculateUiScale(width);
-    
+    const matches = getBreakpointMatches(width);
+
     return {
-      isStack,
-      uiScale,
       breakpoint,
+      isStack: STACK_STATE_BY_BREAKPOINT[breakpoint],
+      uiScale: UI_SCALE_BY_BREAKPOINT[breakpoint],
+      matches,
       dimensions: {
         width,
         height
