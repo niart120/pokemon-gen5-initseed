@@ -44,16 +44,8 @@ interface RunnerState {
   hostMemoryLimitBytes: number;
   hostMemoryLimitPerSlotBytes: number;
   deviceContext: WebGpuDeviceContext | null;
-  pipelines: {
-    generate: GPUComputePipeline;
-    scan: GPUComputePipeline;
-    scatter: GPUComputePipeline;
-  } | null;
-  bindGroupLayouts: {
-    generate: GPUBindGroupLayout;
-    scan: GPUBindGroupLayout;
-    scatter: GPUBindGroupLayout;
-  } | null;
+  pipeline: GPUComputePipeline | null;
+  bindGroupLayout: GPUBindGroupLayout | null;
   configBuffer: GPUBuffer | null;
   configData: Uint32Array | null;
   bufferPool: WebGpuBufferPool | null;
@@ -126,8 +118,8 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
     hostMemoryLimitBytes: totalHostMemoryLimitBytes,
     hostMemoryLimitPerSlotBytes,
     deviceContext: null,
-    pipelines: null,
-    bindGroupLayouts: null,
+    pipeline: null,
+    bindGroupLayout: null,
     configBuffer: null,
     configData: null,
     bufferPool: null,
@@ -161,14 +153,14 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
   };
 
   const init = async (): Promise<void> => {
-    if (state.pipelines && state.bufferPool && state.planner && state.deviceContext) {
+    if (state.pipeline && state.bufferPool && state.planner && state.deviceContext) {
       return;
     }
 
     const context = await createWebGpuDeviceContext();
     const device = context.getDevice();
     const resolvedWorkgroupSize = context.getSupportedWorkgroupSize(state.workgroupSize);
-    const { pipelines, layouts } = createGeneratedPipeline(device, resolvedWorkgroupSize);
+    const { pipeline, layout } = createGeneratedPipeline(device, resolvedWorkgroupSize);
 
     const configData = new Uint32Array(CONFIG_WORD_COUNT);
     const configSize = alignSize(configData.byteLength);
@@ -180,7 +172,6 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
 
     const bufferPool = createWebGpuBufferPool(device, {
       slots: state.bufferSlotCount,
-      workgroupSize: resolvedWorkgroupSize,
     });
 
     const planner = createWebGpuBatchPlanner(context, {
@@ -192,8 +183,8 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
     });
 
     state.deviceContext = context;
-    state.pipelines = pipelines;
-    state.bindGroupLayouts = layouts;
+    state.pipeline = pipeline;
+    state.bindGroupLayout = layout;
     state.configBuffer = configBuffer;
     state.configData = configData;
     state.bufferPool = bufferPool;
@@ -240,11 +231,11 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
       throw new Error('WebGPU search is already running');
     }
 
-    if (!state.pipelines || !state.bufferPool || !state.configBuffer || !state.configData || !state.planner || !state.deviceContext) {
+    if (!state.pipeline || !state.bufferPool || !state.configBuffer || !state.configData || !state.planner || !state.deviceContext) {
       await init();
     }
 
-    if (!state.pipelines || !state.bufferPool || !state.configBuffer || !state.configData || !state.planner || !state.deviceContext) {
+    if (!state.pipeline || !state.bufferPool || !state.configBuffer || !state.configData || !state.planner || !state.deviceContext) {
       throw new Error('WebGPU runner failed to initialize');
     }
 
@@ -255,7 +246,7 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
       return;
     }
 
-    if (!state.bindGroupLayouts) {
+    if (!state.bindGroupLayout) {
       throw new Error('WebGPU runner missing bind group layout');
     }
 
@@ -351,8 +342,8 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
     state.configBuffer?.destroy();
     state.configBuffer = null;
     state.configData = null;
-    state.pipelines = null;
-    state.bindGroupLayouts = null;
+    state.pipeline = null;
+    state.bindGroupLayout = null;
     state.bufferPool = null;
     state.planner = null;
     state.deviceContext = null;
@@ -368,13 +359,13 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
   ): Promise<void> => {
     if (
       !state.deviceContext ||
-      !state.pipelines ||
+      !state.pipeline ||
       !state.bufferPool ||
       !state.configBuffer ||
       !state.configData ||
       !state.planner ||
       !state.targetBuffer ||
-      !state.bindGroupLayouts
+      !state.bindGroupLayout
     ) {
       throw new Error('WebGPU runner is not ready');
     }
@@ -487,22 +478,22 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
   ): Promise<void> => {
     if (
       !state.deviceContext ||
-      !state.pipelines ||
+      !state.pipeline ||
       !state.bufferPool ||
       !state.configBuffer ||
       !state.configData ||
       !state.targetBuffer ||
-      !state.bindGroupLayouts
+      !state.bindGroupLayout
     ) {
       throw new Error('WebGPU runner is not ready');
     }
 
-  const device = state.deviceContext.getDevice();
-  const configBuffer = state.configBuffer!;
-  const configData = state.configData!;
-  const bindGroupLayouts = state.bindGroupLayouts!;
-  const pipelines = state.pipelines!;
-  const targetBuffer = state.targetBuffer!;
+    const device = state.deviceContext.getDevice();
+    const configBuffer = state.configBuffer!;
+    const configData = state.configData!;
+    const bindGroupLayout = state.bindGroupLayout!;
+    const pipeline = state.pipeline!;
+    const targetBuffer = state.targetBuffer!;
     const slot = state.bufferPool.acquire(dispatchContext.slotIndex, dispatchContext.messageCount);
     let slotReleased = false;
     let finalizeRegistered = false;
@@ -514,7 +505,7 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
       releaseSlot(dispatchContext.slotIndex);
     };
     const workgroupCount = Math.ceil(dispatchContext.messageCount / state.workgroupSize);
-    const scatterWorkgroupCount = Math.max(1, Math.ceil(slot.candidateCapacity / state.workgroupSize));
+    const groupCount = Math.max(1, workgroupCount);
     const headerCopySize = alignSize(MATCH_OUTPUT_HEADER_WORDS * Uint32Array.BYTES_PER_ELEMENT);
 
     const baseDispatchMetadata = {
@@ -522,9 +513,7 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
       messageCount: dispatchContext.messageCount,
       slotIndex: dispatchContext.slotIndex,
       workgroupCount,
-      scatterWorkgroupCount,
       candidateCapacity: slot.candidateCapacity,
-      groupCount: slot.groupCount,
       segmentIndex: dispatchContext.segment.index,
       segmentBaseOffset,
     } satisfies Record<string, unknown>;
@@ -543,7 +532,7 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
           dispatchContext.segment,
           segmentBaseOffset,
           dispatchContext.messageCount,
-          slot.groupCount,
+          groupCount,
           slot.candidateCapacity
         );
         queue.writeBuffer(
@@ -556,35 +545,11 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
 
         const generateBindGroup = device.createBindGroup({
           label: `gpu-seed-generate-group-${dispatchContext.dispatchIndex}`,
-          layout: bindGroupLayouts.generate,
+          layout: bindGroupLayout,
           entries: [
             { binding: 0, resource: { buffer: configBuffer } },
             { binding: 1, resource: { buffer: targetBuffer } },
-            { binding: 2, resource: { buffer: slot.candidate } },
-            { binding: 3, resource: { buffer: slot.groupCounts } },
-          ],
-        });
-
-        const scanBindGroup = device.createBindGroup({
-          label: `gpu-seed-scan-group-${dispatchContext.dispatchIndex}`,
-          layout: bindGroupLayouts.scan,
-          entries: [
-            { binding: 0, resource: { buffer: configBuffer } },
-            { binding: 3, resource: { buffer: slot.groupCounts } },
-            { binding: 4, resource: { buffer: slot.groupOffsets } },
-            { binding: 5, resource: { buffer: slot.output } },
-          ],
-        });
-
-        const scatterBindGroup = device.createBindGroup({
-          label: `gpu-seed-scatter-group-${dispatchContext.dispatchIndex}`,
-          layout: bindGroupLayouts.scatter,
-          entries: [
-            { binding: 0, resource: { buffer: configBuffer } },
-            { binding: 2, resource: { buffer: slot.candidate } },
-            { binding: 3, resource: { buffer: slot.groupCounts } },
-            { binding: 4, resource: { buffer: slot.groupOffsets } },
-            { binding: 5, resource: { buffer: slot.output } },
+            { binding: 2, resource: { buffer: slot.output } },
           ],
         });
 
@@ -594,26 +559,10 @@ export function createWebGpuSeedSearchRunner(options?: WebGpuSeedSearchRunnerOpt
         const generatePass = computeEncoder.beginComputePass({
           label: `gpu-seed-generate-pass-${dispatchContext.dispatchIndex}`,
         });
-        generatePass.setPipeline(pipelines.generate);
+        generatePass.setPipeline(pipeline);
         generatePass.setBindGroup(0, generateBindGroup);
         generatePass.dispatchWorkgroups(workgroupCount);
         generatePass.end();
-
-        const scanPass = computeEncoder.beginComputePass({
-          label: `gpu-seed-scan-pass-${dispatchContext.dispatchIndex}`,
-        });
-        scanPass.setPipeline(pipelines.scan);
-        scanPass.setBindGroup(0, scanBindGroup);
-        scanPass.dispatchWorkgroups(1);
-        scanPass.end();
-
-        const scatterPass = computeEncoder.beginComputePass({
-          label: `gpu-seed-scatter-pass-${dispatchContext.dispatchIndex}`,
-        });
-        scatterPass.setPipeline(pipelines.scatter);
-        scatterPass.setBindGroup(0, scatterBindGroup);
-        scatterPass.dispatchWorkgroups(scatterWorkgroupCount);
-        scatterPass.end();
 
         computeEncoder.copyBufferToBuffer(slot.output, 0, slot.matchCount, 0, headerCopySize);
 
