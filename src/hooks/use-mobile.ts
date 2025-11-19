@@ -1,6 +1,45 @@
 import { useSyncExternalStore, useMemo, useCallback, useRef } from 'react';
+import rawBreakpoints from '@/config/breakpoints.json';
 
-const MOBILE_BREAKPOINT = 768;
+const BREAKPOINTS = rawBreakpoints as Record<'sm' | 'md' | 'lg' | 'xl' | '2xl', number>;
+const BASE_BREAKPOINT = 'base' as const;
+type TailwindBreakpoint = keyof typeof BREAKPOINTS;
+type ResponsiveBreakpoint = TailwindBreakpoint | typeof BASE_BREAKPOINT;
+
+const MOBILE_BREAKPOINT = BREAKPOINTS.md;
+const STACK_PORTRAIT_BREAKPOINT = BREAKPOINTS.lg;
+const DESCENDING_BREAKPOINTS = (Object.entries(BREAKPOINTS) as Array<[
+  TailwindBreakpoint,
+  number
+]>).sort((a, b) => b[1] - a[1]);
+
+const resolveBreakpoint = (width: number): ResponsiveBreakpoint => {
+  for (const [breakpoint, minWidth] of DESCENDING_BREAKPOINTS) {
+    if (width >= minWidth) {
+      return breakpoint;
+    }
+  }
+  return BASE_BREAKPOINT;
+};
+
+const calculateUiScale = (width: number): number => {
+  if (width <= 1366) {
+    return 0.85;
+  }
+  if (width <= 1920) {
+    return 1.0;
+  }
+  if (width <= 2048) {
+    return 1.1;
+  }
+  if (width <= 2560) {
+    return 1.33;
+  }
+  if (width <= 3840) {
+    return 1.5;
+  }
+  return Math.min(2.0, width / 1920);
+};
 
 /**
  * モバイル検出フック
@@ -59,12 +98,7 @@ export function useResponsiveLayout() {
     // DOM読み取りは必要最小限に
     const currentWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
     const currentHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
-    
-    // 細かいサイズ変更を無視してパフォーマンス向上（10px単位で丸める）
-    const roundedWidth = Math.round(currentWidth / 10) * 10;
-    const roundedHeight = Math.round(currentHeight / 10) * 10;
-    
-    return `${roundedWidth}x${roundedHeight}`;
+    return `${currentWidth}x${currentHeight}`;
   }, []);
   
   // SSR用スナップショット
@@ -78,27 +112,22 @@ export function useResponsiveLayout() {
     const [widthStr, heightStr] = sizeString.split('x');
     const width = parseInt(widthStr, 10);
     const height = parseInt(heightStr, 10);
+    const breakpoint = resolveBreakpoint(width);
+    const isPortrait = height > width;
     
     // スタックレイアウト判定
-    const isStack = width < MOBILE_BREAKPOINT || (height > width && width < 1024);
+    const isStack = width < MOBILE_BREAKPOINT || (isPortrait && width < STACK_PORTRAIT_BREAKPOINT);
+    const uiScale = calculateUiScale(width);
     
-    // UIスケール計算
-    let uiScale = 1.0;
-    if (width <= 1366) {
-      uiScale = 0.85;
-    } else if (width <= 1920) {
-      uiScale = 1.0;
-    } else if (width <= 2048) {
-      uiScale = 1.1;
-    } else if (width <= 2560) {
-      uiScale = 1.33;
-    } else if (width <= 3840) {
-      uiScale = 1.5;
-    } else {
-      uiScale = Math.min(2.0, width / 1920);
-    }
-    
-    return { isStack, uiScale };
+    return {
+      isStack,
+      uiScale,
+      breakpoint,
+      dimensions: {
+        width,
+        height
+      }
+    };
   }, [sizeString]);
 }
 
