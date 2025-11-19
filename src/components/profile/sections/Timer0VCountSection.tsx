@@ -23,6 +23,7 @@ interface Timer0VCountSectionProps {
   onTimerHexBlur: (field: TimerRangeField) => void;
   onVCountHexChange: (field: VCountRangeField, value: string) => void;
   onVCountHexBlur: (field: VCountRangeField) => void;
+  disabled?: boolean;
 }
 
 export function Timer0VCountSection({
@@ -36,6 +37,7 @@ export function Timer0VCountSection({
   onTimerHexBlur,
   onVCountHexChange,
   onVCountHexBlur,
+  disabled = false,
 }: Timer0VCountSectionProps) {
   const locale = useLocale();
 
@@ -50,7 +52,7 @@ export function Timer0VCountSection({
           value={timer0Min}
           onChange={(event) => onTimerHexChange('timer0Min', event.target.value)}
           onBlur={() => onTimerHexBlur('timer0Min')}
-          disabled={timer0Auto}
+          disabled={timer0Auto || disabled}
           className="h-9 w-full min-w-0 px-2 font-mono text-xs"
           placeholder="0x0"
         />
@@ -64,7 +66,7 @@ export function Timer0VCountSection({
           value={timer0Max}
           onChange={(event) => onTimerHexChange('timer0Max', event.target.value)}
           onBlur={() => onTimerHexBlur('timer0Max')}
-          disabled={timer0Auto}
+          disabled={timer0Auto || disabled}
           className="h-9 w-full min-w-0 px-2 font-mono text-xs"
           placeholder="0x0"
         />
@@ -78,7 +80,7 @@ export function Timer0VCountSection({
           value={vcountMin}
           onChange={(event) => onVCountHexChange('vcountMin', event.target.value)}
           onBlur={() => onVCountHexBlur('vcountMin')}
-          disabled={timer0Auto}
+          disabled={timer0Auto || disabled}
           className="h-9 w-full min-w-0 px-2 font-mono text-xs"
           placeholder="0x0"
         />
@@ -92,7 +94,7 @@ export function Timer0VCountSection({
           value={vcountMax}
           onChange={(event) => onVCountHexChange('vcountMax', event.target.value)}
           onBlur={() => onVCountHexBlur('vcountMax')}
-          disabled={timer0Auto}
+          disabled={timer0Auto || disabled}
           className="h-9 w-full min-w-0 px-2 font-mono text-xs"
           placeholder="0x0"
         />
@@ -105,6 +107,7 @@ export function Timer0VCountSection({
           id="profile-timer-auto"
           checked={timer0Auto}
           onCheckedChange={(value) => onAutoToggle(Boolean(value))}
+          disabled={disabled}
           aria-label={resolveProfileTimerAutoAria(locale)}
         />
       </div>

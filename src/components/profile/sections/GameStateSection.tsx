@@ -21,6 +21,7 @@ interface GameStateSectionProps {
   withSaveDisabled: boolean;
   shinyCharmDisabled: boolean;
   memoryLinkDisabled: boolean;
+  disabled?: boolean;
 }
 
 export function GameStateSection({
@@ -39,6 +40,7 @@ export function GameStateSection({
   withSaveDisabled,
   shinyCharmDisabled,
   memoryLinkDisabled,
+  disabled = false,
 }: GameStateSectionProps) {
   const locale = useLocale();
 
@@ -55,6 +57,7 @@ export function GameStateSection({
           placeholder="00000"
           inputMode="numeric"
           className="h-9"
+          disabled={disabled}
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -68,6 +71,7 @@ export function GameStateSection({
           placeholder="00000"
           inputMode="numeric"
           className="h-9"
+          disabled={disabled}
         />
       </div>
       <ToggleField
@@ -75,27 +79,28 @@ export function GameStateSection({
         label={resolveProfileGameFieldLabel('newGame', locale)}
         checked={newGame}
         onChange={onNewGameToggle}
+        disabled={disabled}
       />
       <ToggleField
         id="profile-with-save"
         label={resolveProfileGameFieldLabel('withSave', locale)}
         checked={withSave}
         onChange={onWithSaveToggle}
-        disabled={withSaveDisabled}
+        disabled={withSaveDisabled || disabled}
       />
       <ToggleField
         id="profile-shiny"
         label={resolveProfileGameFieldLabel('shinyCharm', locale)}
         checked={shinyCharm}
         onChange={onShinyCharmToggle}
-        disabled={shinyCharmDisabled}
+        disabled={shinyCharmDisabled || disabled}
       />
       <ToggleField
         id="profile-memory-link"
         label={resolveProfileGameFieldLabel('memoryLink', locale)}
         checked={memoryLink}
         onChange={onMemoryLinkToggle}
-        disabled={memoryLinkDisabled}
+        disabled={memoryLinkDisabled || disabled}
       />
     </div>
   );

@@ -27,15 +27,7 @@ export function ProfileCard() {
   const locale = useLocale();
 
   const { profiles, activeId, onSelect } = profileSelection;
-  const {
-    dirty,
-    profileName,
-    canModify,
-    disableDelete,
-    onProfileNameChange,
-    onSave,
-    onDelete,
-  } = header;
+  const { profileName, canModify, disableDelete, lockedReason, onProfileNameChange, onDelete } = header;
   const { sectionOpen, isStack, toggleSection } = layout;
 
   const profileManagementSection = (
@@ -43,12 +35,11 @@ export function ProfileCard() {
       profiles={profiles}
       activeProfileId={activeId}
       profileName={profileName}
-      dirty={dirty}
       canModify={canModify}
       disableDelete={disableDelete}
+        lockedReason={lockedReason}
       onSelectProfile={onSelect}
       onProfileNameChange={onProfileNameChange}
-      onSave={onSave}
       onDelete={onDelete}
     />
   );
@@ -71,7 +62,8 @@ export function ProfileCard() {
       onMacSegmentMouseDown={rom.onMacSegmentMouseDown}
       onMacSegmentClick={rom.onMacSegmentClick}
       onMacSegmentKeyDown={rom.onMacSegmentKeyDown}
-      onMacSegmentPaste={rom.onMacSegmentPaste}
+        onMacSegmentPaste={rom.onMacSegmentPaste}
+        disabled={rom.disabled}
     />
   );
 
@@ -86,7 +78,8 @@ export function ProfileCard() {
       onTimerHexChange={timer.onTimerHexChange}
       onTimerHexBlur={timer.onTimerHexBlur}
       onVCountHexChange={timer.onVCountHexChange}
-      onVCountHexBlur={timer.onVCountHexBlur}
+        onVCountHexBlur={timer.onVCountHexBlur}
+        disabled={timer.disabled}
     />
   );
 
@@ -103,10 +96,11 @@ export function ProfileCard() {
       onNewGameToggle={game.onNewGameToggle}
       onWithSaveToggle={game.onWithSaveToggle}
       onShinyCharmToggle={game.onShinyCharmToggle}
-      onMemoryLinkToggle={game.onMemoryLinkToggle}
-      withSaveDisabled={game.withSaveDisabled}
-      shinyCharmDisabled={game.shinyCharmDisabled}
-      memoryLinkDisabled={game.memoryLinkDisabled}
+        onMemoryLinkToggle={game.onMemoryLinkToggle}
+        withSaveDisabled={game.withSaveDisabled}
+        shinyCharmDisabled={game.shinyCharmDisabled}
+        memoryLinkDisabled={game.memoryLinkDisabled}
+        disabled={game.disabled}
     />
   );
 

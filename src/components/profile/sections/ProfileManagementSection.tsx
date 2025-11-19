@@ -13,7 +13,6 @@ import {
   profileManagementSelectPlaceholder,
   profileManagementNewProfileLabel,
   profileManagementImportCurrentLabel,
-  profileManagementDirtyBadge,
   resolveProfileManagementButtonLabel,
 } from '@/lib/i18n/strings/profile-management';
 
@@ -21,12 +20,11 @@ interface ProfileManagementSectionProps {
   profiles: DeviceProfile[];
   activeProfileId: string;
   profileName: string;
-  dirty: boolean;
   canModify: boolean;
   disableDelete: boolean;
+  lockedReason: string | null;
   onSelectProfile: (profileId: string) => void;
   onProfileNameChange: (value: string) => void;
-  onSave: () => void;
   onDelete: () => void;
 }
 
@@ -34,12 +32,11 @@ export function ProfileManagementSection({
   profiles,
   activeProfileId,
   profileName,
-  dirty,
   canModify,
   disableDelete,
+  lockedReason,
   onSelectProfile,
   onProfileNameChange,
-  onSave,
   onDelete,
 }: ProfileManagementSectionProps) {
   const [renameOpen, setRenameOpen] = React.useState(false);
@@ -69,7 +66,7 @@ export function ProfileManagementSection({
         <Label htmlFor="profile-select" className="text-xs">
           {resolveLocaleValue(profileManagementSelectLabel, locale)}
         </Label>
-        <Select value={activeProfileId} onValueChange={onSelectProfile}>
+        <Select value={activeProfileId} onValueChange={onSelectProfile} disabled={!canModify}>
           <SelectTrigger id="profile-select" className="h-9">
             <SelectValue placeholder={resolveLocaleValue(profileManagementSelectPlaceholder, locale)} />
           </SelectTrigger>
@@ -92,10 +89,7 @@ export function ProfileManagementSection({
       <Button size="sm" variant="outline" onClick={onRename} disabled={!canModify}>
         {resolveProfileManagementButtonLabel('rename', locale)}
       </Button>
-      <Button size="sm" variant="outline" onClick={onSave} disabled={!canModify}>
-        {resolveProfileManagementButtonLabel('save', locale)}
-      </Button>
-      <Button size="sm" variant="destructive" onClick={onDelete} disabled={disableDelete}>
+      <Button size="sm" variant="destructive" onClick={onDelete} disabled={disableDelete || !canModify}>
         {resolveProfileManagementButtonLabel('delete', locale)}
       </Button>
       <ProfileRenameDialog
@@ -105,9 +99,9 @@ export function ProfileManagementSection({
         onRename={onProfileNameChange}
       />
       
-      {dirty && (
-        <Badge variant="secondary">
-          {resolveLocaleValue(profileManagementDirtyBadge, locale)}
+      {lockedReason && (
+        <Badge variant="secondary" className="whitespace-nowrap">
+          {lockedReason}
         </Badge>
       )}
     </div>

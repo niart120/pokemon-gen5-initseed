@@ -26,19 +26,15 @@ export const profileManagementButtons = {
     ja: 'Rename',
     en: 'Rename',
   } satisfies LocaleText,
-  save: {
-    ja: 'Save',
-    en: 'Save',
-  } satisfies LocaleText,
   delete: {
     ja: 'Delete',
     en: 'Delete',
   } satisfies LocaleText,
 } as const;
 
-export const profileManagementDirtyBadge: LocaleText = {
-  ja: 'Unsaved',
-  en: 'Unsaved',
+const profileManagementLockedBadge: LocaleText = {
+  ja: '検索/世代実行中は編集できません',
+  en: 'Editing is locked while searches or generation run',
 };
 
 export function resolveProfileManagementButtonLabel(
@@ -46,4 +42,8 @@ export function resolveProfileManagementButtonLabel(
   locale: SupportedLocale,
 ): string {
   return resolveLocaleValue(profileManagementButtons[key], locale);
+}
+
+export function resolveProfileManagementLockLabel(locale: SupportedLocale): string {
+  return resolveLocaleValue(profileManagementLockedBadge, locale);
 }

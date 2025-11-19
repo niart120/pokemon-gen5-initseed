@@ -1,13 +1,11 @@
 import React from 'react';
-import type { ProfileFormState } from './profileFormTypes';
 
 interface UseMacAddressInputParams {
   macSegments: string[];
-  setForm: React.Dispatch<React.SetStateAction<ProfileFormState>>;
-  setDirty: (value: boolean) => void;
+  updateSegments: (updater: (prev: string[]) => string[]) => void;
 }
 
-export function useMacAddressInput({ macSegments, setForm, setDirty }: UseMacAddressInputParams) {
+export function useMacAddressInput({ macSegments, updateSegments }: UseMacAddressInputParams) {
   const macInputRefs = React.useRef<Array<HTMLInputElement | null>>([]);
 
   const focusMacSegment = React.useCallback((index: number) => {
@@ -23,18 +21,17 @@ export function useMacAddressInput({ macSegments, setForm, setDirty }: UseMacAdd
       const sanitized = rawValue.replace(/[^0-9a-fA-F]/g, '').toUpperCase().slice(0, 2);
       const currentValue = macSegments[index];
       if (sanitized !== currentValue) {
-        setForm((prev) => {
-          const nextSegments = [...prev.macSegments];
-          nextSegments[index] = sanitized;
-          return { ...prev, macSegments: nextSegments };
+        updateSegments((prev) => {
+          const next = [...prev];
+          next[index] = sanitized;
+          return next;
         });
-        setDirty(true);
       }
       if (sanitized.length === 2 && currentValue.length < 2 && index < macSegments.length - 1) {
         focusMacSegment(index + 1);
       }
     },
-    [focusMacSegment, macSegments, setDirty, setForm],
+    [focusMacSegment, macSegments, updateSegments],
   );
 
   const handleMacSegmentFocus = React.useCallback((event: React.FocusEvent<HTMLInputElement>) => {
@@ -88,24 +85,20 @@ export function useMacAddressInput({ macSegments, setForm, setDirty }: UseMacAdd
         return;
       }
       let changed = false;
-      setForm((prev) => {
-        const nextSegments = [...prev.macSegments];
+      updateSegments((prev) => {
+        const next = [...prev];
         let cursor = 0;
-        for (let i = index; i < nextSegments.length && cursor < usableDigits; i += 1) {
+        for (let i = index; i < next.length && cursor < usableDigits; i += 1) {
           const segmentValue = sanitized.slice(cursor, cursor + 2);
-          if (segmentValue !== nextSegments[i]) {
-            nextSegments[i] = segmentValue;
+          if (segmentValue !== next[i]) {
+            next[i] = segmentValue;
             changed = true;
           }
           cursor += 2;
         }
-        if (!changed) {
-          return prev;
-        }
-        return { ...prev, macSegments: nextSegments };
+        return next;
       });
       if (changed) {
-        setDirty(true);
         const segmentsAdvanced = Math.floor(usableDigits / 2);
         const hasRemainder = usableDigits % 2 !== 0;
         let targetIndex = index + segmentsAdvanced;
@@ -118,7 +111,7 @@ export function useMacAddressInput({ macSegments, setForm, setDirty }: UseMacAdd
         focusMacSegment(targetIndex);
       }
     },
-    [focusMacSegment, macSegments.length, setDirty, setForm],
+    [focusMacSegment, macSegments.length, updateSegments],
   );
 
   return {

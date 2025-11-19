@@ -31,6 +31,7 @@ interface RomHardwareSectionProps {
   onMacSegmentClick: (event: React.MouseEvent<HTMLInputElement>) => void;
   onMacSegmentKeyDown: (index: number, event: React.KeyboardEvent<HTMLInputElement>) => void;
   onMacSegmentPaste: (index: number, event: React.ClipboardEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
 }
 
 export function RomHardwareSection({
@@ -51,6 +52,7 @@ export function RomHardwareSection({
   onMacSegmentClick,
   onMacSegmentKeyDown,
   onMacSegmentPaste,
+  disabled = false,
 }: RomHardwareSectionProps) {
   const locale = useLocale();
 
@@ -60,7 +62,7 @@ export function RomHardwareSection({
         <Label htmlFor="profile-rom-version" className="text-xs">
           {resolveProfileRomLabel('version', locale)}
         </Label>
-        <Select value={romVersion} onValueChange={(value) => onRomVersionChange(value as ROMVersion)}>
+        <Select value={romVersion} onValueChange={(value) => onRomVersionChange(value as ROMVersion)} disabled={disabled}>
           <SelectTrigger id="profile-rom-version" className="h-9">
             <SelectValue />
           </SelectTrigger>
@@ -75,7 +77,7 @@ export function RomHardwareSection({
         <Label htmlFor="profile-rom-region" className="text-xs">
           {resolveProfileRomLabel('region', locale)}
         </Label>
-        <Select value={romRegion} onValueChange={(value) => onRomRegionChange(value as ROMRegion)}>
+        <Select value={romRegion} onValueChange={(value) => onRomRegionChange(value as ROMRegion)} disabled={disabled}>
           <SelectTrigger id="profile-rom-region" className="h-9">
             <SelectValue />
           </SelectTrigger>
@@ -90,7 +92,7 @@ export function RomHardwareSection({
         <Label htmlFor="profile-hardware" className="text-xs">
           {resolveProfileRomLabel('hardware', locale)}
         </Label>
-        <Select value={hardware} onValueChange={(value) => onHardwareChange(value as Hardware)}>
+        <Select value={hardware} onValueChange={(value) => onHardwareChange(value as Hardware)} disabled={disabled}>
           <SelectTrigger id="profile-hardware" className="h-9">
             <SelectValue />
           </SelectTrigger>
@@ -125,6 +127,7 @@ export function RomHardwareSection({
               maxLength={2}
               className={MAC_SEGMENT_CLASS}
               aria-label={formatProfileMacSegmentAria(index, locale)}
+              disabled={disabled}
             />
           ))}
         </div>

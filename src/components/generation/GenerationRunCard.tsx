@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback } from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Button } from '@/components/ui/button';
 import { Play, Square, ChartBar } from '@phosphor-icons/react';
@@ -14,14 +14,8 @@ import {
   generationRunPanelTitle,
   generationRunResultsLabel,
   generationRunStatusPrefix,
-  resolveGenerationRunProfileSyncDialog,
 } from '@/lib/i18n/strings/generation-run';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useProfileFormStore } from '@/store/profile-form-store';
-import { deviceProfileToDraft } from '@/types/profile';
-import { areDeviceProfileDraftsEqual } from '@/lib/utils/profile-draft';
-import type { DeviceProfileDraft } from '@/types/profile';
 
 // Control + Progress 統合カード (Phase1 experimental)
 export const GenerationRunCard: React.FC = () => {
@@ -33,9 +27,6 @@ export const GenerationRunCard: React.FC = () => {
     status,
     lastCompletion,
     draftParams,
-    profiles,
-    activeProfileId,
-    updateProfile,
   } = useAppStore();
   const resultCount = useAppStore(s => s.results.length);
   const params = useAppStore(s => s.params);
@@ -44,112 +35,17 @@ export const GenerationRunCard: React.FC = () => {
   const maxResults = params?.maxResults ?? draftParams.maxResults ?? 0;
   const pct = maxResults > 0 ? (resultCount / maxResults) * 100 : 0;
 
-  const profileDirty = useProfileFormStore((state) => state.isDirty);
-  const profileDraft = useProfileFormStore((state) => state.draft);
-  const profileValidationErrors = useProfileFormStore((state) => state.validationErrors);
-  const [profileSyncDialogOpen, setProfileSyncDialogOpen] = useState(false);
-  const profileSyncPromiseResolveRef = useRef<((value: boolean) => void) | null>(null);
-  const pendingProfileDraftRef = useRef<DeviceProfileDraft | null>(null);
-  const profileSyncCloseActionRef = useRef<'confirm' | 'cancel' | null>(null);
-
-  const activeProfile = useMemo(() => {
-    if (!profiles.length) {
-      return null;
-    }
-    if (activeProfileId) {
-      const found = profiles.find((profile) => profile.id === activeProfileId);
-      if (found) {
-        return found;
-      }
-    }
-    return profiles[0];
-  }, [activeProfileId, profiles]);
-
-  const profileSyncDialogText = useMemo(() => resolveGenerationRunProfileSyncDialog(locale), [locale]);
-
   const { isStack } = useResponsiveLayout();
   const isStarting = status === 'starting';
   const isRunning = status === 'running';
   const isStopping = status === 'stopping';
-  const resolveProfileSyncRequest = useCallback((result: boolean) => {
-    if (profileSyncPromiseResolveRef.current) {
-      profileSyncPromiseResolveRef.current(result);
-      profileSyncPromiseResolveRef.current = null;
-    }
-    pendingProfileDraftRef.current = null;
-  }, []);
-
-  const handleProfileSyncCancel = useCallback(() => {
-    profileSyncCloseActionRef.current = 'cancel';
-    setProfileSyncDialogOpen(false);
-    resolveProfileSyncRequest(false);
-  }, [resolveProfileSyncRequest]);
-
-  const handleProfileSyncConfirm = useCallback(() => {
-    const draft = pendingProfileDraftRef.current;
-    if (!draft || !activeProfile) {
-      profileSyncCloseActionRef.current = 'cancel';
-      setProfileSyncDialogOpen(false);
-      resolveProfileSyncRequest(false);
-      return;
-    }
-    profileSyncCloseActionRef.current = 'confirm';
-    updateProfile(activeProfile.id, draft);
-    useProfileFormStore.getState().reset();
-    setProfileSyncDialogOpen(false);
-    resolveProfileSyncRequest(true);
-  }, [activeProfile, resolveProfileSyncRequest, updateProfile]);
-
-  const handleProfileSyncDialogOpenChange = useCallback(
-    (open: boolean) => {
-      if (open) {
-        setProfileSyncDialogOpen(true);
-        return;
-      }
-      if (profileSyncCloseActionRef.current) {
-        profileSyncCloseActionRef.current = null;
-        return;
-      }
-      handleProfileSyncCancel();
-    },
-    [handleProfileSyncCancel],
-  );
-
-  const ensureProfileSyncedBeforeGeneration = useCallback(async (): Promise<boolean> => {
-    if (!profileDirty) {
-      return true;
-    }
-    if (!profileDraft) {
-      const message = profileValidationErrors[0] ?? profileSyncDialogText.validationError;
-      alert(message);
-      return false;
-    }
-    if (!activeProfile) {
-      alert(profileSyncDialogText.missingProfile);
-      return false;
-    }
-    const currentDraft = deviceProfileToDraft(activeProfile);
-    if (areDeviceProfileDraftsEqual(profileDraft, currentDraft)) {
-      return true;
-    }
-    pendingProfileDraftRef.current = profileDraft;
-    profileSyncCloseActionRef.current = null;
-    setProfileSyncDialogOpen(true);
-    return await new Promise<boolean>((resolve) => {
-      profileSyncPromiseResolveRef.current = resolve;
-    });
-  }, [activeProfile, profileDirty, profileDraft, profileSyncDialogText, profileValidationErrors]);
 
   const handleStart = useCallback(async () => {
-    const ready = await ensureProfileSyncedBeforeGeneration();
-    if (!ready) {
-      return;
-    }
     validateDraft();
     if (validationErrors.length === 0) {
       await startGeneration();
     }
-  }, [ensureProfileSyncedBeforeGeneration, startGeneration, validateDraft, validationErrors.length]);
+  }, [startGeneration, validateDraft, validationErrors.length]);
 
   const canStart = status === 'idle' || status === 'completed' || status === 'error';
   const statusPrefix = resolveLocaleValue(generationRunStatusPrefix, locale);
@@ -167,14 +63,14 @@ export const GenerationRunCard: React.FC = () => {
   return (
     <>
       <PanelCard
-      icon={<ChartBar size={20} className="opacity-80" />}
-      title={<span id="gen-run-title">{title}</span>}
-      className={isStack ? 'max-h-96' : undefined}
-      fullHeight={!isStack}
-      scrollMode={isStack ? 'parent' : 'content'}
-      role="region"
-      aria-labelledby="gen-run-title"
-    >
+        icon={<ChartBar size={20} className="opacity-80" />}
+        title={<span id="gen-run-title">{title}</span>}
+        className={isStack ? 'max-h-96' : undefined}
+        fullHeight={!isStack}
+        scrollMode={isStack ? 'parent' : 'content'}
+        role="region"
+        aria-labelledby="gen-run-title"
+      >
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
           <div className="text-destructive text-xs space-y-0.5" role="alert">
@@ -210,22 +106,6 @@ export const GenerationRunCard: React.FC = () => {
         </div>
       </PanelCard>
 
-      <Dialog open={profileSyncDialogOpen} onOpenChange={handleProfileSyncDialogOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{profileSyncDialogText.title}</DialogTitle>
-            <DialogDescription>{profileSyncDialogText.description}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={handleProfileSyncCancel}>
-              {profileSyncDialogText.cancel}
-            </Button>
-            <Button onClick={handleProfileSyncConfirm}>
-              {profileSyncDialogText.confirm}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };
