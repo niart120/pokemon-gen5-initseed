@@ -8,7 +8,6 @@ import { useLocale } from '@/lib/i18n/locale-context';
 import {
   formatGenerationRunAdvancesDisplay,
   formatGenerationRunPercentDisplay,
-  formatGenerationRunScreenReaderSummary,
   formatGenerationRunStatusDisplay,
   generationRunButtonLabels,
   generationRunControlsLabel,
@@ -164,7 +163,6 @@ export const GenerationRunCard: React.FC = () => {
   const statusDisplay = formatGenerationRunStatusDisplay(status, lastCompletion?.reason ?? null, locale);
   const advancesDisplay = formatGenerationRunAdvancesDisplay(resultCount, maxResults, locale);
   const percentDisplay = formatGenerationRunPercentDisplay(pct, locale);
-  const screenReaderSummary = formatGenerationRunScreenReaderSummary(statusDisplay, advancesDisplay, percentDisplay, locale);
 
   return (
     <>

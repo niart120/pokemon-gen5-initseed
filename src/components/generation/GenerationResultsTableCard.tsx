@@ -8,7 +8,6 @@ import { shinyLabel, calculateNeedleDirection, needleDirectionArrow } from '@/li
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
 import {
-  formatGenerationResultsTableAnnouncement,
   formatGenerationResultsTableTitle,
   generationResultsTableCaption,
   generationResultsTableUnknownLabel,
@@ -26,7 +25,6 @@ export const GenerationResultsTableCard: React.FC = () => {
   const panelTitle = formatGenerationResultsTableTitle(rows.length, total, locale);
   const caption = resolveLocaleValue(generationResultsTableCaption, locale);
   const unknownLabel = resolveLocaleValue(generationResultsTableUnknownLabel, locale);
-  const announcement = formatGenerationResultsTableAnnouncement(rows.length, total, locale);
   // スクロール方針
   // - モバイル(isStack): カード内でスクロール(overflow-y-auto)にして、ドキュメント高さの膨張を防ぐ
   // - デスクトップ: 呼び出し元の指定を尊重（既定はfalseでカード内スクロール）
