@@ -27,7 +27,6 @@ import {
   generationResultsControlAbilityPreviewEllipsis,
   generationResultsControlClearResultsLabel,
   generationResultsControlFieldLabels,
-  generationResultsControlFiltersHeading,
   generationResultsControlLevelAriaLabel,
   generationResultsControlResetFiltersLabel,
   generationResultsControlStatLabels,
@@ -48,6 +47,17 @@ import {
 type AppStoreState = ReturnType<typeof useAppStore.getState>;
 
 const STAT_KEYS: StatKey[] = ['hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed'];
+const FILTER_FIELD_BASE_CLASS = 'flex flex-col gap-1 grow-0';
+const FILTER_FIELD_WIDTHS = {
+  species: 'basis-[26ch] min-w-[22ch] max-w-[34ch]',
+  ability: 'basis-[24ch] min-w-[18ch] max-w-[30ch]',
+  gender: 'basis-[14ch] min-w-[10ch] max-w-[16ch]',
+  nature: 'basis-[20ch] min-w-[16ch] max-w-[24ch]',
+  shiny: 'basis-[18ch] min-w-[14ch] max-w-[20ch]',
+  level: 'basis-[12ch] min-w-[10ch] max-w-[14ch]',
+} as const;
+const STAT_FIELD_BASE_CLASS = 'flex flex-col gap-1 grow-0';
+const STAT_FIELD_WIDTH = 'basis-[12ch] min-w-[10ch] max-w-[14ch]';
 
 interface AbilityMeta {
   options: Array<{ index: 0 | 1 | 2; label: string }>;
@@ -167,7 +177,6 @@ export const GenerationResultsControlCard: React.FC = () => {
   const noAbilitiesLabel = resolveLocaleValue(noAbilitySelectionLabel, optionLocale);
   const noGendersLabel = resolveLocaleValue(noGenderSelectionLabel, optionLocale);
   const cardTitle = resolveLocaleValue(generationResultsControlTitle, optionLocale);
-  const filtersHeading = resolveLocaleValue(generationResultsControlFiltersHeading, optionLocale);
   const resetFiltersLabel = resolveLocaleValue(generationResultsControlResetFiltersLabel, optionLocale);
   const clearResultsLabel = resolveLocaleValue(generationResultsControlClearResultsLabel, optionLocale);
   const fieldLabels = resolveLocaleValue(generationResultsControlFieldLabels, optionLocale);
@@ -547,27 +556,18 @@ export const GenerationResultsControlCard: React.FC = () => {
     ...natureOptions.map((option) => ({ value: String(option.id), label: option.label })),
   ], [anyLabel, natureOptions]);
 
-  const numericFields = [
-    {
-      id: 'level-filter',
-      label: fieldLabels.level,
-      value: levelValue,
-      onChange: handleLevelValueChange,
-      ariaLabel: levelAriaLabel,
-    },
-    ...STAT_KEYS.map((stat) => {
-      const statLabel = statLabels[stat];
-      const range = filters.statRanges[stat];
-      const value = range?.min != null ? String(range.min) : '';
-      return {
-        id: `stat-${stat}`,
-        label: statLabel,
-        value,
-        onChange: handleStatValueChange(stat),
-        ariaLabel: formatGenerationResultsControlStatAria(statLabel, optionLocale),
-      };
-    }),
-  ];
+  const statNumericFields = STAT_KEYS.map((stat) => {
+    const statLabel = statLabels[stat];
+    const range = filters.statRanges[stat];
+    const value = range?.min != null ? String(range.min) : '';
+    return {
+      id: `stat-${stat}`,
+      label: statLabel,
+      value,
+      onChange: handleStatValueChange(stat),
+      ariaLabel: formatGenerationResultsControlStatAria(statLabel, optionLocale),
+    };
+  });
 
   return (
     <PanelCard
@@ -613,70 +613,97 @@ export const GenerationResultsControlCard: React.FC = () => {
     >
       <form onSubmit={(event) => event.preventDefault()} className="flex flex-col gap-4">
         <fieldset className="space-y-3" aria-labelledby="gf-filters" role="group">
-          <div id="gf-filters" className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground">{filtersHeading}</div>
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-              <FilterPopoverField
-                id="species-select"
-                label={fieldLabels.species}
-                placeholder={anyLabel}
-                selectedValue={filters.speciesIds.length ? String(filters.speciesIds[0]) : 'any'}
-                selectedLabel={speciesSelectedLabel}
-                options={speciesFieldOptions}
-                onSelect={handleSpeciesSelect}
-                disabled={speciesFieldDisabled}
-                searchable
-                emptyLabel={commandEmptyLabel}
-                searchPlaceholder={speciesSearchPlaceholder}
-              />
-              <FilterPopoverField
-                id="ability-select"
-                label={fieldLabels.ability}
-                placeholder={abilityPlaceholder}
-                selectedValue={filters.abilityIndices.length ? String(filters.abilityIndices[0]) : 'any'}
-                selectedLabel={abilitySelectedLabel}
-                options={abilityFieldOptions}
-                onSelect={handleAbilitySelect}
-                disabled={abilityDisabled}
-                emptyLabel={commandEmptyLabel}
-              />
-              <FilterPopoverField
-                id="gender-select"
-                label={fieldLabels.gender}
-                placeholder={genderPlaceholder}
-                selectedValue={filters.genders.length ? filters.genders[0] : 'any'}
-                selectedLabel={genderSelectedLabel}
-                options={genderFieldOptions}
-                onSelect={handleGenderSelect}
-                disabled={genderDisabled}
-                emptyLabel={commandEmptyLabel}
-              />
-              <FilterPopoverField
-                id="nature-select"
-                label={fieldLabels.nature}
-                placeholder={anyLabel}
-                selectedValue={filters.natureIds.length ? String(filters.natureIds[0]) : 'any'}
-                selectedLabel={natureSelectedLabel}
-                options={natureFieldOptions}
-                onSelect={handleNatureSelect}
-                searchable
-                emptyLabel={commandEmptyLabel}
-                searchPlaceholder={natureSearchPlaceholder}
-              />
-              <FilterPopoverField
-                id="shiny-mode"
-                label={fieldLabels.shiny}
-                placeholder={anyLabel}
-                selectedValue={filters.shinyMode}
-                selectedLabel={shinySelectedLabel}
-                options={shinyOptions}
-                onSelect={handleShinyModeChange}
-                emptyLabel={commandEmptyLabel}
-              />
+            <div className="flex flex-wrap gap-3">
+              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.species)}>
+                <FilterPopoverField
+                  id="species-select"
+                  label={fieldLabels.species}
+                  placeholder={anyLabel}
+                  selectedValue={filters.speciesIds.length ? String(filters.speciesIds[0]) : 'any'}
+                  selectedLabel={speciesSelectedLabel}
+                  options={speciesFieldOptions}
+                  onSelect={handleSpeciesSelect}
+                  disabled={speciesFieldDisabled}
+                  searchable
+                  emptyLabel={commandEmptyLabel}
+                  searchPlaceholder={speciesSearchPlaceholder}
+                />
+              </div>
+              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.ability)}>
+                <FilterPopoverField
+                  id="ability-select"
+                  label={fieldLabels.ability}
+                  placeholder={abilityPlaceholder}
+                  selectedValue={filters.abilityIndices.length ? String(filters.abilityIndices[0]) : 'any'}
+                  selectedLabel={abilitySelectedLabel}
+                  options={abilityFieldOptions}
+                  onSelect={handleAbilitySelect}
+                  disabled={abilityDisabled}
+                  emptyLabel={commandEmptyLabel}
+                />
+              </div>
+              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.gender)}>
+                <FilterPopoverField
+                  id="gender-select"
+                  label={fieldLabels.gender}
+                  placeholder={genderPlaceholder}
+                  selectedValue={filters.genders.length ? filters.genders[0] : 'any'}
+                  selectedLabel={genderSelectedLabel}
+                  options={genderFieldOptions}
+                  onSelect={handleGenderSelect}
+                  disabled={genderDisabled}
+                  emptyLabel={commandEmptyLabel}
+                />
+              </div>
+              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.nature)}>
+                <FilterPopoverField
+                  id="nature-select"
+                  label={fieldLabels.nature}
+                  placeholder={anyLabel}
+                  selectedValue={filters.natureIds.length ? String(filters.natureIds[0]) : 'any'}
+                  selectedLabel={natureSelectedLabel}
+                  options={natureFieldOptions}
+                  onSelect={handleNatureSelect}
+                  searchable
+                  emptyLabel={commandEmptyLabel}
+                  searchPlaceholder={natureSearchPlaceholder}
+                />
+              </div>
+              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.shiny)}>
+                <FilterPopoverField
+                  id="shiny-mode"
+                  label={fieldLabels.shiny}
+                  placeholder={anyLabel}
+                  selectedValue={filters.shinyMode}
+                  selectedLabel={shinySelectedLabel}
+                  options={shinyOptions}
+                  onSelect={handleShinyModeChange}
+                  emptyLabel={commandEmptyLabel}
+                />
+              </div>
+              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.level)}>
+                <Label htmlFor="level-filter" className="text-[11px] font-medium text-muted-foreground">
+                  {fieldLabels.level}
+                </Label>
+                <Input
+                  id="level-filter"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={3}
+                  value={levelValue}
+                  onChange={handleLevelValueChange}
+                  className="h-10 w-full px-3 text-right text-xs font-mono"
+                  placeholder={anyLabel}
+                  disabled={!statsAvailable}
+                  aria-label={levelAriaLabel}
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-2 items-start gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-              {numericFields.map((field) => (
-                <div key={field.id} className="flex flex-col gap-1">
+            <div className="flex flex-wrap gap-2">
+              {statNumericFields.map((field) => (
+                <div key={field.id} className={cn(STAT_FIELD_BASE_CLASS, STAT_FIELD_WIDTH)}>
                   <Label htmlFor={field.id} className="text-[11px] font-medium text-muted-foreground">{field.label}</Label>
                   <Input
                     id={field.id}
