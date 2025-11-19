@@ -40,23 +40,6 @@ struct TargetSeedBuffer {
   values : array<u32>,
 };
 
-struct CandidateRecord {
-  message_index : u32,
-  seed : u32,
-};
-
-struct CandidateBuffer {
-  records : array<CandidateRecord>,
-};
-
-struct GroupCountBuffer {
-  values : array<u32>,
-};
-
-struct GroupOffsetBuffer {
-  values : array<u32>,
-};
-
 struct MatchRecord {
   message_index : u32,
   seed : u32,
@@ -86,13 +69,7 @@ const MONTH_LENGTHS_LEAP : array<u32, 12> = array<u32, 12>(
 
 @group(0) @binding(0) var<storage, read> config : GeneratedConfig;
 @group(0) @binding(1) var<storage, read> target_seeds : TargetSeedBuffer;
-@group(0) @binding(2) var<storage, read_write> candidate_buffer : CandidateBuffer;
-@group(0) @binding(3) var<storage, read_write> group_counts_buffer : GroupCountBuffer;
-@group(0) @binding(4) var<storage, read_write> group_offsets_buffer : GroupOffsetBuffer;
-@group(0) @binding(5) var<storage, read_write> output_buffer : MatchOutputBuffer;
-
-var<workgroup> scan_values : array<u32, WORKGROUP_SIZE>;
-var<workgroup> group_total_matches : u32;
+@group(0) @binding(2) var<storage, read_write> output_buffer : MatchOutputBuffer;
 
 fn left_rotate(value : u32, amount : u32) -> u32 {
   return (value << amount) | (value >> (32u - amount));
@@ -177,18 +154,11 @@ fn compute_seed_from_hash(h0 : u32, h1 : u32) -> u32 {
 
 @compute @workgroup_size(WORKGROUP_SIZE_PLACEHOLDER)
 fn sha1_generate(
-  @builtin(global_invocation_id) global_id : vec3<u32>,
-  @builtin(local_invocation_id) local_id : vec3<u32>,
-  @builtin(local_invocation_index) local_linear_index : u32,
-  @builtin(workgroup_id) workgroup_id : vec3<u32>
+  @builtin(global_invocation_id) global_id : vec3<u32>
 ) {
 
   let global_linear_index = global_id.x;
   let is_active = global_linear_index < config.message_count;
-  let group_index = workgroup_id.x;
-  let configured_workgroup_size = config.configured_workgroup_size;
-
-  var local_message_index : u32 = 0u;
   var seed : u32 = 0u;
   var matched = false;
 
@@ -380,92 +350,16 @@ fn sha1_generate(
     }
   }
 
-  let match_flag = select(0u, 1u, matched);
-  scan_values[local_linear_index] = match_flag;
-  workgroupBarrier();
-
-  var offset = 1u;
-  while (offset < WORKGROUP_SIZE) {
-    workgroupBarrier();
-    let current_value = scan_values[local_linear_index];
-    var addend = 0u;
-    if (local_linear_index >= offset) {
-      addend = scan_values[local_linear_index - offset];
-    }
-    workgroupBarrier();
-    scan_values[local_linear_index] = current_value + addend;
-    offset = offset << 1u;
-  }
-
-  workgroupBarrier();
-  let inclusive_sum = scan_values[local_linear_index];
-  if (local_linear_index == (WORKGROUP_SIZE - 1u)) {
-    group_total_matches = inclusive_sum;
-  }
-  workgroupBarrier();
-
-  if (local_linear_index == 0u) {
-    group_counts_buffer.values[group_index] = group_total_matches;
-  }
-
-  if (match_flag == 0u) {
+  if (!matched) {
     return;
   }
 
-  let record_rank = inclusive_sum - 1u;
-  let candidate_index = group_index * configured_workgroup_size + record_rank;
-  if (candidate_index >= config.candidate_capacity) {
+  let record_index = atomicAdd(&output_buffer.match_count, 1u);
+  if (record_index >= config.candidate_capacity) {
+    atomicSub(&output_buffer.match_count, 1u);
     return;
   }
 
-  local_message_index = global_linear_index;
-  candidate_buffer.records[candidate_index].message_index = local_message_index;
-  candidate_buffer.records[candidate_index].seed = seed;
-}
-
-@compute @workgroup_size(1)
-fn exclusive_scan_groups(@builtin(global_invocation_id) global_id : vec3<u32>) {
-  if (global_id.x != 0u) {
-    return;
-  }
-
-  let group_count = config.groups_per_dispatch;
-  var running_total = 0u;
-  for (var i = 0u; i < group_count; i = i + 1u) {
-    let count = group_counts_buffer.values[i];
-    group_offsets_buffer.values[i] = running_total;
-    running_total = running_total + count;
-  }
-
-  atomicStore(&output_buffer.match_count, running_total);
-}
-
-@compute @workgroup_size(WORKGROUP_SIZE_PLACEHOLDER)
-fn scatter_matches(@builtin(global_invocation_id) global_id : vec3<u32>) {
-  let candidate_index = global_id.x;
-  if (candidate_index >= config.candidate_capacity) {
-    return;
-  }
-
-  let configured_workgroup_size = config.configured_workgroup_size;
-  let group_index = candidate_index / configured_workgroup_size;
-  if (group_index >= config.groups_per_dispatch) {
-    return;
-  }
-
-  let local_rank = candidate_index - group_index * configured_workgroup_size;
-  let group_match_count = group_counts_buffer.values[group_index];
-  if (local_rank >= group_match_count) {
-    return;
-  }
-
-  let base_offset = group_offsets_buffer.values[group_index];
-  let final_index = base_offset + local_rank;
-  if (final_index >= config.message_count) {
-    return;
-  }
-
-  let record = candidate_buffer.records[candidate_index];
-  output_buffer.records[final_index].message_index = record.message_index;
-  output_buffer.records[final_index].seed = record.seed;
+  output_buffer.records[record_index].message_index = global_linear_index;
+  output_buffer.records[record_index].seed = seed;
 }

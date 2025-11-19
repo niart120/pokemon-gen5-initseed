@@ -144,7 +144,6 @@ function summarizeSpans(spans: SpanRecord[]) {
   const avgCandidateCapacity = averageOf(dispatchSpans.map((span) => Number(span.metadata.candidateCapacity ?? 0)));
   const maxWorkgroupCount = maxMetadata(dispatchSpans, 'workgroupCount');
   const avgWorkgroupCount = averageOf(dispatchSpans.map((span) => Number(span.metadata.workgroupCount ?? 0)));
-  const maxScatterWorkgroupCount = maxMetadata(dispatchSpans, 'scatterWorkgroupCount');
 
   const dispatchMs = dispatchSpans.reduce((sum, span) => sum + span.durationMs, 0);
   const throughputPerSecond = dispatchMs > 0 ? (totalMessages / dispatchMs) * 1000 : 0;
@@ -164,7 +163,6 @@ function summarizeSpans(spans: SpanRecord[]) {
       avgCandidateCapacity,
       maxWorkgroupCount,
       avgWorkgroupCount,
-      maxScatterWorkgroupCount,
       dispatchMs,
       throughputPerSecond,
       avgPerMessageNs,
@@ -361,7 +359,6 @@ describeWebGpu('webgpu seed search profiling instrumentation', () => {
                   avgCandidateCapacity: Number(summary.dispatch.avgCandidateCapacity.toFixed(2)),
                   maxWorkgroupCount: summary.dispatch.maxWorkgroupCount,
                   avgWorkgroupCount: Number(summary.dispatch.avgWorkgroupCount.toFixed(2)),
-                  maxScatterWorkgroupCount: summary.dispatch.maxScatterWorkgroupCount,
                   dispatchMs: Number(summary.dispatch.dispatchMs.toFixed(3)),
                   throughputPerSecond: Number(summary.dispatch.throughputPerSecond.toFixed(2)),
                   avgPerMessageNs: Number(summary.dispatch.avgPerMessageNs.toFixed(2)),
