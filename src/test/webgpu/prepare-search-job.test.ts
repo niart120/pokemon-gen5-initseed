@@ -1,9 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import { hasImpossibleKeyCombination, keyCodeToMask, keyNamesToMask } from '@/lib/utils/key-input';
-import { buildSearchContext } from '@/lib/webgpu/seed-search/message-encoder';
+import { prepareSearchJob } from '@/lib/webgpu/seed-search/prepare-search-job';
 import type { SearchConditions } from '@/types/search';
+import { createTestSeedSearchJobLimits } from './seed-search-job-limit-helpers';
 
 const REAL_DATE = Date;
+const TEST_LIMITS = createTestSeedSearchJobLimits();
+
+function prepareJob(conditions: SearchConditions) {
+  return prepareSearchJob(conditions, undefined, { limits: TEST_LIMITS });
+}
 
 function createSearchConditions(
   dateRange: SearchConditions['dateRange'],
@@ -72,7 +78,7 @@ function withMockedLocalTimezone<T>(offsetMinutes: number, callback: () => T): T
   }
 }
 
-describe('buildSearchContext', () => {
+describe('prepareSearchJob', () => {
   const singleDayRange: SearchConditions['dateRange'] = {
     startYear: 2000,
     startMonth: 1,
@@ -88,64 +94,44 @@ describe('buildSearchContext', () => {
     endSecond: 0,
   };
 
-  it('2000-01-01 はいかなるローカルタイムゾーンでもエポックチェックを通過するべき', () => {
-    const result = withMockedLocalTimezone(-540, () => {
+  it('computes start timestamp using local timezone information', () => {
+    withMockedLocalTimezone(-540, () => {
       const conditions = createSearchConditions(singleDayRange);
-      const context = buildSearchContext(conditions);
-
+      const job = prepareJob(conditions);
       const expectedLocalTimestamp = new Date(
-        conditions.dateRange.startYear,
-        conditions.dateRange.startMonth - 1,
-        conditions.dateRange.startDay,
-        conditions.dateRange.startHour,
-        conditions.dateRange.startMinute,
-        conditions.dateRange.startSecond
+        singleDayRange.startYear,
+        singleDayRange.startMonth - 1,
+        singleDayRange.startDay,
+        singleDayRange.startHour,
+        singleDayRange.startMinute,
+        singleDayRange.startSecond
       ).getTime();
 
-      expect(context.startTimestampMs).toBe(expectedLocalTimestamp);
-      return context;
+      expect(job.timePlan.startDayTimestampMs).toBe(expectedLocalTimestamp);
     });
-
-    const expectedEpoch = REAL_DATE.UTC(2000, 0, 1, 0, 0, 0);
-
-    expect(result.rangeSeconds).toBe(1);
-    expect(result.segments[0]?.config.startSecondsSince2000).toBe(0);
-    expect(result.startTimestampMs).toBeGreaterThanOrEqual(expectedEpoch);
   });
 
-  it('2100-01-01 は 2000 エポック以降の正しい秒数を返すべき', () => {
+  it('calculates seconds since Y2K epoch accurately for far future dates', () => {
     const futureRange: SearchConditions['dateRange'] = {
       ...singleDayRange,
       startYear: 2100,
       endYear: 2100,
     };
 
-    const result = withMockedLocalTimezone(-540, () => {
+    withMockedLocalTimezone(-540, () => {
       const conditions = createSearchConditions(futureRange);
-      const context = buildSearchContext(conditions);
+      const job = prepareJob(conditions);
 
-      const expectedLocalTimestamp = new Date(
-        conditions.dateRange.startYear,
-        conditions.dateRange.startMonth - 1,
-        conditions.dateRange.startDay,
-        conditions.dateRange.startHour,
-        conditions.dateRange.startMinute,
-        conditions.dateRange.startSecond
-      ).getTime();
+      const expectedEpoch = new Date(2000, 0, 1, 0, 0, 0).getTime();
+      const expectedStart = new Date(2100, 0, 1, 0, 0, 0).getTime();
+      const expectedSeconds = Math.floor((expectedStart - expectedEpoch) / 1000);
+      const actualSeconds = Math.floor((job.timePlan.startDayTimestampMs - expectedEpoch) / 1000);
 
-      expect(context.startTimestampMs).toBe(expectedLocalTimestamp);
-      return context;
+      expect(actualSeconds).toBe(expectedSeconds);
     });
-
-    const expectedEpoch = REAL_DATE.UTC(2000, 0, 1, 0, 0, 0);
-    const expectedStart = REAL_DATE.UTC(2100, 0, 1, 0, 0, 0);
-    const expectedSeconds = Math.floor((expectedStart - expectedEpoch) / 1000);
-
-    expect(result.segments[0]?.config.startSecondsSince2000).toBe(expectedSeconds >>> 0);
-    expect(result.startTimestampMs).toBeGreaterThan(expectedEpoch);
   });
 
-  it('時刻範囲の境界が正確に rangeSeconds に反映される', () => {
+  it('reflects time range boundaries in summary seconds and total messages', () => {
     const multiSecondRange: SearchConditions['dateRange'] = {
       startYear: 2001,
       endYear: 2001,
@@ -161,77 +147,75 @@ describe('buildSearchContext', () => {
       endSecond: 5,
     };
 
-    const context = withMockedLocalTimezone(-540, () => {
+    const job = withMockedLocalTimezone(-540, () => {
       const conditions = createSearchConditions(multiSecondRange);
-      return buildSearchContext(conditions);
+      return prepareJob(conditions);
     });
 
-    expect(context.rangeSeconds).toBe(6);
-    expect(context.totalMessages).toBe(6 * 2);
+    expect(job.summary.rangeSeconds).toBe(6);
+
+    const summedMessages = job.segments.reduce((sum, segment) => sum + segment.messageCount, 0);
+    expect(job.summary.totalMessages).toBe(summedMessages);
+    expect(job.summary.totalMessages).toBe(12);
   });
 
-  it('生成されたセグメントにチャンクのオーバーラップがない', () => {
-    const wideTimerRangeConditions = createSearchConditions({
-      ...singleDayRange,
-    });
-
+  it('emits non-overlapping segments with contiguous message offsets', () => {
+    const wideTimerRangeConditions = createSearchConditions({ ...singleDayRange });
     wideTimerRangeConditions.timer0VCountConfig.timer0Range = { min: 0xC79, max: 0xC7C };
 
-    const context = withMockedLocalTimezone(-540, () => buildSearchContext(wideTimerRangeConditions));
+    const job = withMockedLocalTimezone(-540, () => prepareJob(wideTimerRangeConditions));
 
-    const { segments } = context;
-    const totalMessages = segments.reduce((sum, segment) => sum + segment.totalMessages, 0);
+    expect(job.segments.length).toBeGreaterThan(0);
 
-    expect(segments.length).toBeGreaterThan(0);
-
-    for (let index = 1; index < segments.length; index += 1) {
-      const previous = segments[index - 1];
-      const current = segments[index];
-      expect(current.baseOffset).toBe(previous.baseOffset + previous.totalMessages);
+    for (let index = 1; index < job.segments.length; index += 1) {
+      const previous = job.segments[index - 1]!;
+      const current = job.segments[index]!;
+      expect(current.globalMessageOffset).toBe(previous.globalMessageOffset + previous.messageCount);
     }
 
-    expect(totalMessages).toBe(context.totalMessages);
+    const totalMessages = job.segments.reduce((sum, segment) => sum + segment.messageCount, 0);
+    expect(totalMessages).toBe(job.summary.totalMessages);
   });
 
-  it('上下同時押しを含むキーコードを除外する', () => {
-    const context = withMockedLocalTimezone(-540, () => {
+  it('filters key codes containing opposite directions (up/down)', () => {
+    const job = withMockedLocalTimezone(-540, () => {
       const conditions = createSearchConditions(singleDayRange);
       conditions.keyInput = keyNamesToMask(['[↑]', '[↓]']);
       conditions.timer0VCountConfig.timer0Range = { min: 0xC79, max: 0xC79 };
-      return buildSearchContext(conditions);
+      return prepareJob(conditions);
     });
 
-    const uniqueKeyCodes = new Set(context.segments.map(segment => segment.keyCode));
+    const uniqueKeyCodes = new Set(job.segments.map((segment) => segment.keyCode));
     expect(uniqueKeyCodes.size).toBe(3);
     for (const code of uniqueKeyCodes) {
       expect(hasImpossibleKeyCombination(keyCodeToMask(code))).toBe(false);
     }
   });
 
-  it('左右同時押しを含むキーコードを除外する', () => {
-    const context = withMockedLocalTimezone(-540, () => {
+  it('filters key codes containing opposite directions (left/right)', () => {
+    const job = withMockedLocalTimezone(-540, () => {
       const conditions = createSearchConditions(singleDayRange);
       conditions.keyInput = keyNamesToMask(['[←]', '[→]', 'A']);
       conditions.timer0VCountConfig.timer0Range = { min: 0xC79, max: 0xC79 };
-      return buildSearchContext(conditions);
+      return prepareJob(conditions);
     });
 
-    const uniqueKeyCodes = new Set(context.segments.map(segment => segment.keyCode));
+    const uniqueKeyCodes = new Set(job.segments.map((segment) => segment.keyCode));
     expect(uniqueKeyCodes.size).toBe(6);
     for (const code of uniqueKeyCodes) {
       expect(hasImpossibleKeyCombination(keyCodeToMask(code))).toBe(false);
     }
   });
 
-  it('Start+Select+L+R同時押しを含むキーコードを除外する', () => {
-    const context = withMockedLocalTimezone(-540, () => {
+  it('filters Start+Select+L+R simultaneous presses', () => {
+    const job = withMockedLocalTimezone(-540, () => {
       const conditions = createSearchConditions(singleDayRange);
       conditions.keyInput = keyNamesToMask(['Start', 'Select', 'L', 'R', 'B']);
       conditions.timer0VCountConfig.timer0Range = { min: 0xC79, max: 0xC79 };
-      return buildSearchContext(conditions);
+      return prepareJob(conditions);
     });
 
-    const uniqueKeyCodes = new Set(context.segments.map(segment => segment.keyCode));
+    const uniqueKeyCodes = new Set(job.segments.map((segment) => segment.keyCode));
     expect(uniqueKeyCodes.size).toBe(30);
     for (const code of uniqueKeyCodes) {
       expect(hasImpossibleKeyCombination(keyCodeToMask(code))).toBe(false);

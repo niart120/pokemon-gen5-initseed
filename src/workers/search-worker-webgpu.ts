@@ -1,11 +1,23 @@
 /// <reference lib="webworker" />
 
-import { buildSearchContext } from '@/lib/webgpu/seed-search/message-encoder';
-import { createWebGpuSeedSearchRunner, isWebGpuSeedSearchSupported } from '@/lib/webgpu/seed-search/runner';
-import type { WebGpuRunRequest, WebGpuRunnerCallbacks } from '@/lib/webgpu/seed-search/types';
+import { prepareSearchJob } from '@/lib/webgpu/seed-search/prepare-search-job';
+import {
+  createSeedSearchController,
+  type SeedSearchController,
+} from '@/lib/webgpu/seed-search/seed-search-controller';
+import {
+  createWebGpuDeviceContext,
+  isWebGpuSeedSearchSupported,
+  type WebGpuDeviceContext,
+} from '@/lib/webgpu/seed-search/device-context';
+import { createSeedSearchEngine } from '@/lib/webgpu/seed-search/seed-search-engine';
+import type { SeedSearchJobLimits, WebGpuRunnerCallbacks } from '@/lib/webgpu/seed-search/types';
 import type { WorkerRequest, WorkerResponse } from '@/types/worker';
 
 const ctx: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobalScope;
+
+const CANDIDATE_CAPACITY_SAFETY_FACTOR = 3n;
+const UINT32_RANGE = 0x1_0000_0000n;
 
 interface WorkerState {
   isRunning: boolean;
@@ -17,8 +29,52 @@ const workerState: WorkerState = {
   isPaused: false,
 };
 
-const runner = createWebGpuSeedSearchRunner();
+let controller: SeedSearchController | null = null;
 let abortController: AbortController | null = null;
+let deviceContextPromise: Promise<WebGpuDeviceContext> | null = null;
+let cachedLimits: SeedSearchJobLimits | null = null;
+
+function estimateCandidateCapacityPerDispatch(
+  limits: SeedSearchJobLimits,
+  targetSeedCount: number,
+): number {
+  if (targetSeedCount <= 0 || limits.maxMessagesPerDispatch <= 0) {
+    return limits.candidateCapacityPerDispatch;
+  }
+
+  const numerator =
+    CANDIDATE_CAPACITY_SAFETY_FACTOR *
+    BigInt(limits.maxMessagesPerDispatch) *
+    BigInt(targetSeedCount);
+  const estimated = Number((numerator + UINT32_RANGE - 1n) / UINT32_RANGE);
+  return Math.max(1, estimated);
+}
+
+async function ensureDeviceContext(): Promise<WebGpuDeviceContext> {
+  if (!deviceContextPromise) {
+    deviceContextPromise = createWebGpuDeviceContext();
+  }
+  return deviceContextPromise;
+}
+
+async function ensureController(): Promise<SeedSearchController> {
+  if (controller) {
+    return controller;
+  }
+  const context = await ensureDeviceContext();
+  const engine = createSeedSearchEngine(undefined, context);
+  controller = createSeedSearchController(engine);
+  return controller;
+}
+
+async function ensureJobLimits(): Promise<SeedSearchJobLimits> {
+  if (cachedLimits) {
+    return cachedLimits;
+  }
+  const context = await ensureDeviceContext();
+  cachedLimits = context.deriveSearchJobLimits();
+  return cachedLimits;
+}
 
 function postMessageSafely(response: WorkerResponse): void {
   ctx.postMessage(response);
@@ -64,9 +120,21 @@ async function startSearch(request: WorkerRequest): Promise<void> {
   workerState.isRunning = true;
   workerState.isPaused = false;
 
-  let context;
+  let job;
+  let activeController: SeedSearchController;
   try {
-    context = buildSearchContext(request.conditions);
+    const [limits, controllerInstance] = await Promise.all([
+      ensureJobLimits(),
+      ensureController(),
+    ]);
+    const candidateEstimate = estimateCandidateCapacityPerDispatch(limits, request.targetSeeds.length);
+    const adjustedLimits: SeedSearchJobLimits = {
+      ...limits,
+      // Keep the candidate buffer within the default margin while covering expected hits.
+      candidateCapacityPerDispatch: Math.min(limits.candidateCapacityPerDispatch, candidateEstimate),
+    };
+    job = prepareSearchJob(request.conditions, request.targetSeeds, { limits: adjustedLimits });
+    activeController = controllerInstance;
   } catch (error) {
     resetState();
     const message = error instanceof Error ? error.message : '検索条件の解析中にエラーが発生しました';
@@ -105,15 +173,8 @@ async function startSearch(request: WorkerRequest): Promise<void> {
     },
   };
 
-  const runRequest: WebGpuRunRequest = {
-    context,
-    targetSeeds: request.targetSeeds,
-    callbacks,
-    signal: abortController.signal,
-  };
-
   try {
-    await runner.run(runRequest);
+    await activeController.run(job, callbacks, abortController.signal);
   } catch (error) {
     if (!workerState.isRunning) {
       return;
@@ -128,25 +189,21 @@ function pauseSearch(): void {
   if (!workerState.isRunning || workerState.isPaused) {
     return;
   }
-  runner.pause();
-  workerState.isPaused = true;
-  postMessageSafely({ type: 'PAUSED' });
+  controller?.pause();
 }
 
 function resumeSearch(): void {
   if (!workerState.isRunning || !workerState.isPaused) {
     return;
   }
-  runner.resume();
-  workerState.isPaused = false;
-  postMessageSafely({ type: 'RESUMED' });
+  controller?.resume();
 }
 
 function stopSearch(): void {
   if (!workerState.isRunning) {
     return;
   }
-  runner.stop();
+  controller?.stop();
   abortController?.abort();
 }
 

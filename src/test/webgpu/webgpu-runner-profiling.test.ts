@@ -1,80 +1,38 @@
 /// <reference types="@webgpu/types" />
 
-import { describe, expect, it } from 'vitest';
-import { SeedCalculator } from '@/lib/core/seed-calculator';
-import { buildSearchContext } from '@/lib/webgpu/seed-search/message-encoder';
-import { getDateFromTimePlan } from '@/lib/webgpu/seed-search/time-plan';
-import { DOUBLE_BUFFER_SET_COUNT } from '@/lib/webgpu/seed-search/constants';
-import { estimateHostMemoryLimitBytes } from '@/lib/webgpu/seed-search/environment';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { prepareSearchJob } from '@/lib/webgpu/seed-search/prepare-search-job';
+import { createSeedSearchController } from '@/lib/webgpu/seed-search/seed-search-controller';
 import {
-  createWebGpuSeedSearchRunner,
+  createWebGpuDeviceContext,
   isWebGpuSeedSearchSupported,
-  type WebGpuSeedSearchRunnerOptions,
-} from '@/lib/webgpu/seed-search/runner';
+  type SeedSearchLimitPreferences,
+  type WebGpuDeviceContext,
+} from '@/lib/webgpu/seed-search/device-context';
+import { createSeedSearchEngine, type SeedSearchEngineObserver } from '@/lib/webgpu/seed-search/seed-search-engine';
 import type {
-  WebGpuRunnerInstrumentation,
-  WebGpuRunnerSpanContext,
-  WebGpuRunnerSpanKind,
-  WebGpuSearchContext,
+  SeedSearchJobLimits,
+  SeedSearchJobSegment,
+  WebGpuRunnerCallbacks,
 } from '@/lib/webgpu/seed-search/types';
+import { enumerateJobCpuBaseline, pickUniqueEntries } from './job-baseline-helpers';
 import type { InitialSeedResult, SearchConditions } from '@/types/search';
 
 const hasWebGpu = isWebGpuSeedSearchSupported();
 const describeWebGpu = hasWebGpu ? describe : describe.skip;
 
-interface SpanRecord {
-  kind: WebGpuRunnerSpanKind;
-  metadata: Record<string, unknown>;
-  durationMs: number;
-}
-
-class CollectingInstrumentation implements WebGpuRunnerInstrumentation {
-  public readonly spans: SpanRecord[] = [];
-
-  async trace<T>(context: WebGpuRunnerSpanContext, operation: () => Promise<T>): Promise<T> {
-    const start = performance.now();
-    try {
-      return await operation();
-    } finally {
-      const duration = performance.now() - start;
-      this.spans.push({
-        kind: context.kind,
-        metadata: { ...context.metadata },
-        durationMs: duration,
-      });
-    }
-  }
-}
-
-const sampleSeedCalculator = new SeedCalculator();
-
-function computeSampleSeeds(
+function selectTargetSeeds(
   conditions: SearchConditions,
-  context: WebGpuSearchContext,
+  limits: SeedSearchJobLimits,
   sampleCount: number
 ): number[] {
   if (sampleCount <= 0) {
     return [];
   }
-
-  const seeds: number[] = [];
-
-  outer: for (const segment of context.segments) {
-    const rangeSeconds = Math.max(1, segment.rangeSeconds);
-    for (let timer0 = segment.timer0Min; timer0 <= segment.timer0Max; timer0 += 1) {
-      for (let offset = 0; offset < rangeSeconds; offset += 1) {
-        const datetime = getDateFromTimePlan(context.timePlan, offset);
-  const message = sampleSeedCalculator.generateMessage(conditions, timer0, segment.vcount, datetime, segment.keyCode);
-        const { seed } = sampleSeedCalculator.calculateSeed(message);
-        seeds.push(seed);
-        if (seeds.length >= sampleCount) {
-          break outer;
-        }
-      }
-    }
-  }
-
-  return seeds;
+  const baselineJob = prepareSearchJob(conditions, undefined, { limits });
+  const baseline = enumerateJobCpuBaseline(conditions, baselineJob, sampleCount * 4);
+  const unique = pickUniqueEntries(baseline);
+  return unique.slice(0, sampleCount).map((entry) => entry.seed);
 }
 
 function buildSearchConditions(rangeSeconds: number, timer0Range: { min: number; max: number }): SearchConditions {
@@ -121,83 +79,229 @@ function buildSearchConditions(rangeSeconds: number, timer0Range: { min: number;
   };
 }
 
-function summarizeSpans(spans: SpanRecord[]) {
-  const byKind = (kind: SpanRecord['kind']): SpanRecord[] => spans.filter((span) => span.kind === kind);
-  const totalDuration = (kind: SpanRecord['kind']): number => byKind(kind).reduce((sum, span) => sum + span.durationMs, 0);
-  const sumMetadata = (targetSpans: SpanRecord[], key: string): number =>
-    targetSpans.reduce((sum, span) => sum + Number(span.metadata[key] ?? 0), 0);
-  const maxMetadata = (targetSpans: SpanRecord[], key: string): number =>
-    targetSpans.reduce((max, span) => Math.max(max, Number(span.metadata[key] ?? 0)), 0);
-  const averageOf = (values: number[]): number => {
-    if (values.length === 0) {
-      return 0;
-    }
-    const total = values.reduce((sum, value) => sum + value, 0);
-    return total / values.length;
+
+interface ProgressSnapshot {
+  eventIndex: number;
+  timestampMs: number;
+  elapsedTime: number;
+  estimatedTimeRemaining: number;
+  currentStep: number;
+  matchesFound: number;
+}
+
+interface ProfilingCollector {
+  results: InitialSeedResult[];
+  progressSteps: number[];
+  timeline: ProgressSnapshot[];
+}
+
+interface EngineEnsureEvent {
+  timestampMs: number;
+  pipelineRecreated: boolean;
+  workgroupSize: number;
+  candidateCapacity: number;
+}
+
+type EngineBufferKind = 'config' | 'match-output' | 'match-readback' | 'target';
+
+interface EngineBufferEvent {
+  timestampMs: number;
+  kind: EngineBufferKind;
+  sizeBytes: number;
+}
+
+interface EngineDispatchEvent {
+  timestampMs: number;
+  segmentId: string;
+  messageCount: number;
+  workgroupCount: number;
+  workgroupCountX?: number;
+  workgroupCountY?: number;
+  matchCount: number;
+  candidateCapacity: number;
+  timings: {
+    totalMs: number;
+    setupMs: number;
+    gpuMs: number;
+    readbackMs: number;
   };
-
-  const dispatchSpans = byKind('dispatch');
-  const totalMessages = sumMetadata(dispatchSpans, 'messageCount');
-  const batches = dispatchSpans.length;
-  const maxBatchMessages = maxMetadata(dispatchSpans, 'messageCount');
-  const avgBatchMessages = batches > 0 ? totalMessages / batches : 0;
-  const maxCandidateCapacity = maxMetadata(dispatchSpans, 'candidateCapacity');
-  const avgCandidateCapacity = averageOf(dispatchSpans.map((span) => Number(span.metadata.candidateCapacity ?? 0)));
-  const maxWorkgroupCount = maxMetadata(dispatchSpans, 'workgroupCount');
-  const avgWorkgroupCount = averageOf(dispatchSpans.map((span) => Number(span.metadata.workgroupCount ?? 0)));
-
-  const dispatchMs = dispatchSpans.reduce((sum, span) => sum + span.durationMs, 0);
-  const throughputPerSecond = dispatchMs > 0 ? (totalMessages / dispatchMs) * 1000 : 0;
-  const avgPerMessageNs = totalMessages > 0 ? (dispatchMs / totalMessages) * 1_000_000 : 0;
-
-  const copySpans = byKind('dispatch.copyResults');
-  const totalCopyBytes = sumMetadata(copySpans, 'totalCopyBytes');
-  const maxCopyBytes = maxMetadata(copySpans, 'totalCopyBytes');
-
-  return {
-    dispatch: {
-      batches,
-      totalMessages,
-      maxBatchMessages,
-      avgBatchMessages,
-      maxCandidateCapacity,
-      avgCandidateCapacity,
-      maxWorkgroupCount,
-      avgWorkgroupCount,
-      dispatchMs,
-      throughputPerSecond,
-      avgPerMessageNs,
-    },
-    stages: {
-      submitMs: totalDuration('dispatch.submit'),
-      submitEncodeMs: totalDuration('dispatch.submit.encode'),
-      submitWaitMs: totalDuration('dispatch.submit.wait'),
-      mapCountMs: totalDuration('dispatch.mapMatchCount'),
-      copyMs: totalDuration('dispatch.copyResults'),
-      copyEncodeMs: totalDuration('dispatch.copyResults.encode'),
-      copyWaitMs: totalDuration('dispatch.copyResults.wait'),
-      mapResultsMs: totalDuration('dispatch.mapResults'),
-      processMatchesMs: totalDuration('dispatch.processMatches'),
-    },
-    copyBytes: {
-      totalBytes: totalCopyBytes,
-      maxBytesPerDispatch: maxCopyBytes,
-      avgBytesPerDispatch: copySpans.length > 0 ? totalCopyBytes / copySpans.length : 0,
-    },
-  } as const;
 }
 
-function createRunner(options: WebGpuSeedSearchRunnerOptions) {
-  return createWebGpuSeedSearchRunner(options);
+interface EngineProfilingStats {
+  ensures: EngineEnsureEvent[];
+  buffers: EngineBufferEvent[];
+  dispatches: EngineDispatchEvent[];
 }
 
-function buildCallbacks(results: InitialSeedResult[], progressSteps: number[]) {
+interface ProfilingSummaryRow {
+  scenario: string;
+  workgroupSize: number;
+  totalMessages: number;
+  totalSegments: number;
+  totalWorkgroups: number;
+  targetSeeds: number;
+  runtimeMs: number;
+  throughputPerSecond: number;
+  matchesFound: number;
+  progressEvents: number;
+  segmentMinMessages: number;
+  segmentMaxMessages: number;
+  segmentAvgMessages: number;
+  pipelineReconfigurations: number;
+  configBufferRebuilds: number;
+  matchBufferRebuilds: number;
+  readbackBufferRebuilds: number;
+  targetBufferRebuilds: number;
+  dispatchTotalMs: number;
+  dispatchSetupMs: number;
+  dispatchGpuMs: number;
+  dispatchReadbackMs: number;
+  dispatchCount: number;
+}
+
+const nowMs = (): number => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+function createProfilingCollector(): ProfilingCollector {
   return {
-    onProgress: (progress: { currentStep: number }) => {
-      progressSteps.push(progress.currentStep);
+    results: [],
+    progressSteps: [],
+    timeline: [],
+  };
+}
+
+function createEngineProfilingStats(): EngineProfilingStats {
+  return {
+    ensures: [],
+    buffers: [],
+    dispatches: [],
+  };
+}
+
+function createEngineObserver(stats: EngineProfilingStats): SeedSearchEngineObserver {
+  return {
+    onEnsureConfigured: (event) => {
+      stats.ensures.push({
+        timestampMs: event.timestampMs,
+        pipelineRecreated: event.pipelineRecreated,
+        workgroupSize: event.workgroupSize,
+        candidateCapacity: event.candidateCapacity,
+      });
     },
-    onResult: (result: InitialSeedResult) => {
-      results.push(result);
+    onBufferRecreated: (event) => {
+      stats.buffers.push({
+        timestampMs: event.timestampMs,
+        kind: event.kind,
+        sizeBytes: event.sizeBytes,
+      });
+    },
+    onDispatchComplete: (event) => {
+      stats.dispatches.push({
+        timestampMs: event.timestampMs,
+        segmentId: event.segmentId,
+        messageCount: event.messageCount,
+        workgroupCount: event.workgroupCount,
+        matchCount: event.matchCount,
+        candidateCapacity: event.candidateCapacity,
+        timings: event.timings,
+      });
+    },
+  };
+}
+
+interface SegmentStats {
+  minMessages: number;
+  maxMessages: number;
+  avgMessages: number;
+}
+
+function summarizeSegmentStats(segments: readonly SeedSearchJobSegment[]): SegmentStats {
+  if (segments.length === 0) {
+    return { minMessages: 0, maxMessages: 0, avgMessages: 0 };
+  }
+  let min = Number.POSITIVE_INFINITY;
+  let max = 0;
+  let total = 0;
+  for (const segment of segments) {
+    const count = segment.messageCount;
+    if (count < min) {
+      min = count;
+    }
+    if (count > max) {
+      max = count;
+    }
+    total += count;
+  }
+  return {
+    minMessages: min,
+    maxMessages: max,
+    avgMessages: total / segments.length,
+  };
+}
+
+interface EngineStatsSummary {
+  pipelineReconfigurations: number;
+  configBufferRebuilds: number;
+  matchBufferRebuilds: number;
+  readbackBufferRebuilds: number;
+  targetBufferRebuilds: number;
+  dispatchTotalMs: number;
+  dispatchSetupMs: number;
+  dispatchGpuMs: number;
+  dispatchReadbackMs: number;
+  dispatchCount: number;
+}
+
+function summarizeEngineStats(stats: EngineProfilingStats): EngineStatsSummary {
+  const pipelineReconfigurations = stats.ensures.filter((event) => event.pipelineRecreated).length;
+  const configBufferRebuilds = stats.buffers.filter((event) => event.kind === 'config').length;
+  const matchBufferRebuilds = stats.buffers.filter((event) => event.kind === 'match-output').length;
+  const readbackBufferRebuilds = stats.buffers.filter((event) => event.kind === 'match-readback').length;
+  const targetBufferRebuilds = stats.buffers.filter((event) => event.kind === 'target').length;
+  const dispatchTotals = stats.dispatches.reduce(
+    (acc, dispatch) => {
+      acc.dispatchTotalMs += dispatch.timings.totalMs;
+      acc.dispatchSetupMs += dispatch.timings.setupMs;
+      acc.dispatchGpuMs += dispatch.timings.gpuMs;
+      acc.dispatchReadbackMs += dispatch.timings.readbackMs;
+      return acc;
+    },
+    {
+      dispatchTotalMs: 0,
+      dispatchSetupMs: 0,
+      dispatchGpuMs: 0,
+      dispatchReadbackMs: 0,
+    }
+  );
+
+  return {
+    pipelineReconfigurations,
+    configBufferRebuilds,
+    matchBufferRebuilds,
+    readbackBufferRebuilds,
+    targetBufferRebuilds,
+    dispatchTotalMs: dispatchTotals.dispatchTotalMs,
+    dispatchSetupMs: dispatchTotals.dispatchSetupMs,
+    dispatchGpuMs: dispatchTotals.dispatchGpuMs,
+    dispatchReadbackMs: dispatchTotals.dispatchReadbackMs,
+    dispatchCount: stats.dispatches.length,
+  };
+}
+
+function buildCallbacks(collector: ProfilingCollector): WebGpuRunnerCallbacks {
+  return {
+    onProgress: (progress) => {
+      collector.progressSteps.push(progress.currentStep);
+      collector.timeline.push({
+        eventIndex: collector.timeline.length,
+        timestampMs: nowMs(),
+        elapsedTime: progress.elapsedTime,
+        estimatedTimeRemaining: progress.estimatedTimeRemaining,
+        currentStep: progress.currentStep,
+        matchesFound: progress.matchesFound,
+      });
+    },
+    onResult: (result) => {
+      collector.results.push(result);
     },
     onComplete: () => {
       // noop
@@ -217,175 +321,236 @@ function buildCallbacks(results: InitialSeedResult[], progressSteps: number[]) {
   };
 }
 
-const WORKGROUP_CONFIGS = [
-  { label: 'wg-64', workgroupSize: 64 },
-  { label: 'wg-128', workgroupSize: 128 },
-  { label: 'wg-256', workgroupSize: 256 },
-] as const;
+function expectMonotonicSeries(series: number[]): void {
+  for (let i = 1; i < series.length; i += 1) {
+    expect(series[i]).toBeGreaterThanOrEqual(series[i - 1]);
+  }
+}
 
-const DISPATCH_LIMITS = [
-  { label: 'auto', maxMessagesPerDispatch: null },
-  { label: 'limit-256', maxMessagesPerDispatch: 256 },
-  { label: 'limit-2048', maxMessagesPerDispatch: 2048 },
-] as const;
+function recordProfilingSummary(
+  summaries: ProfilingSummaryRow[],
+  params: {
+    scenario: string;
+    workgroupSize: number;
+    jobMessages: number;
+    segments: number;
+    workgroups: number;
+    targetSeeds: number;
+    runtimeMs: number;
+    matchesFound: number;
+    progressEvents: number;
+    segmentStats: SegmentStats;
+    engineStats: EngineStatsSummary;
+  }
+): void {
+  const throughput = params.runtimeMs > 0 ? params.jobMessages / (params.runtimeMs / 1000) : 0;
+  summaries.push({
+    scenario: params.scenario,
+    workgroupSize: params.workgroupSize,
+    totalMessages: params.jobMessages,
+    totalSegments: params.segments,
+    totalWorkgroups: params.workgroups,
+    targetSeeds: params.targetSeeds,
+    runtimeMs: params.runtimeMs,
+    throughputPerSecond: throughput,
+    matchesFound: params.matchesFound,
+    progressEvents: params.progressEvents,
+    segmentMinMessages: params.segmentStats.minMessages,
+    segmentMaxMessages: params.segmentStats.maxMessages,
+    segmentAvgMessages: params.segmentStats.avgMessages,
+    pipelineReconfigurations: params.engineStats.pipelineReconfigurations,
+    configBufferRebuilds: params.engineStats.configBufferRebuilds,
+    matchBufferRebuilds: params.engineStats.matchBufferRebuilds,
+    readbackBufferRebuilds: params.engineStats.readbackBufferRebuilds,
+    targetBufferRebuilds: params.engineStats.targetBufferRebuilds,
+    dispatchTotalMs: params.engineStats.dispatchTotalMs,
+    dispatchSetupMs: params.engineStats.dispatchSetupMs,
+    dispatchGpuMs: params.engineStats.dispatchGpuMs,
+    dispatchReadbackMs: params.engineStats.dispatchReadbackMs,
+    dispatchCount: params.engineStats.dispatchCount,
+  });
+}
 
-const BUFFER_SLOT_CONFIGS = [
-  { label: 'slots-2', slots: 2 },
-  { label: 'slots-4', slots: 4 },
-] as const;
+function outputProfilingSummaries(rows: ProfilingSummaryRow[]): void {
+  if (rows.length === 0 || typeof console === 'undefined') {
+    return;
+  }
 
-const HOST_MEMORY_CONFIGS = [
-  { label: 'per-slot-default', perSlotMultiplier: 1 },
-  { label: 'per-slot-x2', perSlotMultiplier: 2 },
-] as const;
+  const formattedRows = rows.map((row) => ({
+    scenario: row.scenario,
+    workgroup: row.workgroupSize,
+    runtimeMs: row.runtimeMs.toFixed(1),
+    throughput: row.throughputPerSecond.toFixed(1),
+    messages: row.totalMessages,
+    segments: row.totalSegments,
+    workgroups: row.totalWorkgroups,
+    matches: row.matchesFound,
+    progressEvents: row.progressEvents,
+    targets: row.targetSeeds,
+    segmentMin: row.segmentMinMessages,
+    segmentMax: row.segmentMaxMessages,
+    segmentAvg: row.segmentAvgMessages.toFixed(1),
+    pipelineResets: row.pipelineReconfigurations,
+    configBuf: row.configBufferRebuilds,
+    matchBuf: row.matchBufferRebuilds,
+    readbackBuf: row.readbackBufferRebuilds,
+    targetBuf: row.targetBufferRebuilds,
+    dispatchCount: row.dispatchCount,
+    dispatchTotalMs: row.dispatchTotalMs.toFixed(1),
+    dispatchGpuMs: row.dispatchGpuMs.toFixed(1),
+    dispatchReadbackMs: row.dispatchReadbackMs.toFixed(1),
+  }));
 
-type DispatchLimitLabel = (typeof DISPATCH_LIMITS)[number]['label'];
+  if (typeof console.table === 'function') {
+    console.table(formattedRows);
+  }
+
+  for (const row of formattedRows) {
+    console.log(
+      `[profiling] scenario=${row.scenario} workgroup=${row.workgroup} ` +
+        `runtimeMs=${row.runtimeMs} throughput=${row.throughput} ` +
+        `messages=${row.messages} segments=${row.segments} workgroups=${row.workgroups} ` +
+        `segment[min/max/avg]=${row.segmentMin}/${row.segmentMax}/${row.segmentAvg} ` +
+        `pipelineResets=${row.pipelineResets} buf(config/match/readback/target)=${row.configBuf}/${row.matchBuf}/${row.readbackBuf}/${row.targetBuf} ` +
+        `dispatches=${row.dispatchCount} dispatchMs(total/gpu/readback)=${row.dispatchTotalMs}/${row.dispatchGpuMs}/${row.dispatchReadbackMs} ` +
+        `matches=${row.matches} progressEvents=${row.progressEvents} targets=${row.targets}`
+    );
+  }
+}
+
+const WORKGROUP_CONFIGS = [64, 128, 256] as const;
 
 interface ScenarioConfig {
   label: string;
   rangeSeconds: number;
   timer0Range: { min: number; max: number };
-  targetSeeds?: readonly number[];
-  targetSampleCount?: number;
-  dispatchLimitLabels?: readonly DispatchLimitLabel[];
+  sampleSeeds: number;
+  limitOverrides?: SeedSearchLimitPreferences;
+}
+
+function buildScenarioLimitPreferences(
+  scenario: ScenarioConfig,
+  workgroupSize: number
+): SeedSearchLimitPreferences | undefined {
+  const overrides = scenario.limitOverrides;
+  if (!overrides) {
+    return { workgroupSize };
+  }
+  return {
+    ...overrides,
+    workgroupSize: overrides.workgroupSize ?? workgroupSize,
+  };
 }
 
 const SECONDS_IN_YEAR = 365 * 24 * 60 * 60;
-const SECONDS_IN_50_YEARS = SECONDS_IN_YEAR * 50;
 
 const SCENARIOS: readonly ScenarioConfig[] = [
   {
-    label: 'baseline-600s',
-    rangeSeconds: 600,
-    timer0Range: { min: 0x10a0, max: 0x10a3 },
-    targetSampleCount: 6,
+    label: 'baseline-10year',
+    rangeSeconds: SECONDS_IN_YEAR * 10,
+    timer0Range: { min: 0x10a0, max: 0x10a0 },
+    sampleSeeds: 8,
   },
   {
-    label: 'ultra-50years',
-    rangeSeconds: SECONDS_IN_50_YEARS,
+    label: 'high-50year',
+    rangeSeconds: SECONDS_IN_YEAR * 50,
     timer0Range: { min: 0x10a0, max: 0x10a0 },
-    targetSampleCount: 8,
-    dispatchLimitLabels: ['auto'],
+    sampleSeeds: 8,
+  },
+  {
+    label: 'ultra-100year',
+    rangeSeconds: SECONDS_IN_YEAR * 100,
+    timer0Range: { min: 0x10a0, max: 0x10a0 },
+    sampleSeeds: 8,
   },
 ];
 
 describeWebGpu('webgpu seed search profiling instrumentation', () => {
+  let deviceContext: WebGpuDeviceContext;
+
+  beforeAll(async () => {
+    deviceContext = await createWebGpuDeviceContext();
+  });
+
   it(
-    'collects instrumentation spans from the production runner',
+    'collects controller-level progress across scenarios',
     async () => {
-      const estimatedHostLimitBytes = estimateHostMemoryLimitBytes();
-      const defaultHostLimitPerSlot = estimatedHostLimitBytes / DOUBLE_BUFFER_SET_COUNT;
-
+      const profilingSummaries: ProfilingSummaryRow[] = [];
       for (const scenario of SCENARIOS) {
-        for (const workgroup of WORKGROUP_CONFIGS) {
-          for (const bufferSlot of BUFFER_SLOT_CONFIGS) {
-            const hostMemoryConfigs = bufferSlot.slots === 2 ? HOST_MEMORY_CONFIGS : [HOST_MEMORY_CONFIGS[0]];
-            for (const hostMemory of hostMemoryConfigs) {
-              for (const dispatch of DISPATCH_LIMITS) {
-                if (scenario.dispatchLimitLabels && !scenario.dispatchLimitLabels.includes(dispatch.label)) {
-                  continue;
-                }
+        for (const workgroupSize of WORKGROUP_CONFIGS) {
+          const engineStats = createEngineProfilingStats();
+          const engine = createSeedSearchEngine(createEngineObserver(engineStats), deviceContext);
+          const controller = createSeedSearchController(engine);
+          const conditions = buildSearchConditions(scenario.rangeSeconds, scenario.timer0Range);
+          const limitPreferences = buildScenarioLimitPreferences(scenario, workgroupSize);
+          const jobLimits = deviceContext.deriveSearchJobLimits(limitPreferences);
+          const targetSeeds = selectTargetSeeds(conditions, jobLimits, scenario.sampleSeeds);
+          expect(targetSeeds.length).toBeGreaterThan(0);
 
-                const conditions = buildSearchConditions(scenario.rangeSeconds, scenario.timer0Range);
-                const context = buildSearchContext(conditions);
-                const sampleSeeds =
-                  scenario.targetSeeds !== undefined
-                    ? Array.from(new Set(scenario.targetSeeds))
-                    : computeSampleSeeds(conditions, context, scenario.targetSampleCount ?? 0);
-                const targetSeeds = sampleSeeds;
-                expect(targetSeeds.length).toBeGreaterThan(0);
+          const job = prepareSearchJob(conditions, targetSeeds, { limits: jobLimits });
 
-                const instrumentation = new CollectingInstrumentation();
-                const hostMemoryLimitPerSlotBytes = defaultHostLimitPerSlot * hostMemory.perSlotMultiplier;
-                const adjustedHostLimitBytes = Math.max(
-                  estimatedHostLimitBytes,
-                  hostMemoryLimitPerSlotBytes * bufferSlot.slots
-                );
-                const runnerOptions: WebGpuSeedSearchRunnerOptions = {
-                  workgroupSize: workgroup.workgroupSize,
-                  instrumentation,
-                  bufferSlots: bufferSlot.slots,
-                  hostMemoryLimitBytes: adjustedHostLimitBytes,
-                  hostMemoryLimitPerSlotBytes,
-                };
-                if (dispatch.maxMessagesPerDispatch !== null) {
-                  runnerOptions.maxMessagesPerDispatch = dispatch.maxMessagesPerDispatch;
-                }
-                const runner = createRunner(runnerOptions);
+          const collector = createProfilingCollector();
+          const callbacks = buildCallbacks(collector);
 
-                const results: InitialSeedResult[] = [];
-                const progressSteps: number[] = [];
-                const callbacks = buildCallbacks(results, progressSteps);
-
-                await runner.run({
-                  context,
-                  targetSeeds,
-                  callbacks,
-                });
-                runner.dispose();
-
-                expect(results.length).toBeGreaterThanOrEqual(targetSeeds.length);
-                const resultSeedSet = new Set(results.map((result) => result.seed));
-                expect(resultSeedSet.size).toBe(targetSeeds.length);
-                for (const seed of targetSeeds) {
-                  expect(resultSeedSet.has(seed)).toBe(true);
-                }
-
-                const summary = summarizeSpans(instrumentation.spans);
-                expect(summary.dispatch.batches).toBeGreaterThan(0);
-                expect(summary.dispatch.totalMessages).toBe(context.totalMessages);
-                if (dispatch.maxMessagesPerDispatch !== null) {
-                  expect(summary.dispatch.maxBatchMessages).toBeLessThanOrEqual(dispatch.maxMessagesPerDispatch);
-                } else {
-                  expect(summary.dispatch.maxBatchMessages).toBeGreaterThan(0);
-                  expect(summary.dispatch.maxBatchMessages).toBeLessThanOrEqual(context.totalMessages);
-                }
-                expect(summary.dispatch.dispatchMs).toBeGreaterThan(0);
-                expect(summary.stages.submitMs).toBeGreaterThanOrEqual(0);
-                expect(summary.stages.mapResultsMs).toBeGreaterThanOrEqual(0);
-
-                console.info('[runner-profile] summary', {
-                  scenario: scenario.label,
-                  workgroup: workgroup.label,
-                  dispatchLimit: dispatch.label,
-                  dispatchLimitOverride: dispatch.maxMessagesPerDispatch,
-                  bufferSlots: bufferSlot.slots,
-                  hostMemoryConfig: hostMemory.label,
-                  hostMemoryLimitPerSlotBytes,
-                  targetSeedCount: targetSeeds.length,
-                  batches: summary.dispatch.batches,
-                  totalMessages: summary.dispatch.totalMessages,
-                  maxBatchMessages: summary.dispatch.maxBatchMessages,
-                  avgBatchMessages: Number(summary.dispatch.avgBatchMessages.toFixed(2)),
-                  maxCandidateCapacity: summary.dispatch.maxCandidateCapacity,
-                  avgCandidateCapacity: Number(summary.dispatch.avgCandidateCapacity.toFixed(2)),
-                  maxWorkgroupCount: summary.dispatch.maxWorkgroupCount,
-                  avgWorkgroupCount: Number(summary.dispatch.avgWorkgroupCount.toFixed(2)),
-                  dispatchMs: Number(summary.dispatch.dispatchMs.toFixed(3)),
-                  throughputPerSecond: Number(summary.dispatch.throughputPerSecond.toFixed(2)),
-                  avgPerMessageNs: Number(summary.dispatch.avgPerMessageNs.toFixed(2)),
-                  submitMs: Number(summary.stages.submitMs.toFixed(3)),
-                  submitEncodeMs: Number(summary.stages.submitEncodeMs.toFixed(3)),
-                  submitWaitMs: Number(summary.stages.submitWaitMs.toFixed(3)),
-                  mapCountMs: Number(summary.stages.mapCountMs.toFixed(3)),
-                  copyMs: Number(summary.stages.copyMs.toFixed(3)),
-                  copyEncodeMs: Number(summary.stages.copyEncodeMs.toFixed(3)),
-                  copyWaitMs: Number(summary.stages.copyWaitMs.toFixed(3)),
-                  mapResultsMs: Number(summary.stages.mapResultsMs.toFixed(3)),
-                  processMatchesMs: Number(summary.stages.processMatchesMs.toFixed(3)),
-                  copyTotalBytes: summary.copyBytes.totalBytes,
-                  copyMaxBytes: summary.copyBytes.maxBytesPerDispatch,
-                  copyAvgBytes: Number(summary.copyBytes.avgBytesPerDispatch.toFixed(2)),
-                });
-
-                expect(progressSteps.length).toBeGreaterThan(0);
-                expect(progressSteps[progressSteps.length - 1]).toBe(context.totalMessages);
-              }
-            }
+          const startTimestamp = nowMs();
+          try {
+            await controller.run(job, callbacks);
+          } finally {
+            engine.dispose();
           }
+          const runtimeMs = nowMs() - startTimestamp;
+
+          const { results, progressSteps, timeline } = collector;
+
+          expect(results.length).toBeGreaterThanOrEqual(targetSeeds.length);
+          const seedSet = new Set(results.map((result) => result.seed));
+          for (const seed of targetSeeds) {
+            expect(seedSet.has(seed)).toBe(true);
+          }
+
+          expect(progressSteps.length).toBeGreaterThan(0);
+          expect(progressSteps[progressSteps.length - 1]).toBe(job.summary.totalMessages);
+
+          expect(timeline.length).toBe(progressSteps.length);
+          expect(timeline.length).toBeGreaterThan(0);
+          expect(timeline[0]?.currentStep).toBe(0);
+          const lastSnapshot = timeline[timeline.length - 1]!;
+          expect(lastSnapshot.currentStep).toBe(job.summary.totalMessages);
+          expect(lastSnapshot.estimatedTimeRemaining).toBe(0);
+          expect(lastSnapshot.matchesFound).toBe(results.length);
+          expect(lastSnapshot.elapsedTime).toBeGreaterThan(0);
+
+          expectMonotonicSeries(progressSteps);
+          expectMonotonicSeries(timeline.map((entry) => entry.timestampMs));
+          expectMonotonicSeries(timeline.map((entry) => entry.elapsedTime));
+          expectMonotonicSeries(timeline.map((entry) => entry.matchesFound));
+
+          const elapsedDelta = Math.abs(lastSnapshot.elapsedTime - runtimeMs);
+          const allowedDelta = Math.max(1500, runtimeMs * 0.25);
+          expect(elapsedDelta).toBeLessThanOrEqual(allowedDelta);
+
+          const totalWorkgroups = job.segments.reduce((sum, segment) => sum + segment.workgroupCount, 0);
+          const segmentStats = summarizeSegmentStats(job.segments);
+          const engineSummary = summarizeEngineStats(engineStats);
+          recordProfilingSummary(profilingSummaries, {
+            scenario: scenario.label,
+            workgroupSize,
+            jobMessages: job.summary.totalMessages,
+            segments: job.summary.totalSegments,
+            workgroups: totalWorkgroups,
+            targetSeeds: targetSeeds.length,
+            runtimeMs,
+            matchesFound: results.length,
+            progressEvents: progressSteps.length,
+            segmentStats,
+            engineStats: engineSummary,
+          });
         }
       }
+
+      outputProfilingSummaries(profilingSummaries);
+      expect(profilingSummaries).toHaveLength(SCENARIOS.length * WORKGROUP_CONFIGS.length);
     },
-    180_000
+    120_000
   );
 });

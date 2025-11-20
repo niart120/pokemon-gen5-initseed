@@ -33,6 +33,7 @@ struct GeneratedConfig {
   minute_range_count : u32,
   second_range_start : u32,
   second_range_count : u32,
+  workgroups_per_dispatch_y : u32,
 };
 
 struct TargetSeedBuffer {
@@ -157,7 +158,8 @@ fn sha1_generate(
   @builtin(global_invocation_id) global_id : vec3<u32>
 ) {
 
-  let global_linear_index = global_id.x;
+  let invocations_per_y = max(config.groups_per_dispatch, 1u) * max(config.configured_workgroup_size, 1u);
+  let global_linear_index = global_id.x + global_id.y * invocations_per_y;
   let is_active = global_linear_index < config.message_count;
   var seed : u32 = 0u;
   var matched = false;

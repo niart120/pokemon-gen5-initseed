@@ -1,78 +1,6 @@
 import type { SearchConditions, InitialSeedResult } from '@/types/search';
 import type { WorkerProgressMessage } from '@/types/callbacks';
-
-export interface WebGpuTimePlan {
-  dayCount: number;
-  combosPerDay: number;
-  hourRangeStart: number;
-  hourRangeCount: number;
-  minuteRangeStart: number;
-  minuteRangeCount: number;
-  secondRangeStart: number;
-  secondRangeCount: number;
-  startDayTimestampMs: number;
-}
-
-export interface GpuSha1WorkloadConfig {
-  startSecondsSince2000: number;
-  rangeSeconds: number;
-  timer0Min: number;
-  timer0Max: number;
-  timer0Count: number;
-  vcountMin: number;
-  vcountMax: number;
-  vcountCount: number;
-  totalMessages: number;
-  hardwareType: number;
-  macLower: number;
-  data7Swapped: number;
-  keyInputSwapped: number;
-  nazoSwapped: Uint32Array;
-  startYear: number;
-  startDayOfYear: number;
-  startSecondOfDay: number;
-  startDayOfWeek: number;
-  dayCount: number;
-  hourRangeStart: number;
-  hourRangeCount: number;
-  minuteRangeStart: number;
-  minuteRangeCount: number;
-  secondRangeStart: number;
-  secondRangeCount: number;
-}
-
-export interface WebGpuSegment {
-  index: number;
-  baseOffset: number;
-  timer0Min: number;
-  timer0Max: number;
-  timer0Count: number;
-  vcount: number;
-  rangeSeconds: number;
-  totalMessages: number;
-  keyCode: number;
-  config: GpuSha1WorkloadConfig;
-}
-
-export interface WebGpuSearchContext {
-  conditions: SearchConditions;
-  startDate: Date;
-  startTimestampMs: number;
-  rangeSeconds: number;
-  totalMessages: number;
-  segments: WebGpuSegment[];
-  timePlan: WebGpuTimePlan;
-}
-
-export interface WebGpuDispatchPlan {
-  baseOffset: number;
-  messageCount: number;
-}
-
-export interface WebGpuBatchPlan {
-  maxMessagesPerDispatch: number;
-  dispatches: WebGpuDispatchPlan[];
-}
+import type { SearchTimePlan } from '@/lib/search/time/time-plan';
 
 export type WebGpuRunnerProgress = WorkerProgressMessage;
 
@@ -86,31 +14,51 @@ export interface WebGpuRunnerCallbacks {
   onStopped: (message: string, finalProgress: WebGpuRunnerProgress) => void;
 }
 
-export interface WebGpuRunRequest {
-  context: WebGpuSearchContext;
-  targetSeeds: number[];
-  callbacks: WebGpuRunnerCallbacks;
-  signal?: AbortSignal;
+export interface SeedSearchJobSegment {
+  id: string;
+  keyCode: number;
+  timer0Min: number;
+  timer0Max: number;
+  timer0Count: number;
+  vcountMin: number;
+  vcountCount: number;
+  rangeSeconds: number;
+  messageCount: number;
+  localMessageOffset: number;
+  globalMessageOffset: number;
+  baseTimer0Index: number;
+  baseVcountIndex: number;
+  baseSecondOffset: number;
+  workgroupCount: number;
+  workgroupCountX: number;
+  workgroupCountY: number;
+  configWords: Uint32Array;
 }
 
-export type WebGpuRunnerSpanKind =
-  | 'planner.computePlan'
-  | 'dispatch'
-  | 'dispatch.submit'
-  | 'dispatch.submit.encode'
-  | 'dispatch.submit.wait'
-  | 'dispatch.mapMatchCount'
-  | 'dispatch.copyResults'
-  | 'dispatch.copyResults.encode'
-  | 'dispatch.copyResults.wait'
-  | 'dispatch.mapResults'
-  | 'dispatch.processMatches';
-
-export interface WebGpuRunnerSpanContext {
-  kind: WebGpuRunnerSpanKind;
-  metadata: Record<string, unknown>;
+export interface SeedSearchJobSummary {
+  totalMessages: number;
+  totalSegments: number;
+  targetSeedCount: number;
+  rangeSeconds: number;
 }
 
-export interface WebGpuRunnerInstrumentation {
-  trace<T>(context: WebGpuRunnerSpanContext, operation: () => Promise<T>): Promise<T>;
+export interface SeedSearchJobLimits {
+  workgroupSize: number;
+  maxWorkgroupsPerDispatch: number;
+  maxWorkgroupsPerDispatchY: number;
+  candidateCapacityPerDispatch: number;
+  maxMessagesPerDispatch: number;
+}
+
+export interface SeedSearchJobOptions {
+  limits: SeedSearchJobLimits;
+}
+
+export interface SeedSearchJob {
+  segments: SeedSearchJobSegment[];
+  targetSeeds: Uint32Array;
+  timePlan: SearchTimePlan;
+  summary: SeedSearchJobSummary;
+  limits: SeedSearchJobLimits;
+  conditions: SearchConditions;
 }

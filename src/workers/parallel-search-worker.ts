@@ -7,12 +7,8 @@ import type { TimerState } from '../types/callbacks';
 import { SeedCalculator } from '../lib/core/seed-calculator';
 import { toMacUint8Array } from '@/lib/utils/mac-address';
 import { countValidKeyCombinations, keyMaskToKeyCode } from '@/lib/utils/key-input';
-import {
-  advanceByAllowedSeconds,
-  countAllowedSecondsInInterval,
-  isDateWithinTimePlan,
-  resolveTimePlan,
-} from '@/lib/webgpu/seed-search/time-plan';
+import { countAllowedSecondsInInterval, isDateWithinTimePlan, resolveTimePlan } from '@/lib/search/time/time-plan';
+import { iterateAllowedSubChunks } from '@/lib/search/time/sub-chunk-planner';
 import type { SearchConditions, InitialSeedResult } from '../types/search';
 import type { ParallelWorkerRequest, ParallelWorkerResponse, WorkerChunk } from '../types/parallel';
 import type { Hardware } from '../types/rom';
@@ -244,8 +240,13 @@ async function processChunkWithWasm(
     // 初期進捗報告
     reportProgress(0, totalOperations, 0, lastProcessedIso);
 
-    let subChunkStartMs = chunkStartMs;
-    while (subChunkStartMs < chunkEndExclusiveMs) {
+    for (const window of iterateAllowedSubChunks({
+      plan,
+      chunkStartMs,
+      chunkEndExclusiveMs,
+      desiredAllowedSeconds,
+      maxSecondsPerChunk: maxSubChunkSeconds,
+    })) {
       if (searchState.shouldStop) {
         break;
       }
@@ -270,28 +271,10 @@ async function processChunkWithWasm(
         break;
       }
 
-      const maxSubChunkEndMs = Math.min(subChunkStartMs + maxSubChunkSeconds * 1000, chunkEndExclusiveMs);
-      const { endTimestampMs, countedSeconds, lastAllowedTimestampMs } = advanceByAllowedSeconds(
-        plan,
-        subChunkStartMs,
-        maxSubChunkEndMs,
-        desiredAllowedSeconds
-      );
-
-      if (endTimestampMs <= subChunkStartMs) {
-        break;
-      }
-
-      if (countedSeconds === 0) {
-        subChunkStartMs = endTimestampMs;
-        continue;
-      }
-
-      const subChunkStart = new Date(subChunkStartMs);
-      const subChunkRange = Math.floor((endTimestampMs - subChunkStartMs) / 1000);
+      const subChunkStart = new Date(window.startTimestampMs);
+      const subChunkRange = window.durationSeconds;
 
       if (subChunkRange <= 0) {
-        subChunkStartMs = endTimestampMs;
         continue;
       }
 
@@ -357,13 +340,11 @@ async function processChunkWithWasm(
         });
       }
 
-      processedOperations += countedSeconds * operationsPerSecond;
-      if (lastAllowedTimestampMs !== undefined) {
-        lastProcessedIso = new Date(lastAllowedTimestampMs).toISOString();
+      processedOperations += window.countedSeconds * operationsPerSecond;
+      if (window.lastAllowedTimestampMs !== undefined) {
+        lastProcessedIso = new Date(window.lastAllowedTimestampMs).toISOString();
       }
       reportProgress(processedOperations, totalOperations, allResults.length, lastProcessedIso);
-
-      subChunkStartMs = endTimestampMs;
     }
 
     return allResults;

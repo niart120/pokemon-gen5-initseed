@@ -1,39 +1,47 @@
 import { describe, it, expect } from 'vitest';
 import { SeedCalculator } from '@/lib/core/seed-calculator';
 import { SHA1 } from '@/lib/core/sha1';
-import { buildSearchContext } from '@/lib/webgpu/seed-search/message-encoder';
-import { getDateFromTimePlan } from '@/lib/webgpu/seed-search/time-plan';
+import { prepareSearchJob } from '@/lib/webgpu/seed-search/prepare-search-job';
+import { getDateFromTimePlan } from '@/lib/search/time/time-plan';
+import type { SeedSearchJobSegment } from '@/lib/webgpu/seed-search/types';
 import type { SearchConditions } from '@/types/search';
-import type { WebGpuSegment } from '@/lib/webgpu/seed-search/types';
+import { createTestSeedSearchJobLimits } from './seed-search-job-limit-helpers';
 
-function simulateGpuIndices(segment: WebGpuSegment, messageIndex: number, context: WebGpuSearchContext) {
+const TEST_LIMITS = createTestSeedSearchJobLimits();
+
+interface SimulatedIndices {
+  timer0: number;
+  vcount: number;
+  timeCombinationIndex: number;
+  datetime: Date;
+}
+
+function simulateGpuIndices(
+  segment: SeedSearchJobSegment,
+  messageIndex: number,
+  timePlanStart: (timeIndex: number) => Date
+): SimulatedIndices {
   const safeRangeSeconds = Math.max(segment.rangeSeconds, 1);
-  const safeVcountCount = Math.max(segment.config.vcountCount, 1);
+  const safeVcountCount = Math.max(segment.vcountCount, 1);
   const messagesPerVcount = safeRangeSeconds;
   const messagesPerTimer0 = messagesPerVcount * safeVcountCount;
 
-  const timer0Index = Math.floor(messageIndex / messagesPerTimer0);
-  const remainderAfterTimer0 = messageIndex - timer0Index * messagesPerTimer0;
+  const absoluteOffset =
+    segment.baseTimer0Index * messagesPerTimer0 +
+    segment.baseVcountIndex * messagesPerVcount +
+    segment.baseSecondOffset +
+    messageIndex;
+
+  const timer0Index = Math.floor(absoluteOffset / messagesPerTimer0);
+  const remainderAfterTimer0 = absoluteOffset - timer0Index * messagesPerTimer0;
   const vcountIndex = Math.floor(remainderAfterTimer0 / messagesPerVcount);
   const timeCombinationIndex = remainderAfterTimer0 - vcountIndex * messagesPerVcount;
 
-  const timer0 = segment.config.timer0Min + timer0Index;
-  const vcount = segment.config.vcountMin + vcountIndex;
+  const timer0 = segment.timer0Min + timer0Index;
+  const vcount = segment.vcountMin + vcountIndex;
+  const datetime = timePlanStart(timeCombinationIndex);
 
-  const datetime = getDateFromTimePlan(context.timePlan, timeCombinationIndex);
-
-  return {
-    timer0,
-    vcount,
-    timeCombinationIndex,
-    year: datetime.getFullYear(),
-    month: datetime.getMonth() + 1,
-    day: datetime.getDate(),
-    hour: datetime.getHours(),
-    minute: datetime.getMinutes(),
-    second: datetime.getSeconds(),
-    dayOfWeek: datetime.getDay(),
-  };
+  return { timer0, vcount, timeCombinationIndex, datetime };
 }
 
 function swap32(value: number): number {
@@ -84,27 +92,39 @@ function toBcd(value: number): number {
   return ((tens << 4) | ones) >>> 0;
 }
 
+function decodeSegmentConfig(segment: SeedSearchJobSegment) {
+  const words = segment.configWords;
+  return {
+    macLower: words[11] >>> 0,
+    data7Swapped: words[12] >>> 0,
+    keyInputSwapped: words[13] >>> 0,
+    nazoSwapped: words.slice(15, 20),
+  };
+}
+
 function buildGpuMessage(
-  segment: WebGpuSegment,
-  simulated: ReturnType<typeof simulateGpuIndices>,
+  segment: SeedSearchJobSegment,
+  simulated: SimulatedIndices,
   hardware: SearchConditions['hardware']
 ): number[] {
-  const dateYear = simulated.year % 100;
+  const config = decodeSegmentConfig(segment);
+  const datetime = simulated.datetime;
+  const dateYear = datetime.getFullYear() % 100;
   const dateWord =
     (toBcd(dateYear) << 24) |
-    (toBcd(simulated.month) << 16) |
-    (toBcd(simulated.day) << 8) |
-    toBcd(simulated.dayOfWeek);
+    (toBcd(datetime.getMonth() + 1) << 16) |
+    (toBcd(datetime.getDate()) << 8) |
+    toBcd(datetime.getDay());
 
   const isPmHardware = hardware === 'DS' || hardware === 'DS_LITE';
-  const pmFlag = isPmHardware && simulated.hour >= 12 ? 1 : 0;
+  const pmFlag = isPmHardware && datetime.getHours() >= 12 ? 1 : 0;
   const timeWord =
     (pmFlag << 30) |
-    (toBcd(simulated.hour) << 24) |
-    (toBcd(simulated.minute) << 16) |
-    (toBcd(simulated.second) << 8);
+    (toBcd(datetime.getHours()) << 24) |
+    (toBcd(datetime.getMinutes()) << 16) |
+    (toBcd(datetime.getSeconds()) << 8);
 
-  const nazo = segment.config.nazoSwapped;
+  const nazo = config.nazoSwapped;
 
   return [
     nazo[0]!,
@@ -113,13 +133,13 @@ function buildGpuMessage(
     nazo[3]!,
     nazo[4]!,
     swap32(((simulated.vcount << 16) | simulated.timer0) >>> 0),
-    segment.config.macLower >>> 0,
-    segment.config.data7Swapped >>> 0,
+    config.macLower >>> 0,
+    config.data7Swapped >>> 0,
     dateWord >>> 0,
     timeWord >>> 0,
     0,
     0,
-    segment.config.keyInputSwapped >>> 0,
+    config.keyInputSwapped >>> 0,
     0x80000000,
     0,
     0x000001a0,
@@ -161,41 +181,42 @@ describe('webgpu seed search message mapping', () => {
     macAddress: [0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e],
   };
 
-  const context = buildSearchContext(conditions);
+  const job = prepareSearchJob(conditions, undefined, { limits: TEST_LIMITS });
+  const primarySegment = job.segments[0]!;
+  const timePlanResolver = (timeIndex: number) => getDateFromTimePlan(job.timePlan, timeIndex);
 
   it('matches CPU enumeration order', () => {
-    const segment = context.segments[0];
     const expectedOrder: Array<{ timer0: number; vcount: number; timeIndex: number }> = [];
 
-    for (let timer0 = segment.timer0Min; timer0 <= segment.timer0Max; timer0 += 1) {
-      for (let secondOffset = 0; secondOffset < segment.rangeSeconds; secondOffset += 1) {
+    for (let timer0 = primarySegment.timer0Min; timer0 <= primarySegment.timer0Max; timer0 += 1) {
+      for (let secondOffset = 0; secondOffset < primarySegment.rangeSeconds; secondOffset += 1) {
         expectedOrder.push({
           timer0,
-          vcount: segment.vcount,
+          vcount: primarySegment.vcountMin,
           timeIndex: secondOffset,
         });
       }
     }
 
-    for (let index = 0; index < segment.totalMessages; index += 1) {
+    for (let index = 0; index < primarySegment.messageCount; index += 1) {
       const expected = expectedOrder[index]!;
-      const simulated = simulateGpuIndices(segment, index, context);
+      const simulated = simulateGpuIndices(primarySegment, index, timePlanResolver);
 
       expect(simulated.timer0).toBe(expected.timer0);
       expect(simulated.vcount).toBe(expected.vcount);
       expect(simulated.timeCombinationIndex).toBe(expected.timeIndex);
 
-      const expectedDatetime = getDateFromTimePlan(context.timePlan, simulated.timeCombinationIndex);
-      expect(expectedDatetime.getFullYear()).toBe(simulated.year);
-      expect(expectedDatetime.getMonth() + 1).toBe(simulated.month);
-      expect(expectedDatetime.getDate()).toBe(simulated.day);
-      expect(expectedDatetime.getHours()).toBe(simulated.hour);
-      expect(expectedDatetime.getMinutes()).toBe(simulated.minute);
-      expect(expectedDatetime.getSeconds()).toBe(simulated.second);
-      expect(expectedDatetime.getDay()).toBe(simulated.dayOfWeek);
+      const expectedDatetime = simulated.datetime;
+      expect(simulated.datetime.getTime()).toBe(expectedDatetime.getTime());
 
-      const message = calculator.generateMessage(conditions, simulated.timer0, simulated.vcount, expectedDatetime, segment.keyCode);
-      const gpuMessage = buildGpuMessage(segment, simulated, conditions.hardware);
+      const message = calculator.generateMessage(
+        conditions,
+        simulated.timer0,
+        simulated.vcount,
+        expectedDatetime,
+        primarySegment.keyCode
+      );
+      const gpuMessage = buildGpuMessage(primarySegment, simulated, conditions.hardware);
       expect(gpuMessage).toEqual(message);
       const hash = sha1.calculateHash(message);
       const seedCpu = calculator.calculateSeed(message).seed;
@@ -228,11 +249,13 @@ describe('webgpu seed search message mapping', () => {
       },
     };
 
-    const rolloverContext = buildSearchContext(rolloverConditions);
-    const rolloverSegment = rolloverContext.segments[0];
-    for (let index = 0; index < rolloverSegment.totalMessages; index += 1) {
-      const simulated = simulateGpuIndices(rolloverSegment, index, rolloverContext);
-      const expectedDatetime = getDateFromTimePlan(rolloverContext.timePlan, simulated.timeCombinationIndex);
+    const rolloverJob = prepareSearchJob(rolloverConditions, undefined, { limits: TEST_LIMITS });
+    const rolloverSegment = rolloverJob.segments[0]!;
+    const resolveRolloverTime = (timeIndex: number) => getDateFromTimePlan(rolloverJob.timePlan, timeIndex);
+
+    for (let index = 0; index < rolloverSegment.messageCount; index += 1) {
+      const simulated = simulateGpuIndices(rolloverSegment, index, resolveRolloverTime);
+      const expectedDatetime = simulated.datetime;
       const message = calculator.generateMessage(
         rolloverConditions,
         simulated.timer0,

@@ -1,5 +1,4 @@
 import type { SearchConditions, TimeFieldRange } from '@/types/search';
-import type { WebGpuTimePlan } from './types';
 
 const MS_PER_SECOND = 1000;
 const SECONDS_PER_MINUTE = 60;
@@ -15,8 +14,20 @@ interface ValidatedFieldRange {
   count: number;
 }
 
+export interface SearchTimePlan {
+  dayCount: number;
+  combosPerDay: number;
+  hourRangeStart: number;
+  hourRangeCount: number;
+  minuteRangeStart: number;
+  minuteRangeCount: number;
+  secondRangeStart: number;
+  secondRangeCount: number;
+  startDayTimestampMs: number;
+}
+
 export interface ResolvedTimePlan {
-  plan: WebGpuTimePlan;
+  plan: SearchTimePlan;
   firstCombinationDate: Date;
 }
 
@@ -28,7 +39,7 @@ interface DailyWindowBounds {
 export function resolveTimePlan(conditions: SearchConditions): ResolvedTimePlan {
   const timeRange = conditions.timeRange;
   if (!timeRange) {
-    throw new Error('timeRange is required for WebGPU search');
+    throw new Error('timeRange is required for seed search');
   }
 
   const hourRange = validateFieldRange('hour', timeRange.hour, 0, HOURS_PER_DAY - 1);
@@ -78,7 +89,7 @@ export function resolveTimePlan(conditions: SearchConditions): ResolvedTimePlan 
     0
   );
 
-  const plan: WebGpuTimePlan = {
+  const plan: SearchTimePlan = {
     dayCount,
     combosPerDay,
     hourRangeStart: hourRange.start,
@@ -96,7 +107,7 @@ export function resolveTimePlan(conditions: SearchConditions): ResolvedTimePlan 
   };
 }
 
-export function getDateFromTimePlan(plan: WebGpuTimePlan, timeIndex: number): Date {
+export function getDateFromTimePlan(plan: SearchTimePlan, timeIndex: number): Date {
   const safeMinuteCount = Math.max(plan.minuteRangeCount, 1);
   const safeSecondCount = Math.max(plan.secondRangeCount, 1);
   const combosPerDay = Math.max(plan.combosPerDay, 1);
@@ -126,7 +137,7 @@ export function getDateFromTimePlan(plan: WebGpuTimePlan, timeIndex: number): Da
 }
 
 export function countAllowedSecondsInInterval(
-  plan: WebGpuTimePlan,
+  plan: SearchTimePlan,
   startTimestampMs: number,
   endTimestampMsExclusive: number
 ): number {
@@ -162,13 +173,14 @@ export function countAllowedSecondsInInterval(
 }
 
 export function advanceByAllowedSeconds(
-  plan: WebGpuTimePlan,
+  plan: SearchTimePlan,
   startTimestampMs: number,
   endTimestampMsExclusive: number,
   targetAllowedSeconds: number
 ): {
   endTimestampMs: number;
   countedSeconds: number;
+  firstAllowedTimestampMs?: number;
   lastAllowedTimestampMs?: number;
 } {
   if (endTimestampMsExclusive <= startTimestampMs) {
@@ -179,6 +191,7 @@ export function advanceByAllowedSeconds(
   const bounds = getDailyWindowBounds(plan);
   let cursor = startTimestampMs;
   let counted = 0;
+  let firstAllowed: number | undefined;
   let lastAllowed: number | undefined;
 
   while (cursor < endTimestampMsExclusive) {
@@ -201,6 +214,9 @@ export function advanceByAllowedSeconds(
 
       if (needed > 0) {
         counted += needed;
+        if (firstAllowed === undefined) {
+          firstAllowed = overlapStartMs;
+        }
         lastAllowed = overlapStartMs + (needed - 1) * MS_PER_SECOND;
         const consumedEndMs = overlapStartMs + needed * MS_PER_SECOND;
 
@@ -208,6 +224,7 @@ export function advanceByAllowedSeconds(
           return {
             endTimestampMs: consumedEndMs,
             countedSeconds: counted,
+            firstAllowedTimestampMs: firstAllowed,
             lastAllowedTimestampMs: lastAllowed,
           };
         }
@@ -223,11 +240,12 @@ export function advanceByAllowedSeconds(
   return {
     endTimestampMs: cursor,
     countedSeconds: counted,
+    firstAllowedTimestampMs: firstAllowed,
     lastAllowedTimestampMs: lastAllowed,
   };
 }
 
-export function isDateWithinTimePlan(date: Date, plan: WebGpuTimePlan): boolean {
+export function isDateWithinTimePlan(date: Date, plan: SearchTimePlan): boolean {
   const secondOfDay =
     date.getHours() * SECONDS_PER_HOUR + date.getMinutes() * SECONDS_PER_MINUTE + date.getSeconds();
   const bounds = getDailyWindowBounds(plan);
@@ -261,7 +279,7 @@ function validateFieldRange(
   };
 }
 
-function getDailyWindowBounds(plan: WebGpuTimePlan): DailyWindowBounds {
+function getDailyWindowBounds(plan: SearchTimePlan): DailyWindowBounds {
   const startSecond =
     plan.hourRangeStart * SECONDS_PER_HOUR +
     plan.minuteRangeStart * SECONDS_PER_MINUTE +
@@ -271,7 +289,7 @@ function getDailyWindowBounds(plan: WebGpuTimePlan): DailyWindowBounds {
   return { startSecond, endSecondExclusive };
 }
 
-function getDayBounds(plan: WebGpuTimePlan, timestampMs: number): { dayStartMs: number; dayEndMs: number } {
+function getDayBounds(plan: SearchTimePlan, timestampMs: number): { dayStartMs: number; dayEndMs: number } {
   const relativeMs = timestampMs - plan.startDayTimestampMs;
   const dayIndex = Math.floor(relativeMs / MS_PER_DAY);
   const dayStartMs = plan.startDayTimestampMs + dayIndex * MS_PER_DAY;

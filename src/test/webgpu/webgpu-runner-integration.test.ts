@@ -1,55 +1,27 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { SeedCalculator } from '@/lib/core/seed-calculator';
-import { buildSearchContext } from '@/lib/webgpu/seed-search/message-encoder';
-import { getDateFromTimePlan } from '@/lib/webgpu/seed-search/time-plan';
-import {
-  createWebGpuSeedSearchRunner,
-  isWebGpuSeedSearchSupported,
-  type WebGpuSeedSearchRunner,
-} from '@/lib/webgpu/seed-search/runner';
-import type { WebGpuRunnerCallbacks, WebGpuRunnerProgress, WebGpuSearchContext } from '@/lib/webgpu/seed-search/types';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { prepareSearchJob } from '@/lib/webgpu/seed-search/prepare-search-job';
+import { createSeedSearchController } from '@/lib/webgpu/seed-search/seed-search-controller';
+import type { SeedSearchController } from '@/lib/webgpu/seed-search/seed-search-controller';
+import { isWebGpuSeedSearchSupported } from '@/lib/webgpu/seed-search/device-context';
+import type { WebGpuRunnerCallbacks, WebGpuRunnerProgress } from '@/lib/webgpu/seed-search/types';
+import { enumerateJobCpuBaseline, pickUniqueEntries } from './job-baseline-helpers';
+import type { CpuBaselineEntry } from './job-baseline-helpers';
 import type { InitialSeedResult, SearchConditions } from '@/types/search';
+import { createTestSeedSearchJobLimits } from './seed-search-job-limit-helpers';
 
 const hasWebGpu = isWebGpuSeedSearchSupported();
 const describeWebGpu = hasWebGpu ? describe : describe.skip;
-
-interface CpuBaselineEntry {
-  seed: number;
-  timer0: number;
-  vcount: number;
-  datetime: Date;
-}
-
-const calculator = new SeedCalculator();
-
-function enumerateCpuBaseline(conditions: SearchConditions, context: WebGpuSearchContext): CpuBaselineEntry[] {
-  const entries: CpuBaselineEntry[] = [];
-
-  for (const segment of context.segments) {
-    const rangeSeconds = Math.max(1, segment.rangeSeconds);
-    for (let timer0 = segment.timer0Min; timer0 <= segment.timer0Max; timer0 += 1) {
-      for (let secondOffset = 0; secondOffset < rangeSeconds; secondOffset += 1) {
-        const datetime = getDateFromTimePlan(context.timePlan, secondOffset);
-  const message = calculator.generateMessage(conditions, timer0, segment.vcount, datetime, segment.keyCode);
-        const { seed } = calculator.calculateSeed(message);
-        entries.push({ seed, timer0, vcount: segment.vcount, datetime });
-      }
-    }
-  }
-
-  return entries;
-}
+const TEST_LIMITS = createTestSeedSearchJobLimits({
+  workgroupSize: 64,
+  maxWorkgroupsPerDispatch: 2048,
+  candidateCapacityPerDispatch: 4096,
+});
 
 describeWebGpu('webgpu seed search runner integration', () => {
-  let runner: WebGpuSeedSearchRunner;
+  let controller: SeedSearchController;
 
-  beforeAll(async () => {
-    runner = createWebGpuSeedSearchRunner();
-    await runner.init();
-  });
-
-  afterAll(() => {
-    runner?.dispose();
+  beforeAll(() => {
+    controller = createSeedSearchController();
   });
 
   it(
@@ -87,20 +59,13 @@ describeWebGpu('webgpu seed search runner integration', () => {
         macAddress: [0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e],
       };
 
-      const context = buildSearchContext(conditions);
-      expect(context.totalMessages).toBeGreaterThan(0);
+      const baselineJob = prepareSearchJob(conditions, undefined, { limits: TEST_LIMITS });
+      expect(baselineJob.summary.totalMessages).toBeGreaterThan(0);
 
-      const baseline = enumerateCpuBaseline(conditions, context);
-      expect(baseline.length).toBe(context.totalMessages);
+      const baseline = enumerateJobCpuBaseline(conditions, baselineJob);
+      expect(baseline.length).toBe(baselineJob.summary.totalMessages);
 
-      const uniqueBySeed = new Map<number, CpuBaselineEntry>();
-      for (const entry of baseline) {
-        if (!uniqueBySeed.has(entry.seed)) {
-          uniqueBySeed.set(entry.seed, entry);
-        }
-      }
-
-      const uniqueEntries = Array.from(uniqueBySeed.values());
+      const uniqueEntries = pickUniqueEntries(baseline);
       expect(uniqueEntries.length).toBeGreaterThan(0);
 
       let targetEntries = uniqueEntries.filter((_, index) => index % 2 === 0);
@@ -115,6 +80,9 @@ describeWebGpu('webgpu seed search runner integration', () => {
       const expectedBySeed = new Map<number, CpuBaselineEntry>(targetEntries.map((entry) => [entry.seed, entry]));
       expect(targetSeeds.length).toBeGreaterThan(0);
       expect(targetSeeds.length).toBeLessThanOrEqual(uniqueEntries.length);
+
+      const job = prepareSearchJob(conditions, targetSeeds, { limits: TEST_LIMITS });
+      expect(job.summary.totalMessages).toBe(baselineJob.summary.totalMessages);
 
       const results: InitialSeedResult[] = [];
       const progressEvents: WebGpuRunnerProgress[] = [];
@@ -146,11 +114,7 @@ describeWebGpu('webgpu seed search runner integration', () => {
         },
       };
 
-      await runner.run({
-        context,
-        targetSeeds,
-        callbacks,
-      });
+      await controller.run(job, callbacks);
 
       expect(errors).toHaveLength(0);
       expect(stopped).toHaveLength(0);
@@ -175,8 +139,8 @@ describeWebGpu('webgpu seed search runner integration', () => {
 
       expect(progressEvents.length).toBeGreaterThan(0);
       const finalProgress = progressEvents[progressEvents.length - 1]!;
-      expect(finalProgress.currentStep).toBe(context.totalMessages);
-      expect(finalProgress.totalSteps).toBe(context.totalMessages);
+      expect(finalProgress.currentStep).toBe(job.summary.totalMessages);
+      expect(finalProgress.totalSteps).toBe(job.summary.totalMessages);
       expect(finalProgress.matchesFound).toBe(results.length);
     },
     60_000
