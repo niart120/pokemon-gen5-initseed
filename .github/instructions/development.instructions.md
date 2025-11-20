@@ -10,7 +10,8 @@ applyTo: "src/**/*.{ts,tsx}"
 ```typescript
 // ✅ 推奨: 直接WebAssemblyまたはTypeScriptフォールバック
 import { SeedCalculator } from '@/lib/core/seed-calculator';
-import { createWebGpuSeedSearchRunner } from '@/lib/webgpu/seed-search/runner';
+import { prepareSearchJob } from '@/lib/webgpu/seed-search/prepare-search-job';
+import { createSeedSearchController } from '@/lib/webgpu/seed-search/seed-search-controller';
 ```
 
 ### アーキテクチャ分離の原則
