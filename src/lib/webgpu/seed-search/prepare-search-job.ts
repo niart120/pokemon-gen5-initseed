@@ -29,9 +29,7 @@ interface KernelContext {
   hardwareType: number;
   startYear: number;
   startDayOfYear: number;
-  startSecondOfDay: number;
   startDayOfWeek: number;
-  dayCount: number;
   hourRangeStart: number;
   hourRangeCount: number;
   minuteRangeStart: number;
@@ -84,74 +82,55 @@ function buildSegments(context: KernelContext, limits: SeedSearchJobLimits): See
     const keyInputSwapped = swap32(keyCode >>> 0);
 
     for (const timerSegment of context.timer0Segments) {
-      const timer0Count = timerSegment.timer0Max - timerSegment.timer0Min + 1;
-      if (timer0Count <= 0) {
-        continue;
-      }
+      for (let timer0 = timerSegment.timer0Min; timer0 <= timerSegment.timer0Max; timer0 += 1) {
+        const vcount = timerSegment.vcount;
+        let remainingSeconds = context.rangeSeconds;
+        let baseSecondOffset = 0;
+        const timer0VcountSwapped = swap32(((vcount & 0xffff) << 16) | (timer0 & 0xffff));
 
-      const vcountCount = 1;
-      const totalMessagesForSegment = context.rangeSeconds * timer0Count;
-      let remaining = totalMessagesForSegment;
-      let localOffset = 0;
+        while (remainingSeconds > 0) {
+          const messageCount = Math.min(remainingSeconds, chunkSizeLimit);
+          const workgroupCount = computeWorkgroupCount(messageCount, limits);
+          const configWords = encodeConfigWords({
+            messageCount,
+            baseSecondOffset,
+            timer0VcountSwapped,
+            startDayOfWeek: context.startDayOfWeek,
+            macLower: context.macLower,
+            data7Swapped: context.data7Swapped,
+            keyInputSwapped,
+            hardwareType: context.hardwareType,
+            nazoSwapped: context.nazoSwapped,
+            startYear: context.startYear,
+            startDayOfYear: context.startDayOfYear,
+            hourRangeStart: context.hourRangeStart,
+            hourRangeCount: context.hourRangeCount,
+            minuteRangeStart: context.minuteRangeStart,
+            minuteRangeCount: context.minuteRangeCount,
+            secondRangeStart: context.secondRangeStart,
+            secondRangeCount: context.secondRangeCount,
+            groupsPerDispatch: workgroupCount,
+            workgroupSize: limits.workgroupSize,
+            candidateCapacity: limits.candidateCapacityPerDispatch,
+          });
 
-      while (remaining > 0) {
-        const messageCount = Math.min(remaining, chunkSizeLimit);
-        const workgroupCount = computeWorkgroupCount(messageCount, limits);
-        const baseIndices = computeBaseIndices(context.rangeSeconds, vcountCount, localOffset);
-        const configWords = encodeConfigWords({
-          messageCount,
-          baseTimer0Index: baseIndices.baseTimer0Index,
-          baseVcountIndex: baseIndices.baseVcountIndex,
-          baseSecondOffset: baseIndices.baseSecondOffset,
-          rangeSeconds: context.rangeSeconds,
-          timer0Min: timerSegment.timer0Min,
-          timer0Count,
-          vcountMin: timerSegment.vcount,
-          vcountCount,
-          startSecondOfDay: context.startSecondOfDay,
-          startDayOfWeek: context.startDayOfWeek,
-          macLower: context.macLower,
-          data7Swapped: context.data7Swapped,
-          keyInputSwapped,
-          hardwareType: context.hardwareType,
-          nazoSwapped: context.nazoSwapped,
-          startYear: context.startYear,
-          startDayOfYear: context.startDayOfYear,
-          dayCount: context.dayCount,
-          hourRangeStart: context.hourRangeStart,
-          hourRangeCount: context.hourRangeCount,
-          minuteRangeStart: context.minuteRangeStart,
-          minuteRangeCount: context.minuteRangeCount,
-          secondRangeStart: context.secondRangeStart,
-          secondRangeCount: context.secondRangeCount,
-          groupsPerDispatch: workgroupCount,
-          workgroupSize: limits.workgroupSize,
-          candidateCapacity: limits.candidateCapacityPerDispatch,
-        });
+          segments.push({
+            id: `seg-${segmentCounter}`,
+            keyCode,
+            timer0,
+            vcount,
+            messageCount,
+            baseSecondOffset,
+            globalMessageOffset: globalOffset,
+            workgroupCount,
+            configWords,
+          });
 
-        segments.push({
-          id: `seg-${segmentCounter}`,
-          keyCode,
-          timer0Min: timerSegment.timer0Min,
-          timer0Max: timerSegment.timer0Max,
-          timer0Count,
-          vcountMin: timerSegment.vcount,
-          vcountCount,
-          rangeSeconds: context.rangeSeconds,
-          messageCount,
-          localMessageOffset: localOffset,
-          globalMessageOffset: globalOffset,
-          baseTimer0Index: baseIndices.baseTimer0Index,
-          baseVcountIndex: baseIndices.baseVcountIndex,
-          baseSecondOffset: baseIndices.baseSecondOffset,
-          workgroupCount,
-          configWords,
-        });
-
-        remaining -= messageCount;
-        localOffset += messageCount;
-        globalOffset += messageCount;
-        segmentCounter += 1;
+          remainingSeconds -= messageCount;
+          baseSecondOffset += messageCount;
+          globalOffset += messageCount;
+          segmentCounter += 1;
+        }
       }
     }
   }
@@ -232,9 +211,7 @@ function buildKernelContext(
     hardwareType: mapHardwareToId(conditions.hardware),
     startYear: startDate.getFullYear(),
     startDayOfYear: calculateLocalDayOfYear(startDate),
-    startSecondOfDay: calculateSecondOfDay(startDate),
     startDayOfWeek: startDate.getDay(),
-    dayCount: plan.dayCount,
     hourRangeStart: plan.hourRangeStart,
     hourRangeCount: plan.hourRangeCount,
     minuteRangeStart: plan.minuteRangeStart,
@@ -267,29 +244,10 @@ function clampPositiveInteger(value: number, label: string): number {
   return Math.floor(value);
 }
 
-function computeBaseIndices(rangeSeconds: number, vcountCount: number, baseOffset: number) {
-  const safeRangeSeconds = Math.max(rangeSeconds, 1);
-  const safeVcountCount = Math.max(vcountCount, 1);
-  const messagesPerVcount = safeRangeSeconds;
-  const messagesPerTimer0 = messagesPerVcount * safeVcountCount;
-  const baseTimer0Index = Math.floor(baseOffset / messagesPerTimer0);
-  const remainderAfterTimer0 = baseOffset - baseTimer0Index * messagesPerTimer0;
-  const baseVcountIndex = Math.floor(remainderAfterTimer0 / messagesPerVcount);
-  const baseSecondOffset = remainderAfterTimer0 - baseVcountIndex * messagesPerVcount;
-  return { baseTimer0Index, baseVcountIndex, baseSecondOffset };
-}
-
 interface EncodeConfigWordsParams {
   messageCount: number;
-  baseTimer0Index: number;
-  baseVcountIndex: number;
   baseSecondOffset: number;
-  rangeSeconds: number;
-  timer0Min: number;
-  timer0Count: number;
-  vcountMin: number;
-  vcountCount: number;
-  startSecondOfDay: number;
+  timer0VcountSwapped: number;
   startDayOfWeek: number;
   macLower: number;
   data7Swapped: number;
@@ -298,7 +256,6 @@ interface EncodeConfigWordsParams {
   nazoSwapped: Uint32Array;
   startYear: number;
   startDayOfYear: number;
-  dayCount: number;
   hourRangeStart: number;
   hourRangeCount: number;
   minuteRangeStart: number;
@@ -313,35 +270,29 @@ interface EncodeConfigWordsParams {
 function encodeConfigWords(params: EncodeConfigWordsParams): Uint32Array {
   const data = new Uint32Array(32);
   data[0] = params.messageCount >>> 0;
-  data[1] = params.baseTimer0Index >>> 0;
-  data[2] = params.baseVcountIndex >>> 0;
-  data[3] = params.baseSecondOffset >>> 0;
-  data[4] = params.rangeSeconds >>> 0;
-  data[5] = params.timer0Min >>> 0;
-  data[6] = params.timer0Count >>> 0;
-  data[7] = params.vcountMin >>> 0;
-  data[8] = params.vcountCount >>> 0;
-  data[9] = params.startSecondOfDay >>> 0;
-  data[10] = params.startDayOfWeek >>> 0;
-  data[11] = params.macLower >>> 0;
-  data[12] = params.data7Swapped >>> 0;
-  data[13] = params.keyInputSwapped >>> 0;
-  data[14] = params.hardwareType >>> 0;
-  for (let i = 0; i < params.nazoSwapped.length && (15 + i) < 20; i += 1) {
-    data[15 + i] = params.nazoSwapped[i] >>> 0;
-  }
-  data[20] = params.startYear >>> 0;
-  data[21] = params.startDayOfYear >>> 0;
-  data[22] = params.groupsPerDispatch >>> 0;
-  data[23] = params.workgroupSize >>> 0;
-  data[24] = params.candidateCapacity >>> 0;
-  data[25] = params.dayCount >>> 0;
-  data[26] = params.hourRangeStart >>> 0;
-  data[27] = params.hourRangeCount >>> 0;
-  data[28] = params.minuteRangeStart >>> 0;
-  data[29] = params.minuteRangeCount >>> 0;
-  data[30] = params.secondRangeStart >>> 0;
-  data[31] = params.secondRangeCount >>> 0;
+  data[1] = params.baseSecondOffset >>> 0;
+  data[2] = params.timer0VcountSwapped >>> 0;
+  data[3] = params.startDayOfWeek >>> 0;
+  data[4] = params.macLower >>> 0;
+  data[5] = params.data7Swapped >>> 0;
+  data[6] = params.keyInputSwapped >>> 0;
+  data[7] = params.hardwareType >>> 0;
+  data[8] = (params.nazoSwapped[0] ?? 0) >>> 0;
+  data[9] = (params.nazoSwapped[1] ?? 0) >>> 0;
+  data[10] = (params.nazoSwapped[2] ?? 0) >>> 0;
+  data[11] = (params.nazoSwapped[3] ?? 0) >>> 0;
+  data[12] = (params.nazoSwapped[4] ?? 0) >>> 0;
+  data[13] = params.startYear >>> 0;
+  data[14] = params.startDayOfYear >>> 0;
+  data[15] = params.groupsPerDispatch >>> 0;
+  data[16] = params.workgroupSize >>> 0;
+  data[17] = params.candidateCapacity >>> 0;
+  data[18] = params.hourRangeStart >>> 0;
+  data[19] = params.hourRangeCount >>> 0;
+  data[20] = params.minuteRangeStart >>> 0;
+  data[21] = params.minuteRangeCount >>> 0;
+  data[22] = params.secondRangeStart >>> 0;
+  data[23] = params.secondRangeCount >>> 0;
   return data;
 }
 
@@ -399,8 +350,20 @@ function resolveTimer0Segments(
   params: { vcountTimerRanges: readonly [number, number, number][] }
 ): Timer0SegmentDescriptor[] {
   const segments: Timer0SegmentDescriptor[] = [];
-  const timer0Min = conditions.timer0VCountConfig.timer0Range.min;
-  const timer0Max = conditions.timer0VCountConfig.timer0Range.max;
+  const {
+    timer0VCountConfig: {
+      useAutoConfiguration,
+      timer0Range: { min: timer0Min, max: timer0Max },
+      vcountRange: { min: vcountMin, max: vcountMax },
+    },
+  } = conditions;
+
+  if (!useAutoConfiguration) {
+    for (let vcount = vcountMin; vcount <= vcountMax; vcount += 1) {
+      segments.push({ timer0Min, timer0Max, vcount });
+    }
+    return segments;
+  }
 
   let current: Timer0SegmentDescriptor | null = null;
 
@@ -489,6 +452,3 @@ function calculateLocalDayOfYear(date: Date): number {
   return Math.floor(diffMs / (24 * 60 * 60 * 1000)) + 1;
 }
 
-function calculateSecondOfDay(date: Date): number {
-  return date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds();
-}

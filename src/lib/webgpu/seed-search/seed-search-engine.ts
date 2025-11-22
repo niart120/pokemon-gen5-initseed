@@ -224,9 +224,9 @@ export function createSeedSearchEngine(
     const configData = state.configData;
     configData.set(segment.configWords);
     configData[0] = segment.messageCount >>> 0;
-    configData[22] = workgroupCount >>> 0;
-    configData[23] = state.workgroupSize >>> 0;
-    configData[24] = state.candidateCapacity >>> 0;
+    configData[15] = workgroupCount >>> 0;
+    configData[16] = state.workgroupSize >>> 0;
+    configData[17] = state.candidateCapacity >>> 0;
 
     queue.writeBuffer(
       state.configBuffer,

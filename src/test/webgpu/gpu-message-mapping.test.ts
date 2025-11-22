@@ -21,24 +21,9 @@ function simulateGpuIndices(
   messageIndex: number,
   timePlanStart: (timeIndex: number) => Date
 ): SimulatedIndices {
-  const safeRangeSeconds = Math.max(segment.rangeSeconds, 1);
-  const safeVcountCount = Math.max(segment.vcountCount, 1);
-  const messagesPerVcount = safeRangeSeconds;
-  const messagesPerTimer0 = messagesPerVcount * safeVcountCount;
-
-  const absoluteOffset =
-    segment.baseTimer0Index * messagesPerTimer0 +
-    segment.baseVcountIndex * messagesPerVcount +
-    segment.baseSecondOffset +
-    messageIndex;
-
-  const timer0Index = Math.floor(absoluteOffset / messagesPerTimer0);
-  const remainderAfterTimer0 = absoluteOffset - timer0Index * messagesPerTimer0;
-  const vcountIndex = Math.floor(remainderAfterTimer0 / messagesPerVcount);
-  const timeCombinationIndex = remainderAfterTimer0 - vcountIndex * messagesPerVcount;
-
-  const timer0 = segment.timer0Min + timer0Index;
-  const vcount = segment.vcountMin + vcountIndex;
+  const timeCombinationIndex = segment.baseSecondOffset + messageIndex;
+  const timer0 = segment.timer0;
+  const vcount = segment.vcount;
   const datetime = timePlanStart(timeCombinationIndex);
 
   return { timer0, vcount, timeCombinationIndex, datetime };
@@ -95,10 +80,10 @@ function toBcd(value: number): number {
 function decodeSegmentConfig(segment: SeedSearchJobSegment) {
   const words = segment.configWords;
   return {
-    macLower: words[11] >>> 0,
-    data7Swapped: words[12] >>> 0,
-    keyInputSwapped: words[13] >>> 0,
-    nazoSwapped: words.slice(15, 20),
+    macLower: words[4] >>> 0,
+    data7Swapped: words[5] >>> 0,
+    keyInputSwapped: words[6] >>> 0,
+    nazoSwapped: words.slice(8, 13),
   };
 }
 
@@ -186,17 +171,11 @@ describe('webgpu seed search message mapping', () => {
   const timePlanResolver = (timeIndex: number) => getDateFromTimePlan(job.timePlan, timeIndex);
 
   it('matches CPU enumeration order', () => {
-    const expectedOrder: Array<{ timer0: number; vcount: number; timeIndex: number }> = [];
-
-    for (let timer0 = primarySegment.timer0Min; timer0 <= primarySegment.timer0Max; timer0 += 1) {
-      for (let secondOffset = 0; secondOffset < primarySegment.rangeSeconds; secondOffset += 1) {
-        expectedOrder.push({
-          timer0,
-          vcount: primarySegment.vcountMin,
-          timeIndex: secondOffset,
-        });
-      }
-    }
+    const expectedOrder = Array.from({ length: primarySegment.messageCount }, (_, index) => ({
+      timer0: primarySegment.timer0,
+      vcount: primarySegment.vcount,
+      timeIndex: primarySegment.baseSecondOffset + index,
+    }));
 
     for (let index = 0; index < primarySegment.messageCount; index += 1) {
       const expected = expectedOrder[index]!;
@@ -206,7 +185,7 @@ describe('webgpu seed search message mapping', () => {
       expect(simulated.vcount).toBe(expected.vcount);
       expect(simulated.timeCombinationIndex).toBe(expected.timeIndex);
 
-      const expectedDatetime = simulated.datetime;
+      const expectedDatetime = timePlanResolver(expected.timeIndex);
       expect(simulated.datetime.getTime()).toBe(expectedDatetime.getTime());
 
       const message = calculator.generateMessage(

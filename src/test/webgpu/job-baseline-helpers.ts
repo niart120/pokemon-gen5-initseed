@@ -21,22 +21,10 @@ export function enumerateJobCpuBaseline(
   const entries: CpuBaselineEntry[] = [];
 
   for (const segment of job.segments) {
-    const messagesPerVcount = Math.max(1, segment.rangeSeconds);
-    const messagesPerTimer0 = messagesPerVcount * Math.max(1, segment.vcountCount);
-    const baseOffset =
-      segment.baseTimer0Index * messagesPerTimer0 +
-      segment.baseVcountIndex * messagesPerVcount +
-      segment.baseSecondOffset;
-
     for (let localIndex = 0; localIndex < segment.messageCount; localIndex += 1) {
-      const absoluteOffset = baseOffset + localIndex;
-      const timer0Index = Math.floor(absoluteOffset / messagesPerTimer0);
-      const remainderAfterTimer0 = absoluteOffset - timer0Index * messagesPerTimer0;
-      const vcountIndex = Math.floor(remainderAfterTimer0 / messagesPerVcount);
-      const timeCombinationOffset = remainderAfterTimer0 - vcountIndex * messagesPerVcount;
-
-      const timer0 = segment.timer0Min + timer0Index;
-      const vcount = segment.vcountMin + vcountIndex;
+      const timeCombinationOffset = segment.baseSecondOffset + localIndex;
+      const timer0 = segment.timer0;
+      const vcount = segment.vcount;
       const datetime = getDateFromTimePlan(job.timePlan, timeCombinationOffset);
       const message = calculator.generateMessage(conditions, timer0, vcount, datetime, segment.keyCode);
       const { seed } = calculator.calculateSeed(message);
