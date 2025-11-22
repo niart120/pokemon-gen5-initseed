@@ -78,7 +78,7 @@ function toBcd(value: number): number {
 }
 
 function decodeSegmentConstants(segment: SeedSearchJobSegment) {
-  const words = segment.uniformWords;
+  const words = segment.getUniformWords();
   return {
     macLower: words[1] >>> 0,
     data7Swapped: words[2] >>> 0,

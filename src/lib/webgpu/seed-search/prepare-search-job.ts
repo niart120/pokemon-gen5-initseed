@@ -66,6 +66,8 @@ export function prepareSearchJob(
   };
 }
 
+type UniformConstantsBase = Omit<EncodeSearchConstantsParams, 'timer0VcountSwapped' | 'keyInputSwapped'>;
+
 function buildSegments(context: KernelContext, limits: SeedSearchJobLimits): SeedSearchJobSegment[] {
   const segments: SeedSearchJobSegment[] = [];
   if (context.rangeSeconds <= 0) {
@@ -74,6 +76,22 @@ function buildSegments(context: KernelContext, limits: SeedSearchJobLimits): See
 
   const maxMessagesByWorkgroups = Math.max(1, limits.workgroupSize * limits.maxWorkgroupsPerDispatch);
   const chunkSizeLimit = Math.min(limits.maxMessagesPerDispatch, maxMessagesByWorkgroups);
+
+  const uniformBaseParams: UniformConstantsBase = {
+    startDayOfWeek: context.startDayOfWeek,
+    macLower: context.macLower,
+    data7Swapped: context.data7Swapped,
+    hardwareType: context.hardwareType,
+    nazoSwapped: context.nazoSwapped,
+    startYear: context.startYear,
+    startDayOfYear: context.startDayOfYear,
+    hourRangeStart: context.hourRangeStart,
+    hourRangeCount: context.hourRangeCount,
+    minuteRangeStart: context.minuteRangeStart,
+    minuteRangeCount: context.minuteRangeCount,
+    secondRangeStart: context.secondRangeStart,
+    secondRangeCount: context.secondRangeCount,
+  };
 
   let globalOffset = 0;
   let segmentCounter = 0;
@@ -91,23 +109,12 @@ function buildSegments(context: KernelContext, limits: SeedSearchJobLimits): See
         while (remainingSeconds > 0) {
           const messageCount = Math.min(remainingSeconds, chunkSizeLimit);
           const workgroupCount = computeWorkgroupCount(messageCount, limits);
-          const uniformWords = encodeSearchConstants({
-            timer0VcountSwapped,
-            startDayOfWeek: context.startDayOfWeek,
-            macLower: context.macLower,
-            data7Swapped: context.data7Swapped,
-            keyInputSwapped,
-            hardwareType: context.hardwareType,
-            nazoSwapped: context.nazoSwapped,
-            startYear: context.startYear,
-            startDayOfYear: context.startDayOfYear,
-            hourRangeStart: context.hourRangeStart,
-            hourRangeCount: context.hourRangeCount,
-            minuteRangeStart: context.minuteRangeStart,
-            minuteRangeCount: context.minuteRangeCount,
-            secondRangeStart: context.secondRangeStart,
-            secondRangeCount: context.secondRangeCount,
-          });
+          const getUniformWords = (): Uint32Array =>
+            encodeSearchConstants({
+              ...uniformBaseParams,
+              timer0VcountSwapped,
+              keyInputSwapped,
+            });
 
           segments.push({
             id: `seg-${segmentCounter}`,
@@ -118,7 +125,7 @@ function buildSegments(context: KernelContext, limits: SeedSearchJobLimits): See
             baseSecondOffset,
             globalMessageOffset: globalOffset,
             workgroupCount,
-            uniformWords,
+            getUniformWords,
           });
 
           remainingSeconds -= messageCount;

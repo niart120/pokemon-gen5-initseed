@@ -23,7 +23,7 @@ export interface SeedSearchJobSegment {
   baseSecondOffset: number;
   globalMessageOffset: number;
   workgroupCount: number;
-  uniformWords: Uint32Array;
+  getUniformWords: () => Uint32Array;
 }
 
 export interface SeedSearchJobSummary {

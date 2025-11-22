@@ -253,13 +253,14 @@ export function createSeedSearchEngine(
       dispatchStateData.byteLength
     );
 
-    ensureUniformBufferCapacity(device, segment.uniformWords.length);
+    const uniformWords = segment.getUniformWords();
+    ensureUniformBufferCapacity(device, uniformWords.length);
     queue.writeBuffer(
       state.uniformBuffer!,
       0,
-      segment.uniformWords.buffer,
-      segment.uniformWords.byteOffset,
-      segment.uniformWords.byteLength
+      uniformWords.buffer,
+      uniformWords.byteOffset,
+      uniformWords.byteLength
     );
     const setupEnd = nowMs();
 
