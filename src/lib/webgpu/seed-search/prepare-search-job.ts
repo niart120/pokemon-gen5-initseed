@@ -91,9 +91,7 @@ function buildSegments(context: KernelContext, limits: SeedSearchJobLimits): See
         while (remainingSeconds > 0) {
           const messageCount = Math.min(remainingSeconds, chunkSizeLimit);
           const workgroupCount = computeWorkgroupCount(messageCount, limits);
-          const configWords = encodeConfigWords({
-            messageCount,
-            baseSecondOffset,
+          const uniformWords = encodeSearchConstants({
             timer0VcountSwapped,
             startDayOfWeek: context.startDayOfWeek,
             macLower: context.macLower,
@@ -109,9 +107,6 @@ function buildSegments(context: KernelContext, limits: SeedSearchJobLimits): See
             minuteRangeCount: context.minuteRangeCount,
             secondRangeStart: context.secondRangeStart,
             secondRangeCount: context.secondRangeCount,
-            groupsPerDispatch: workgroupCount,
-            workgroupSize: limits.workgroupSize,
-            candidateCapacity: limits.candidateCapacityPerDispatch,
           });
 
           segments.push({
@@ -123,7 +118,7 @@ function buildSegments(context: KernelContext, limits: SeedSearchJobLimits): See
             baseSecondOffset,
             globalMessageOffset: globalOffset,
             workgroupCount,
-            configWords,
+            uniformWords,
           });
 
           remainingSeconds -= messageCount;
@@ -244,9 +239,7 @@ function clampPositiveInteger(value: number, label: string): number {
   return Math.floor(value);
 }
 
-interface EncodeConfigWordsParams {
-  messageCount: number;
-  baseSecondOffset: number;
+interface EncodeSearchConstantsParams {
   timer0VcountSwapped: number;
   startDayOfWeek: number;
   macLower: number;
@@ -262,37 +255,30 @@ interface EncodeConfigWordsParams {
   minuteRangeCount: number;
   secondRangeStart: number;
   secondRangeCount: number;
-  groupsPerDispatch: number;
-  workgroupSize: number;
-  candidateCapacity: number;
 }
 
-function encodeConfigWords(params: EncodeConfigWordsParams): Uint32Array {
-  const data = new Uint32Array(32);
-  data[0] = params.messageCount >>> 0;
-  data[1] = params.baseSecondOffset >>> 0;
-  data[2] = params.timer0VcountSwapped >>> 0;
-  data[3] = params.startDayOfWeek >>> 0;
-  data[4] = params.macLower >>> 0;
-  data[5] = params.data7Swapped >>> 0;
-  data[6] = params.keyInputSwapped >>> 0;
-  data[7] = params.hardwareType >>> 0;
-  data[8] = (params.nazoSwapped[0] ?? 0) >>> 0;
-  data[9] = (params.nazoSwapped[1] ?? 0) >>> 0;
-  data[10] = (params.nazoSwapped[2] ?? 0) >>> 0;
-  data[11] = (params.nazoSwapped[3] ?? 0) >>> 0;
-  data[12] = (params.nazoSwapped[4] ?? 0) >>> 0;
-  data[13] = params.startYear >>> 0;
-  data[14] = params.startDayOfYear >>> 0;
-  data[15] = params.groupsPerDispatch >>> 0;
-  data[16] = params.workgroupSize >>> 0;
-  data[17] = params.candidateCapacity >>> 0;
-  data[18] = params.hourRangeStart >>> 0;
-  data[19] = params.hourRangeCount >>> 0;
-  data[20] = params.minuteRangeStart >>> 0;
-  data[21] = params.minuteRangeCount >>> 0;
-  data[22] = params.secondRangeStart >>> 0;
-  data[23] = params.secondRangeCount >>> 0;
+function encodeSearchConstants(params: EncodeSearchConstantsParams): Uint32Array {
+  const data = new Uint32Array(20);
+  data[0] = params.timer0VcountSwapped >>> 0;
+  data[1] = params.macLower >>> 0;
+  data[2] = params.data7Swapped >>> 0;
+  data[3] = params.keyInputSwapped >>> 0;
+  data[4] = params.hardwareType >>> 0;
+  data[5] = params.startYear >>> 0;
+  data[6] = params.startDayOfYear >>> 0;
+  data[7] = params.startDayOfWeek >>> 0;
+  data[8] = params.hourRangeStart >>> 0;
+  data[9] = params.hourRangeCount >>> 0;
+  data[10] = params.minuteRangeStart >>> 0;
+  data[11] = params.minuteRangeCount >>> 0;
+  data[12] = params.secondRangeStart >>> 0;
+  data[13] = params.secondRangeCount >>> 0;
+  data[14] = (params.nazoSwapped[0] ?? 0) >>> 0;
+  data[15] = (params.nazoSwapped[1] ?? 0) >>> 0;
+  data[16] = (params.nazoSwapped[2] ?? 0) >>> 0;
+  data[17] = (params.nazoSwapped[3] ?? 0) >>> 0;
+  data[18] = (params.nazoSwapped[4] ?? 0) >>> 0;
+  data[19] = 0;
   return data;
 }
 

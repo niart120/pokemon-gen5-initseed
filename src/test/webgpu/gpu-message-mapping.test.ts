@@ -77,13 +77,13 @@ function toBcd(value: number): number {
   return ((tens << 4) | ones) >>> 0;
 }
 
-function decodeSegmentConfig(segment: SeedSearchJobSegment) {
-  const words = segment.configWords;
+function decodeSegmentConstants(segment: SeedSearchJobSegment) {
+  const words = segment.uniformWords;
   return {
-    macLower: words[4] >>> 0,
-    data7Swapped: words[5] >>> 0,
-    keyInputSwapped: words[6] >>> 0,
-    nazoSwapped: words.slice(8, 13),
+    macLower: words[1] >>> 0,
+    data7Swapped: words[2] >>> 0,
+    keyInputSwapped: words[3] >>> 0,
+    nazoSwapped: words.slice(14, 19),
   };
 }
 
@@ -92,7 +92,7 @@ function buildGpuMessage(
   simulated: SimulatedIndices,
   hardware: SearchConditions['hardware']
 ): number[] {
-  const config = decodeSegmentConfig(segment);
+  const config = decodeSegmentConstants(segment);
   const datetime = simulated.datetime;
   const dateYear = datetime.getFullYear() % 100;
   const dateWord =

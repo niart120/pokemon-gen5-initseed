@@ -48,10 +48,15 @@ export function createSeedSearchKernel(device: GPUDevice, workgroupSize: number)
       {
         binding: 1,
         visibility: GPUShaderStage.COMPUTE,
-        buffer: { type: 'read-only-storage' },
+        buffer: { type: 'uniform' },
       },
       {
         binding: 2,
+        visibility: GPUShaderStage.COMPUTE,
+        buffer: { type: 'read-only-storage' },
+      },
+      {
+        binding: 3,
         visibility: GPUShaderStage.COMPUTE,
         buffer: { type: 'storage' },
       },

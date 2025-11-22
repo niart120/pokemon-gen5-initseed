@@ -3,7 +3,7 @@ import { createWebGpuDeviceContext, type WebGpuDeviceContext } from './device-co
 import type { SeedSearchJobLimits, SeedSearchJobSegment } from './types';
 import { createSeedSearchKernel } from './kernel/seed-search-kernel';
 
-const CONFIG_WORD_COUNT = 32;
+const DISPATCH_STATE_WORD_COUNT = 4;
 const BUFFER_ALIGNMENT = 256;
 const ZERO_HEADER = new Uint32Array([0]);
 
@@ -16,7 +16,7 @@ export interface SeedSearchEngineObserver {
     timestampMs: number;
   }) => void;
   onBufferRecreated?: (payload: {
-    kind: 'config' | 'match-output' | 'match-readback' | 'target';
+    kind: 'config' | 'uniform' | 'match-output' | 'match-readback' | 'target';
     sizeBytes: number;
     timestampMs: number;
   }) => void;
@@ -54,8 +54,10 @@ interface EngineState {
   context: WebGpuDeviceContext | null;
   pipeline: GPUComputePipeline | null;
   bindGroupLayout: GPUBindGroupLayout | null;
-  configBuffer: GPUBuffer | null;
-  configData: Uint32Array | null;
+  dispatchStateBuffer: GPUBuffer | null;
+  dispatchStateData: Uint32Array | null;
+  uniformBuffer: GPUBuffer | null;
+  uniformCapacityWords: number;
   matchOutputBuffer: GPUBuffer | null;
   readbackBuffer: GPUBuffer | null;
   matchBufferSize: number;
@@ -74,8 +76,10 @@ export function createSeedSearchEngine(
     context: initialContext ?? null,
     pipeline: null,
     bindGroupLayout: null,
-    configBuffer: null,
-    configData: null,
+    dispatchStateBuffer: null,
+    dispatchStateData: null,
+    uniformBuffer: null,
+    uniformCapacityWords: 0,
     matchOutputBuffer: null,
     readbackBuffer: null,
     matchBufferSize: 0,
@@ -104,7 +108,7 @@ export function createSeedSearchEngine(
       const { pipeline, layout } = createSeedSearchKernel(device, resolvedWorkgroupSize);
       state.pipeline = pipeline;
       state.bindGroupLayout = layout;
-      recreateConfigBuffer(device);
+      recreateDispatchStateBuffer(device);
       recreateMatchBuffers(device, limits.candidateCapacityPerDispatch);
       state.workgroupSize = resolvedWorkgroupSize;
       state.candidateCapacity = limits.candidateCapacityPerDispatch;
@@ -116,8 +120,8 @@ export function createSeedSearchEngine(
       recreateMatchBuffers(device, limits.candidateCapacityPerDispatch);
     }
 
-    if (!state.configBuffer || !state.configData) {
-      recreateConfigBuffer(device);
+    if (!state.dispatchStateBuffer || !state.dispatchStateData) {
+      recreateDispatchStateBuffer(device);
     }
 
     state.currentLimits = limits;
@@ -131,16 +135,16 @@ export function createSeedSearchEngine(
     });
   };
 
-  const recreateConfigBuffer = (device: GPUDevice): void => {
-    const configData = new Uint32Array(CONFIG_WORD_COUNT);
-    const size = alignSize(configData.byteLength);
-    state.configBuffer?.destroy();
-    state.configBuffer = device.createBuffer({
-      label: 'seed-search-config',
+  const recreateDispatchStateBuffer = (device: GPUDevice): void => {
+    const dispatchStateData = new Uint32Array(DISPATCH_STATE_WORD_COUNT);
+    const size = alignSize(dispatchStateData.byteLength);
+    state.dispatchStateBuffer?.destroy();
+    state.dispatchStateBuffer = device.createBuffer({
+      label: 'seed-search-dispatch-state',
       size,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
-    state.configData = configData;
+    state.dispatchStateData = dispatchStateData;
     observer?.onBufferRecreated?.({ kind: 'config', sizeBytes: size, timestampMs: nowMs() });
   };
 
@@ -162,6 +166,20 @@ export function createSeedSearchEngine(
     state.matchBufferSize = bytes;
     observer?.onBufferRecreated?.({ kind: 'match-output', sizeBytes: bytes, timestampMs: nowMs() });
     observer?.onBufferRecreated?.({ kind: 'match-readback', sizeBytes: bytes, timestampMs: nowMs() });
+  };
+
+  const ensureUniformBufferCapacity = (device: GPUDevice, words: number): void => {
+    const requiredBytes = alignSize(words * Uint32Array.BYTES_PER_ELEMENT);
+    if (!state.uniformBuffer || state.uniformCapacityWords < words) {
+      state.uniformBuffer?.destroy();
+      state.uniformBuffer = device.createBuffer({
+        label: 'seed-search-uniform',
+        size: requiredBytes,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      state.uniformCapacityWords = words;
+      observer?.onBufferRecreated?.({ kind: 'uniform', sizeBytes: requiredBytes, timestampMs: nowMs() });
+    }
   };
 
   const setTargetSeeds = (targetSeeds: Uint32Array): void => {
@@ -199,7 +217,7 @@ export function createSeedSearchEngine(
       throw new Error('SeedSearchEngine is not ready');
     }
 
-    if (!state.configBuffer || !state.configData || !state.matchOutputBuffer || !state.readbackBuffer) {
+    if (!state.dispatchStateBuffer || !state.dispatchStateData || !state.matchOutputBuffer || !state.readbackBuffer) {
       throw new Error('SeedSearchEngine buffers are not ready');
     }
 
@@ -221,19 +239,27 @@ export function createSeedSearchEngine(
       ZERO_HEADER.byteLength
     );
 
-    const configData = state.configData;
-    configData.set(segment.configWords);
-    configData[0] = segment.messageCount >>> 0;
-    configData[15] = workgroupCount >>> 0;
-    configData[16] = state.workgroupSize >>> 0;
-    configData[17] = state.candidateCapacity >>> 0;
+    const dispatchStateData = state.dispatchStateData;
+    dispatchStateData[0] = segment.messageCount >>> 0;
+    dispatchStateData[1] = segment.baseSecondOffset >>> 0;
+    dispatchStateData[2] = state.candidateCapacity >>> 0;
+    dispatchStateData[3] = 0;
 
     queue.writeBuffer(
-      state.configBuffer,
+      state.dispatchStateBuffer,
       0,
-      configData.buffer,
-      configData.byteOffset,
-      configData.byteLength
+      dispatchStateData.buffer,
+      dispatchStateData.byteOffset,
+      dispatchStateData.byteLength
+    );
+
+    ensureUniformBufferCapacity(device, segment.uniformWords.length);
+    queue.writeBuffer(
+      state.uniformBuffer!,
+      0,
+      segment.uniformWords.buffer,
+      segment.uniformWords.byteOffset,
+      segment.uniformWords.byteLength
     );
     const setupEnd = nowMs();
 
@@ -241,9 +267,10 @@ export function createSeedSearchEngine(
       label: `seed-search-bind-group-${segment.id}`,
       layout: state.bindGroupLayout,
       entries: [
-        { binding: 0, resource: { buffer: state.configBuffer } },
-        { binding: 1, resource: { buffer: state.targetBuffer } },
-        { binding: 2, resource: { buffer: state.matchOutputBuffer } },
+        { binding: 0, resource: { buffer: state.dispatchStateBuffer } },
+        { binding: 1, resource: { buffer: state.uniformBuffer! } },
+        { binding: 2, resource: { buffer: state.targetBuffer } },
+        { binding: 3, resource: { buffer: state.matchOutputBuffer } },
       ],
     });
 
@@ -304,15 +331,18 @@ export function createSeedSearchEngine(
   };
 
   const dispose = (): void => {
-    state.configBuffer?.destroy();
+    state.dispatchStateBuffer?.destroy();
     state.matchOutputBuffer?.destroy();
     state.readbackBuffer?.destroy();
     state.targetBuffer?.destroy();
+    state.uniformBuffer?.destroy();
     state.context = null;
     state.pipeline = null;
     state.bindGroupLayout = null;
-    state.configBuffer = null;
-    state.configData = null;
+    state.dispatchStateBuffer = null;
+    state.dispatchStateData = null;
+    state.uniformBuffer = null;
+    state.uniformCapacityWords = 0;
     state.matchOutputBuffer = null;
     state.readbackBuffer = null;
     state.targetBuffer = null;

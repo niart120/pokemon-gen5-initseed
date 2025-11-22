@@ -1,30 +1,33 @@
 const WORKGROUP_SIZE : u32 = WORKGROUP_SIZE_PLACEHOLDERu;
 
-struct GeneratedConfig {
+struct DispatchState {
   message_count : u32,
   base_second_offset : u32,
+  candidate_capacity : u32,
+  padding : u32,
+};
+
+struct SearchConstants {
   timer0_vcount_swapped : u32,
-  start_day_of_week : u32,
   mac_lower : u32,
   data7_swapped : u32,
   key_input_swapped : u32,
   hardware_type : u32,
-  nazo0 : u32,
-  nazo1 : u32,
-  nazo2 : u32,
-  nazo3 : u32,
-  nazo4 : u32,
   start_year : u32,
   start_day_of_year : u32,
-  groups_per_dispatch : u32,
-  configured_workgroup_size : u32,
-  candidate_capacity : u32,
+  start_day_of_week : u32,
   hour_range_start : u32,
   hour_range_count : u32,
   minute_range_start : u32,
   minute_range_count : u32,
   second_range_start : u32,
   second_range_count : u32,
+  nazo0 : u32,
+  nazo1 : u32,
+  nazo2 : u32,
+  nazo3 : u32,
+  nazo4 : u32,
+  reserved0 : u32,
 };
 
 struct TargetSeedBuffer {
@@ -59,9 +62,10 @@ const MONTH_LENGTHS_LEAP : array<u32, 12> = array<u32, 12>(
   31u, 29u, 31u, 30u, 31u, 30u, 31u, 31u, 30u, 31u, 30u, 31u
 );
 
-@group(0) @binding(0) var<storage, read> config : GeneratedConfig;
-@group(0) @binding(1) var<storage, read> target_seeds : TargetSeedBuffer;
-@group(0) @binding(2) var<storage, read_write> output_buffer : MatchOutputBuffer;
+@group(0) @binding(0) var<storage, read> state : DispatchState;
+@group(0) @binding(1) var<uniform> constants : SearchConstants;
+@group(0) @binding(2) var<storage, read> target_seeds : TargetSeedBuffer;
+@group(0) @binding(3) var<storage, read_write> output_buffer : MatchOutputBuffer;
 
 fn left_rotate(value : u32, amount : u32) -> u32 {
   return (value << amount) | (value >> (32u - amount));
@@ -149,16 +153,16 @@ fn sha1_generate(
 ) {
 
   let global_linear_index = global_id.x;
-  let is_active = global_linear_index < config.message_count;
+  let is_active = global_linear_index < state.message_count;
   var seed : u32 = 0u;
   var matched = false;
 
   if (is_active) {
-    let safe_hour_count = max(config.hour_range_count, 1u);
-    let safe_minute_count = max(config.minute_range_count, 1u);
-    let safe_second_count = max(config.second_range_count, 1u);
+    let safe_hour_count = max(constants.hour_range_count, 1u);
+    let safe_minute_count = max(constants.minute_range_count, 1u);
+    let safe_second_count = max(constants.second_range_count, 1u);
     let combos_per_day = safe_hour_count * safe_minute_count * safe_second_count;
-    let total_second_offset = config.base_second_offset + global_linear_index;
+    let total_second_offset = state.base_second_offset + global_linear_index;
 
     let day_offset = total_second_offset / combos_per_day;
     let remainder_after_day = total_second_offset - day_offset * combos_per_day;
@@ -169,12 +173,12 @@ fn sha1_generate(
     let minute_index = remainder_after_hour / safe_second_count;
     let second_index = remainder_after_hour - minute_index * safe_second_count;
 
-    let hour = config.hour_range_start + hour_index;
-    let minute = config.minute_range_start + minute_index;
-    let second = config.second_range_start + second_index;
+    let hour = constants.hour_range_start + hour_index;
+    let minute = constants.minute_range_start + minute_index;
+    let second = constants.second_range_start + second_index;
 
-    var year = config.start_year;
-    var day_of_year = config.start_day_of_year + day_offset;
+    var year = constants.start_year;
+    var day_of_year = constants.start_day_of_year + day_offset;
     loop {
       let year_length = select(365u, 366u, is_leap_year(year));
       if (day_of_year <= year_length) {
@@ -189,27 +193,27 @@ fn sha1_generate(
     let month = month_day.x;
     let day = month_day.y;
 
-    let day_of_week = (config.start_day_of_week + day_offset) % 7u;
+    let day_of_week = (constants.start_day_of_week + day_offset) % 7u;
     let year_mod = year % 100u;
     let date_word = (to_bcd(year_mod) << 24u) | (to_bcd(month) << 16u) | (to_bcd(day) << 8u) | to_bcd(day_of_week);
-    let is_pm = (config.hardware_type <= 1u) && (hour >= 12u);
+    let is_pm = (constants.hardware_type <= 1u) && (hour >= 12u);
     let pm_flag = select(0u, 1u, is_pm);
     let time_word = (pm_flag << 30u) | (to_bcd(hour) << 24u) | (to_bcd(minute) << 16u) | (to_bcd(second) << 8u);
 
     var w : array<u32, 16>;
-    w[0] = config.nazo0;
-    w[1] = config.nazo1;
-    w[2] = config.nazo2;
-    w[3] = config.nazo3;
-    w[4] = config.nazo4;
-    w[5] = config.timer0_vcount_swapped;
-    w[6] = config.mac_lower;
-    w[7] = config.data7_swapped;
+    w[0] = constants.nazo0;
+    w[1] = constants.nazo1;
+    w[2] = constants.nazo2;
+    w[3] = constants.nazo3;
+    w[4] = constants.nazo4;
+    w[5] = constants.timer0_vcount_swapped;
+    w[6] = constants.mac_lower;
+    w[7] = constants.data7_swapped;
     w[8] = date_word;
     w[9] = time_word;
     w[10] = 0u;
     w[11] = 0u;
-    w[12] = config.key_input_swapped;
+    w[12] = constants.key_input_swapped;
     w[13] = 0x80000000u;
     w[14] = 0u;
     w[15] = 0x000001A0u;
@@ -324,7 +328,7 @@ fn sha1_generate(
   }
 
   let record_index = atomicAdd(&output_buffer.match_count, 1u);
-  if (record_index >= config.candidate_capacity) {
+  if (record_index >= state.candidate_capacity) {
     atomicSub(&output_buffer.match_count, 1u);
     return;
   }
