@@ -167,6 +167,10 @@ function sanitizeDispatchLimits(limits: SeedSearchJobLimits): SeedSearchJobLimit
     limits.maxMessagesPerDispatch,
     'maxMessagesPerDispatch'
   );
+  const maxDispatchesInFlight = clampPositiveInteger(
+    limits.maxDispatchesInFlight,
+    'maxDispatchesInFlight'
+  );
   const maxWorkgroupsByMessages = Math.max(1, Math.floor(MAX_U32 / Math.max(1, workgroupSize)));
   const safeWorkgroupsPerDispatch = Math.min(maxWorkgroupsPerDispatch, maxWorkgroupsByMessages);
   const maxMessagesByWorkgroups = Math.max(1, workgroupSize * safeWorkgroupsPerDispatch);
@@ -176,6 +180,7 @@ function sanitizeDispatchLimits(limits: SeedSearchJobLimits): SeedSearchJobLimit
     maxWorkgroupsPerDispatch: safeWorkgroupsPerDispatch,
     candidateCapacityPerDispatch,
     maxMessagesPerDispatch,
+    maxDispatchesInFlight,
   };
 }
 

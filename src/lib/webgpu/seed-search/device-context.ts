@@ -15,7 +15,7 @@ export interface WebGpuCapabilities {
 
 export type GpuProfileKind = 'unknown' | 'integrated' | 'mobile' | 'discrete';
 
-export type GpuProfileSource = 'unknown' | 'user-agent' | 'adapter-info' | 'fallback';
+export type GpuProfileSource = 'unknown' | 'user-agent' | 'adapter-info' | 'webgl' | 'fallback';
 
 export interface GpuProfile {
   kind: GpuProfileKind;
@@ -30,6 +30,7 @@ export interface SeedSearchLimitPreferences {
   maxWorkgroupsPerDispatch?: number;
   maxMessagesPerDispatch?: number;
   candidateCapacityPerDispatch?: number;
+  maxDispatchesInFlight?: number;
 }
 
 export interface WebGpuDeviceContext {
@@ -57,6 +58,15 @@ const DEFAULT_LIMIT_PREFERENCES: SeedSearchLimitPreferences = {
 
 const MATCH_RECORD_BYTES = MATCH_RECORD_WORDS * Uint32Array.BYTES_PER_ELEMENT;
 const MAX_U32 = 0xffffffff;
+
+const DEFAULT_DISPATCH_SLOTS_BY_PROFILE: Record<GpuProfileKind, number> = {
+  mobile: 1,
+  integrated: 2,
+  discrete: 4,
+  unknown: 1,
+};
+const FALLBACK_DISPATCH_SLOTS = 1;
+const MAX_AUTOMATIC_DISPATCH_SLOTS = 8;
 
 export function isWebGpuSupported(): boolean {
   return typeof navigator !== 'undefined' && typeof navigator.gpu !== 'undefined';
@@ -153,12 +163,14 @@ function deriveSearchJobLimits(
     Math.min(requestedCandidateCapacity, maxCandidateByStorage),
     'candidateCapacityPerDispatch'
   );
+  const maxDispatchesInFlight = resolveMaxDispatchesInFlight(profile, prefs);
 
   return {
     workgroupSize,
     maxWorkgroupsPerDispatch,
     maxMessagesPerDispatch,
     candidateCapacityPerDispatch,
+    maxDispatchesInFlight,
   };
 }
 
@@ -189,6 +201,18 @@ function clampPositive(value: number, label: string): number {
   return Math.floor(value);
 }
 
+function resolveMaxDispatchesInFlight(profile: GpuProfile, prefs: SeedSearchLimitPreferences): number {
+  if (typeof prefs.maxDispatchesInFlight === 'number') {
+    return clampPositive(Math.min(prefs.maxDispatchesInFlight, MAX_AUTOMATIC_DISPATCH_SLOTS), 'maxDispatchesInFlight');
+  }
+
+  const profileDefault = profile.isFallbackAdapter
+    ? FALLBACK_DISPATCH_SLOTS
+    : DEFAULT_DISPATCH_SLOTS_BY_PROFILE[profile.kind] ?? DEFAULT_DISPATCH_SLOTS_BY_PROFILE.unknown;
+
+  return clampPositive(Math.min(profileDefault, MAX_AUTOMATIC_DISPATCH_SLOTS), 'maxDispatchesInFlight');
+}
+
 export type AdapterInfoResult = {
   vendor?: string;
   architecture?: string;
@@ -197,30 +221,16 @@ export type AdapterInfoResult = {
 };
 
 async function detectGpuProfile(adapter: GPUAdapter): Promise<GpuProfile> {
-  const adapterWithInfo = adapter as GPUAdapter & {
-    requestAdapterInfo?: () => Promise<AdapterInfoResult>;
-  };
-
   const userAgent = getUserAgent();
-  const adapterInfo = await tryGetAdapterInfo(adapterWithInfo);
   const fallbackAwareAdapter = adapter as GPUAdapter & { isFallbackAdapter?: boolean };
   const isFallbackAdapter = Boolean(fallbackAwareAdapter.isFallbackAdapter);
 
-  if (isMobileUserAgent(userAgent)) {
+  const webglInference = detectGpuKindFromWebGl();
+  if (webglInference) {
+    const adapterInfo: AdapterInfoResult = { description: webglInference.renderer };
     return {
-      kind: 'mobile',
-      source: 'user-agent',
-      userAgent,
-      adapterInfo,
-      isFallbackAdapter,
-    };
-  }
-
-  const classifiedKind = classifyAdapterInfo(adapterInfo);
-  if (classifiedKind) {
-    return {
-      kind: classifiedKind,
-      source: 'adapter-info',
+      kind: webglInference.kind,
+      source: 'webgl',
       userAgent,
       adapterInfo,
       isFallbackAdapter,
@@ -232,7 +242,7 @@ async function detectGpuProfile(adapter: GPUAdapter): Promise<GpuProfile> {
       kind: 'integrated',
       source: 'fallback',
       userAgent,
-      adapterInfo,
+      adapterInfo: undefined,
       isFallbackAdapter,
     };
   }
@@ -241,24 +251,9 @@ async function detectGpuProfile(adapter: GPUAdapter): Promise<GpuProfile> {
     kind: 'unknown',
     source: 'unknown',
     userAgent,
-    adapterInfo,
+    adapterInfo: undefined,
     isFallbackAdapter,
   };
-}
-
-async function tryGetAdapterInfo(
-  adapter: GPUAdapter & { requestAdapterInfo?: () => Promise<AdapterInfoResult> }
-): Promise<AdapterInfoResult | undefined> {
-  const requestInfo = adapter.requestAdapterInfo;
-  if (typeof requestInfo !== 'function') {
-    return undefined;
-  }
-  try {
-    return await requestInfo.call(adapter);
-  } catch (error) {
-    console.warn('[webgpu] requestAdapterInfo failed:', error);
-    return undefined;
-  }
 }
 
 function getUserAgent(): string {
@@ -268,47 +263,97 @@ function getUserAgent(): string {
   return navigator.userAgent || '';
 }
 
-function isMobileUserAgent(userAgent: string): boolean {
-  if (!userAgent) {
-    return false;
-  }
-  return /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle|Opera Mini|Opera Mobi/i.test(userAgent);
-}
-
 const MOBILE_GPU_KEYWORDS = ['mali', 'adreno', 'powervr', 'apple gpu', 'apple m', 'snapdragon', 'exynos'];
-const INTEGRATED_GPU_KEYWORDS = ['intel', 'iris', 'uhd', 'hd graphics', 'radeon graphics', 'apple'];
 const DISCRETE_GPU_KEYWORDS = ['nvidia', 'geforce', 'rtx', 'gtx', 'quadro', 'amd', 'radeon rx', 'radeon pro', 'arc'];
-
-function classifyAdapterInfo(info?: AdapterInfoResult): GpuProfileKind | undefined {
-  if (!info) {
-    return undefined;
-  }
-  const searchable = [info.vendor, info.architecture, info.device, info.description]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-
-  if (!searchable) {
-    return undefined;
-  }
-
-  if (includesKeyword(searchable, MOBILE_GPU_KEYWORDS)) {
-    return 'mobile';
-  }
-
-  if (includesKeyword(searchable, INTEGRATED_GPU_KEYWORDS)) {
-    return 'integrated';
-  }
-
-  if (includesKeyword(searchable, DISCRETE_GPU_KEYWORDS)) {
-    return 'discrete';
-  }
-
-  return undefined;
-}
+const INTEGRATED_GPU_KEYWORDS = ['intel', 'iris', 'uhd', 'hd graphics', 'radeon graphics', 'apple'];
 
 function includesKeyword(target: string, keywords: string[]): boolean {
   return keywords.some((keyword) => target.includes(keyword));
+}
+
+function classifyGpuString(searchable?: string): GpuProfileKind | undefined {
+  if (!searchable) {
+    return undefined;
+  }
+  const normalized = searchable.toLowerCase();
+  if (includesKeyword(normalized, MOBILE_GPU_KEYWORDS)) {
+    return 'mobile';
+  }
+  if (includesKeyword(normalized, DISCRETE_GPU_KEYWORDS)) {
+    return 'discrete';
+  }
+  if (includesKeyword(normalized, INTEGRATED_GPU_KEYWORDS)) {
+    return 'integrated';
+  }
+  return undefined;
+}
+
+function detectGpuKindFromWebGl(): { kind: GpuProfileKind; renderer: string } | undefined {
+  const rendererDescription = detectWebGlRendererDescription();
+  if (!rendererDescription) {
+    return undefined;
+  }
+  const inferredKind = classifyGpuString(rendererDescription);
+  if (!inferredKind) {
+    return undefined;
+  }
+  return { kind: inferredKind, renderer: rendererDescription };
+}
+
+function detectWebGlRendererDescription(): string | undefined {
+  const canvas = createCanvasForDetection();
+  if (!canvas) {
+    return undefined;
+  }
+  try {
+    const context = getWebGlContext(canvas);
+    if (!context) {
+      return undefined;
+    }
+    const debugInfo = context.getExtension('WEBGL_debug_renderer_info');
+    if (!debugInfo) {
+      return undefined;
+    }
+    const renderer = context.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+    const loseContext = context.getExtension('WEBGL_lose_context');
+    if (loseContext) {
+      loseContext.loseContext();
+    }
+    return typeof renderer === 'string' ? renderer : undefined;
+  } catch (error) {
+    console.warn('[webgpu] webgl renderer detection failed:', error);
+    return undefined;
+  }
+}
+
+type CanvasLike = HTMLCanvasElement | OffscreenCanvas;
+
+function createCanvasForDetection(): CanvasLike | undefined {
+  if (typeof OffscreenCanvas !== 'undefined') {
+    return new OffscreenCanvas(1, 1);
+  }
+  if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    return canvas;
+  }
+  return undefined;
+}
+
+type WebGlContext = WebGLRenderingContext | WebGL2RenderingContext;
+
+function getWebGlContext(canvas: CanvasLike): WebGlContext | null {
+  const canvasAny = canvas as { getContext?: (contextId: string) => RenderingContext | null };
+  const getContext = canvasAny.getContext;
+  if (typeof getContext !== 'function') {
+    return null;
+  }
+  const tryGet = (contextId: 'webgl2' | 'webgl'): WebGlContext | null => {
+    const ctx = getContext.call(canvasAny, contextId);
+    return (ctx as WebGlContext | null) ?? null;
+  };
+  return tryGet('webgl2') ?? tryGet('webgl');
 }
 
 function applyProfileOverrides(

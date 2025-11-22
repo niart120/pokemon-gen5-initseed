@@ -101,8 +101,36 @@ export function createSeedSearchController(engine?: SeedSearchEngine): SeedSearc
         return;
       }
 
-      await searchEngine.ensureConfigured(job.limits);
+      const dispatchConcurrency = Math.max(
+        1,
+        Math.min(job.limits.maxDispatchesInFlight ?? 1, job.segments.length || 1)
+      );
+      await searchEngine.ensureConfigured(job.limits, { dispatchSlots: dispatchConcurrency });
       searchEngine.setTargetSeeds(job.targetSeeds);
+      const dispatchInflight = new Set<Promise<void>>();
+      const processingInflight = new Set<Promise<void>>();
+
+      const scheduleSegment = (segment: SeedSearchJobSegment): void => {
+        let trackedDispatch: Promise<void>;
+        const dispatchPromise = (async () => {
+          if (state.shouldStop) {
+            return;
+          }
+          const { words, matchCount } = await searchEngine.executeSegment(segment);
+          if (state.shouldStop) {
+            return;
+          }
+          let trackedProcessing: Promise<void>;
+          const processingPromise = (async () => {
+            await processMatches(segment, words, matchCount);
+          })();
+          trackedProcessing = processingPromise.finally(() => processingInflight.delete(trackedProcessing));
+          processingInflight.add(trackedProcessing);
+        })();
+
+        trackedDispatch = dispatchPromise.finally(() => dispatchInflight.delete(trackedDispatch));
+        dispatchInflight.add(trackedDispatch);
+      };
 
       for (const segment of job.segments) {
         if (state.shouldStop) {
@@ -114,12 +142,18 @@ export function createSeedSearchController(engine?: SeedSearchEngine): SeedSearc
           break;
         }
 
-        const { words, matchCount } = await searchEngine.executeSegment(segment);
-        await processMatches(segment, words, matchCount);
+        scheduleSegment(segment);
 
-        if (state.shouldStop) {
-          break;
+        if (dispatchInflight.size >= dispatchConcurrency) {
+          await Promise.race(dispatchInflight);
         }
+      }
+
+      if (dispatchInflight.size > 0) {
+        await Promise.all(dispatchInflight);
+      }
+      if (processingInflight.size > 0) {
+        await Promise.all(processingInflight);
       }
 
       finalizeRun();

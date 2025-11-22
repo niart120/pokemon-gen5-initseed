@@ -5,6 +5,7 @@ const BASE_TEST_LIMITS: SeedSearchJobLimits = {
   maxWorkgroupsPerDispatch: 256,
   candidateCapacityPerDispatch: 512,
   maxMessagesPerDispatch: 32 * 256,
+  maxDispatchesInFlight: 2,
 };
 
 export function createTestSeedSearchJobLimits(
@@ -20,11 +21,13 @@ export function createTestSeedSearchJobLimits(
     requestedMaxMessages,
     Math.max(1, workgroupSize * maxWorkgroupsPerDispatch)
   );
+  const maxDispatchesInFlight = overrides?.maxDispatchesInFlight ?? BASE_TEST_LIMITS.maxDispatchesInFlight;
 
   return {
     workgroupSize,
     maxWorkgroupsPerDispatch,
     candidateCapacityPerDispatch,
     maxMessagesPerDispatch,
+    maxDispatchesInFlight,
   };
 }

@@ -41,31 +41,44 @@ export interface SeedSearchEngineResult {
   matchCount: number;
 }
 
+export interface SeedSearchEngineConfigureOptions {
+  dispatchSlots?: number;
+}
+
 export interface SeedSearchEngine {
-  ensureConfigured(limits: SeedSearchJobLimits): Promise<void>;
+  ensureConfigured(limits: SeedSearchJobLimits, options?: SeedSearchEngineConfigureOptions): Promise<void>;
   setTargetSeeds(targetSeeds: Uint32Array): void;
   executeSegment(segment: SeedSearchJobSegment): Promise<SeedSearchEngineResult>;
   dispose(): void;
   getWorkgroupSize(): number;
   getCandidateCapacity(): number;
+  getSupportedLimits(): GPUSupportedLimits | null;
 }
 
 interface EngineState {
   context: WebGpuDeviceContext | null;
   pipeline: GPUComputePipeline | null;
   bindGroupLayout: GPUBindGroupLayout | null;
-  dispatchStateBuffer: GPUBuffer | null;
-  dispatchStateData: Uint32Array | null;
-  uniformBuffer: GPUBuffer | null;
-  uniformCapacityWords: number;
-  matchOutputBuffer: GPUBuffer | null;
-  readbackBuffer: GPUBuffer | null;
-  matchBufferSize: number;
   targetBuffer: GPUBuffer | null;
   targetCapacity: number;
   workgroupSize: number;
   candidateCapacity: number;
   currentLimits: SeedSearchJobLimits | null;
+  dispatchSlots: DispatchSlot[];
+  availableSlots: DispatchSlot[];
+  slotWaiters: Array<(slot: DispatchSlot) => void>;
+  desiredDispatchSlots: number;
+}
+
+interface DispatchSlot {
+  id: number;
+  dispatchStateBuffer: GPUBuffer;
+  dispatchStateData: Uint32Array;
+  uniformBuffer: GPUBuffer | null;
+  uniformCapacityWords: number;
+  matchOutputBuffer: GPUBuffer;
+  readbackBuffer: GPUBuffer;
+  matchBufferSize: number;
 }
 
 export function createSeedSearchEngine(
@@ -76,27 +89,28 @@ export function createSeedSearchEngine(
     context: initialContext ?? null,
     pipeline: null,
     bindGroupLayout: null,
-    dispatchStateBuffer: null,
-    dispatchStateData: null,
-    uniformBuffer: null,
-    uniformCapacityWords: 0,
-    matchOutputBuffer: null,
-    readbackBuffer: null,
-    matchBufferSize: 0,
     targetBuffer: null,
     targetCapacity: 0,
     workgroupSize: 0,
     candidateCapacity: 0,
     currentLimits: null,
+    dispatchSlots: [],
+    availableSlots: [],
+    slotWaiters: [],
+    desiredDispatchSlots: 1,
   };
 
-  const ensureConfigured = async (limits: SeedSearchJobLimits): Promise<void> => {
+  const ensureConfigured = async (
+    limits: SeedSearchJobLimits,
+    options?: SeedSearchEngineConfigureOptions
+  ): Promise<void> => {
     if (!state.context) {
       state.context = await createWebGpuDeviceContext();
     }
 
     const device = state.context.getDevice();
     const resolvedWorkgroupSize = state.context.getSupportedWorkgroupSize(limits.workgroupSize);
+    const desiredSlots = Math.max(1, options?.dispatchSlots ?? state.desiredDispatchSlots ?? 1);
     const limitsChanged =
       !state.currentLimits ||
       state.workgroupSize !== resolvedWorkgroupSize ||
@@ -108,21 +122,13 @@ export function createSeedSearchEngine(
       const { pipeline, layout } = createSeedSearchKernel(device, resolvedWorkgroupSize);
       state.pipeline = pipeline;
       state.bindGroupLayout = layout;
-      recreateDispatchStateBuffer(device);
-      recreateMatchBuffers(device, limits.candidateCapacityPerDispatch);
-      state.workgroupSize = resolvedWorkgroupSize;
-      state.candidateCapacity = limits.candidateCapacityPerDispatch;
-      state.currentLimits = limits;
-      return;
     }
 
-    if (!state.matchOutputBuffer || !state.readbackBuffer) {
-      recreateMatchBuffers(device, limits.candidateCapacityPerDispatch);
-    }
-
-    if (!state.dispatchStateBuffer || !state.dispatchStateData) {
-      recreateDispatchStateBuffer(device);
-    }
+    state.workgroupSize = resolvedWorkgroupSize;
+    state.candidateCapacity = limits.candidateCapacityPerDispatch;
+    state.currentLimits = limits;
+    state.desiredDispatchSlots = desiredSlots;
+    syncDispatchSlots(device, desiredSlots, limits.candidateCapacityPerDispatch);
 
     state.currentLimits = limits;
 
@@ -135,51 +141,141 @@ export function createSeedSearchEngine(
     });
   };
 
-  const recreateDispatchStateBuffer = (device: GPUDevice): void => {
+  const syncDispatchSlots = (device: GPUDevice, desiredSlots: number, candidateCapacity: number): void => {
+    for (const slot of state.dispatchSlots) {
+      ensureSlotMatchBuffers(device, slot, candidateCapacity);
+    }
+
+    while (state.dispatchSlots.length < desiredSlots) {
+      const slotId = state.dispatchSlots.length;
+      const slot = createDispatchSlot(device, slotId, candidateCapacity);
+      state.dispatchSlots.push(slot);
+    }
+
+    while (state.dispatchSlots.length > desiredSlots) {
+      const removed = state.dispatchSlots.pop();
+      if (removed) {
+        destroyDispatchSlot(removed);
+      }
+    }
+
+    state.availableSlots = [...state.dispatchSlots];
+    state.slotWaiters.length = 0;
+  };
+
+  const createDispatchSlot = (
+    device: GPUDevice,
+    slotId: number,
+    candidateCapacity: number
+  ): DispatchSlot => {
     const dispatchStateData = new Uint32Array(DISPATCH_STATE_WORD_COUNT);
-    const size = alignSize(dispatchStateData.byteLength);
-    state.dispatchStateBuffer?.destroy();
-    state.dispatchStateBuffer = device.createBuffer({
-      label: 'seed-search-dispatch-state',
-      size,
+    const dispatchStateSize = alignSize(dispatchStateData.byteLength);
+    const dispatchStateBuffer = device.createBuffer({
+      label: `seed-search-dispatch-state-${slotId}`,
+      size: dispatchStateSize,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
-    state.dispatchStateData = dispatchStateData;
-    observer?.onBufferRecreated?.({ kind: 'config', sizeBytes: size, timestampMs: nowMs() });
+    observer?.onBufferRecreated?.({ kind: 'config', sizeBytes: dispatchStateSize, timestampMs: nowMs() });
+
+    const { matchOutputBuffer, readbackBuffer, matchBufferSize } = createMatchBuffers(
+      device,
+      candidateCapacity,
+      slotId
+    );
+
+    return {
+      id: slotId,
+      dispatchStateBuffer,
+      dispatchStateData,
+      uniformBuffer: null,
+      uniformCapacityWords: 0,
+      matchOutputBuffer,
+      readbackBuffer,
+      matchBufferSize,
+    };
   };
 
-  const recreateMatchBuffers = (device: GPUDevice, candidateCapacity: number): void => {
-    const words = MATCH_OUTPUT_HEADER_WORDS + candidateCapacity * MATCH_RECORD_WORDS;
-    const bytes = alignSize(words * Uint32Array.BYTES_PER_ELEMENT);
-    state.matchOutputBuffer?.destroy();
-    state.matchOutputBuffer = device.createBuffer({
-      label: 'seed-search-output',
-      size: bytes,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
-    });
-    state.readbackBuffer?.destroy();
-    state.readbackBuffer = device.createBuffer({
-      label: 'seed-search-readback',
-      size: bytes,
-      usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-    });
-    state.matchBufferSize = bytes;
-    observer?.onBufferRecreated?.({ kind: 'match-output', sizeBytes: bytes, timestampMs: nowMs() });
-    observer?.onBufferRecreated?.({ kind: 'match-readback', sizeBytes: bytes, timestampMs: nowMs() });
-  };
-
-  const ensureUniformBufferCapacity = (device: GPUDevice, words: number): void => {
+  const ensureSlotUniformCapacity = (
+    device: GPUDevice,
+    slot: DispatchSlot,
+    words: number
+  ): void => {
     const requiredBytes = alignSize(words * Uint32Array.BYTES_PER_ELEMENT);
-    if (!state.uniformBuffer || state.uniformCapacityWords < words) {
-      state.uniformBuffer?.destroy();
-      state.uniformBuffer = device.createBuffer({
-        label: 'seed-search-uniform',
+    if (!slot.uniformBuffer || slot.uniformCapacityWords < words) {
+      slot.uniformBuffer?.destroy();
+      slot.uniformBuffer = device.createBuffer({
+        label: `seed-search-uniform-${slot.id}`,
         size: requiredBytes,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
-      state.uniformCapacityWords = words;
+      slot.uniformCapacityWords = words;
       observer?.onBufferRecreated?.({ kind: 'uniform', sizeBytes: requiredBytes, timestampMs: nowMs() });
     }
+  };
+
+  const createMatchBuffers = (
+    device: GPUDevice,
+    candidateCapacity: number,
+    slotId: number
+  ): { matchOutputBuffer: GPUBuffer; readbackBuffer: GPUBuffer; matchBufferSize: number } => {
+    const words = MATCH_OUTPUT_HEADER_WORDS + candidateCapacity * MATCH_RECORD_WORDS;
+    const bytes = alignSize(words * Uint32Array.BYTES_PER_ELEMENT);
+    const matchOutputBuffer = device.createBuffer({
+      label: `seed-search-output-${slotId}`,
+      size: bytes,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
+    });
+    const readbackBuffer = device.createBuffer({
+      label: `seed-search-readback-${slotId}`,
+      size: bytes,
+      usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+    });
+    observer?.onBufferRecreated?.({ kind: 'match-output', sizeBytes: bytes, timestampMs: nowMs() });
+    observer?.onBufferRecreated?.({ kind: 'match-readback', sizeBytes: bytes, timestampMs: nowMs() });
+    return { matchOutputBuffer, readbackBuffer, matchBufferSize: bytes };
+  };
+
+  const ensureSlotMatchBuffers = (
+    device: GPUDevice,
+    slot: DispatchSlot,
+    candidateCapacity: number
+  ): void => {
+    const words = MATCH_OUTPUT_HEADER_WORDS + candidateCapacity * MATCH_RECORD_WORDS;
+    const bytes = alignSize(words * Uint32Array.BYTES_PER_ELEMENT);
+    if (slot.matchBufferSize === bytes) {
+      return;
+    }
+    slot.matchOutputBuffer.destroy();
+    slot.readbackBuffer.destroy();
+    const buffers = createMatchBuffers(device, candidateCapacity, slot.id);
+    slot.matchOutputBuffer = buffers.matchOutputBuffer;
+    slot.readbackBuffer = buffers.readbackBuffer;
+    slot.matchBufferSize = buffers.matchBufferSize;
+  };
+
+  const destroyDispatchSlot = (slot: DispatchSlot): void => {
+    slot.dispatchStateBuffer.destroy();
+    slot.uniformBuffer?.destroy();
+    slot.matchOutputBuffer.destroy();
+    slot.readbackBuffer.destroy();
+  };
+
+  const acquireSlot = (): Promise<DispatchSlot> => {
+    if (state.availableSlots.length > 0) {
+      return Promise.resolve(state.availableSlots.pop()!);
+    }
+    return new Promise<DispatchSlot>((resolve) => {
+      state.slotWaiters.push(resolve);
+    });
+  };
+
+  const releaseSlot = (slot: DispatchSlot): void => {
+    const waiter = state.slotWaiters.shift();
+    if (waiter) {
+      waiter(slot);
+      return;
+    }
+    state.availableSlots.push(slot);
   };
 
   const setTargetSeeds = (targetSeeds: Uint32Array): void => {
@@ -217,135 +313,136 @@ export function createSeedSearchEngine(
       throw new Error('SeedSearchEngine is not ready');
     }
 
-    if (!state.dispatchStateBuffer || !state.dispatchStateData || !state.matchOutputBuffer || !state.readbackBuffer) {
-      throw new Error('SeedSearchEngine buffers are not ready');
-    }
-
     if (!state.targetBuffer) {
       throw new Error('Target seed buffer is not prepared');
+    }
+
+    if (state.dispatchSlots.length === 0) {
+      throw new Error('Dispatch slots are not configured');
     }
 
     const device = state.context.getDevice();
     const queue = device.queue;
     const workgroupCount = Math.max(1, segment.workgroupCount);
     const totalWorkgroups = workgroupCount;
-    const dispatchStart = nowMs();
+    const slot = await acquireSlot();
 
-    queue.writeBuffer(
-      state.matchOutputBuffer,
-      0,
-      ZERO_HEADER.buffer,
-      ZERO_HEADER.byteOffset,
-      ZERO_HEADER.byteLength
-    );
+    try {
+      const dispatchStart = nowMs();
 
-    const dispatchStateData = state.dispatchStateData;
-    dispatchStateData[0] = segment.messageCount >>> 0;
-    dispatchStateData[1] = segment.baseSecondOffset >>> 0;
-    dispatchStateData[2] = state.candidateCapacity >>> 0;
-    dispatchStateData[3] = 0;
+      queue.writeBuffer(
+        slot.matchOutputBuffer,
+        0,
+        ZERO_HEADER.buffer,
+        ZERO_HEADER.byteOffset,
+        ZERO_HEADER.byteLength
+      );
 
-    queue.writeBuffer(
-      state.dispatchStateBuffer,
-      0,
-      dispatchStateData.buffer,
-      dispatchStateData.byteOffset,
-      dispatchStateData.byteLength
-    );
+      const dispatchStateData = slot.dispatchStateData;
+      dispatchStateData[0] = segment.messageCount >>> 0;
+      dispatchStateData[1] = segment.baseSecondOffset >>> 0;
+      dispatchStateData[2] = state.candidateCapacity >>> 0;
+      dispatchStateData[3] = 0;
 
-    const uniformWords = segment.getUniformWords();
-    ensureUniformBufferCapacity(device, uniformWords.length);
-    queue.writeBuffer(
-      state.uniformBuffer!,
-      0,
-      uniformWords.buffer,
-      uniformWords.byteOffset,
-      uniformWords.byteLength
-    );
-    const setupEnd = nowMs();
+      queue.writeBuffer(
+        slot.dispatchStateBuffer,
+        0,
+        dispatchStateData.buffer,
+        dispatchStateData.byteOffset,
+        dispatchStateData.byteLength
+      );
 
-    const bindGroup = device.createBindGroup({
-      label: `seed-search-bind-group-${segment.id}`,
-      layout: state.bindGroupLayout,
-      entries: [
-        { binding: 0, resource: { buffer: state.dispatchStateBuffer } },
-        { binding: 1, resource: { buffer: state.uniformBuffer! } },
-        { binding: 2, resource: { buffer: state.targetBuffer } },
-        { binding: 3, resource: { buffer: state.matchOutputBuffer } },
-      ],
-    });
+      const uniformWords = segment.getUniformWords();
+      ensureSlotUniformCapacity(device, slot, uniformWords.length);
+      queue.writeBuffer(
+        slot.uniformBuffer!,
+        0,
+        uniformWords.buffer,
+        uniformWords.byteOffset,
+        uniformWords.byteLength
+      );
+      const setupEnd = nowMs();
 
-    const encoder = device.createCommandEncoder({ label: `seed-search-encoder-${segment.id}` });
-    const pass = encoder.beginComputePass({ label: `seed-search-pass-${segment.id}` });
-    pass.setPipeline(state.pipeline);
-    pass.setBindGroup(0, bindGroup);
-    pass.dispatchWorkgroups(workgroupCount);
-    pass.end();
+      const bindGroup = device.createBindGroup({
+        label: `seed-search-bind-group-${segment.id}-slot-${slot.id}`,
+        layout: state.bindGroupLayout,
+        entries: [
+          { binding: 0, resource: { buffer: slot.dispatchStateBuffer } },
+          { binding: 1, resource: { buffer: slot.uniformBuffer! } },
+          { binding: 2, resource: { buffer: state.targetBuffer } },
+          { binding: 3, resource: { buffer: slot.matchOutputBuffer } },
+        ],
+      });
 
-    encoder.copyBufferToBuffer(
-      state.matchOutputBuffer,
-      0,
-      state.readbackBuffer,
-      0,
-      state.matchBufferSize
-    );
+      const encoder = device.createCommandEncoder({ label: `seed-search-encoder-${segment.id}` });
+      const pass = encoder.beginComputePass({ label: `seed-search-pass-${segment.id}` });
+      pass.setPipeline(state.pipeline);
+      pass.setBindGroup(0, bindGroup);
+      pass.dispatchWorkgroups(workgroupCount);
+      pass.end();
 
-    const commandBuffer = encoder.finish();
-    queue.submit([commandBuffer]);
-    await queue.onSubmittedWorkDone();
-    const gpuEnd = nowMs();
+      encoder.copyBufferToBuffer(
+        slot.matchOutputBuffer,
+        0,
+        slot.readbackBuffer,
+        0,
+        slot.matchBufferSize
+      );
 
-    await state.readbackBuffer.mapAsync(GPUMapMode.READ, 0, state.matchBufferSize);
-    const mapped = state.readbackBuffer.getMappedRange(0, state.matchBufferSize);
-    const words = new Uint32Array(mapped.slice(0));
-    state.readbackBuffer.unmap();
-    const readbackEnd = nowMs();
+      const commandBuffer = encoder.finish();
+      queue.submit([commandBuffer]);
 
-    const rawMatchCount = words[0] ?? 0;
-    const clampedMatchCount = Math.min(rawMatchCount, state.candidateCapacity);
-    const totalWords = Math.min(
-      words.length,
-      MATCH_OUTPUT_HEADER_WORDS + clampedMatchCount * MATCH_RECORD_WORDS
-    );
+      await slot.readbackBuffer.mapAsync(GPUMapMode.READ, 0, slot.matchBufferSize);
+      const gpuEnd = nowMs();
+      const mapped = slot.readbackBuffer.getMappedRange(0, slot.matchBufferSize);
+      const words = new Uint32Array(mapped.slice(0));
+      slot.readbackBuffer.unmap();
+      const readbackEnd = nowMs();
 
-    const result = {
-      words: words.slice(0, totalWords),
-      matchCount: clampedMatchCount,
-    };
+      const rawMatchCount = words[0] ?? 0;
+      const clampedMatchCount = Math.min(rawMatchCount, state.candidateCapacity);
+      const totalWords = Math.min(
+        words.length,
+        MATCH_OUTPUT_HEADER_WORDS + clampedMatchCount * MATCH_RECORD_WORDS
+      );
 
-    observer?.onDispatchComplete?.({
-      segmentId: segment.id,
-      messageCount: segment.messageCount,
-      workgroupCount: totalWorkgroups,
-      matchCount: clampedMatchCount,
-      candidateCapacity: state.candidateCapacity,
-      timings: {
-        totalMs: readbackEnd - dispatchStart,
-        setupMs: setupEnd - dispatchStart,
-        gpuMs: gpuEnd - setupEnd,
-        readbackMs: readbackEnd - gpuEnd,
-      },
-      timestampMs: readbackEnd,
-    });
+      const result = {
+        words: words.slice(0, totalWords),
+        matchCount: clampedMatchCount,
+      };
 
-    return result;
+      observer?.onDispatchComplete?.({
+        segmentId: segment.id,
+        messageCount: segment.messageCount,
+        workgroupCount: totalWorkgroups,
+        matchCount: clampedMatchCount,
+        candidateCapacity: state.candidateCapacity,
+        timings: {
+          totalMs: readbackEnd - dispatchStart,
+          setupMs: setupEnd - dispatchStart,
+          gpuMs: gpuEnd - setupEnd,
+          readbackMs: readbackEnd - gpuEnd,
+        },
+        timestampMs: readbackEnd,
+      });
+
+      return result;
+    } finally {
+      releaseSlot(slot);
+    }
   };
 
   const dispose = (): void => {
-    state.dispatchStateBuffer?.destroy();
-    state.matchOutputBuffer?.destroy();
-    state.readbackBuffer?.destroy();
+    for (const slot of state.dispatchSlots) {
+      destroyDispatchSlot(slot);
+    }
+    state.dispatchSlots = [];
+    state.availableSlots = [];
+    state.slotWaiters.length = 0;
     state.targetBuffer?.destroy();
-    state.uniformBuffer?.destroy();
     state.context = null;
     state.pipeline = null;
     state.bindGroupLayout = null;
-    state.dispatchStateBuffer = null;
-    state.dispatchStateData = null;
-    state.uniformBuffer = null;
-    state.uniformCapacityWords = 0;
-    state.matchOutputBuffer = null;
-    state.readbackBuffer = null;
     state.targetBuffer = null;
     state.targetCapacity = 0;
     state.currentLimits = null;
@@ -353,6 +450,7 @@ export function createSeedSearchEngine(
 
   const getWorkgroupSize = (): number => state.workgroupSize;
   const getCandidateCapacity = (): number => state.candidateCapacity;
+  const getSupportedLimits = (): GPUSupportedLimits | null => state.context?.getLimits() ?? null;
 
   return {
     ensureConfigured,
@@ -361,6 +459,7 @@ export function createSeedSearchEngine(
     dispose,
     getWorkgroupSize,
     getCandidateCapacity,
+    getSupportedLimits,
   };
 }
 

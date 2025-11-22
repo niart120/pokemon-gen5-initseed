@@ -38,6 +38,7 @@ export interface SeedSearchJobLimits {
   maxWorkgroupsPerDispatch: number;
   candidateCapacityPerDispatch: number;
   maxMessagesPerDispatch: number;
+  maxDispatchesInFlight: number;
 }
 
 export interface SeedSearchJobOptions {

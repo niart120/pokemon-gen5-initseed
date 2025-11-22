@@ -102,7 +102,7 @@ interface EngineEnsureEvent {
   candidateCapacity: number;
 }
 
-type EngineBufferKind = 'config' | 'match-output' | 'match-readback' | 'target';
+type EngineBufferKind = 'config' | 'match-output' | 'match-readback' | 'target' | 'uniform';
 
 interface EngineBufferEvent {
   timestampMs: number;
@@ -134,6 +134,8 @@ interface EngineProfilingStats {
 interface ProfilingSummaryRow {
   scenario: string;
   workgroupSize: number;
+  dispatchConcurrency: number;
+  effectiveDispatchLimit: number;
   totalMessages: number;
   totalSegments: number;
   totalWorkgroups: number;
@@ -150,6 +152,7 @@ interface ProfilingSummaryRow {
   matchBufferRebuilds: number;
   readbackBufferRebuilds: number;
   targetBufferRebuilds: number;
+  uniformBufferRebuilds: number;
   dispatchTotalMs: number;
   dispatchSetupMs: number;
   dispatchGpuMs: number;
@@ -242,6 +245,7 @@ interface EngineStatsSummary {
   matchBufferRebuilds: number;
   readbackBufferRebuilds: number;
   targetBufferRebuilds: number;
+  uniformBufferRebuilds: number;
   dispatchTotalMs: number;
   dispatchSetupMs: number;
   dispatchGpuMs: number;
@@ -255,6 +259,7 @@ function summarizeEngineStats(stats: EngineProfilingStats): EngineStatsSummary {
   const matchBufferRebuilds = stats.buffers.filter((event) => event.kind === 'match-output').length;
   const readbackBufferRebuilds = stats.buffers.filter((event) => event.kind === 'match-readback').length;
   const targetBufferRebuilds = stats.buffers.filter((event) => event.kind === 'target').length;
+  const uniformBufferRebuilds = stats.buffers.filter((event) => event.kind === 'uniform').length;
   const dispatchTotals = stats.dispatches.reduce(
     (acc, dispatch) => {
       acc.dispatchTotalMs += dispatch.timings.totalMs;
@@ -277,6 +282,7 @@ function summarizeEngineStats(stats: EngineProfilingStats): EngineStatsSummary {
     matchBufferRebuilds,
     readbackBufferRebuilds,
     targetBufferRebuilds,
+    uniformBufferRebuilds,
     dispatchTotalMs: dispatchTotals.dispatchTotalMs,
     dispatchSetupMs: dispatchTotals.dispatchSetupMs,
     dispatchGpuMs: dispatchTotals.dispatchGpuMs,
@@ -330,6 +336,8 @@ function recordProfilingSummary(
   params: {
     scenario: string;
     workgroupSize: number;
+    dispatchConcurrency: number;
+    effectiveDispatchLimit: number;
     jobMessages: number;
     segments: number;
     workgroups: number;
@@ -345,6 +353,8 @@ function recordProfilingSummary(
   summaries.push({
     scenario: params.scenario,
     workgroupSize: params.workgroupSize,
+    dispatchConcurrency: params.dispatchConcurrency,
+    effectiveDispatchLimit: params.effectiveDispatchLimit,
     totalMessages: params.jobMessages,
     totalSegments: params.segments,
     totalWorkgroups: params.workgroups,
@@ -361,6 +371,7 @@ function recordProfilingSummary(
     matchBufferRebuilds: params.engineStats.matchBufferRebuilds,
     readbackBufferRebuilds: params.engineStats.readbackBufferRebuilds,
     targetBufferRebuilds: params.engineStats.targetBufferRebuilds,
+    uniformBufferRebuilds: params.engineStats.uniformBufferRebuilds,
     dispatchTotalMs: params.engineStats.dispatchTotalMs,
     dispatchSetupMs: params.engineStats.dispatchSetupMs,
     dispatchGpuMs: params.engineStats.dispatchGpuMs,
@@ -377,6 +388,8 @@ function outputProfilingSummaries(rows: ProfilingSummaryRow[]): void {
   const formattedRows = rows.map((row) => ({
     scenario: row.scenario,
     workgroup: row.workgroupSize,
+    dispatchPref: row.dispatchConcurrency,
+    dispatchLimit: row.effectiveDispatchLimit,
     runtimeMs: row.runtimeMs.toFixed(1),
     throughput: row.throughputPerSecond.toFixed(1),
     messages: row.totalMessages,
@@ -393,6 +406,7 @@ function outputProfilingSummaries(rows: ProfilingSummaryRow[]): void {
     matchBuf: row.matchBufferRebuilds,
     readbackBuf: row.readbackBufferRebuilds,
     targetBuf: row.targetBufferRebuilds,
+    uniformBuf: row.uniformBufferRebuilds,
     dispatchCount: row.dispatchCount,
     dispatchTotalMs: row.dispatchTotalMs.toFixed(1),
     dispatchGpuMs: row.dispatchGpuMs.toFixed(1),
@@ -406,17 +420,19 @@ function outputProfilingSummaries(rows: ProfilingSummaryRow[]): void {
   for (const row of formattedRows) {
     console.log(
       `[profiling] scenario=${row.scenario} workgroup=${row.workgroup} ` +
+        `dispatchPref=${row.dispatchPref} dispatchLimit=${row.dispatchLimit} ` +
         `runtimeMs=${row.runtimeMs} throughput=${row.throughput} ` +
         `messages=${row.messages} segments=${row.segments} workgroups=${row.workgroups} ` +
         `segment[min/max/avg]=${row.segmentMin}/${row.segmentMax}/${row.segmentAvg} ` +
-        `pipelineResets=${row.pipelineResets} buf(config/match/readback/target)=${row.configBuf}/${row.matchBuf}/${row.readbackBuf}/${row.targetBuf} ` +
+        `pipelineResets=${row.pipelineResets} buf(config/match/readback/target/uniform)=${row.configBuf}/${row.matchBuf}/${row.readbackBuf}/${row.targetBuf}/${row.uniformBuf} ` +
         `dispatches=${row.dispatchCount} dispatchMs(total/gpu/readback)=${row.dispatchTotalMs}/${row.dispatchGpuMs}/${row.dispatchReadbackMs} ` +
         `matches=${row.matches} progressEvents=${row.progressEvents} targets=${row.targets}`
     );
   }
 }
 
-const WORKGROUP_CONFIGS = [64, 128, 256] as const;
+const WORKGROUP_CONFIGS = [256] as const;
+const DISPATCH_CONCURRENCY_CONFIGS = [1, 4] as const;
 
 interface ScenarioConfig {
   label: string;
@@ -428,15 +444,22 @@ interface ScenarioConfig {
 
 function buildScenarioLimitPreferences(
   scenario: ScenarioConfig,
-  workgroupSize: number
-): SeedSearchLimitPreferences | undefined {
+  workgroupSize: number,
+  dispatchConcurrency: number
+): SeedSearchLimitPreferences {
   const overrides = scenario.limitOverrides;
+  const base: SeedSearchLimitPreferences = {
+    workgroupSize,
+    maxDispatchesInFlight: dispatchConcurrency,
+  };
   if (!overrides) {
-    return { workgroupSize };
+    return base;
   }
   return {
+    ...base,
     ...overrides,
     workgroupSize: overrides.workgroupSize ?? workgroupSize,
+    maxDispatchesInFlight: overrides.maxDispatchesInFlight ?? dispatchConcurrency,
   };
 }
 
@@ -475,79 +498,89 @@ describeWebGpu('webgpu seed search profiling instrumentation', () => {
     async () => {
       const profilingSummaries: ProfilingSummaryRow[] = [];
       for (const scenario of SCENARIOS) {
-        for (const workgroupSize of WORKGROUP_CONFIGS) {
-          const engineStats = createEngineProfilingStats();
-          const engine = createSeedSearchEngine(createEngineObserver(engineStats), deviceContext);
-          const controller = createSeedSearchController(engine);
-          const conditions = buildSearchConditions(scenario.rangeSeconds, scenario.timer0Range);
-          const limitPreferences = buildScenarioLimitPreferences(scenario, workgroupSize);
-          const jobLimits = deviceContext.deriveSearchJobLimits(limitPreferences);
-          const targetSeeds = selectTargetSeeds(conditions, jobLimits, scenario.sampleSeeds);
-          expect(targetSeeds.length).toBeGreaterThan(0);
+        for (const dispatchConcurrency of DISPATCH_CONCURRENCY_CONFIGS) {
+          for (const workgroupSize of WORKGROUP_CONFIGS) {
+            const engineStats = createEngineProfilingStats();
+            const engine = createSeedSearchEngine(createEngineObserver(engineStats), deviceContext);
+            const controller = createSeedSearchController(engine);
+            const conditions = buildSearchConditions(scenario.rangeSeconds, scenario.timer0Range);
+            const limitPreferences = buildScenarioLimitPreferences(
+              scenario,
+              workgroupSize,
+              dispatchConcurrency
+            );
+            const jobLimits = deviceContext.deriveSearchJobLimits(limitPreferences);
+            const targetSeeds = selectTargetSeeds(conditions, jobLimits, scenario.sampleSeeds);
+            expect(targetSeeds.length).toBeGreaterThan(0);
 
-          const job = prepareSearchJob(conditions, targetSeeds, { limits: jobLimits });
+            const job = prepareSearchJob(conditions, targetSeeds, { limits: jobLimits });
 
-          const collector = createProfilingCollector();
-          const callbacks = buildCallbacks(collector);
+            const collector = createProfilingCollector();
+            const callbacks = buildCallbacks(collector);
 
-          const startTimestamp = nowMs();
-          try {
-            await controller.run(job, callbacks);
-          } finally {
-            engine.dispose();
+            const startTimestamp = nowMs();
+            try {
+              await controller.run(job, callbacks);
+            } finally {
+              engine.dispose();
+            }
+            const runtimeMs = nowMs() - startTimestamp;
+
+            const { results, progressSteps, timeline } = collector;
+
+            expect(results.length).toBeGreaterThanOrEqual(targetSeeds.length);
+            const seedSet = new Set(results.map((result) => result.seed));
+            for (const seed of targetSeeds) {
+              expect(seedSet.has(seed)).toBe(true);
+            }
+
+            expect(progressSteps.length).toBeGreaterThan(0);
+            expect(progressSteps[progressSteps.length - 1]).toBe(job.summary.totalMessages);
+
+            expect(timeline.length).toBe(progressSteps.length);
+            expect(timeline.length).toBeGreaterThan(0);
+            expect(timeline[0]?.currentStep).toBe(0);
+            const lastSnapshot = timeline[timeline.length - 1]!;
+            expect(lastSnapshot.currentStep).toBe(job.summary.totalMessages);
+            expect(lastSnapshot.estimatedTimeRemaining).toBe(0);
+            expect(lastSnapshot.matchesFound).toBe(results.length);
+            expect(lastSnapshot.elapsedTime).toBeGreaterThan(0);
+
+            expectMonotonicSeries(progressSteps);
+            expectMonotonicSeries(timeline.map((entry) => entry.timestampMs));
+            expectMonotonicSeries(timeline.map((entry) => entry.elapsedTime));
+            expectMonotonicSeries(timeline.map((entry) => entry.matchesFound));
+
+            const elapsedDelta = Math.abs(lastSnapshot.elapsedTime - runtimeMs);
+            const allowedDelta = Math.max(1500, runtimeMs * 0.25);
+            expect(elapsedDelta).toBeLessThanOrEqual(allowedDelta);
+
+            const totalWorkgroups = job.segments.reduce((sum, segment) => sum + segment.workgroupCount, 0);
+            const segmentStats = summarizeSegmentStats(job.segments);
+            const engineSummary = summarizeEngineStats(engineStats);
+            recordProfilingSummary(profilingSummaries, {
+              scenario: scenario.label,
+              workgroupSize,
+              dispatchConcurrency,
+              effectiveDispatchLimit: jobLimits.maxDispatchesInFlight,
+              jobMessages: job.summary.totalMessages,
+              segments: job.summary.totalSegments,
+              workgroups: totalWorkgroups,
+              targetSeeds: targetSeeds.length,
+              runtimeMs,
+              matchesFound: results.length,
+              progressEvents: progressSteps.length,
+              segmentStats,
+              engineStats: engineSummary,
+            });
           }
-          const runtimeMs = nowMs() - startTimestamp;
-
-          const { results, progressSteps, timeline } = collector;
-
-          expect(results.length).toBeGreaterThanOrEqual(targetSeeds.length);
-          const seedSet = new Set(results.map((result) => result.seed));
-          for (const seed of targetSeeds) {
-            expect(seedSet.has(seed)).toBe(true);
-          }
-
-          expect(progressSteps.length).toBeGreaterThan(0);
-          expect(progressSteps[progressSteps.length - 1]).toBe(job.summary.totalMessages);
-
-          expect(timeline.length).toBe(progressSteps.length);
-          expect(timeline.length).toBeGreaterThan(0);
-          expect(timeline[0]?.currentStep).toBe(0);
-          const lastSnapshot = timeline[timeline.length - 1]!;
-          expect(lastSnapshot.currentStep).toBe(job.summary.totalMessages);
-          expect(lastSnapshot.estimatedTimeRemaining).toBe(0);
-          expect(lastSnapshot.matchesFound).toBe(results.length);
-          expect(lastSnapshot.elapsedTime).toBeGreaterThan(0);
-
-          expectMonotonicSeries(progressSteps);
-          expectMonotonicSeries(timeline.map((entry) => entry.timestampMs));
-          expectMonotonicSeries(timeline.map((entry) => entry.elapsedTime));
-          expectMonotonicSeries(timeline.map((entry) => entry.matchesFound));
-
-          const elapsedDelta = Math.abs(lastSnapshot.elapsedTime - runtimeMs);
-          const allowedDelta = Math.max(1500, runtimeMs * 0.25);
-          expect(elapsedDelta).toBeLessThanOrEqual(allowedDelta);
-
-          const totalWorkgroups = job.segments.reduce((sum, segment) => sum + segment.workgroupCount, 0);
-          const segmentStats = summarizeSegmentStats(job.segments);
-          const engineSummary = summarizeEngineStats(engineStats);
-          recordProfilingSummary(profilingSummaries, {
-            scenario: scenario.label,
-            workgroupSize,
-            jobMessages: job.summary.totalMessages,
-            segments: job.summary.totalSegments,
-            workgroups: totalWorkgroups,
-            targetSeeds: targetSeeds.length,
-            runtimeMs,
-            matchesFound: results.length,
-            progressEvents: progressSteps.length,
-            segmentStats,
-            engineStats: engineSummary,
-          });
         }
       }
 
       outputProfilingSummaries(profilingSummaries);
-      expect(profilingSummaries).toHaveLength(SCENARIOS.length * WORKGROUP_CONFIGS.length);
+      expect(profilingSummaries).toHaveLength(
+        SCENARIOS.length * WORKGROUP_CONFIGS.length * DISPATCH_CONCURRENCY_CONFIGS.length
+      );
     },
     120_000
   );
