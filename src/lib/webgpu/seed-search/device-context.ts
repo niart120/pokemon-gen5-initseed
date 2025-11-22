@@ -28,7 +28,6 @@ export interface GpuProfile {
 export interface SeedSearchLimitPreferences {
   workgroupSize?: number;
   maxWorkgroupsPerDispatch?: number;
-  maxWorkgroupsPerDispatchY?: number;
   maxMessagesPerDispatch?: number;
   candidateCapacityPerDispatch?: number;
 }
@@ -53,7 +52,6 @@ const DEFAULT_DEVICE_OPTIONS: Required<Pick<WebGpuDeviceOptions, 'requiredFeatur
 
 const DEFAULT_LIMIT_PREFERENCES: SeedSearchLimitPreferences = {
   workgroupSize: 256,
-  maxWorkgroupsPerDispatchY: 256,
   candidateCapacityPerDispatch: 4096,
 };
 
@@ -133,22 +131,13 @@ function deriveSearchJobLimits(
   const workgroupSize = resolveWorkgroupSize(limits, prefs.workgroupSize);
   const maxWorkgroupsLimit = getLimit(limits.maxComputeWorkgroupsPerDimension);
   const requestedWorkgroupLimitX = prefs.maxWorkgroupsPerDispatch ?? maxWorkgroupsLimit;
+  const maxWorkgroupsByMessages = Math.max(1, Math.floor(MAX_U32 / Math.max(1, workgroupSize)));
   const maxWorkgroupsPerDispatch = clampPositive(
-    Math.min(requestedWorkgroupLimitX, maxWorkgroupsLimit),
+    Math.min(requestedWorkgroupLimitX, maxWorkgroupsLimit, maxWorkgroupsByMessages),
     'maxWorkgroupsPerDispatch'
   );
-  const maxWorkgroupsByMessages = Math.max(
-    1,
-    Math.floor(MAX_U32 / Math.max(1, workgroupSize * maxWorkgroupsPerDispatch))
-  );
-  const requestedWorkgroupLimitY = prefs.maxWorkgroupsPerDispatchY ?? maxWorkgroupsLimit;
-  const maxWorkgroupsPerDispatchY = clampPositive(
-    Math.min(requestedWorkgroupLimitY, maxWorkgroupsLimit, maxWorkgroupsByMessages),
-    'maxWorkgroupsPerDispatchY'
-  );
 
-  const maxWorkgroupsProduct = Math.max(1, maxWorkgroupsPerDispatch * maxWorkgroupsPerDispatchY);
-  const maxMessagesByWorkgroups = workgroupSize * maxWorkgroupsProduct;
+  const maxMessagesByWorkgroups = workgroupSize * maxWorkgroupsPerDispatch;
   const requestedMessagesLimit = prefs.maxMessagesPerDispatch ?? maxMessagesByWorkgroups;
   const maxMessagesPerDispatch = clampPositive(
     Math.min(requestedMessagesLimit, maxMessagesByWorkgroups),
@@ -168,7 +157,6 @@ function deriveSearchJobLimits(
   return {
     workgroupSize,
     maxWorkgroupsPerDispatch,
-    maxWorkgroupsPerDispatchY,
     maxMessagesPerDispatch,
     candidateCapacityPerDispatch,
   };
@@ -325,13 +313,7 @@ function includesKeyword(target: string, keywords: string[]): boolean {
 
 function applyProfileOverrides(
   prefs: SeedSearchLimitPreferences,
-  profile: GpuProfile
+  _profile: GpuProfile
 ): SeedSearchLimitPreferences {
-  if (profile.kind === 'mobile' || profile.kind === 'integrated') {
-    return {
-      ...prefs,
-      maxWorkgroupsPerDispatchY: 1,
-    };
-  }
   return prefs;
 }

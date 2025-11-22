@@ -115,8 +115,6 @@ interface EngineDispatchEvent {
   segmentId: string;
   messageCount: number;
   workgroupCount: number;
-  workgroupCountX?: number;
-  workgroupCountY?: number;
   matchCount: number;
   candidateCapacity: number;
   timings: {

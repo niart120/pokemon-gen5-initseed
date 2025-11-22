@@ -30,8 +30,6 @@ export interface SeedSearchJobSegment {
   baseVcountIndex: number;
   baseSecondOffset: number;
   workgroupCount: number;
-  workgroupCountX: number;
-  workgroupCountY: number;
   configWords: Uint32Array;
 }
 
@@ -45,7 +43,6 @@ export interface SeedSearchJobSummary {
 export interface SeedSearchJobLimits {
   workgroupSize: number;
   maxWorkgroupsPerDispatch: number;
-  maxWorkgroupsPerDispatchY: number;
   candidateCapacityPerDispatch: number;
   maxMessagesPerDispatch: number;
 }

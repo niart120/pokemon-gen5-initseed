@@ -3,7 +3,7 @@ import { createWebGpuDeviceContext, type WebGpuDeviceContext } from './device-co
 import type { SeedSearchJobLimits, SeedSearchJobSegment } from './types';
 import { createSeedSearchKernel } from './kernel/seed-search-kernel';
 
-const CONFIG_WORD_COUNT = 33;
+const CONFIG_WORD_COUNT = 32;
 const BUFFER_ALIGNMENT = 256;
 const ZERO_HEADER = new Uint32Array([0]);
 
@@ -24,8 +24,6 @@ export interface SeedSearchEngineObserver {
     segmentId: string;
     messageCount: number;
     workgroupCount: number;
-    workgroupCountX?: number;
-    workgroupCountY?: number;
     matchCount: number;
     candidateCapacity: number;
     timings: {
@@ -211,9 +209,8 @@ export function createSeedSearchEngine(
 
     const device = state.context.getDevice();
     const queue = device.queue;
-    const workgroupCountX = Math.max(1, segment.workgroupCountX ?? 1);
-    const workgroupCountY = Math.max(1, segment.workgroupCountY ?? 1);
-    const totalWorkgroups = workgroupCountX * workgroupCountY;
+    const workgroupCount = Math.max(1, segment.workgroupCount);
+    const totalWorkgroups = workgroupCount;
     const dispatchStart = nowMs();
 
     queue.writeBuffer(
@@ -227,10 +224,9 @@ export function createSeedSearchEngine(
     const configData = state.configData;
     configData.set(segment.configWords);
     configData[0] = segment.messageCount >>> 0;
-    configData[22] = workgroupCountX >>> 0;
+    configData[22] = workgroupCount >>> 0;
     configData[23] = state.workgroupSize >>> 0;
     configData[24] = state.candidateCapacity >>> 0;
-    configData[32] = workgroupCountY >>> 0;
 
     queue.writeBuffer(
       state.configBuffer,
@@ -255,7 +251,7 @@ export function createSeedSearchEngine(
     const pass = encoder.beginComputePass({ label: `seed-search-pass-${segment.id}` });
     pass.setPipeline(state.pipeline);
     pass.setBindGroup(0, bindGroup);
-    pass.dispatchWorkgroups(workgroupCountX, workgroupCountY);
+    pass.dispatchWorkgroups(workgroupCount);
     pass.end();
 
     encoder.copyBufferToBuffer(
@@ -293,8 +289,6 @@ export function createSeedSearchEngine(
       segmentId: segment.id,
       messageCount: segment.messageCount,
       workgroupCount: totalWorkgroups,
-      workgroupCountX,
-      workgroupCountY,
       matchCount: clampedMatchCount,
       candidateCapacity: state.candidateCapacity,
       timings: {

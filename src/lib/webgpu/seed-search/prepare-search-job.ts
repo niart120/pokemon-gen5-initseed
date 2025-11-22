@@ -74,10 +74,7 @@ function buildSegments(context: KernelContext, limits: SeedSearchJobLimits): See
     return segments;
   }
 
-  const maxMessagesByWorkgroups = Math.max(
-    1,
-    limits.workgroupSize * limits.maxWorkgroupsPerDispatch * limits.maxWorkgroupsPerDispatchY
-  );
+  const maxMessagesByWorkgroups = Math.max(1, limits.workgroupSize * limits.maxWorkgroupsPerDispatch);
   const chunkSizeLimit = Math.min(limits.maxMessagesPerDispatch, maxMessagesByWorkgroups);
 
   let globalOffset = 0;
@@ -99,7 +96,7 @@ function buildSegments(context: KernelContext, limits: SeedSearchJobLimits): See
 
       while (remaining > 0) {
         const messageCount = Math.min(remaining, chunkSizeLimit);
-        const workgroupShape = computeWorkgroupShape(messageCount, limits);
+        const workgroupCount = computeWorkgroupCount(messageCount, limits);
         const baseIndices = computeBaseIndices(context.rangeSeconds, vcountCount, localOffset);
         const configWords = encodeConfigWords({
           messageCount,
@@ -127,8 +124,7 @@ function buildSegments(context: KernelContext, limits: SeedSearchJobLimits): See
           minuteRangeCount: context.minuteRangeCount,
           secondRangeStart: context.secondRangeStart,
           secondRangeCount: context.secondRangeCount,
-          groupsPerDispatch: workgroupShape.x,
-          workgroupsPerDispatchY: workgroupShape.y,
+          groupsPerDispatch: workgroupCount,
           workgroupSize: limits.workgroupSize,
           candidateCapacity: limits.candidateCapacityPerDispatch,
         });
@@ -148,9 +144,7 @@ function buildSegments(context: KernelContext, limits: SeedSearchJobLimits): See
           baseTimer0Index: baseIndices.baseTimer0Index,
           baseVcountIndex: baseIndices.baseVcountIndex,
           baseSecondOffset: baseIndices.baseSecondOffset,
-          workgroupCount: workgroupShape.total,
-          workgroupCountX: workgroupShape.x,
-          workgroupCountY: workgroupShape.y,
+          workgroupCount,
           configWords,
         });
 
@@ -165,23 +159,10 @@ function buildSegments(context: KernelContext, limits: SeedSearchJobLimits): See
   return segments;
 }
 
-function computeWorkgroupShape(messageCount: number, limits: SeedSearchJobLimits) {
+function computeWorkgroupCount(messageCount: number, limits: SeedSearchJobLimits): number {
   const totalWorkgroupsNeeded = Math.max(1, Math.ceil(messageCount / limits.workgroupSize));
-  const maxX = Math.max(1, limits.maxWorkgroupsPerDispatch);
-  const maxY = Math.max(1, limits.maxWorkgroupsPerDispatchY);
-
-  const primaryX = Math.min(totalWorkgroupsNeeded, maxX);
-  const tentativeY = Math.max(1, Math.ceil(totalWorkgroupsNeeded / primaryX));
-  const clampedY = Math.min(tentativeY, maxY);
-  const adjustedX = Math.max(1, Math.ceil(totalWorkgroupsNeeded / clampedY));
-  const clampedX = Math.min(adjustedX, maxX);
-  const total = clampedX * clampedY;
-
-  return {
-    x: clampedX,
-    y: clampedY,
-    total,
-  };
+  const maxWorkgroups = Math.max(1, limits.maxWorkgroupsPerDispatch);
+  return Math.min(totalWorkgroupsNeeded, maxWorkgroups);
 }
 
 function resolveRequiredDispatchLimits(options?: SeedSearchJobOptions): SeedSearchJobLimits {
@@ -197,10 +178,6 @@ function sanitizeDispatchLimits(limits: SeedSearchJobLimits): SeedSearchJobLimit
     limits.maxWorkgroupsPerDispatch,
     'maxWorkgroupsPerDispatch'
   );
-  const requestedMaxWorkgroupsPerDispatchY = clampPositiveInteger(
-    limits.maxWorkgroupsPerDispatchY,
-    'maxWorkgroupsPerDispatchY'
-  );
   const candidateCapacityPerDispatch = clampPositiveInteger(
     limits.candidateCapacityPerDispatch,
     'candidateCapacityPerDispatch'
@@ -209,20 +186,13 @@ function sanitizeDispatchLimits(limits: SeedSearchJobLimits): SeedSearchJobLimit
     limits.maxMessagesPerDispatch,
     'maxMessagesPerDispatch'
   );
-  const maxYByMessages = Math.max(
-    1,
-    Math.floor(MAX_U32 / Math.max(1, workgroupSize * maxWorkgroupsPerDispatch))
-  );
-  const maxWorkgroupsPerDispatchY = Math.min(requestedMaxWorkgroupsPerDispatchY, maxYByMessages);
-  const maxMessagesByWorkgroups = Math.max(
-    1,
-    workgroupSize * maxWorkgroupsPerDispatch * maxWorkgroupsPerDispatchY
-  );
+  const maxWorkgroupsByMessages = Math.max(1, Math.floor(MAX_U32 / Math.max(1, workgroupSize)));
+  const safeWorkgroupsPerDispatch = Math.min(maxWorkgroupsPerDispatch, maxWorkgroupsByMessages);
+  const maxMessagesByWorkgroups = Math.max(1, workgroupSize * safeWorkgroupsPerDispatch);
   const maxMessagesPerDispatch = Math.min(requestedMaxMessages, maxMessagesByWorkgroups);
   return {
     workgroupSize,
-    maxWorkgroupsPerDispatch,
-    maxWorkgroupsPerDispatchY,
+    maxWorkgroupsPerDispatch: safeWorkgroupsPerDispatch,
     candidateCapacityPerDispatch,
     maxMessagesPerDispatch,
   };
@@ -336,13 +306,12 @@ interface EncodeConfigWordsParams {
   secondRangeStart: number;
   secondRangeCount: number;
   groupsPerDispatch: number;
-  workgroupsPerDispatchY: number;
   workgroupSize: number;
   candidateCapacity: number;
 }
 
 function encodeConfigWords(params: EncodeConfigWordsParams): Uint32Array {
-  const data = new Uint32Array(33);
+  const data = new Uint32Array(32);
   data[0] = params.messageCount >>> 0;
   data[1] = params.baseTimer0Index >>> 0;
   data[2] = params.baseVcountIndex >>> 0;
@@ -373,7 +342,6 @@ function encodeConfigWords(params: EncodeConfigWordsParams): Uint32Array {
   data[29] = params.minuteRangeCount >>> 0;
   data[30] = params.secondRangeStart >>> 0;
   data[31] = params.secondRangeCount >>> 0;
-  data[32] = params.workgroupsPerDispatchY >>> 0;
   return data;
 }
 
