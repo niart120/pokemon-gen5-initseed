@@ -62,6 +62,19 @@ const MONTH_LENGTHS_LEAP : array<u32, 12> = array<u32, 12>(
   31u, 29u, 31u, 30u, 31u, 30u, 31u, 31u, 30u, 31u, 30u, 31u
 );
 
+const BCD_LOOKUP : array<u32, 100> = array<u32, 100>(
+  0x00u, 0x01u, 0x02u, 0x03u, 0x04u, 0x05u, 0x06u, 0x07u, 0x08u, 0x09u,
+  0x10u, 0x11u, 0x12u, 0x13u, 0x14u, 0x15u, 0x16u, 0x17u, 0x18u, 0x19u,
+  0x20u, 0x21u, 0x22u, 0x23u, 0x24u, 0x25u, 0x26u, 0x27u, 0x28u, 0x29u,
+  0x30u, 0x31u, 0x32u, 0x33u, 0x34u, 0x35u, 0x36u, 0x37u, 0x38u, 0x39u,
+  0x40u, 0x41u, 0x42u, 0x43u, 0x44u, 0x45u, 0x46u, 0x47u, 0x48u, 0x49u,
+  0x50u, 0x51u, 0x52u, 0x53u, 0x54u, 0x55u, 0x56u, 0x57u, 0x58u, 0x59u,
+  0x60u, 0x61u, 0x62u, 0x63u, 0x64u, 0x65u, 0x66u, 0x67u, 0x68u, 0x69u,
+  0x70u, 0x71u, 0x72u, 0x73u, 0x74u, 0x75u, 0x76u, 0x77u, 0x78u, 0x79u,
+  0x80u, 0x81u, 0x82u, 0x83u, 0x84u, 0x85u, 0x86u, 0x87u, 0x88u, 0x89u,
+  0x90u, 0x91u, 0x92u, 0x93u, 0x94u, 0x95u, 0x96u, 0x97u, 0x98u, 0x99u
+);
+
 @group(0) @binding(0) var<storage, read> state : DispatchState;
 @group(0) @binding(1) var<uniform> constants : SearchConstants;
 @group(0) @binding(2) var<storage, read> target_seeds : TargetSeedBuffer;
@@ -69,12 +82,6 @@ const MONTH_LENGTHS_LEAP : array<u32, 12> = array<u32, 12>(
 
 fn left_rotate(value : u32, amount : u32) -> u32 {
   return (value << amount) | (value >> (32u - amount));
-}
-
-fn to_bcd(value : u32) -> u32 {
-  let tens = value / 10u;
-  let ones = value - tens * 10u;
-  return (tens << 4u) | ones;
 }
 
 fn is_leap_year(year : u32) -> bool {
@@ -195,10 +202,16 @@ fn sha1_generate(
 
     let day_of_week = (constants.start_day_of_week + day_offset) % 7u;
     let year_mod = year % 100u;
-    let date_word = (to_bcd(year_mod) << 24u) | (to_bcd(month) << 16u) | (to_bcd(day) << 8u) | to_bcd(day_of_week);
+    let date_word = (BCD_LOOKUP[year_mod] << 24u) |
+      (BCD_LOOKUP[month] << 16u) |
+      (BCD_LOOKUP[day] << 8u) |
+      BCD_LOOKUP[day_of_week];
     let is_pm = (constants.hardware_type <= 1u) && (hour >= 12u);
     let pm_flag = select(0u, 1u, is_pm);
-    let time_word = (pm_flag << 30u) | (to_bcd(hour) << 24u) | (to_bcd(minute) << 16u) | (to_bcd(second) << 8u);
+    let time_word = (pm_flag << 30u) |
+      (BCD_LOOKUP[hour] << 24u) |
+      (BCD_LOOKUP[minute] << 16u) |
+      (BCD_LOOKUP[second] << 8u);
 
     var w : array<u32, 16>;
     w[0] = constants.nazo0;
