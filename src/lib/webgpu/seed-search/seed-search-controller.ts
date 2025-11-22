@@ -175,8 +175,6 @@ export function createSeedSearchController(engine?: SeedSearchEngine): SeedSearc
       return;
     }
 
-    const messagesPerVcount = Math.max(segment.rangeSeconds, 1);
-    const messagesPerTimer0 = messagesPerVcount * Math.max(segment.vcountCount, 1);
     const headerWords = MATCH_OUTPUT_HEADER_WORDS;
     const recordWords = MATCH_RECORD_WORDS;
 
@@ -196,14 +194,9 @@ export function createSeedSearchController(engine?: SeedSearchEngine): SeedSearc
       const localMessageIndex = matchWords[recordOffset];
       const seed = matchWords[recordOffset + 1] >>> 0;
       const messageIndex = segment.globalMessageOffset + localMessageIndex;
-
-      const timer0Index = Math.floor(messageIndex / messagesPerTimer0);
-      const remainderAfterTimer0 = messageIndex - timer0Index * messagesPerTimer0;
-      const vcountIndex = Math.floor(remainderAfterTimer0 / messagesPerVcount);
-      const timeCombinationOffset = remainderAfterTimer0 - vcountIndex * messagesPerVcount;
-
-      const timer0 = segment.timer0Min + timer0Index;
-      const vcount = segment.vcountMin + vcountIndex;
+      const timeCombinationOffset = segment.baseSecondOffset + localMessageIndex;
+      const timer0 = segment.timer0;
+      const vcount = segment.vcount;
       const datetime = getDateFromTimePlan(job.timePlan, timeCombinationOffset);
       const message = seedCalculator.generateMessage(job.conditions, timer0, vcount, datetime, segment.keyCode);
       const { hash, seed: recalculatedSeed, lcgSeed } = seedCalculator.calculateSeed(message);
@@ -234,11 +227,7 @@ export function createSeedSearchController(engine?: SeedSearchEngine): SeedSearc
 
     if (segment.messageCount > 0) {
       const finalLocalIndex = segment.messageCount - 1;
-      const finalMessageIndex = segment.globalMessageOffset + finalLocalIndex;
-      const finalTimer0Index = Math.floor(finalMessageIndex / messagesPerTimer0);
-      const finalRemainderAfterTimer0 = finalMessageIndex - finalTimer0Index * messagesPerTimer0;
-      const finalVcountIndex = Math.floor(finalRemainderAfterTimer0 / messagesPerVcount);
-      const finalTimeCombination = finalRemainderAfterTimer0 - finalVcountIndex * messagesPerVcount;
+      const finalTimeCombination = segment.baseSecondOffset + finalLocalIndex;
       progress.currentDateTime = getDateFromTimePlan(job.timePlan, finalTimeCombination).toISOString();
     }
 

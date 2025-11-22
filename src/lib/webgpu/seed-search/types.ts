@@ -17,18 +17,11 @@ export interface WebGpuRunnerCallbacks {
 export interface SeedSearchJobSegment {
   id: string;
   keyCode: number;
-  timer0Min: number;
-  timer0Max: number;
-  timer0Count: number;
-  vcountMin: number;
-  vcountCount: number;
-  rangeSeconds: number;
+  timer0: number;
+  vcount: number;
   messageCount: number;
-  localMessageOffset: number;
-  globalMessageOffset: number;
-  baseTimer0Index: number;
-  baseVcountIndex: number;
   baseSecondOffset: number;
+  globalMessageOffset: number;
   workgroupCount: number;
   configWords: Uint32Array;
 }

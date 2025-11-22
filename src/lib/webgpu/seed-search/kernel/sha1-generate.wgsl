@@ -2,15 +2,8 @@ const WORKGROUP_SIZE : u32 = WORKGROUP_SIZE_PLACEHOLDERu;
 
 struct GeneratedConfig {
   message_count : u32,
-  base_timer0_index : u32,
-  base_vcount_index : u32,
   base_second_offset : u32,
-  range_seconds : u32,
-  timer0_min : u32,
-  timer0_count : u32,
-  vcount_min : u32,
-  vcount_count : u32,
-  start_second_of_day : u32,
+  timer0_vcount_swapped : u32,
   start_day_of_week : u32,
   mac_lower : u32,
   data7_swapped : u32,
@@ -26,7 +19,6 @@ struct GeneratedConfig {
   groups_per_dispatch : u32,
   configured_workgroup_size : u32,
   candidate_capacity : u32,
-  day_count : u32,
   hour_range_start : u32,
   hour_range_count : u32,
   minute_range_start : u32,
@@ -73,13 +65,6 @@ const MONTH_LENGTHS_LEAP : array<u32, 12> = array<u32, 12>(
 
 fn left_rotate(value : u32, amount : u32) -> u32 {
   return (value << amount) | (value >> (32u - amount));
-}
-
-fn swap32(value : u32) -> u32 {
-  return ((value & 0x000000FFu) << 24u) |
-    ((value & 0x0000FF00u) << 8u) |
-    ((value & 0x00FF0000u) >> 8u) |
-    ((value & 0xFF000000u) >> 24u);
 }
 
 fn to_bcd(value : u32) -> u32 {
@@ -131,8 +116,14 @@ fn addCarry(a : u32, b : u32) -> CarryResult {
 }
 
 fn compute_seed_from_hash(h0 : u32, h1 : u32) -> u32 {
-  let le0 = swap32(h0);
-  let le1 = swap32(h1);
+  let le0 = ((h0 & 0x000000FFu) << 24u) |
+    ((h0 & 0x0000FF00u) << 8u) |
+    ((h0 & 0x00FF0000u) >> 8u) |
+    ((h0 & 0xFF000000u) >> 24u);
+  let le1 = ((h1 & 0x000000FFu) << 24u) |
+    ((h1 & 0x0000FF00u) << 8u) |
+    ((h1 & 0x00FF0000u) >> 8u) |
+    ((h1 & 0xFF000000u) >> 24u);
 
   let mul_lo : u32 = 0x6C078965u;
   let mul_hi : u32 = 0x5D588B65u;
@@ -163,35 +154,14 @@ fn sha1_generate(
   var matched = false;
 
   if (is_active) {
-    let safe_range_seconds = max(config.range_seconds, 1u);
-    let safe_vcount_count = max(config.vcount_count, 1u);
-    let messages_per_vcount = safe_range_seconds;
-    let messages_per_timer0 = messages_per_vcount * safe_vcount_count;
-
-    let local_timer0_index = global_linear_index / messages_per_timer0;
-    let local_remainder_after_timer0 = global_linear_index - local_timer0_index * messages_per_timer0;
-    let local_vcount_index = local_remainder_after_timer0 / messages_per_vcount;
-    let local_second_offset = local_remainder_after_timer0 - local_vcount_index * messages_per_vcount;
-
-    let combined_second_offset = config.base_second_offset + local_second_offset;
-    let carry_to_vcount = combined_second_offset / messages_per_vcount;
-    let second_offset = combined_second_offset - carry_to_vcount * messages_per_vcount;
-
-    let combined_vcount_index = config.base_vcount_index + local_vcount_index + carry_to_vcount;
-    let carry_to_timer0 = combined_vcount_index / safe_vcount_count;
-    let vcount_index = combined_vcount_index - carry_to_timer0 * safe_vcount_count;
-
-    let timer0_index = config.base_timer0_index + local_timer0_index + carry_to_timer0;
-
-    let timer0 = config.timer0_min + timer0_index;
-    let vcount = config.vcount_min + vcount_index;
     let safe_hour_count = max(config.hour_range_count, 1u);
     let safe_minute_count = max(config.minute_range_count, 1u);
     let safe_second_count = max(config.second_range_count, 1u);
     let combos_per_day = safe_hour_count * safe_minute_count * safe_second_count;
+    let total_second_offset = config.base_second_offset + global_linear_index;
 
-    let day_offset = second_offset / combos_per_day;
-    let remainder_after_day = second_offset - day_offset * combos_per_day;
+    let day_offset = total_second_offset / combos_per_day;
+    let remainder_after_day = total_second_offset - day_offset * combos_per_day;
 
     let entries_per_hour = safe_minute_count * safe_second_count;
     let hour_index = remainder_after_day / entries_per_hour;
@@ -202,7 +172,6 @@ fn sha1_generate(
     let hour = config.hour_range_start + hour_index;
     let minute = config.minute_range_start + minute_index;
     let second = config.second_range_start + second_index;
-    let seconds_of_day = hour * 3600u + minute * 60u + second;
 
     var year = config.start_year;
     var day_of_year = config.start_day_of_year + day_offset;
@@ -233,7 +202,7 @@ fn sha1_generate(
     w[2] = config.nazo2;
     w[3] = config.nazo3;
     w[4] = config.nazo4;
-    w[5] = swap32((vcount << 16u) | timer0);
+    w[5] = config.timer0_vcount_swapped;
     w[6] = config.mac_lower;
     w[7] = config.data7_swapped;
     w[8] = date_word;
