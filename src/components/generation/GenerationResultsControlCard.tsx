@@ -61,6 +61,25 @@ const FILTER_FIELD_WIDTHS = {
 const STAT_FIELD_BASE_CLASS = 'flex flex-col gap-1 grow-0';
 const STAT_FIELD_WIDTH = 'basis-[6ch] min-w-[6ch] max-w-[7ch]';
 
+type HexFilterFieldKey = 'timer0Filter' | 'vcountFilter';
+
+const HEX_FILTER_FIELD_CONFIG: Record<HexFilterFieldKey, { id: string; widthClass: string; placeholder: string; maxLength: number; labelKey: 'timer0' | 'vcount'; }> = {
+  timer0Filter: {
+    id: 'timer0-filter',
+    widthClass: FILTER_FIELD_WIDTHS.timer0,
+    placeholder: '0000',
+    maxLength: 6,
+    labelKey: 'timer0',
+  },
+  vcountFilter: {
+    id: 'vcount-filter',
+    widthClass: FILTER_FIELD_WIDTHS.vcount,
+    placeholder: '00',
+    maxLength: 4,
+    labelKey: 'vcount',
+  },
+} as const;
+
 interface AbilityMeta {
   options: Array<{ index: 0 | 1 | 2; label: string }>;
   available: Set<0 | 1 | 2>;
@@ -291,8 +310,20 @@ export const GenerationResultsControlCard: React.FC = () => {
     [computeAbilityMeta, filters.speciesIds],
   );
   const levelValue = filters.levelRange?.min != null ? String(filters.levelRange.min) : '';
-  const timer0Value = filters.timer0Filter ?? '';
-  const vcountValue = filters.vcountFilter ?? '';
+  const hexFilterFields = React.useMemo(() => [
+    {
+      field: 'timer0Filter' as const,
+      ...HEX_FILTER_FIELD_CONFIG.timer0Filter,
+      label: fieldLabels[HEX_FILTER_FIELD_CONFIG.timer0Filter.labelKey],
+      value: filters.timer0Filter ?? '',
+    },
+    {
+      field: 'vcountFilter' as const,
+      ...HEX_FILTER_FIELD_CONFIG.vcountFilter,
+      label: fieldLabels[HEX_FILTER_FIELD_CONFIG.vcountFilter.labelKey],
+      value: filters.vcountFilter ?? '',
+    },
+  ], [fieldLabels, filters.timer0Filter, filters.vcountFilter]);
 
   const computeAvailableGenders = React.useCallback((speciesIds: number[]): Set<'M' | 'F' | 'N'> => {
     const genders = new Set<'M' | 'F' | 'N'>();
@@ -510,24 +541,13 @@ export const GenerationResultsControlCard: React.FC = () => {
     [applyFilters, filters.levelRange],
   );
 
-  const handleTimer0FilterChange = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleHexFilterChange = React.useCallback(
+    (field: HexFilterFieldKey) => (event: React.ChangeEvent<HTMLInputElement>) => {
       const raw = event.target.value.toUpperCase();
       if (!HEX_FILTER_INPUT_PATTERN.test(raw)) {
         return;
       }
-      applyFilters({ timer0Filter: raw });
-    },
-    [applyFilters],
-  );
-
-  const handleVcountFilterChange = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const raw = event.target.value.toUpperCase();
-      if (!HEX_FILTER_INPUT_PATTERN.test(raw)) {
-        return;
-      }
-      applyFilters({ vcountFilter: raw });
+      applyFilters({ [field]: raw });
     },
     [applyFilters],
   );
@@ -728,40 +748,25 @@ export const GenerationResultsControlCard: React.FC = () => {
                   aria-label={levelAriaLabel}
                 />
               </div>
-              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.timer0)}>
-                <Label htmlFor="timer0-filter" className="text-[11px] font-medium text-muted-foreground">
-                  {fieldLabels.timer0}
-                </Label>
-                <Input
-                  id="timer0-filter"
-                  type="text"
-                  inputMode="text"
-                  value={timer0Value}
-                  onChange={handleTimer0FilterChange}
-                  className="h-10 w-full px-3 text-right font-mono uppercase"
-                  placeholder="0000"
-                  maxLength={6}
-                  spellCheck={false}
-                  autoComplete="off"
-                />
-              </div>
-              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.vcount)}>
-                <Label htmlFor="vcount-filter" className="text-[11px] font-medium text-muted-foreground">
-                  {fieldLabels.vcount}
-                </Label>
-                <Input
-                  id="vcount-filter"
-                  type="text"
-                  inputMode="text"
-                  value={vcountValue}
-                  onChange={handleVcountFilterChange}
-                  className="h-10 w-full px-3 text-right font-mono uppercase"
-                  placeholder="00"
-                  maxLength={4}
-                  spellCheck={false}
-                  autoComplete="off"
-                />
-              </div>
+              {hexFilterFields.map((field) => (
+                <div key={field.id} className={cn(FILTER_FIELD_BASE_CLASS, field.widthClass)}>
+                  <Label htmlFor={field.id} className="text-[11px] font-medium text-muted-foreground">
+                    {field.label}
+                  </Label>
+                  <Input
+                    id={field.id}
+                    type="text"
+                    inputMode="text"
+                    value={field.value}
+                    onChange={handleHexFilterChange(field.field)}
+                    className="h-10 w-full px-3 text-right font-mono uppercase"
+                    placeholder={field.placeholder}
+                    maxLength={field.maxLength}
+                    spellCheck={false}
+                    autoComplete="off"
+                  />
+                </div>
+              ))}
             </div>
             <div className="flex flex-wrap gap-2">
               {statNumericFields.map((field) => (

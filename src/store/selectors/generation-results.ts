@@ -7,6 +7,7 @@ import { resolveBatch, toUiReadyPokemon } from '@/lib/generation/pokemon-resolve
 import { buildResolutionContextFromSources } from '@/lib/initialization/build-resolution-context';
 import { resolveKeyInputDisplay } from '@/lib/generation/result-formatters';
 import { DomainShinyType } from '@/types/domain';
+import { parseHexFilterValue } from '@/lib/utils/hex-filter';
 
 export type FilteredRowsCache = {
   resultsRef: GenerationResult[];
@@ -23,34 +24,6 @@ export type FilteredRowsCache = {
 } | null;
 
 let _filteredRowsCache: FilteredRowsCache = null;
-
-function parseSingleFilter(value: string | undefined, maxValue: number): number | null {
-  if (!value) return null;
-  const cleaned = value.replace(/\s+/g, '').toUpperCase();
-  if (!cleaned) return null;
-
-  let base = 10;
-  let normalized = cleaned;
-  if (normalized.startsWith('0X')) {
-    base = 16;
-    normalized = normalized.slice(2);
-  } else if (/[A-F]/.test(normalized)) {
-    base = 16;
-  }
-
-  const pattern = base === 16 ? /^[0-9A-F]+$/ : /^[0-9]+$/;
-  if (!pattern.test(normalized)) {
-    return null;
-  }
-
-  const parsed = parseInt(normalized, base);
-  if (Number.isNaN(parsed)) {
-    return null;
-  }
-
-  const clamped = Math.min(Math.max(parsed, 0), maxValue);
-  return clamped;
-}
 
 function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonNullable<FilteredRowsCache> {
   const {
@@ -110,8 +83,8 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
   const levelRange = filters.levelRange;
   const hasLevelFilter = Boolean(levelRange && (levelRange.min != null || levelRange.max != null));
 
-  const timer0FilterValue = parseSingleFilter(filters.timer0Filter, 0xFFFF);
-  const vcountFilterValue = parseSingleFilter(filters.vcountFilter, 0xFF);
+  const timer0FilterValue = parseHexFilterValue(filters.timer0Filter, { maxValue: 0xFFFF });
+  const vcountFilterValue = parseHexFilterValue(filters.vcountFilter, { maxValue: 0xFF });
   const hasTimer0Filter = timer0FilterValue != null;
   const hasVcountFilter = vcountFilterValue != null;
 

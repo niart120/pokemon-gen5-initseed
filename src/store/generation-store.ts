@@ -3,6 +3,7 @@ import type { GenerationParams, GenerationCompletion, GenerationResultsPayload, 
 import { validateGenerationParams, hexParamsToGenerationParams, generationParamsToHex, requiresStaticSelection } from '@/types/generation';
 import { createDefaultDeviceProfile } from '@/types/profile';
 import { keyMaskToNames } from '@/lib/utils/key-input';
+import { normalizeHexFilterInput } from '@/lib/utils/hex-filter';
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
 import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
@@ -193,6 +194,21 @@ const manager = new GenerationWorkerManager();
 type PartialState<T> = Partial<T> | ((state: T) => Partial<T>);
 type SetFn = (partial: PartialState<GenerationSlice>, replace?: boolean) => void;
 type GetFn<T> = () => T;
+
+function normalizeStatRange(range?: StatRange | null): StatRange | undefined {
+  if (!range) return undefined;
+  const hasMin = range.min != null;
+  const hasMax = range.max != null;
+  if (!hasMin && !hasMax) return undefined;
+  return {
+    min: hasMin ? range.min : undefined,
+    max: hasMax ? range.max : undefined,
+  };
+}
+
+function normalizeHexFilterText(value?: string): string | undefined {
+  return normalizeHexFilterInput(value);
+}
 
 export function createDefaultGenerationFilters(): GenerationFilters {
   return {
@@ -463,32 +479,15 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     const nextAbility = partial.abilityIndices ? [...partial.abilityIndices] : current.abilityIndices;
     const nextGenders = partial.genders ? [...partial.genders] as ('M' | 'F' | 'N')[] : current.genders;
 
-    const normalizeRange = (range?: StatRange | null): StatRange | undefined => {
-      if (!range) return undefined;
-      const hasMin = range.min != null;
-      const hasMax = range.max != null;
-      if (!hasMin && !hasMax) return undefined;
-      return {
-        min: hasMin ? range.min : undefined,
-        max: hasMax ? range.max : undefined,
-      };
-    };
-
-    const normalizeFilterText = (value?: string): string | undefined => {
-      if (typeof value !== 'string') return undefined;
-      const trimmed = value.trim();
-      return trimmed.length ? trimmed.toUpperCase() : undefined;
-    };
-
     const hasLevelUpdate = Object.prototype.hasOwnProperty.call(partial, 'levelRange');
-    const nextLevelRange = hasLevelUpdate ? normalizeRange(partial.levelRange) : current.levelRange;
+    const nextLevelRange = hasLevelUpdate ? normalizeStatRange(partial.levelRange) : current.levelRange;
 
     let nextStatRanges = current.statRanges;
     if (partial.statRanges) {
       nextStatRanges = {};
       const entries = Object.entries(partial.statRanges) as Array<[keyof StatRangeFilters, StatRange | undefined]>;
       for (const [key, range] of entries) {
-        const normalized = normalizeRange(range);
+        const normalized = normalizeStatRange(range);
         if (!normalized) continue;
         nextStatRanges[key] = normalized;
       }
@@ -496,8 +495,8 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
 
     const hasTimer0Update = Object.prototype.hasOwnProperty.call(partial, 'timer0Filter');
     const hasVcountUpdate = Object.prototype.hasOwnProperty.call(partial, 'vcountFilter');
-    const nextTimer0Filter = hasTimer0Update ? normalizeFilterText(partial.timer0Filter) : current.timer0Filter;
-    const nextVcountFilter = hasVcountUpdate ? normalizeFilterText(partial.vcountFilter) : current.vcountFilter;
+    const nextTimer0Filter = hasTimer0Update ? normalizeHexFilterText(partial.timer0Filter) : current.timer0Filter;
+    const nextVcountFilter = hasVcountUpdate ? normalizeHexFilterText(partial.vcountFilter) : current.vcountFilter;
 
     const next: GenerationFilters = {
       sortField: nextSortField,
