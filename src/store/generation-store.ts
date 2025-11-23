@@ -1,18 +1,28 @@
 import { GenerationWorkerManager } from '@/lib/generation/generation-worker-manager';
 import type { GenerationParams, GenerationCompletion, GenerationResultsPayload, GenerationResult, GenerationParamsHex, BootTimingDraft } from '@/types/generation';
 import { validateGenerationParams, hexParamsToGenerationParams, generationParamsToHex, requiresStaticSelection } from '@/types/generation';
-import type { DeviceProfile } from '@/types/profile';
 import { createDefaultDeviceProfile } from '@/types/profile';
-import { KEY_INPUT_DEFAULT, keyMaskToNames, normalizeKeyMask } from '@/lib/utils/key-input';
+import { keyMaskToNames } from '@/lib/utils/key-input';
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
 import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
-import { DomainShinyType, type DomainEncounterType } from '@/types/domain';
-import { resolveBatch, toUiReadyPokemon } from '@/lib/generation/pokemon-resolver';
-import type { ResolvedPokemonData, UiReadyPokemonData, SerializedResolutionContext } from '@/types/pokemon-resolved';
+import { type DomainEncounterType } from '@/types/domain';
+import { resolveBatch } from '@/lib/generation/pokemon-resolver';
+import type { ResolvedPokemonData, SerializedResolutionContext } from '@/types/pokemon-resolved';
 import { buildResolutionContextFromSources } from '@/lib/initialization/build-resolution-context';
-import { BOOT_TIMING_PAIR_LIMIT, deriveBootTimingSeedJobs, type DerivedSeedJob, type DerivedSeedMetadata } from '@/lib/generation/boot-timing-derivation';
-import { formatKeyInputDisplay } from '@/lib/i18n/strings/search-results';
+import { BOOT_TIMING_PAIR_LIMIT, deriveBootTimingSeedJobs, type DerivedSeedMetadata } from '@/lib/generation/boot-timing-derivation';
+import {
+  cloneBootTimingDraft,
+  createBootTimingDraftFromProfile,
+  normalizeBootTimingDraft,
+} from '@/store/utils/boot-timing-draft';
+import {
+  advanceDerivedSeedState,
+  createDerivedSeedState,
+  markDerivedSeedAbort,
+  shouldAppendDerivedResults,
+  type DerivedSeedRunState,
+} from '@/store/modules/boot-timing-runner';
 
 export type GenerationStatus = 'idle' | 'starting' | 'running' | 'stopping' | 'completed' | 'error';
 
@@ -85,69 +95,11 @@ export interface GenerationSliceActions {
 
 export type GenerationSlice = GenerationSliceState & GenerationSliceActions;
 
-type BootTimingProfileSource = Pick<DeviceProfile, 'romRegion' | 'hardware' | 'timer0Range' | 'vcountRange' | 'macAddress'>;
-
 type DraftParamsUpdate = Partial<Omit<GenerationParamsHex, 'bootTiming'>> & {
   bootTiming?: Partial<BootTimingDraft>;
 };
 
 const DEFAULT_DEVICE_PROFILE_FOR_GENERATION = createDefaultDeviceProfile();
-
-function ensureMacAddressTuple(
-  values: readonly number[] | undefined,
-  fallback: BootTimingDraft['macAddress'] = [0, 0, 0, 0, 0, 0],
-): BootTimingDraft['macAddress'] {
-  const result: number[] = [];
-  for (let i = 0; i < 6; i += 1) {
-    const fallbackValue = fallback[i] ?? 0;
-    const raw = values?.[i];
-    result.push(clampNumber(raw, 0, 255, fallbackValue));
-  }
-  return result as BootTimingDraft['macAddress'];
-}
-
-export function createBootTimingDraftFromProfile(profile: BootTimingProfileSource): BootTimingDraft {
-  return {
-    timestampIso: undefined,
-    keyMask: KEY_INPUT_DEFAULT,
-    timer0Range: { ...profile.timer0Range },
-    vcountRange: { ...profile.vcountRange },
-    romRegion: profile.romRegion,
-    hardware: profile.hardware,
-    macAddress: ensureMacAddressTuple(profile.macAddress),
-  };
-}
-
-export function cloneBootTimingDraft(source: BootTimingDraft): BootTimingDraft {
-  return {
-    timestampIso: source.timestampIso,
-    keyMask: source.keyMask,
-    timer0Range: { ...source.timer0Range },
-    vcountRange: { ...source.vcountRange },
-    romRegion: source.romRegion,
-    hardware: source.hardware,
-    macAddress: ensureMacAddressTuple(source.macAddress),
-  };
-}
-
-export function normalizeBootTimingDraft(
-  partial: Partial<BootTimingDraft> | undefined,
-  fallback: BootTimingDraft,
-): BootTimingDraft {
-  const base = fallback ?? createBootTimingDraftFromProfile(DEFAULT_DEVICE_PROFILE_FOR_GENERATION);
-  const timer0Range = normalizeNumericRange(partial?.timer0Range, base.timer0Range, 0, 0xFFFF);
-  const vcountRange = normalizeNumericRange(partial?.vcountRange, base.vcountRange, 0, 0xFF);
-  const keyMask = partial?.keyMask != null ? normalizeKeyMask(partial.keyMask) : base.keyMask;
-  return {
-    timestampIso: partial?.timestampIso ?? base.timestampIso,
-    keyMask,
-    timer0Range,
-    vcountRange,
-    romRegion: partial?.romRegion ?? base.romRegion,
-    hardware: partial?.hardware ?? base.hardware,
-    macAddress: ensureMacAddressTuple(partial?.macAddress, base.macAddress),
-  };
-}
 
 function validateBootTimingInputs(draft: BootTimingDraft): string[] {
   const errors: string[] = [];
@@ -188,47 +140,6 @@ function validateBootTimingInputs(draft: BootTimingDraft): string[] {
   return errors;
 }
 
-function normalizeNumericRange(
-  partial: { min?: number; max?: number } | undefined,
-  fallback: { min: number; max: number },
-  minBound: number,
-  maxBound: number,
-): { min: number; max: number } {
-  const nextMin = clampNumber(partial?.min, minBound, maxBound, fallback.min);
-  const nextMax = clampNumber(partial?.max, minBound, maxBound, fallback.max);
-  if (nextMin > nextMax) {
-    return { min: nextMax, max: nextMin };
-  }
-  return { min: nextMin, max: nextMax };
-}
-
-function clampNumber(value: number | undefined, min: number, max: number, fallback: number): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    return clampToBounds(fallback, min, max);
-  }
-  return clampToBounds(Math.round(value), min, max);
-}
-
-function clampToBounds(value: number, min: number, max: number): number {
-  if (value < min) return min;
-  if (value > max) return max;
-  return value;
-}
-
-interface DerivedSeedAggregate {
-  processedAdvances: number;
-  resultsCount: number;
-  elapsedMs: number;
-  shinyFound: boolean;
-}
-
-interface DerivedSeedRunState {
-  jobs: DerivedSeedJob[];
-  cursor: number;
-  total: number;
-  aggregate: DerivedSeedAggregate;
-  abortRequested: boolean;
-}
 
 function resolveShinyLock(base: GenerationParams, staticEncounterId: string | null | undefined): GenerationParams {
   if (!staticEncounterId || !requiresStaticSelection(base.encounterType)) {
@@ -333,19 +244,6 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
       return false;
     }
   };
-
-  const createDerivedSeedState = (jobs: DerivedSeedJob[]): DerivedSeedRunState => ({
-    jobs,
-    cursor: 0,
-    total: jobs.length,
-    aggregate: {
-      processedAdvances: 0,
-      resultsCount: 0,
-      elapsedMs: 0,
-      shinyFound: false,
-    },
-    abortRequested: false,
-  });
 
   return {
     params: null,
@@ -545,9 +443,7 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     if (st === 'running' || st === 'stopping') {
       set((state: GenerationSlice) => ({
         status: 'stopping',
-        derivedSeedState: state.derivedSeedState
-          ? { ...state.derivedSeedState, abortRequested: true }
-          : null,
+        derivedSeedState: markDerivedSeedAbort(state.derivedSeedState),
       }));
       manager.stop();
     }
@@ -666,7 +562,7 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
       };
     });
 
-    const shouldAppend = Boolean(state.derivedSeedState && state.derivedSeedState.cursor > 0);
+    const shouldAppend = shouldAppendDerivedResults(state.derivedSeedState);
     const nextResults = shouldAppend ? [...state.results, ...enrichedResults] : enrichedResults;
     const nextResolved = shouldAppend ? [...(state.resolvedResults ?? []), ...resolvedList] : resolvedList;
 
@@ -680,21 +576,19 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     const state = get();
     const derivedState = state.derivedSeedState;
     if (derivedState) {
-      const aggregate: DerivedSeedAggregate = {
-        processedAdvances: derivedState.aggregate.processedAdvances + c.processedAdvances,
-        resultsCount: derivedState.aggregate.resultsCount + c.resultsCount,
-        elapsedMs: derivedState.aggregate.elapsedMs + c.elapsedMs,
-        shinyFound: derivedState.aggregate.shinyFound || c.shinyFound,
-      };
-      const nextCursor = derivedState.cursor + 1;
-      const hasMore = nextCursor < derivedState.total;
+      const advanceResult = advanceDerivedSeedState(derivedState, c);
       set({
-        derivedSeedState: hasMore ? { ...derivedState, cursor: nextCursor, aggregate } : null,
+        derivedSeedState: advanceResult.nextState,
         activeSeedMetadata: null,
       });
 
-      if (hasMore && !derivedState.abortRequested && c.reason !== 'error') {
-        const nextJob = derivedState.jobs[nextCursor];
+      const shouldStartNext = Boolean(
+        advanceResult.nextJob &&
+        !derivedState.abortRequested &&
+        c.reason !== 'error',
+      );
+      if (shouldStartNext && advanceResult.nextJob) {
+        const nextJob = advanceResult.nextJob;
         void (async () => {
           const started = await startWorkerRun(nextJob.params, { resetResults: false, metadata: nextJob.metadata });
           if (!started) {
@@ -704,12 +598,12 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
         return;
       }
 
-      const finalCompletion: GenerationCompletion = {
+      const finalCompletion: GenerationCompletion = advanceResult.finalCompletion ?? {
         ...c,
-        processedAdvances: aggregate.processedAdvances,
-        resultsCount: aggregate.resultsCount,
-        elapsedMs: aggregate.elapsedMs,
-        shinyFound: aggregate.shinyFound,
+        processedAdvances: advanceResult.aggregate.processedAdvances,
+        resultsCount: advanceResult.aggregate.resultsCount,
+        elapsedMs: advanceResult.aggregate.elapsedMs,
+        shinyFound: advanceResult.aggregate.shinyFound,
       };
       const finalStatus: GenerationStatus = c.reason === 'stopped' ? 'idle' : 'completed';
       set({ status: finalStatus, lastCompletion: finalCompletion });
@@ -758,232 +652,9 @@ export function getCurrentHexParams(state: GenerationSlice): GenerationParamsHex
   return state.params ? generationParamsToHex(state.params) : null;
 }
 
-type FilteredRowsCache = {
-  resultsRef: GenerationResult[];
-  resolvedRef: ResolvedPokemonData[];
-  filtersRef: GenerationFilters;
-  encounterTableRef?: EncounterTable;
-  genderRatiosRef?: Map<number, GenderRatio>;
-  abilityCatalogRef?: Map<number, string[]>;
-  locale: 'ja' | 'en';
-  baseSeedRef?: bigint;
-  versionRef: 'B' | 'W' | 'B2' | 'W2';
-  ui: UiReadyPokemonData[];
-  raw: GenerationResult[];
-} | null;
+export {
+  selectFilteredDisplayRows,
+  selectFilteredSortedResults,
+  selectResolvedResults,
+} from '@/store/selectors/generation-results';
 
-let _filteredRowsCache: FilteredRowsCache = null;
-
-function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonNullable<FilteredRowsCache> {
-  const {
-    results,
-    filters,
-    encounterTable,
-    genderRatios,
-    abilityCatalog,
-  } = s as GenerationSlice & {
-    encounterTable?: EncounterTable;
-    genderRatios?: Map<number, GenderRatio>;
-    abilityCatalog?: Map<number, string[]>;
-    locale?: 'ja' | 'en';
-  };
-
-  const cache = _filteredRowsCache;
-  const version = (s.params?.version ?? s.draftParams.version ?? 'B') as 'B' | 'W' | 'B2' | 'W2';
-  const baseSeed = s.params?.baseSeed;
-  const resolvedFromState = s.resolvedResults ?? [];
-  const requiresFallback = results.length > 0 && resolvedFromState.length !== results.length;
-
-  if (
-    cache &&
-    cache.resultsRef === results &&
-    cache.filtersRef === filters &&
-    cache.encounterTableRef === encounterTable &&
-    cache.genderRatiosRef === genderRatios &&
-    cache.abilityCatalogRef === abilityCatalog &&
-    cache.locale === locale &&
-    cache.versionRef === version &&
-    cache.baseSeedRef === baseSeed &&
-    (
-      (!requiresFallback && cache.resolvedRef === resolvedFromState) ||
-      (requiresFallback && cache.resolvedRef.length === results.length)
-    )
-  ) {
-    return cache;
-  }
-
-  let resolved = resolvedFromState;
-
-  if (requiresFallback) {
-    const context = buildResolutionContextFromSources({ encounterTable, genderRatios, abilityCatalog }) ?? {};
-    resolved = resolveBatch(results, context);
-  }
-
-  const shinyMode = filters.shinyMode;
-  const natureSet = filters.natureIds.length ? new Set(filters.natureIds) : null;
-  const speciesSet = filters.speciesIds.length ? new Set(filters.speciesIds) : null;
-  const abilitySet = speciesSet && filters.abilityIndices.length ? new Set(filters.abilityIndices) : null;
-  const genderSet = speciesSet && filters.genders.length ? new Set(filters.genders) : null;
-  const statKeys: Array<keyof StatRangeFilters> = ['hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed'];
-  const hasStatFilters = statKeys.some((key) => {
-    const range = filters.statRanges[key];
-    return !!range && (range.min != null || range.max != null);
-  });
-  const levelRange = filters.levelRange;
-  const hasLevelFilter = Boolean(levelRange && (levelRange.min != null || levelRange.max != null));
-
-  const entries: Array<{ raw: GenerationResult; ui: UiReadyPokemonData }> = [];
-
-  for (let i = 0; i < results.length; i++) {
-    const raw = results[i];
-    const resolvedData = resolved[i];
-    if (!resolvedData) continue;
-    const perRowBaseSeed = raw.baseSeed ?? baseSeed;
-    const uiData = toUiReadyPokemon(resolvedData, { locale, version, baseSeed: perRowBaseSeed });
-
-    const shinyType = uiData.shinyType ?? DomainShinyType.Normal;
-    if (shinyMode === 'shiny' && shinyType === DomainShinyType.Normal) continue;
-    if (shinyMode === 'non-shiny' && shinyType !== DomainShinyType.Normal) continue;
-    if (shinyMode === 'star' && shinyType !== DomainShinyType.Star) continue;
-    if (shinyMode === 'square' && shinyType !== DomainShinyType.Square) continue;
-    if (natureSet && !natureSet.has(uiData.natureId)) continue;
-
-    if (speciesSet) {
-      const speciesId = uiData.speciesId;
-      if (!speciesId || !speciesSet.has(speciesId)) continue;
-    }
-
-    if (abilitySet) {
-      const abilityIndex = uiData.abilityIndex;
-      if (abilityIndex == null || !abilitySet.has(abilityIndex)) continue;
-    }
-
-    if (genderSet) {
-      const gender = uiData.genderCode;
-      if (!gender || !genderSet.has(gender)) continue;
-    }
-
-    if (hasLevelFilter) {
-      const level = uiData.level;
-      if (level == null) continue;
-      if (levelRange?.min != null && level < levelRange.min) continue;
-      if (levelRange?.max != null && level > levelRange.max) continue;
-    }
-
-    if (hasStatFilters) {
-      const stats = uiData.stats;
-      if (!stats) continue;
-      let ok = true;
-      for (const key of statKeys) {
-        const range = filters.statRanges[key];
-        if (!range) continue;
-        const value = stats[key as keyof typeof stats];
-        if (range.min != null && value < range.min) {
-          ok = false;
-          break;
-        }
-        if (range.max != null && value > range.max) {
-          ok = false;
-          break;
-        }
-      }
-      if (!ok) continue;
-    }
-
-    if (raw.seedSourceMode) {
-      uiData.seedSourceMode = raw.seedSourceMode;
-      uiData.derivedSeedIndex = raw.derivedSeedIndex;
-      uiData.seedSourceSeedHex = raw.seedSourceSeedHex;
-    } else {
-      uiData.seedSourceMode = undefined;
-      uiData.derivedSeedIndex = undefined;
-      uiData.seedSourceSeedHex = undefined;
-    }
-    uiData.timer0 = raw.timer0;
-    uiData.vcount = raw.vcount;
-    uiData.bootTimestampIso = raw.bootTimestampIso;
-    if (raw.keyInputNames && raw.keyInputNames.length) {
-      uiData.keyInputNames = raw.keyInputNames;
-      uiData.keyInputDisplay = formatKeyInputDisplay(raw.keyInputNames, locale);
-    } else {
-      uiData.keyInputNames = undefined;
-      uiData.keyInputDisplay = undefined;
-    }
-
-    entries.push({ raw, ui: uiData });
-  }
-
-  const field = filters.sortField ?? 'advance';
-  const order = filters.sortOrder === 'desc' ? -1 : 1;
-
-  entries.sort((a, b) => {
-    const au = a.ui;
-    const bu = b.ui;
-    let av: number;
-    let bv: number;
-    switch (field) {
-      case 'pid':
-        av = au.pid >>> 0;
-        bv = bu.pid >>> 0;
-        break;
-      case 'nature':
-        av = au.natureId;
-        bv = bu.natureId;
-        break;
-      case 'shiny':
-        av = au.shinyType;
-        bv = bu.shinyType;
-        break;
-      case 'species':
-        av = au.speciesId ?? Number.MAX_SAFE_INTEGER;
-        bv = bu.speciesId ?? Number.MAX_SAFE_INTEGER;
-        break;
-      case 'ability':
-        av = au.abilityIndex ?? Number.MAX_SAFE_INTEGER;
-        bv = bu.abilityIndex ?? Number.MAX_SAFE_INTEGER;
-        break;
-      case 'level':
-        av = au.level ?? Number.MAX_SAFE_INTEGER;
-        bv = bu.level ?? Number.MAX_SAFE_INTEGER;
-        break;
-      case 'advance':
-      default:
-        av = au.advance;
-        bv = bu.advance;
-        break;
-    }
-    if (av < bv) return -1 * order;
-    if (av > bv) return 1 * order;
-    return 0;
-  });
-
-  const ui = entries.map(entry => entry.ui);
-  const raw = entries.map(entry => entry.raw);
-  const nextCache: NonNullable<FilteredRowsCache> = {
-    resultsRef: results,
-    resolvedRef: resolved,
-    filtersRef: filters,
-    encounterTableRef: encounterTable,
-    genderRatiosRef: genderRatios,
-    abilityCatalogRef: abilityCatalog,
-    locale,
-    versionRef: version,
-    baseSeedRef: baseSeed,
-    ui,
-    raw,
-  };
-  _filteredRowsCache = nextCache;
-  return nextCache;
-}
-
-export const selectFilteredDisplayRows = (s: GenerationSlice, locale: 'ja' | 'en' = 'ja'): UiReadyPokemonData[] => {
-  return computeFilteredRowsCache(s, locale).ui;
-};
-
-export const selectFilteredSortedResults = (s: GenerationSlice, locale: 'ja' | 'en' = 'ja') => {
-  return computeFilteredRowsCache(s, locale).raw;
-};
-
-export const selectResolvedResults = (s: GenerationSlice): ResolvedPokemonData[] => {
-  return s.resolvedResults ?? [];
-};

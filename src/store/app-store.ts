@@ -15,7 +15,8 @@ import { createDefaultDeviceProfile, createDeviceProfile, applyDeviceProfileDraf
 import { DEMO_TARGET_SEEDS } from '../data/default-seeds';
 
 import type { GenerationSlice, GenerationFilters, ShinyFilterMode } from './generation-store';
-import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS, createDefaultGenerationDraftParams, createDefaultGenerationFilters, normalizeBootTimingDraft } from './generation-store';
+import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS, createDefaultGenerationDraftParams, createDefaultGenerationFilters } from './generation-store';
+import { bootTimingDraftFromProfile, normalizeBootTimingDraft } from '@/store/utils/boot-timing-draft';
 import { DEFAULT_LOCALE } from '@/types/i18n';
 import { DomainShinyType } from '@/types/domain';
 
@@ -176,22 +177,6 @@ function resolveProfile(state: Pick<AppStore, 'profiles' | 'activeProfileId'>, p
     return state.profiles[0];
   }
   return state.profiles.find((profile) => profile.id === targetId) ?? state.profiles[0];
-}
-
-function mergeBootTimingDraftFromProfile(
-  profile: DeviceProfile,
-  current?: BootTimingDraft,
-): BootTimingDraft {
-  const fallback = current ?? DEFAULT_GENERATION_DRAFT_PARAMS.bootTiming;
-  return normalizeBootTimingDraft({
-    timestampIso: fallback.timestampIso,
-    keyMask: fallback.keyMask,
-    romRegion: profile.romRegion,
-    hardware: profile.hardware,
-    timer0Range: { ...profile.timer0Range },
-    vcountRange: { ...profile.vcountRange },
-    macAddress: Array.from(profile.macAddress) as BootTimingDraft['macAddress'],
-  }, fallback);
 }
 
 // Use demo seeds for initial setup (development only)
@@ -414,7 +399,7 @@ export const useAppStore = create<AppStore>()(
         const profile = resolveProfile(state, profileId);
         if (!profile) return;
         const currentBootTiming = state.draftParams.bootTiming ?? DEFAULT_GENERATION_DRAFT_PARAMS.bootTiming;
-        const nextBootTiming = mergeBootTimingDraftFromProfile(profile, currentBootTiming);
+        const nextBootTiming = bootTimingDraftFromProfile(profile, currentBootTiming);
         state.setDraftParams({
           version: profile.romVersion,
           tid: profile.tid,
