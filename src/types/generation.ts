@@ -146,6 +146,7 @@ export type NormalizedGenerationParams = GenerationParams;
 // --- Result 型 ---
 // UnresolvedPokemonData が advance を含むため、そのまま公開APIとして利用する。
 export type GenerationResult = UnresolvedPokemonData & {
+  baseSeed?: bigint;
   seedSourceMode?: SeedSourceMode;
   derivedSeedIndex?: number;
   seedSourceSeedHex?: string;

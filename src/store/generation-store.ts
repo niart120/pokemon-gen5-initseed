@@ -644,19 +644,27 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
 
     const metadata = state.activeSeedMetadata;
     const keyInputNames = metadata ? keyMaskToNames(metadata.keyMask) : undefined;
-    const enrichedResults = metadata
-      ? payload.results.map((result) => ({
-          ...result,
-          seedSourceMode: metadata.seedSourceMode,
-          derivedSeedIndex: metadata.derivedSeedIndex,
-          seedSourceSeedHex: metadata.seedSourceSeedHex,
-          timer0: metadata.timer0,
-          vcount: metadata.vcount,
-          bootTimestampIso: metadata.bootTimestampIso,
-          keyInputNames,
-          macAddress: metadata.macAddress,
-        }))
-      : payload.results;
+    const activeBaseSeed = state.params?.baseSeed;
+    const enrichedResults = payload.results.map((result) => {
+      const baseEnriched = {
+        ...result,
+        baseSeed: activeBaseSeed ?? result.baseSeed,
+      };
+      if (!metadata) {
+        return baseEnriched;
+      }
+      return {
+        ...baseEnriched,
+        seedSourceMode: metadata.seedSourceMode,
+        derivedSeedIndex: metadata.derivedSeedIndex,
+        seedSourceSeedHex: metadata.seedSourceSeedHex,
+        timer0: metadata.timer0,
+        vcount: metadata.vcount,
+        bootTimestampIso: metadata.bootTimestampIso,
+        keyInputNames,
+        macAddress: metadata.macAddress,
+      };
+    });
 
     const shouldAppend = Boolean(state.derivedSeedState && state.derivedSeedState.cursor > 0);
     const nextResults = shouldAppend ? [...state.results, ...enrichedResults] : enrichedResults;
@@ -830,7 +838,8 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
     const raw = results[i];
     const resolvedData = resolved[i];
     if (!resolvedData) continue;
-    const uiData = toUiReadyPokemon(resolvedData, { locale, version, baseSeed });
+    const perRowBaseSeed = raw.baseSeed ?? baseSeed;
+    const uiData = toUiReadyPokemon(resolvedData, { locale, version, baseSeed: perRowBaseSeed });
 
     const shinyType = uiData.shinyType ?? DomainShinyType.Normal;
     if (shinyMode === 'shiny' && shinyType === DomainShinyType.Normal) continue;

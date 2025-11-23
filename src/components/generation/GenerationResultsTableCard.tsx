@@ -130,9 +130,12 @@ export const GenerationResultsTableCard: React.FC = () => {
               }
             }
             const keyInputDisplay = row.keyInputDisplay ?? '';
+            const timer0Key = row.timer0 !== undefined && row.timer0 !== null ? row.timer0 : 'na';
+            const vcountKey = row.vcount !== undefined && row.vcount !== null ? row.vcount : 'na';
+            const rowKey = `${row.advance}-${timer0Key}-${vcountKey}`;
             return (
               <TableRow
-                key={row.advance}
+                key={rowKey}
                 ref={virtualization.measureRow}
                 data-index={virtualRow.index}
                 className="odd:bg-background even:bg-muted/30 border-0"

@@ -41,15 +41,12 @@ export class GenerationWorkerManager {
     if (this.running) {
       throw new Error('generation already running');
     }
-    if (this.terminated) {
-      // 再利用しない方針 -> 真新しい worker を生成し直す
-      this.terminated = false;
-    }
     const validation = validateGenerationParams(params);
     if (validation.length) {
       return Promise.reject(new Error(validation.join(', ')));
     }
-    this.ensureWorker();
+    const needsFreshWorker = this.terminated || this.worker === null; // avoid reusing a worker awaiting disposal
+    this.ensureWorker(needsFreshWorker);
     this.running = true;
     this.status = 'running';
     const rid = this.generateRequestId();
@@ -80,6 +77,7 @@ export class GenerationWorkerManager {
     this.running = false;
     this.terminated = true;
     this.status = 'idle';
+    this.currentRequestId = null;
   }
 
   onResults(cb: ResultsCb) { this.callbacks.results.push(cb); return this; }
@@ -93,9 +91,14 @@ export class GenerationWorkerManager {
   isRunning() { return this.running; }
 
   // --- Internal ---
-  private ensureWorker() {
+  private ensureWorker(forceNew = false) {
+    if (this.worker && (forceNew || this.terminated)) {
+      this.worker.terminate();
+      this.worker = null;
+    }
     if (this.worker) return;
     this.worker = this.createWorker();
+    this.terminated = false;
     this.worker.onmessage = (ev: MessageEvent) => this.handleMessage(ev.data);
     this.worker.onerror = () => {
       this.emitError('Worker error event', 'RUNTIME', true);
@@ -115,8 +118,12 @@ export class GenerationWorkerManager {
       case 'COMPLETE': {
         this.running = false;
         this.status = 'idle';
+        this.currentRequestId = null;
+        const completedWorker = this.worker;
+        this.worker = null;
+        this.terminated = true;
         this.callbacks.complete.forEach(cb => cb(msg.payload));
-        this.terminate();
+        completedWorker?.terminate();
         break; }
       case 'ERROR':
         this.emitError(msg.message, msg.category, msg.fatal);
