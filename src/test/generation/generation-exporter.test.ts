@@ -52,6 +52,14 @@ describe('generation-exporter', () => {
       'Speed',
       'SeedHex',
       'PIDHex',
+      'Timer0Hex',
+      'VCountHex',
+      'BootTimestamp',
+      'KeyInput',
+      'SeedSourceMode',
+      'DerivedSeedIndex',
+      'SeedSourceSeedHex',
+      'MacAddress',
     ]);
     expect(headers).not.toContain('SeedDec');
     // 1行目データ整合: seedHex/pidHex が 0x + lower-case
