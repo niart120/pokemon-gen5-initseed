@@ -42,7 +42,7 @@ export function SearchExportButton({ results, disabled = false }: SearchExportBu
 
   const handleExport = async (download: boolean = true) => {
     try {
-      const content = ResultExporter.exportResults(results, exportOptions);
+      const content = ResultExporter.exportResults(results, exportOptions, locale);
 
       if (download) {
         const filename = ResultExporter.generateFilename(exportOptions.format);

@@ -18,8 +18,6 @@ import {
   copyToGenerationPanelHint,
   dateTimeLabel,
   detailsButtonLabel,
-  formatKeyInputDisplay,
-  formatResultDateTime,
   generatedMessageLabel,
   hardwareLabel,
   keyInputLabel,
@@ -36,6 +34,12 @@ import {
   timer0Label,
   vcountLabel,
 } from '@/lib/i18n/strings/search-results';
+import {
+  formatBootTimestampDisplay,
+  formatTimer0Hex,
+  formatVCountHex,
+  resolveKeyInputDisplay,
+} from '@/lib/generation/result-formatters';
 import type { InitialSeedResult } from '../../../types/search';
 
 interface ResultDetailsDialogProps {
@@ -115,10 +119,13 @@ export function ResultDetailsDialog({
     : result.keyCode != null
       ? keyCodeToNames(result.keyCode)
       : [];
-  const keyInputDisplay = keyNames.length === 0
-    ? resolveLocaleValue(keyInputUnavailableLabel, locale)
-    : formatKeyInputDisplay(keyNames, locale);
-  const formattedDateTime = formatResultDateTime(result.datetime, locale);
+  const resolvedKeyDisplay = resolveKeyInputDisplay(keyNames, locale);
+  const keyInputDisplay = resolvedKeyDisplay && resolvedKeyDisplay.length > 0
+    ? resolvedKeyDisplay
+    : resolveLocaleValue(keyInputUnavailableLabel, locale);
+  const timer0Display = formatTimer0Hex(result?.timer0);
+  const vcountDisplay = formatVCountHex(result?.vcount);
+  const formattedDateTime = formatBootTimestampDisplay(result.datetime, locale);
   const bootTimingHint = resolveLocaleValue(bootTimingCopyHint, locale);
 
   return (
@@ -207,11 +214,11 @@ export function ResultDetailsDialog({
           <div className="grid grid-cols-4 gap-4">
             <div>
               <Label>{resolveLocaleValue(timer0Label, locale)}</Label>
-              <div className="font-mono">0x{result.timer0.toString(16).toUpperCase().padStart(4, '0')}</div>
+              <div className="font-mono">{timer0Display}</div>
             </div>
             <div>
               <Label>{resolveLocaleValue(vcountLabel, locale)}</Label>
-              <div className="font-mono">0x{result.vcount.toString(16).toUpperCase().padStart(2, '0')}</div>
+              <div className="font-mono">{vcountDisplay}</div>
             </div>
             <div>
               <Label>{resolveLocaleValue(romLabel, locale)}</Label>

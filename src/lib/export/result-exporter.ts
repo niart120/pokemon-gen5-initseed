@@ -1,5 +1,11 @@
 import type { SearchResult } from '../../types/search';
 import { keyCodeToNames } from '@/lib/utils/key-input';
+import {
+  formatBootTimestampDisplay,
+  formatTimer0Hex,
+  formatVCountHex,
+  resolveKeyInputDisplay,
+} from '@/lib/generation/result-formatters';
 
 /**
  * Export functionality for search results
@@ -18,14 +24,14 @@ export class ResultExporter {
   /**
    * Export search results in the specified format
    */
-  public static exportResults(results: SearchResult[], options: ExportOptions): string {
+  public static exportResults(results: SearchResult[], options: ExportOptions, locale: 'ja' | 'en'): string {
     switch (options.format) {
       case 'csv':
-        return this.exportToCSV(results, options);
+        return this.exportToCSV(results, options, locale);
       case 'json':
-        return this.exportToJSON(results, options);
+        return this.exportToJSON(results, options, locale);
       case 'txt':
-        return this.exportToText(results, options);
+        return this.exportToText(results, options, locale);
       default:
         throw new Error(`Unsupported export format: ${options.format}`);
     }
@@ -34,7 +40,7 @@ export class ResultExporter {
   /**
    * Export to CSV format
    */
-  private static exportToCSV(results: SearchResult[], options: ExportOptions): string {
+  private static exportToCSV(results: SearchResult[], options: ExportOptions, locale: 'ja' | 'en'): string {
     const headers = [
       'Seed (Hex)',
       'DateTime',
@@ -60,11 +66,14 @@ export class ResultExporter {
     const csvLines = [headers.join(',')];
 
     results.forEach(result => {
+      const timestampDisplay = formatBootTimestampDisplay(result.datetime, locale);
+      const timer0Display = formatTimer0Hex(result.timer0);
+      const vcountDisplay = formatVCountHex(result.vcount);
       const row = [
         `0x${result.seed.toString(16).padStart(8, '0')}`,
-        this.formatLocalDateTime(result.datetime),
-        `0x${result.timer0.toString(16).padStart(4, '0')}`,
-        `0x${result.vcount.toString(16).padStart(2, '0')}`,
+        timestampDisplay,
+        timer0Display,
+        vcountDisplay,
         result.romVersion,
         result.romRegion,
         result.hardware
@@ -72,7 +81,7 @@ export class ResultExporter {
 
       if (options.includeDetails) {
         const macAddress = result.macAddress?.map(b => b.toString(16).padStart(2, '0')).join(':') || '';
-        const keyInput = this.formatKeyInput(result);
+        const keyInput = this.formatKeyInput(result, locale);
         row.push(macAddress, keyInput);
       }
 
@@ -94,7 +103,7 @@ export class ResultExporter {
   /**
    * Export to JSON format
    */
-  private static exportToJSON(results: SearchResult[], options: ExportOptions): string {
+  private static exportToJSON(results: SearchResult[], options: ExportOptions, locale: 'ja' | 'en'): string {
     const exportData = {
       exportDate: new Date().toISOString(),
       totalResults: results.length,
@@ -120,10 +129,10 @@ export class ResultExporter {
         } = {
           seed: `0x${result.seed.toString(16).padStart(8, '0')}`,
           seedDecimal: result.seed,
-          dateTime: this.formatLocalDateTime(result.datetime),
-          timer0: `0x${result.timer0.toString(16).padStart(4, '0')}`,
+          dateTime: formatBootTimestampDisplay(result.datetime, locale),
+          timer0: formatTimer0Hex(result.timer0),
           timer0Decimal: result.timer0,
-          vcount: `0x${result.vcount.toString(16).padStart(2, '0')}`,
+          vcount: formatVCountHex(result.vcount),
           vcountDecimal: result.vcount,
           rom: {
             version: result.romVersion,
@@ -134,7 +143,7 @@ export class ResultExporter {
 
         if (options.includeDetails) {
           exportResult.macAddress = result.macAddress?.map(b => `0x${b.toString(16).padStart(2, '0')}`);
-          const formattedKey = this.formatKeyInput(result);
+          const formattedKey = this.formatKeyInput(result, locale);
           exportResult.keyInput = formattedKey ? formattedKey : null;
         }
 
@@ -156,7 +165,7 @@ export class ResultExporter {
   /**
    * Export to text format
    */
-  private static exportToText(results: SearchResult[], options: ExportOptions): string {
+  private static exportToText(results: SearchResult[], options: ExportOptions, locale: 'ja' | 'en'): string {
     const lines = [
       'Pokemon BW/BW2 Initial Seed Search Results',
       `Export Date: ${new Date().toISOString()}`,
@@ -168,14 +177,14 @@ export class ResultExporter {
     results.forEach((result, index) => {
       lines.push(`Result #${index + 1}:`);
       lines.push(`  Seed: 0x${result.seed.toString(16).padStart(8, '0')} (${result.seed})`);
-  lines.push(`  DateTime: ${result.datetime.toLocaleString()}`);
-      lines.push(`  Timer0: 0x${result.timer0.toString(16).padStart(4, '0')} (${result.timer0})`);
-      lines.push(`  VCount: 0x${result.vcount.toString(16).padStart(2, '0')} (${result.vcount})`);
+      lines.push(`  DateTime: ${formatBootTimestampDisplay(result.datetime, locale)}`);
+      lines.push(`  Timer0: ${formatTimer0Hex(result.timer0)} (${result.timer0})`);
+      lines.push(`  VCount: ${formatVCountHex(result.vcount)} (${result.vcount})`);
       lines.push(`  ROM: ${result.romVersion} ${result.romRegion} (${result.hardware})`);
 
       if (options.includeDetails) {
         const macAddress = result.macAddress?.map(b => b.toString(16).padStart(2, '0')).join(':') || 'N/A';
-  const keyInput = this.formatKeyInput(result) || 'N/A';
+        const keyInput = this.formatKeyInput(result, locale) || 'N/A';
         lines.push(`  MAC Address: ${macAddress}`);
         lines.push(`  Key Input: ${keyInput}`);
       }
@@ -195,13 +204,13 @@ export class ResultExporter {
     return lines.join('\n');
   }
 
-  private static formatKeyInput(result: SearchResult): string {
+  private static formatKeyInput(result: SearchResult, locale: 'ja' | 'en'): string {
     if (result.keyCode != null) {
       const names = keyCodeToNames(result.keyCode);
-      if (names.length === 0) {
-        return `(No keys)`;
+      const formatted = resolveKeyInputDisplay(names, locale);
+      if (formatted) {
+        return formatted;
       }
-      return `(${names.join(' + ')})`;
     }
 
     if (result.keyInput != null) {
@@ -209,25 +218,6 @@ export class ResultExporter {
     }
 
     return '';
-  }
-
-  private static formatLocalDateTime(date: Date): string {
-    const year = date.getFullYear();
-    const month = ResultExporter.padNumber(date.getMonth() + 1);
-    const day = ResultExporter.padNumber(date.getDate());
-    const hour = ResultExporter.padNumber(date.getHours());
-    const minute = ResultExporter.padNumber(date.getMinutes());
-    const second = ResultExporter.padNumber(date.getSeconds());
-    const offsetMinutes = date.getTimezoneOffset();
-    const offsetSign = offsetMinutes <= 0 ? '+' : '-';
-    const absOffset = Math.abs(offsetMinutes);
-    const offsetHours = ResultExporter.padNumber(Math.floor(absOffset / 60));
-    const offsetRemainder = ResultExporter.padNumber(absOffset % 60);
-    return `${year}-${month}-${day} ${hour}:${minute}:${second} GMT${offsetSign}${offsetHours}:${offsetRemainder}`;
-  }
-
-  private static padNumber(value: number): string {
-    return value.toString().padStart(2, '0');
   }
 
   /**

@@ -13,7 +13,6 @@ import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import {
   formatResultCount,
-  formatResultDateTime,
   formatSearchDuration,
   searchResultsFilteredEmptyMessage,
   searchResultsHeaders,
@@ -22,6 +21,11 @@ import {
   viewDetailsAriaLabel,
   viewDetailsLabel,
 } from '@/lib/i18n/strings/search-results';
+import {
+  formatBootTimestampDisplay,
+  formatTimer0Hex,
+  formatVCountHex,
+} from '@/lib/generation/result-formatters';
 import type { InitialSeedResult } from '../../../types/search';
 import type { SortField } from './ResultsControlCard';
 
@@ -184,7 +188,7 @@ export function ResultsCard({
                         />
                       </TableCell>
                       <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-nowrap">
-                        {formatResultDateTime(result.datetime, locale)}
+                        {formatBootTimestampDisplay(result.datetime, locale)}
                       </TableCell>
                       <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-nowrap">
                         <LazyTooltip
@@ -205,10 +209,10 @@ export function ResultsCard({
                         />
                       </TableCell>
                       <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-nowrap">
-                        0x{result.timer0.toString(16).toUpperCase().padStart(4, '0')}
+                        {formatTimer0Hex(result.timer0)}
                       </TableCell>
                       <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-nowrap">
-                        0x{result.vcount.toString(16).toUpperCase().padStart(2, '0')}
+                        {formatVCountHex(result.vcount)}
                       </TableCell>
                     </TableRow>
                   );
