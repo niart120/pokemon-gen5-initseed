@@ -5,7 +5,7 @@ import type { GenderRatio } from '@/types/pokemon-raw';
 import type { ResolvedPokemonData, UiReadyPokemonData } from '@/types/pokemon-resolved';
 import { resolveBatch, toUiReadyPokemon } from '@/lib/generation/pokemon-resolver';
 import { buildResolutionContextFromSources } from '@/lib/initialization/build-resolution-context';
-import { formatKeyInputDisplay } from '@/lib/i18n/strings/search-results';
+import { resolveKeyInputDisplay } from '@/lib/generation/result-formatters';
 import { DomainShinyType } from '@/types/domain';
 
 export type FilteredRowsCache = {
@@ -152,9 +152,10 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
     uiData.timer0 = raw.timer0;
     uiData.vcount = raw.vcount;
     uiData.bootTimestampIso = raw.bootTimestampIso;
-    if (raw.keyInputNames && raw.keyInputNames.length) {
+    const keyDisplay = resolveKeyInputDisplay(raw.keyInputNames, locale);
+    if (keyDisplay) {
       uiData.keyInputNames = raw.keyInputNames;
-      uiData.keyInputDisplay = formatKeyInputDisplay(raw.keyInputNames, locale);
+      uiData.keyInputDisplay = keyDisplay;
     } else {
       uiData.keyInputNames = undefined;
       uiData.keyInputDisplay = undefined;

@@ -10,7 +10,12 @@ import {
 import { resolveBatch, toUiReadyPokemon, type ResolutionContext } from '@/lib/generation/pokemon-resolver';
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
-import { formatResultDateTime, formatKeyInputDisplay } from '@/lib/i18n/strings/search-results';
+import {
+  formatBootTimestampDisplay,
+  formatTimer0Hex,
+  formatVCountHex,
+  resolveKeyInputDisplay,
+} from '@/lib/generation/result-formatters';
 import type { SupportedLocale } from '@/types/i18n';
 
 export interface GenerationExportOptions {
@@ -127,28 +132,16 @@ export function adaptGenerationResults(results: GenerationResult[], opts?: {
     }
     const uiEntry = resolvedUi?.[idx];
     const stats = uiEntry?.stats;
-    let timer0Hex: string | undefined;
-    let timer0Value: number | undefined;
-    if (typeof r.timer0 === 'number') {
-      timer0Value = r.timer0 >>> 0;
-      timer0Hex = '0x' + timer0Value.toString(16).toUpperCase().padStart(4, '0');
-    }
-    let vcountHex: string | undefined;
-    let vcountValue: number | undefined;
-    if (typeof r.vcount === 'number') {
-      vcountValue = r.vcount >>> 0;
-      vcountHex = '0x' + vcountValue.toString(16).toUpperCase().padStart(2, '0');
-    }
-    let bootTimestampDisplay: string | undefined;
-    if (r.bootTimestampIso) {
-      const dt = new Date(r.bootTimestampIso);
-      if (!Number.isNaN(dt.getTime())) {
-        bootTimestampDisplay = formatResultDateTime(dt, locale);
-      }
-    }
-    const keyInputDisplay = r.keyInputNames && r.keyInputNames.length
-      ? formatKeyInputDisplay(r.keyInputNames, locale)
+    const timer0Value = typeof r.timer0 === 'number' ? r.timer0 >>> 0 : undefined;
+    const timer0Hex = timer0Value != null
+      ? formatTimer0Hex(timer0Value, { fallback: '' })
       : undefined;
+    const vcountValue = typeof r.vcount === 'number' ? r.vcount >>> 0 : undefined;
+    const vcountHex = vcountValue != null
+      ? formatVCountHex(vcountValue, { fallback: '' })
+      : undefined;
+    const bootTimestampDisplay = formatBootTimestampDisplay(r.bootTimestampIso, locale) || undefined;
+    const keyInputDisplay = resolveKeyInputDisplay(r.keyInputNames, locale) || undefined;
     const macAddressDisplay = formatMacAddress(r.macAddress);
     return {
     advance: r.advance,

@@ -4,7 +4,6 @@ import { Table as TableIcon } from '@phosphor-icons/react';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAppStore } from '@/store/app-store';
 import { selectFilteredDisplayRows } from '@/store/generation-store';
-import { shinyLabel, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useTableVirtualization } from '@/hooks/use-table-virtualization';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -15,7 +14,8 @@ import {
   resolveGenerationResultsTableHeaders,
 } from '@/lib/i18n/strings/generation-results-table';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
-import { formatResultDateTime } from '@/lib/i18n/strings/search-results';
+import { GenerationResultRow } from '@/components/generation/results/GenerationResultRow';
+import { buildGenerationResultRowKey } from '@/lib/generation/result-formatters';
 
 type AppStoreState = ReturnType<typeof useAppStore.getState>;
 const GENERATION_RESULTS_COLUMN_COUNT = 21;
@@ -106,66 +106,16 @@ export const GenerationResultsTableCard: React.FC = () => {
             if (!row) {
               return null;
             }
-            const needleDir = calculateNeedleDirection(row.seed);
-            const stats = row.stats;
-            const hpDisplay = stats ? stats.hp : '--';
-            const atkDisplay = stats ? stats.attack : '--';
-            const defDisplay = stats ? stats.defense : '--';
-            const spaDisplay = stats ? stats.specialAttack : '--';
-            const spdDisplay = stats ? stats.specialDefense : '--';
-            const speDisplay = stats ? stats.speed : '--';
-            const natureDisplay = row.natureName;
-            const isBootTimingRow = row.seedSourceMode === 'boot-timing';
-            const timer0Display = isBootTimingRow && row.timer0 != null
-              ? `0x${row.timer0.toString(16).toUpperCase().padStart(4, '0')}`
-              : '--';
-            const vcountDisplay = isBootTimingRow && row.vcount != null
-              ? `0x${row.vcount.toString(16).toUpperCase().padStart(2, '0')}`
-              : '--';
-            let bootTimestampDisplay = '';
-            if (row.bootTimestampIso) {
-              const dt = new Date(row.bootTimestampIso);
-              if (!Number.isNaN(dt.getTime())) {
-                bootTimestampDisplay = formatResultDateTime(dt, locale);
-              }
-            }
-            const keyInputDisplay = row.keyInputDisplay ?? '';
-            const timer0Key = row.timer0 !== undefined && row.timer0 !== null ? row.timer0 : 'na';
-            const vcountKey = row.vcount !== undefined && row.vcount !== null ? row.vcount : 'na';
-            const rowKey = `${row.advance}-${timer0Key}-${vcountKey}`;
+            const rowKey = buildGenerationResultRowKey(row.advance, row.timer0, row.vcount);
             return (
-              <TableRow
+              <GenerationResultRow
                 key={rowKey}
-                ref={virtualization.measureRow}
-                data-index={virtualRow.index}
-                className="odd:bg-background even:bg-muted/30 border-0"
-              >
-                <TableCell className="px-2 py-1 font-mono tabular-nums">{row.advance}</TableCell>
-                <TableCell className="px-2 py-1 text-center font-arrows">{needleDirectionArrow(needleDir)}</TableCell>
-                <TableCell className="px-2 py-1 font-mono tabular-nums">{needleDir}</TableCell>
-                <TableCell className="px-2 py-1 truncate max-w-[120px]" title={row.speciesName || unknownLabel}>
-                  {row.speciesName || unknownLabel}
-                </TableCell>
-                <TableCell className="px-2 py-1 truncate max-w-[120px]" title={row.abilityName || unknownLabel}>
-                  {row.abilityName || unknownLabel}
-                </TableCell>
-                <TableCell className="px-2 py-1">{row.gender || '?'}</TableCell>
-                <TableCell className="px-2 py-1 whitespace-nowrap">{natureDisplay}</TableCell>
-                <TableCell className="px-2 py-1">{shinyLabel(row.shinyType, locale)}</TableCell>
-                <TableCell className="px-2 py-1 tabular-nums">{row.level ?? ''}</TableCell>
-                <TableCell className="px-2 py-1 font-mono tabular-nums text-right">{hpDisplay}</TableCell>
-                <TableCell className="px-2 py-1 font-mono tabular-nums text-right">{atkDisplay}</TableCell>
-                <TableCell className="px-2 py-1 font-mono tabular-nums text-right">{defDisplay}</TableCell>
-                <TableCell className="px-2 py-1 font-mono tabular-nums text-right">{spaDisplay}</TableCell>
-                <TableCell className="px-2 py-1 font-mono tabular-nums text-right">{spdDisplay}</TableCell>
-                <TableCell className="px-2 py-1 font-mono tabular-nums text-right">{speDisplay}</TableCell>
-                <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{row.seedHex}</TableCell>
-                <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{row.pidHex}</TableCell>
-                <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{timer0Display}</TableCell>
-                <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{vcountDisplay}</TableCell>
-                <TableCell className="px-2 py-1 whitespace-nowrap">{bootTimestampDisplay}</TableCell>
-                <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{keyInputDisplay}</TableCell>
-              </TableRow>
+                row={row}
+                locale={locale}
+                unknownLabel={unknownLabel}
+                measureRow={virtualization.measureRow}
+                virtualIndex={virtualRow.index}
+              />
             );
           })}
             {virtualization.paddingBottom > 0 ? (

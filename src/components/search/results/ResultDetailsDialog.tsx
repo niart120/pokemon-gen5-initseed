@@ -6,8 +6,7 @@ import { Label } from '../../ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import { toast } from 'sonner';
 import { lcgSeedToHex, lcgSeedToMtSeed } from '@/lib/utils/lcg-seed';
-import { KEY_INPUT_DEFAULT, keyCodeToMask, keyCodeToNames } from '@/lib/utils/key-input';
-import { useAppStore } from '@/store/app-store';
+import { keyCodeToNames } from '@/lib/utils/key-input';
 import { getIvTooltipEntries } from '@/lib/utils/individual-values-display';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
@@ -22,9 +21,7 @@ import {
   hardwareLabel,
   keyInputLabel,
   keyInputUnavailableLabel,
-  lcgSeedCopySuccess,
   lcgSeedLabel,
-  bootTimingCopySuccess,
   mtSeedCopyFailure,
   mtSeedCopySuccess,
   mtSeedLabel,
@@ -41,6 +38,7 @@ import {
   resolveKeyInputDisplay,
 } from '@/lib/generation/result-formatters';
 import type { InitialSeedResult } from '../../../types/search';
+import { useResultDetailsClipboard } from '@/hooks/search/useResultDetailsClipboard';
 
 interface ResultDetailsDialogProps {
   result: InitialSeedResult | null;
@@ -53,20 +51,12 @@ export function ResultDetailsDialog({
   isOpen,
   onOpenChange,
 }: ResultDetailsDialogProps) {
-  const { setDraftParams } = useAppStore();
   const locale = useLocale();
+  const { copySeedToGeneration, copyBootTimingToGeneration } = useResultDetailsClipboard(locale);
 
   const handleCopyLcgSeed = () => {
     if (!result) return;
-    
-    const lcgSeedHex = lcgSeedToHex(result.lcgSeed);
-    
-    // Copy to Generation Panel
-    setDraftParams({
-      baseSeedHex: lcgSeedHex,
-    });
-    
-    toast.success(resolveLocaleValue(lcgSeedCopySuccess, locale));
+    copySeedToGeneration(result);
   };
 
   const lcgSeedHex = result ? lcgSeedToHex(result.lcgSeed) : '';
@@ -96,20 +86,7 @@ export function ResultDetailsDialog({
 
   const handleCopyBootTiming = () => {
     if (!result) return;
-    const timestampIso = result.datetime.toISOString();
-    const timer0 = Number(result.timer0 ?? 0);
-    const vcount = Number(result.vcount ?? 0);
-    const keyMask = result.keyCode != null ? keyCodeToMask(result.keyCode) : KEY_INPUT_DEFAULT;
-    setDraftParams({
-      seedSourceMode: 'boot-timing',
-      bootTiming: {
-        timestampIso,
-        keyMask,
-        timer0Range: { min: timer0, max: timer0 },
-        vcountRange: { min: vcount, max: vcount },
-      },
-    });
-    toast.success(resolveLocaleValue(bootTimingCopySuccess, locale));
+    copyBootTimingToGeneration(result);
   };
 
   if (!result) return null;
