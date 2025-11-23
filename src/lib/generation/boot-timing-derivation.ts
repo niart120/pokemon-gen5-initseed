@@ -32,6 +32,39 @@ export function deriveBootTimingSeedJobs(
   draft: GenerationParamsHex,
   options?: { maxPairs?: number }
 ): BootTimingDerivationResult {
+  const planResult = buildBootTimingDerivationPlan(draft, options);
+  if (!planResult.ok) {
+    return planResult;
+  }
+  const entries = buildBootTimingMessageEntries(planResult.plan);
+  const jobs = entries.map(entry => buildDerivedSeedJob(draft, entry));
+  return { ok: true, jobs };
+}
+
+interface BootTimingDerivationPlan {
+  timestampIso: string;
+  datetime: Date;
+  timer0Range: { min: number; max: number };
+  vcountRange: { min: number; max: number };
+  baseConditions: SearchConditions;
+  keyMask: number;
+  keyCode: number;
+  macAddress: readonly [number, number, number, number, number, number];
+}
+
+interface BootTimingMessageEntry {
+  seed: bigint;
+  metadata: DerivedSeedMetadata;
+}
+
+type BootTimingPlanResult =
+  | { ok: true; plan: BootTimingDerivationPlan }
+  | { ok: false; error: string };
+
+export function buildBootTimingDerivationPlan(
+  draft: GenerationParamsHex,
+  options?: { maxPairs?: number },
+): BootTimingPlanResult {
   const bootTiming = draft.bootTiming;
   if (!bootTiming) {
     return { ok: false, error: 'boot-timing data unavailable' };
@@ -45,12 +78,6 @@ export function deriveBootTimingSeedJobs(
   if (Number.isNaN(datetime.getTime())) {
     return { ok: false, error: 'boot-timing timestamp invalid' };
   }
-  const year = datetime.getFullYear();
-  const month = datetime.getMonth() + 1;
-  const day = datetime.getDate();
-  const hour = datetime.getHours();
-  const minute = datetime.getMinutes();
-  const second = datetime.getSeconds();
 
   const timer0Range = bootTiming.timer0Range;
   const vcountRange = bootTiming.vcountRange;
@@ -71,6 +98,12 @@ export function deriveBootTimingSeedJobs(
   const macAddress = bootTiming.macAddress;
   const keyMask = bootTiming.keyMask ?? KEY_INPUT_DEFAULT;
   const keyCode = keyMaskToKeyCode(keyMask);
+  const year = datetime.getFullYear();
+  const month = datetime.getMonth() + 1;
+  const day = datetime.getDate();
+  const hour = datetime.getHours();
+  const minute = datetime.getMinutes();
+  const second = datetime.getSeconds();
 
   const baseConditions: SearchConditions = {
     romVersion: draft.version,
@@ -104,41 +137,69 @@ export function deriveBootTimingSeedJobs(
     macAddress: Array.from(macAddress),
   };
 
-  const jobs: DerivedSeedJob[] = [];
+  return {
+    ok: true,
+    plan: {
+      timestampIso,
+      datetime,
+      timer0Range,
+      vcountRange,
+      baseConditions,
+      keyMask,
+      keyCode,
+      macAddress,
+    },
+  };
+}
+
+export function buildBootTimingMessageEntries(
+  plan: BootTimingDerivationPlan,
+  calculator: SeedCalculator = seedCalculator,
+): BootTimingMessageEntry[] {
+  const entries: BootTimingMessageEntry[] = [];
   let derivedSeedIndex = 0;
-  for (let timer0 = timer0Range.min; timer0 <= timer0Range.max; timer0 += 1) {
-    for (let vcount = vcountRange.min; vcount <= vcountRange.max; vcount += 1) {
-      const message = seedCalculator.generateMessage(
-        baseConditions,
+  for (let timer0 = plan.timer0Range.min; timer0 <= plan.timer0Range.max; timer0 += 1) {
+    for (let vcount = plan.vcountRange.min; vcount <= plan.vcountRange.max; vcount += 1) {
+      const message = calculator.generateMessage(
+        plan.baseConditions,
         timer0,
         vcount,
-        datetime,
-        keyCode,
+        plan.datetime,
+        plan.keyCode,
       );
-      const { lcgSeed } = seedCalculator.calculateSeed(message);
+      const { lcgSeed } = calculator.calculateSeed(message);
       const seedSourceSeedHex = `0x${lcgSeed.toString(16).toUpperCase().padStart(16, '0')}`;
-      const nextHex: GenerationParamsHex = {
-        ...draft,
-        baseSeedHex: lcgSeed.toString(16),
-      };
-      const params = hexParamsToGenerationParams(nextHex);
-      jobs.push({
-        params,
+      entries.push({
+        seed: lcgSeed,
         metadata: {
           seedSourceMode: 'boot-timing',
           derivedSeedIndex,
           timer0,
           vcount,
-          keyMask,
-          keyCode,
-          bootTimestampIso: timestampIso,
-          macAddress: [...macAddress] as DerivedSeedMetadata['macAddress'],
+          keyMask: plan.keyMask,
+          keyCode: plan.keyCode,
+          bootTimestampIso: plan.timestampIso,
+          macAddress: [...plan.macAddress] as DerivedSeedMetadata['macAddress'],
           seedSourceSeedHex,
         },
       });
       derivedSeedIndex += 1;
     }
   }
+  return entries;
+}
 
-  return { ok: true, jobs };
+export function buildDerivedSeedJob(
+  draft: GenerationParamsHex,
+  entry: BootTimingMessageEntry,
+): DerivedSeedJob {
+  const nextHex: GenerationParamsHex = {
+    ...draft,
+    baseSeedHex: entry.seed.toString(16),
+  };
+  const params = hexParamsToGenerationParams(nextHex);
+  return {
+    params,
+    metadata: entry.metadata,
+  };
 }
