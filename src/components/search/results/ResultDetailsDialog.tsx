@@ -6,7 +6,7 @@ import { Label } from '../../ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import { toast } from 'sonner';
 import { lcgSeedToHex, lcgSeedToMtSeed } from '@/lib/utils/lcg-seed';
-import { keyCodeToNames } from '@/lib/utils/key-input';
+import { KEY_INPUT_DEFAULT, keyCodeToMask, keyCodeToNames } from '@/lib/utils/key-input';
 import { useAppStore } from '@/store/app-store';
 import { getIvTooltipEntries } from '@/lib/utils/individual-values-display';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -14,6 +14,7 @@ import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import {
   clipboardUnavailable,
   copyMtSeedHint,
+  bootTimingCopyHint,
   copyToGenerationPanelHint,
   dateTimeLabel,
   detailsButtonLabel,
@@ -25,6 +26,7 @@ import {
   keyInputUnavailableLabel,
   lcgSeedCopySuccess,
   lcgSeedLabel,
+  bootTimingCopySuccess,
   mtSeedCopyFailure,
   mtSeedCopySuccess,
   mtSeedLabel,
@@ -88,6 +90,24 @@ export function ResultDetailsDialog({
     }
   };
 
+  const handleCopyBootTiming = () => {
+    if (!result) return;
+    const timestampIso = result.datetime.toISOString();
+    const timer0 = Number(result.timer0 ?? 0);
+    const vcount = Number(result.vcount ?? 0);
+    const keyMask = result.keyCode != null ? keyCodeToMask(result.keyCode) : KEY_INPUT_DEFAULT;
+    setDraftParams({
+      seedSourceMode: 'boot-timing',
+      bootTiming: {
+        timestampIso,
+        keyMask,
+        timer0Range: { min: timer0, max: timer0 },
+        vcountRange: { min: vcount, max: vcount },
+      },
+    });
+    toast.success(resolveLocaleValue(bootTimingCopySuccess, locale));
+  };
+
   if (!result) return null;
 
   const keyNames = result.keyInputNames && result.keyInputNames.length
@@ -98,6 +118,8 @@ export function ResultDetailsDialog({
   const keyInputDisplay = keyNames.length === 0
     ? resolveLocaleValue(keyInputUnavailableLabel, locale)
     : formatKeyInputDisplay(keyNames, locale);
+  const formattedDateTime = formatResultDateTime(result.datetime, locale);
+  const bootTimingHint = resolveLocaleValue(bootTimingCopyHint, locale);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -163,9 +185,22 @@ export function ResultDetailsDialog({
           {/* Date/Time */}
           <div>
             <Label>{resolveLocaleValue(dateTimeLabel, locale)}</Label>
-            <div className="font-mono">
-              {formatResultDateTime(result.datetime, locale)}
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="font-mono w-full text-left cursor-pointer hover:bg-accent p-2 rounded"
+                  onClick={handleCopyBootTiming}
+                  title={bootTimingHint}
+                >
+                  {formattedDateTime}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                {bootTimingHint}
+              </TooltipContent>
+            </Tooltip>
+            <div className="text-xs text-muted-foreground">{bootTimingHint}</div>
           </div>
 
           {/* Parameters */}

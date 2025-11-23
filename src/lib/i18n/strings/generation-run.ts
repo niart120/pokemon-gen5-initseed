@@ -33,6 +33,11 @@ export const generationRunAdvanceUnit: LocaleText = {
   en: 'results',
 };
 
+export const generationRunSeedLabel: LocaleText = {
+  ja: 'Seed',
+  en: 'Seed',
+};
+
 export const generationRunButtonLabels = {
   start: {
     ja: 'Generate',
@@ -133,6 +138,18 @@ export function formatGenerationRunPercentDisplay(pct: number, locale: Supported
     maximumFractionDigits: 1,
   });
   return `${formatter.format(value)}%`;
+}
+
+export function formatGenerationRunSeedProgress(
+  currentSeedIndex: number,
+  totalSeeds: number,
+  locale: SupportedLocale,
+): string {
+  const formatter = getNumberFormatter(locale);
+  const label = resolveLocaleValue(generationRunSeedLabel, locale);
+  const currentText = formatter.format(Math.max(currentSeedIndex, 0));
+  const totalText = formatter.format(Math.max(totalSeeds, 0));
+  return `${label} ${currentText}/${totalText}`;
 }
 
 export function formatGenerationRunScreenReaderSummary(

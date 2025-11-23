@@ -5,7 +5,7 @@ import type { SearchConditions } from '@/types/search';
 import { KEY_INPUT_DEFAULT, keyMaskToKeyCode } from '@/lib/utils/key-input';
 
 const seedCalculator = new SeedCalculator();
-const DEFAULT_PAIR_LIMIT = 512;
+export const BOOT_TIMING_PAIR_LIMIT = 512;
 
 export interface DerivedSeedMetadata {
   readonly seedSourceMode: SeedSourceMode;
@@ -16,6 +16,7 @@ export interface DerivedSeedMetadata {
   readonly keyCode: number;
   readonly bootTimestampIso: string;
   readonly macAddress: readonly [number, number, number, number, number, number];
+  readonly seedSourceSeedHex: string;
 }
 
 export interface DerivedSeedJob {
@@ -62,7 +63,7 @@ export function deriveBootTimingSeedJobs(
     return { ok: false, error: 'timer0/vcount range invalid' };
   }
   const pairCount = timer0Span * vcountSpan;
-  const maxPairs = options?.maxPairs ?? DEFAULT_PAIR_LIMIT;
+  const maxPairs = options?.maxPairs ?? BOOT_TIMING_PAIR_LIMIT;
   if (pairCount > maxPairs) {
     return { ok: false, error: `timer0/vcount combinations exceed limit (${pairCount} > ${maxPairs})` };
   }
@@ -115,6 +116,7 @@ export function deriveBootTimingSeedJobs(
         keyCode,
       );
       const { lcgSeed } = seedCalculator.calculateSeed(message);
+      const seedSourceSeedHex = `0x${lcgSeed.toString(16).toUpperCase().padStart(16, '0')}`;
       const nextHex: GenerationParamsHex = {
         ...draft,
         baseSeedHex: lcgSeed.toString(16),
@@ -131,6 +133,7 @@ export function deriveBootTimingSeedJobs(
           keyCode,
           bootTimestampIso: timestampIso,
           macAddress: [...macAddress] as DerivedSeedMetadata['macAddress'],
+          seedSourceSeedHex,
         },
       });
       derivedSeedIndex += 1;

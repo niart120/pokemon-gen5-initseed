@@ -128,9 +128,19 @@ export const copyMtSeedHint: LocaleText = {
   en: 'Click to copy MT Seed',
 };
 
+export const bootTimingCopyHint: LocaleText = {
+  ja: 'クリックで起動タイミングにコピー',
+  en: 'Click to copy to boot timing mode',
+};
+
 export const lcgSeedCopySuccess: LocaleText = {
   ja: 'LCG Seedを生成パネルにコピーしました',
   en: 'LCG Seed copied to Generation Panel',
+};
+
+export const bootTimingCopySuccess: LocaleText = {
+  ja: '起動タイミングモードにコピーしました',
+  en: 'Copied to boot timing mode',
 };
 
 export const mtSeedCopySuccess: LocaleText = {

@@ -57,6 +57,7 @@ export interface UiReadyPokemonData {
   ivs?: IndividualValues;
   seedSourceMode?: 'lcg' | 'boot-timing';
   derivedSeedIndex?: number;
+  seedSourceSeedHex?: string;
   timer0?: number;
   vcount?: number;
   bootTimestampIso?: string;

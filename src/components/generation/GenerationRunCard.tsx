@@ -14,6 +14,7 @@ import {
   generationRunPanelTitle,
   generationRunResultsLabel,
   generationRunStatusPrefix,
+  formatGenerationRunSeedProgress,
 } from '@/lib/i18n/strings/generation-run';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 
@@ -30,6 +31,8 @@ export const GenerationRunCard: React.FC = () => {
   } = useAppStore();
   const resultCount = useAppStore(s => s.results.length);
   const params = useAppStore(s => s.params);
+  const derivedSeedState = useAppStore(s => s.derivedSeedState);
+  const activeSeedMetadata = useAppStore(s => s.activeSeedMetadata);
 
   const locale = useLocale();
   const maxResults = params?.maxResults ?? draftParams.maxResults ?? 0;
@@ -59,6 +62,16 @@ export const GenerationRunCard: React.FC = () => {
   const statusDisplay = formatGenerationRunStatusDisplay(status, lastCompletion?.reason ?? null, locale);
   const advancesDisplay = formatGenerationRunAdvancesDisplay(resultCount, maxResults, locale);
   const percentDisplay = formatGenerationRunPercentDisplay(pct, locale);
+  let seedProgressDisplay: string | null = null;
+  const totalDerivedSeeds = derivedSeedState?.total ?? 0;
+  if (derivedSeedState && totalDerivedSeeds > 0) {
+    const activeIndex = activeSeedMetadata?.seedSourceMode === 'boot-timing'
+      ? activeSeedMetadata.derivedSeedIndex
+      : derivedSeedState.cursor;
+    if (activeIndex != null && activeIndex >= 0) {
+      seedProgressDisplay = formatGenerationRunSeedProgress(Math.min(activeIndex + 1, totalDerivedSeeds), totalDerivedSeeds, locale);
+    }
+  }
 
   return (
     <>
@@ -103,6 +116,11 @@ export const GenerationRunCard: React.FC = () => {
             <span>{percentDisplay}</span>
             <span>{advancesDisplay}</span>
           </div>
+          {seedProgressDisplay && (
+            <div className="flex items-center justify-end text-[11px] font-mono text-primary">
+              {seedProgressDisplay}
+            </div>
+          )}
         </div>
       </PanelCard>
 

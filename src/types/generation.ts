@@ -148,6 +148,7 @@ export type NormalizedGenerationParams = GenerationParams;
 export type GenerationResult = UnresolvedPokemonData & {
   seedSourceMode?: SeedSourceMode;
   derivedSeedIndex?: number;
+  seedSourceSeedHex?: string;
   timer0?: number;
   vcount?: number;
   bootTimestampIso?: string;

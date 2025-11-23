@@ -1,4 +1,4 @@
-import type { GenerationResult } from '@/types/generation';
+import type { GenerationResult, SeedSourceMode } from '@/types/generation';
 import {
   pidHex,
   seedHex,
@@ -24,6 +24,9 @@ interface AdaptedGenerationResult {
   seedDec: string; // BigInt -> string 保持 (安全)
   pidHex: string;
   pidDec: number;
+  seedSourceMode?: SeedSourceMode;
+  derivedSeedIndex?: number;
+  seedSourceSeedHex?: string;
   timer0Hex?: string;
   timer0Value?: number;
   vcountHex?: string;
@@ -31,6 +34,7 @@ interface AdaptedGenerationResult {
   bootTimestampIso?: string;
   bootTimestampDisplay?: string;
   keyInputDisplay?: string;
+  macAddress?: string;
   natureId: number;
   natureName: string;
   shinyType: number;
@@ -59,9 +63,33 @@ interface AdaptedGenerationResult {
   };
 }
 
+interface BootTimingMetaSeedEntry {
+  derivedSeedIndex: number | null;
+  timer0Hex: string | null;
+  vcountHex: string | null;
+  seedHex: string | null;
+}
+
+interface BootTimingMeta {
+  bootTimestamp: string | null;
+  keyInput: string | null;
+  macAddress: string | null;
+  seeds: BootTimingMetaSeedEntry[];
+}
+
 // 既存toHex系は format-display へ統合。seedは16桁幅固定表示。
 function toHexBigInt(v: bigint): string { return '0x' + seedHex(v).toLowerCase(); }
 function toHex32(v: number): string { return '0x' + pidHex(v).toLowerCase(); }
+
+function formatMacAddress(bytes: readonly number[] | undefined): string | undefined {
+  if (!bytes || bytes.length < 6) {
+    return undefined;
+  }
+  return bytes
+    .slice(0, 6)
+    .map((b) => b.toString(16).toUpperCase().padStart(2, '0'))
+    .join(':');
+}
 
 export function adaptGenerationResults(results: GenerationResult[], opts?: {
   encounterTable?: EncounterTable;
@@ -121,12 +149,16 @@ export function adaptGenerationResults(results: GenerationResult[], opts?: {
     const keyInputDisplay = r.keyInputNames && r.keyInputNames.length
       ? formatKeyInputDisplay(r.keyInputNames, locale)
       : undefined;
+    const macAddressDisplay = formatMacAddress(r.macAddress);
     return {
     advance: r.advance,
     seedHex: toHexBigInt(r.seed),
     seedDec: r.seed.toString(),
     pidHex: toHex32(r.pid >>> 0),
     pidDec: r.pid >>> 0,
+    seedSourceMode: r.seedSourceMode,
+    derivedSeedIndex: r.derivedSeedIndex,
+    seedSourceSeedHex: r.seedSourceSeedHex,
     timer0Hex,
     timer0Value,
     vcountHex,
@@ -134,6 +166,7 @@ export function adaptGenerationResults(results: GenerationResult[], opts?: {
     bootTimestampIso: r.bootTimestampIso,
     bootTimestampDisplay,
     keyInputDisplay,
+    macAddress: macAddressDisplay,
     natureId: r.nature,
     natureName: natureName(r.nature),
     shinyType: r.shiny_type,
@@ -166,6 +199,33 @@ export function adaptGenerationResults(results: GenerationResult[], opts?: {
 }
 
 export type GenerationExportContext = Parameters<typeof adaptGenerationResults>[1];
+
+function buildBootTimingMeta(adapted: AdaptedGenerationResult[]): BootTimingMeta | null {
+  const bootRows = adapted.filter(row => row.seedSourceMode === 'boot-timing');
+  if (!bootRows.length) {
+    return null;
+  }
+  const seedMap = new Map<string, BootTimingMetaSeedEntry>();
+  for (const row of bootRows) {
+    const key = row.derivedSeedIndex != null
+      ? `idx-${row.derivedSeedIndex}`
+      : `seed-${row.seedHex}-${row.timer0Hex ?? ''}-${row.vcountHex ?? ''}`;
+    if (!seedMap.has(key)) {
+      seedMap.set(key, {
+        derivedSeedIndex: row.derivedSeedIndex ?? null,
+        timer0Hex: row.timer0Hex ?? null,
+        vcountHex: row.vcountHex ?? null,
+        seedHex: row.seedSourceSeedHex ?? row.seedHex,
+      });
+    }
+  }
+  return {
+    bootTimestamp: bootRows[0]?.bootTimestampIso ?? null,
+    keyInput: bootRows[0]?.keyInputDisplay ?? null,
+    macAddress: bootRows[0]?.macAddress ?? null,
+    seeds: Array.from(seedMap.values()),
+  };
+}
 
 export function exportGenerationResults(
   results: GenerationResult[],
@@ -206,6 +266,10 @@ const CSV_HEADERS = [
   'VCountHex',
   'BootTimestamp',
   'KeyInput',
+  'SeedSourceMode',
+  'DerivedSeedIndex',
+  'SeedSourceSeedHex',
+  'MacAddress',
   'SeedDec',
   'PIDDec',
   'NatureId',
@@ -219,7 +283,7 @@ const CSV_HEADERS = [
   'LevelRandDec',
 ];
 
-const DISPLAY_COLUMN_COUNT = 21;
+const DISPLAY_COLUMN_COUNT = 25;
 
 function exportCsv(
   results: GenerationResult[],
@@ -234,7 +298,7 @@ function exportCsv(
   const lines = [headers.join(',')];
   for (const a of adapted) {
     const stats = a.stats;
-    const baseRow = [
+      const baseRow = [
       String(a.advance),
       a.needleDirectionArrow,
       a.needleDirectionValue >= 0 ? String(a.needleDirectionValue) : '',
@@ -256,6 +320,10 @@ function exportCsv(
       a.vcountHex ?? '',
       a.bootTimestampDisplay ?? a.bootTimestampIso ?? '',
       a.keyInputDisplay ?? '',
+      a.seedSourceMode ?? '',
+      a.derivedSeedIndex != null ? String(a.derivedSeedIndex) : '',
+      a.seedSourceSeedHex ?? '',
+      a.macAddress ?? '',
     ];
     if (includeAdvanced) {
       baseRow.push(
@@ -284,10 +352,15 @@ function exportJson(
 ): string {
   const adapted = adaptGenerationResults(results, ctx);
   const includeAdvanced = Boolean(options.includeAdvancedFields);
+  const bootTimingMeta = buildBootTimingMeta(adapted);
   const data = {
     exportDate: new Date().toISOString(),
     format: 'generation-v2',
     totalResults: adapted.length,
+    meta: {
+      seedSourceMode: bootTimingMeta ? 'boot-timing' : 'lcg',
+      bootTiming: bootTimingMeta,
+    },
     results: adapted.map((a) => {
       const base: Record<string, unknown> = {
         advance: a.advance,
@@ -320,6 +393,10 @@ function exportJson(
       base.timer0Hex = a.timer0Hex ?? null;
       base.vcountHex = a.vcountHex ?? null;
       base.keyInput = a.keyInputDisplay ?? null;
+      base.seedSourceMode = a.seedSourceMode ?? null;
+      base.derivedSeedIndex = a.derivedSeedIndex ?? null;
+      base.seedSourceSeedHex = a.seedSourceSeedHex ?? null;
+      base.macAddress = a.macAddress ?? null;
       return base;
     }),
   };
@@ -362,6 +439,18 @@ function exportTxt(
     }
     if (a.keyInputDisplay) {
       out.push(`  KeyInput: ${a.keyInputDisplay}`);
+    }
+    if (a.seedSourceMode) {
+      out.push(`  SeedSourceMode: ${a.seedSourceMode}`);
+    }
+    if (a.derivedSeedIndex != null) {
+      out.push(`  DerivedSeedIndex: ${a.derivedSeedIndex}`);
+    }
+    if (a.seedSourceSeedHex) {
+      out.push(`  SeedSourceSeedHex: ${a.seedSourceSeedHex}`);
+    }
+    if (a.macAddress) {
+      out.push(`  MacAddress: ${a.macAddress}`);
     }
     if (includeAdvanced) {
       out.push(`  AbilitySlot: ${a.abilitySlot}`);

@@ -11,7 +11,7 @@ import { DomainShinyType, type DomainEncounterType } from '@/types/domain';
 import { resolveBatch, toUiReadyPokemon } from '@/lib/generation/pokemon-resolver';
 import type { ResolvedPokemonData, UiReadyPokemonData, SerializedResolutionContext } from '@/types/pokemon-resolved';
 import { buildResolutionContextFromSources } from '@/lib/initialization/build-resolution-context';
-import { deriveBootTimingSeedJobs, type DerivedSeedJob, type DerivedSeedMetadata } from '@/lib/generation/boot-timing-derivation';
+import { BOOT_TIMING_PAIR_LIMIT, deriveBootTimingSeedJobs, type DerivedSeedJob, type DerivedSeedMetadata } from '@/lib/generation/boot-timing-derivation';
 import { formatKeyInputDisplay } from '@/lib/i18n/strings/search-results';
 
 export type GenerationStatus = 'idle' | 'starting' | 'running' | 'stopping' | 'completed' | 'error';
@@ -147,6 +147,45 @@ export function normalizeBootTimingDraft(
     hardware: partial?.hardware ?? base.hardware,
     macAddress: ensureMacAddressTuple(partial?.macAddress, base.macAddress),
   };
+}
+
+function validateBootTimingInputs(draft: BootTimingDraft): string[] {
+  const errors: string[] = [];
+  if (!draft.timestampIso) {
+    errors.push('boot-timing timestamp required');
+  } else {
+    const time = Date.parse(draft.timestampIso);
+    if (Number.isNaN(time)) {
+      errors.push('boot-timing timestamp invalid');
+    }
+  }
+
+  const timer0Min = draft.timer0Range.min;
+  const timer0Max = draft.timer0Range.max;
+  if (timer0Min < 0 || timer0Min > 0xFFFF || timer0Max < 0 || timer0Max > 0xFFFF) {
+    errors.push('timer0 range out of bounds');
+  } else if (timer0Min > timer0Max) {
+    errors.push('timer0 range invalid');
+  }
+
+  const vcountMin = draft.vcountRange.min;
+  const vcountMax = draft.vcountRange.max;
+  if (vcountMin < 0 || vcountMin > 0xFF || vcountMax < 0 || vcountMax > 0xFF) {
+    errors.push('vcount range out of bounds');
+  } else if (vcountMin > vcountMax) {
+    errors.push('vcount range invalid');
+  }
+
+  const timer0Span = timer0Max - timer0Min + 1;
+  const vcountSpan = vcountMax - vcountMin + 1;
+  const pairCount = timer0Span > 0 && vcountSpan > 0 ? timer0Span * vcountSpan : 0;
+  if (pairCount <= 0) {
+    errors.push('timer0/vcount range produces no combinations');
+  } else if (pairCount > BOOT_TIMING_PAIR_LIMIT) {
+    errors.push(`timer0/vcount combinations exceed limit (${pairCount} > ${BOOT_TIMING_PAIR_LIMIT})`);
+  }
+
+  return errors;
 }
 
 function normalizeNumericRange(
@@ -432,9 +471,14 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     const baseErrors = maybe ? validateGenerationParams(maybe) : ['incomplete params'];
     const encounterType = maybe?.encounterType ?? (typeof draftParams.encounterType === 'number' ? draftParams.encounterType : undefined);
     const needsStaticSelection = typeof encounterType === 'number' && requiresStaticSelection(encounterType);
-    const combinedErrors = needsStaticSelection && !staticEncounterId
+    let combinedErrors = needsStaticSelection && !staticEncounterId
       ? [...baseErrors, 'static encounter selection required']
       : baseErrors;
+    const seedSourceMode = draftParams.seedSourceMode ?? 'lcg';
+    if (seedSourceMode === 'boot-timing') {
+      const bootTiming = draftParams.bootTiming ?? DEFAULT_GENERATION_DRAFT_PARAMS.bootTiming;
+      combinedErrors = [...combinedErrors, ...validateBootTimingInputs(bootTiming)];
+    }
     set({ validationErrors: combinedErrors });
   },
   commitParams: () => {
@@ -447,9 +491,14 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     const paramsWithLock = resolveShinyLock(full, staticEncounterId);
     const baseErrors = validateGenerationParams(paramsWithLock);
     const needsStaticSelection = requiresStaticSelection(paramsWithLock.encounterType);
-    const combinedErrors = needsStaticSelection && !staticEncounterId
+    let combinedErrors = needsStaticSelection && !staticEncounterId
       ? [...baseErrors, 'static encounter selection required']
       : baseErrors;
+    const seedSourceMode = draftParams.seedSourceMode ?? 'lcg';
+    if (seedSourceMode === 'boot-timing') {
+      const bootTiming = draftParams.bootTiming ?? DEFAULT_GENERATION_DRAFT_PARAMS.bootTiming;
+      combinedErrors = [...combinedErrors, ...validateBootTimingInputs(bootTiming)];
+    }
     set({ validationErrors: combinedErrors });
     if (combinedErrors.length) return false;
     set({ params: paramsWithLock });
@@ -600,6 +649,7 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
           ...result,
           seedSourceMode: metadata.seedSourceMode,
           derivedSeedIndex: metadata.derivedSeedIndex,
+          seedSourceSeedHex: metadata.seedSourceSeedHex,
           timer0: metadata.timer0,
           vcount: metadata.vcount,
           bootTimestampIso: metadata.bootTimestampIso,
@@ -834,9 +884,11 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
     if (raw.seedSourceMode) {
       uiData.seedSourceMode = raw.seedSourceMode;
       uiData.derivedSeedIndex = raw.derivedSeedIndex;
+      uiData.seedSourceSeedHex = raw.seedSourceSeedHex;
     } else {
       uiData.seedSourceMode = undefined;
       uiData.derivedSeedIndex = undefined;
+      uiData.seedSourceSeedHex = undefined;
     }
     uiData.timer0 = raw.timer0;
     uiData.vcount = raw.vcount;

@@ -115,12 +115,13 @@ export const GenerationResultsTableCard: React.FC = () => {
             const spdDisplay = stats ? stats.specialDefense : '--';
             const speDisplay = stats ? stats.speed : '--';
             const natureDisplay = row.natureName;
-            const timer0Display = row.timer0 != null
+            const isBootTimingRow = row.seedSourceMode === 'boot-timing';
+            const timer0Display = isBootTimingRow && row.timer0 != null
               ? `0x${row.timer0.toString(16).toUpperCase().padStart(4, '0')}`
-              : '';
-            const vcountDisplay = row.vcount != null
+              : '--';
+            const vcountDisplay = isBootTimingRow && row.vcount != null
               ? `0x${row.vcount.toString(16).toUpperCase().padStart(2, '0')}`
-              : '';
+              : '--';
             let bootTimestampDisplay = '';
             if (row.bootTimestampIso) {
               const dt = new Date(row.bootTimestampIso);
