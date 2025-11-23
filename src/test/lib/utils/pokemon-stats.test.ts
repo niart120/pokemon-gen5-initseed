@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeIndividualValuesFromSeed, determineIvOffset, calculatePokemonStats } from './pokemon-stats';
-import { generateIndividualValues } from './individual-values';
+import { computeIndividualValuesFromSeed, determineIvOffset, calculatePokemonStats } from '@/lib/utils/pokemon-stats';
+import { generateIndividualValues } from '@/lib/utils/individual-values';
 import type { GeneratedSpecies } from '@/data/species/generated';
 
 function createSpecies(overrides: Partial<GeneratedSpecies> = {}): GeneratedSpecies {

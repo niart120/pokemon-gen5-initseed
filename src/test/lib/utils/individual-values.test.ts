@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MersenneTwister19937 } from 'random-js';
 
-import { generateIndividualValues, type IndividualValues } from './individual-values';
+import { generateIndividualValues, type IndividualValues } from '@/lib/utils/individual-values';
 import { SEED_TEMPLATES } from '@/data/seed-templates';
 
 function createExpectedValues(seed: number, offset: number, order: readonly (keyof IndividualValues)[]): IndividualValues {

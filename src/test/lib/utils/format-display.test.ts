@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateNeedleDirection, needleDirectionArrow, needleDisplay } from './format-display';
+import { calculateNeedleDirection, needleDirectionArrow, needleDisplay } from '@/lib/utils/format-display';
 
 describe('Needle Direction Calculation', () => {
   it('should calculate needle direction correctly', () => {
