@@ -3,6 +3,7 @@
  */
 
 import type { ROMVersion, ROMRegion, Hardware } from './rom';
+import type { KeyName } from '@/lib/utils/key-input';
 
 export interface TimeFieldRange {
   start: number;
@@ -58,6 +59,7 @@ export interface InitialSeedResult {
   timer0: number;
   vcount: number;
   keyCode: number | null;
+  keyInputNames?: KeyName[];
   conditions: SearchConditions;
   message: number[];
   sha1Hash: string;

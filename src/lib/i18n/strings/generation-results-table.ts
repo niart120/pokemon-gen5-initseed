@@ -23,7 +23,11 @@ type HeaderKey =
   | 'specialDefense'
   | 'speed'
   | 'seed'
-  | 'pid';
+  | 'pid'
+  | 'timer0'
+  | 'vcount'
+  | 'bootTimestamp'
+  | 'keyInput';
 
 type HeaderDefinition = {
   label: LocaleText;
@@ -135,6 +139,30 @@ const HEADER_DEFINITIONS: Record<HeaderKey, HeaderDefinition> = {
     label: {
       ja: 'PID',
       en: 'PID',
+    },
+  },
+  timer0: {
+    label: {
+      ja: 'Timer0',
+      en: 'Timer0',
+    },
+  },
+  vcount: {
+    label: {
+      ja: 'VCount',
+      en: 'VCount',
+    },
+  },
+  bootTimestamp: {
+    label: {
+      ja: '起動時刻',
+      en: 'Boot Time',
+    },
+  },
+  keyInput: {
+    label: {
+      ja: 'キー入力',
+      en: 'Key Input',
     },
   },
 };

@@ -15,9 +15,10 @@ import {
   resolveGenerationResultsTableHeaders,
 } from '@/lib/i18n/strings/generation-results-table';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import { formatResultDateTime } from '@/lib/i18n/strings/search-results';
 
 type AppStoreState = ReturnType<typeof useAppStore.getState>;
-const GENERATION_RESULTS_COLUMN_COUNT = 17;
+const GENERATION_RESULTS_COLUMN_COUNT = 21;
 const GENERATION_TABLE_ROW_HEIGHT = 34;
 
 export const GenerationResultsTableCard: React.FC = () => {
@@ -84,6 +85,10 @@ export const GenerationResultsTableCard: React.FC = () => {
               <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.speed.label}</TableHead>
               <TableHead scope="col" className="px-2 py-1 font-medium min-w-[120px] w-36">{headers.seed.label}</TableHead>
               <TableHead scope="col" className="px-2 py-1 font-medium w-32">{headers.pid.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium w-20">{headers.timer0.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium w-20">{headers.vcount.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium min-w-[140px] w-44">{headers.bootTimestamp.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium min-w-[120px] w-40">{headers.keyInput.label}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -110,6 +115,20 @@ export const GenerationResultsTableCard: React.FC = () => {
             const spdDisplay = stats ? stats.specialDefense : '--';
             const speDisplay = stats ? stats.speed : '--';
             const natureDisplay = row.natureName;
+            const timer0Display = row.timer0 != null
+              ? `0x${row.timer0.toString(16).toUpperCase().padStart(4, '0')}`
+              : '';
+            const vcountDisplay = row.vcount != null
+              ? `0x${row.vcount.toString(16).toUpperCase().padStart(2, '0')}`
+              : '';
+            let bootTimestampDisplay = '';
+            if (row.bootTimestampIso) {
+              const dt = new Date(row.bootTimestampIso);
+              if (!Number.isNaN(dt.getTime())) {
+                bootTimestampDisplay = formatResultDateTime(dt, locale);
+              }
+            }
+            const keyInputDisplay = row.keyInputDisplay ?? '';
             return (
               <TableRow
                 key={row.advance}
@@ -138,6 +157,10 @@ export const GenerationResultsTableCard: React.FC = () => {
                 <TableCell className="px-2 py-1 font-mono tabular-nums text-right">{speDisplay}</TableCell>
                 <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{row.seedHex}</TableCell>
                 <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{row.pidHex}</TableCell>
+                <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{timer0Display}</TableCell>
+                <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{vcountDisplay}</TableCell>
+                <TableCell className="px-2 py-1 whitespace-nowrap">{bootTimestampDisplay}</TableCell>
+                <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{keyInputDisplay}</TableCell>
               </TableRow>
             );
           })}

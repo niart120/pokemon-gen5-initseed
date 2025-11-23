@@ -11,6 +11,7 @@ import type {
   ResolvedPokemonData,
   SerializedResolutionContext,
 } from '@/types/pokemon-resolved';
+import type { KeyName } from '@/lib/utils/key-input';
 
 // --- Params ---
 export type SeedSourceMode = 'lcg' | 'boot-timing';
@@ -150,7 +151,7 @@ export type GenerationResult = UnresolvedPokemonData & {
   timer0?: number;
   vcount?: number;
   bootTimestampIso?: string;
-  keyMask?: number;
+  keyInputNames?: KeyName[];
   macAddress?: readonly [number, number, number, number, number, number];
 };
 

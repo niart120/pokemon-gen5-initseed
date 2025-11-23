@@ -10,6 +10,8 @@ import {
 import { resolveBatch, toUiReadyPokemon, type ResolutionContext } from '@/lib/generation/pokemon-resolver';
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
+import { formatResultDateTime, formatKeyInputDisplay } from '@/lib/i18n/strings/search-results';
+import type { SupportedLocale } from '@/types/i18n';
 
 export interface GenerationExportOptions {
   format: 'csv' | 'json' | 'txt';
@@ -22,6 +24,13 @@ interface AdaptedGenerationResult {
   seedDec: string; // BigInt -> string 保持 (安全)
   pidHex: string;
   pidDec: number;
+  timer0Hex?: string;
+  timer0Value?: number;
+  vcountHex?: string;
+  vcountValue?: number;
+  bootTimestampIso?: string;
+  bootTimestampDisplay?: string;
+  keyInputDisplay?: string;
   natureId: number;
   natureName: string;
   shinyType: number;
@@ -58,7 +67,7 @@ export function adaptGenerationResults(results: GenerationResult[], opts?: {
   encounterTable?: EncounterTable;
   genderRatios?: Map<number, GenderRatio>;
   abilityCatalog?: Map<number, string[]>;
-  locale?: 'ja' | 'en';
+  locale?: SupportedLocale;
   version?: 'B' | 'W' | 'B2' | 'W2';
   baseSeed?: bigint;
 }): AdaptedGenerationResult[] {
@@ -90,12 +99,41 @@ export function adaptGenerationResults(results: GenerationResult[], opts?: {
     }
     const uiEntry = resolvedUi?.[idx];
     const stats = uiEntry?.stats;
+    let timer0Hex: string | undefined;
+    let timer0Value: number | undefined;
+    if (typeof r.timer0 === 'number') {
+      timer0Value = r.timer0 >>> 0;
+      timer0Hex = '0x' + timer0Value.toString(16).toUpperCase().padStart(4, '0');
+    }
+    let vcountHex: string | undefined;
+    let vcountValue: number | undefined;
+    if (typeof r.vcount === 'number') {
+      vcountValue = r.vcount >>> 0;
+      vcountHex = '0x' + vcountValue.toString(16).toUpperCase().padStart(2, '0');
+    }
+    let bootTimestampDisplay: string | undefined;
+    if (r.bootTimestampIso) {
+      const dt = new Date(r.bootTimestampIso);
+      if (!Number.isNaN(dt.getTime())) {
+        bootTimestampDisplay = formatResultDateTime(dt, locale);
+      }
+    }
+    const keyInputDisplay = r.keyInputNames && r.keyInputNames.length
+      ? formatKeyInputDisplay(r.keyInputNames, locale)
+      : undefined;
     return {
     advance: r.advance,
     seedHex: toHexBigInt(r.seed),
     seedDec: r.seed.toString(),
     pidHex: toHex32(r.pid >>> 0),
     pidDec: r.pid >>> 0,
+    timer0Hex,
+    timer0Value,
+    vcountHex,
+    vcountValue,
+    bootTimestampIso: r.bootTimestampIso,
+    bootTimestampDisplay,
+    keyInputDisplay,
     natureId: r.nature,
     natureName: natureName(r.nature),
     shinyType: r.shiny_type,
@@ -164,6 +202,10 @@ const CSV_HEADERS = [
   'Speed',
   'SeedHex',
   'PIDHex',
+  'Timer0Hex',
+  'VCountHex',
+  'BootTimestamp',
+  'KeyInput',
   'SeedDec',
   'PIDDec',
   'NatureId',
@@ -177,7 +219,7 @@ const CSV_HEADERS = [
   'LevelRandDec',
 ];
 
-const DISPLAY_COLUMN_COUNT = 17;
+const DISPLAY_COLUMN_COUNT = 21;
 
 function exportCsv(
   results: GenerationResult[],
@@ -210,6 +252,10 @@ function exportCsv(
       stats?.speed != null ? String(stats.speed) : '',
       a.seedHex,
       a.pidHex,
+      a.timer0Hex ?? '',
+      a.vcountHex ?? '',
+      a.bootTimestampDisplay ?? a.bootTimestampIso ?? '',
+      a.keyInputDisplay ?? '',
     ];
     if (includeAdvanced) {
       baseRow.push(
@@ -270,6 +316,10 @@ function exportJson(
         base.levelRandHex = a.levelRandHex;
         base.levelRandDec = a.levelRandDec;
       }
+      base.bootTimestamp = a.bootTimestampDisplay ?? a.bootTimestampIso ?? null;
+      base.timer0Hex = a.timer0Hex ?? null;
+      base.vcountHex = a.vcountHex ?? null;
+      base.keyInput = a.keyInputDisplay ?? null;
       return base;
     }),
   };
@@ -301,6 +351,18 @@ function exportTxt(
       out.push(`  NatureId: ${a.natureId}`);
     }
     out.push(`  Shiny: ${a.shinyLabel}${includeAdvanced ? ` (${a.shinyType})` : ''}`);
+    if (a.bootTimestampDisplay || a.bootTimestampIso) {
+      out.push(`  BootTime: ${a.bootTimestampDisplay ?? a.bootTimestampIso}`);
+    }
+    if (a.timer0Hex) {
+      out.push(`  Timer0: ${a.timer0Hex}${includeAdvanced && a.timer0Value != null ? ` (${a.timer0Value})` : ''}`);
+    }
+    if (a.vcountHex) {
+      out.push(`  VCount: ${a.vcountHex}${includeAdvanced && a.vcountValue != null ? ` (${a.vcountValue})` : ''}`);
+    }
+    if (a.keyInputDisplay) {
+      out.push(`  KeyInput: ${a.keyInputDisplay}`);
+    }
     if (includeAdvanced) {
       out.push(`  AbilitySlot: ${a.abilitySlot}`);
       out.push(`  Encounter: type=${a.encounterType} slotVal=${a.encounterSlotValue}`);

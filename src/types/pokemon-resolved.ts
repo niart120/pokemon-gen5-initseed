@@ -2,6 +2,7 @@ import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
 import type { IndividualValues } from '@/lib/utils/individual-values';
 import type { CalculatedStats } from '@/lib/utils/pokemon-stats';
+import type { KeyName } from '@/lib/utils/key-input';
 
 export interface ResolutionContext {
   encounterTable?: EncounterTable;
@@ -59,5 +60,6 @@ export interface UiReadyPokemonData {
   timer0?: number;
   vcount?: number;
   bootTimestampIso?: string;
-  keyMask?: number;
+  keyInputDisplay?: string;
+  keyInputNames?: KeyName[];
 }

@@ -111,7 +111,6 @@ export function createSeedSearchController(engine?: SeedSearchEngine): SeedSearc
       const processingInflight = new Set<Promise<void>>();
 
       const scheduleSegment = (segment: SeedSearchJobSegment): void => {
-        let trackedDispatch: Promise<void>;
         const dispatchPromise = (async () => {
           if (state.shouldStop) {
             return;
@@ -120,16 +119,15 @@ export function createSeedSearchController(engine?: SeedSearchEngine): SeedSearc
           if (state.shouldStop) {
             return;
           }
-          let trackedProcessing: Promise<void>;
           const processingPromise = (async () => {
             await processMatches(segment, words, matchCount);
           })();
-          trackedProcessing = processingPromise.finally(() => processingInflight.delete(trackedProcessing));
-          processingInflight.add(trackedProcessing);
+          processingInflight.add(processingPromise);
+          processingPromise.finally(() => processingInflight.delete(processingPromise));
         })();
 
-        trackedDispatch = dispatchPromise.finally(() => dispatchInflight.delete(trackedDispatch));
-        dispatchInflight.add(trackedDispatch);
+        dispatchInflight.add(dispatchPromise);
+        dispatchPromise.finally(() => dispatchInflight.delete(dispatchPromise));
       };
 
       for (const segment of job.segments) {

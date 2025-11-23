@@ -90,8 +90,12 @@ export function ResultDetailsDialog({
 
   if (!result) return null;
 
-  const keyNames = result.keyCode != null ? keyCodeToNames(result.keyCode) : [];
-  const keyInputDisplay = result.keyCode == null
+  const keyNames = result.keyInputNames && result.keyInputNames.length
+    ? result.keyInputNames
+    : result.keyCode != null
+      ? keyCodeToNames(result.keyCode)
+      : [];
+  const keyInputDisplay = keyNames.length === 0
     ? resolveLocaleValue(keyInputUnavailableLabel, locale)
     : formatKeyInputDisplay(keyNames, locale);
 

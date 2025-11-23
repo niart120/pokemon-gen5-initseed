@@ -3,7 +3,7 @@ import type { GenerationParams, GenerationCompletion, GenerationResultsPayload, 
 import { validateGenerationParams, hexParamsToGenerationParams, generationParamsToHex, requiresStaticSelection } from '@/types/generation';
 import type { DeviceProfile } from '@/types/profile';
 import { createDefaultDeviceProfile } from '@/types/profile';
-import { KEY_INPUT_DEFAULT, normalizeKeyMask } from '@/lib/utils/key-input';
+import { KEY_INPUT_DEFAULT, keyMaskToNames, normalizeKeyMask } from '@/lib/utils/key-input';
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
 import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
@@ -11,6 +11,8 @@ import { DomainShinyType, type DomainEncounterType } from '@/types/domain';
 import { resolveBatch, toUiReadyPokemon } from '@/lib/generation/pokemon-resolver';
 import type { ResolvedPokemonData, UiReadyPokemonData, SerializedResolutionContext } from '@/types/pokemon-resolved';
 import { buildResolutionContextFromSources } from '@/lib/initialization/build-resolution-context';
+import { deriveBootTimingSeedJobs, type DerivedSeedJob, type DerivedSeedMetadata } from '@/lib/generation/boot-timing-derivation';
+import { formatKeyInputDisplay } from '@/lib/i18n/strings/search-results';
 
 export type GenerationStatus = 'idle' | 'starting' | 'running' | 'stopping' | 'completed' | 'error';
 
@@ -46,6 +48,8 @@ export interface GenerationSliceState {
   error: string | null;
   filters: GenerationFilters;
   internalFlags: { receivedResults: boolean };
+  derivedSeedState: DerivedSeedRunState | null;
+  activeSeedMetadata: DerivedSeedMetadata | null;
   // 解決用参照データ (任意設定)
   encounterTable?: EncounterTable;
   genderRatios?: Map<number, GenderRatio>;
@@ -172,6 +176,21 @@ function clampToBounds(value: number, min: number, max: number): number {
   return value;
 }
 
+interface DerivedSeedAggregate {
+  processedAdvances: number;
+  resultsCount: number;
+  elapsedMs: number;
+  shinyFound: boolean;
+}
+
+interface DerivedSeedRunState {
+  jobs: DerivedSeedJob[];
+  cursor: number;
+  total: number;
+  aggregate: DerivedSeedAggregate;
+  abortRequested: boolean;
+}
+
 function resolveShinyLock(base: GenerationParams, staticEncounterId: string | null | undefined): GenerationParams {
   if (!staticEncounterId || !requiresStaticSelection(base.encounterType)) {
     return { ...base, isShinyLocked: false };
@@ -237,9 +256,61 @@ export function createDefaultGenerationFilters(): GenerationFilters {
   };
 }
 
-export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): GenerationSlice => ({
-  params: null,
-  draftParams: createDefaultGenerationDraftParams(),
+export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): GenerationSlice => {
+  const startWorkerRun = async (
+    params: GenerationParams,
+    options: { resetResults: boolean; metadata?: DerivedSeedMetadata | null },
+  ): Promise<boolean> => {
+    if (options.resetResults) {
+      set({
+        results: [],
+        resolvedResults: [],
+        lastCompletion: null,
+        error: null,
+        internalFlags: { receivedResults: false },
+      });
+    } else {
+      set({
+        lastCompletion: null,
+        error: null,
+        internalFlags: { receivedResults: false },
+      });
+    }
+
+    set({
+      params,
+      status: 'starting',
+      activeSeedMetadata: options.metadata ?? null,
+    });
+
+    try {
+      const resolutionContext = serializeResolutionContextForWorker(get());
+      await manager.start(params, { resolutionContext });
+      set({ status: 'running' });
+      return true;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      set({ status: 'error', error: message || 'start-failed', activeSeedMetadata: null });
+      return false;
+    }
+  };
+
+  const createDerivedSeedState = (jobs: DerivedSeedJob[]): DerivedSeedRunState => ({
+    jobs,
+    cursor: 0,
+    total: jobs.length,
+    aggregate: {
+      processedAdvances: 0,
+      resultsCount: 0,
+      elapsedMs: 0,
+      shinyFound: false,
+    },
+    abortRequested: false,
+  });
+
+  return {
+    params: null,
+    draftParams: createDefaultGenerationDraftParams(),
   // 動的Encounter UI用追加状態（WASMパラメータ未連動のため GenerationParamsHex 外）
   encounterField: undefined,
   encounterSpeciesId: undefined,
@@ -252,6 +323,8 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
   error: null,
   filters: createDefaultGenerationFilters(),
   internalFlags: { receivedResults: false },
+  derivedSeedState: null,
+  activeSeedMetadata: null,
   encounterTable: undefined,
   genderRatios: undefined,
   abilityCatalog: undefined,
@@ -390,24 +463,43 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     const { status } = get();
     if (status === 'running' || status === 'starting' || status === 'stopping') return false;
     if (!get().commitParams()) return false;
-    const { params } = get();
+    const { params, draftParams } = get();
     if (!params) return false;
-    set({ status: 'starting', results: [], resolvedResults: [], lastCompletion: null, error: null, internalFlags: { receivedResults: false } });
-    try {
-      const resolutionContext = serializeResolutionContextForWorker(get());
-      await manager.start(params, { resolutionContext });
-      set({ status: 'running' });
-      return true;
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      set({ status: 'error', error: message || 'start-failed' });
-      return false;
+    const seedSourceMode = (draftParams.seedSourceMode ?? 'lcg');
+    if (seedSourceMode === 'boot-timing') {
+      if (!canBuildFullHex(draftParams)) {
+        set({ validationErrors: ['incomplete params'] });
+        return false;
+      }
+      const derivation = deriveBootTimingSeedJobs(draftParams as GenerationParamsHex);
+      if (!derivation.ok) {
+        set({ validationErrors: [derivation.error] });
+        return false;
+      }
+      if (!derivation.jobs.length) {
+        set({ validationErrors: ['no derived seeds produced'] });
+        return false;
+      }
+      set({ derivedSeedState: createDerivedSeedState(derivation.jobs) });
+      const started = await startWorkerRun(derivation.jobs[0].params, { resetResults: true, metadata: derivation.jobs[0].metadata });
+      if (!started) {
+        set({ derivedSeedState: null });
+      }
+      return started;
     }
+
+    set({ derivedSeedState: null, activeSeedMetadata: null });
+    return startWorkerRun(params, { resetResults: true, metadata: null });
   },
   stopGeneration: () => {
     const st = get().status;
     if (st === 'running' || st === 'stopping') {
-      if (st !== 'stopping') set({ status: 'stopping' });
+      set((state: GenerationSlice) => ({
+        status: 'stopping',
+        derivedSeedState: state.derivedSeedState
+          ? { ...state.derivedSeedState, abortRequested: true }
+          : null,
+      }));
       manager.stop();
     }
   },
@@ -478,6 +570,8 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     lastCompletion: null,
     error: null,
     internalFlags: { receivedResults: false },
+    derivedSeedState: null,
+    activeSeedMetadata: null,
     encounterTable: undefined,
     genderRatios: undefined,
     abilityCatalog: undefined,
@@ -498,20 +592,80 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
         genderRatios: state.genderRatios,
         abilityCatalog: state.abilityCatalog,
       }));
+
+    const metadata = state.activeSeedMetadata;
+    const keyInputNames = metadata ? keyMaskToNames(metadata.keyMask) : undefined;
+    const enrichedResults = metadata
+      ? payload.results.map((result) => ({
+          ...result,
+          seedSourceMode: metadata.seedSourceMode,
+          derivedSeedIndex: metadata.derivedSeedIndex,
+          timer0: metadata.timer0,
+          vcount: metadata.vcount,
+          bootTimestampIso: metadata.bootTimestampIso,
+          keyInputNames,
+          macAddress: metadata.macAddress,
+        }))
+      : payload.results;
+
+    const shouldAppend = Boolean(state.derivedSeedState && state.derivedSeedState.cursor > 0);
+    const nextResults = shouldAppend ? [...state.results, ...enrichedResults] : enrichedResults;
+    const nextResolved = shouldAppend ? [...(state.resolvedResults ?? []), ...resolvedList] : resolvedList;
+
     set({
-      results: payload.results,
-      resolvedResults: resolvedList,
+      results: nextResults,
+      resolvedResults: nextResolved,
       internalFlags: { receivedResults: true },
     });
   },
   _onWorkerComplete: (c) => {
+    const state = get();
+    const derivedState = state.derivedSeedState;
+    if (derivedState) {
+      const aggregate: DerivedSeedAggregate = {
+        processedAdvances: derivedState.aggregate.processedAdvances + c.processedAdvances,
+        resultsCount: derivedState.aggregate.resultsCount + c.resultsCount,
+        elapsedMs: derivedState.aggregate.elapsedMs + c.elapsedMs,
+        shinyFound: derivedState.aggregate.shinyFound || c.shinyFound,
+      };
+      const nextCursor = derivedState.cursor + 1;
+      const hasMore = nextCursor < derivedState.total;
+      set({
+        derivedSeedState: hasMore ? { ...derivedState, cursor: nextCursor, aggregate } : null,
+        activeSeedMetadata: null,
+      });
+
+      if (hasMore && !derivedState.abortRequested && c.reason !== 'error') {
+        const nextJob = derivedState.jobs[nextCursor];
+        void (async () => {
+          const started = await startWorkerRun(nextJob.params, { resetResults: false, metadata: nextJob.metadata });
+          if (!started) {
+            set({ derivedSeedState: null, status: 'error', activeSeedMetadata: null });
+          }
+        })();
+        return;
+      }
+
+      const finalCompletion: GenerationCompletion = {
+        ...c,
+        processedAdvances: aggregate.processedAdvances,
+        resultsCount: aggregate.resultsCount,
+        elapsedMs: aggregate.elapsedMs,
+        shinyFound: aggregate.shinyFound,
+      };
+      const finalStatus: GenerationStatus = c.reason === 'stopped' ? 'idle' : 'completed';
+      set({ status: finalStatus, lastCompletion: finalCompletion });
+      return;
+    }
+
     const nextStatus: GenerationStatus = c.reason === 'stopped' ? 'idle' : 'completed';
     set({ status: nextStatus, lastCompletion: c });
   },
   _onWorkerError: (err) => {
-    set({ status: 'error', error: err });
+    set({ status: 'error', error: err, derivedSeedState: null, activeSeedMetadata: null });
   },
-});
+  } as GenerationSlice;
+};
 
 // マネージャーのイベントを slice にバインド（store 作成後に呼ばれる想定）
 export const bindGenerationManager = (get: () => GenerationSlice) => {
@@ -675,6 +829,24 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
         }
       }
       if (!ok) continue;
+    }
+
+    if (raw.seedSourceMode) {
+      uiData.seedSourceMode = raw.seedSourceMode;
+      uiData.derivedSeedIndex = raw.derivedSeedIndex;
+    } else {
+      uiData.seedSourceMode = undefined;
+      uiData.derivedSeedIndex = undefined;
+    }
+    uiData.timer0 = raw.timer0;
+    uiData.vcount = raw.vcount;
+    uiData.bootTimestampIso = raw.bootTimestampIso;
+    if (raw.keyInputNames && raw.keyInputNames.length) {
+      uiData.keyInputNames = raw.keyInputNames;
+      uiData.keyInputDisplay = formatKeyInputDisplay(raw.keyInputNames, locale);
+    } else {
+      uiData.keyInputNames = undefined;
+      uiData.keyInputDisplay = undefined;
     }
 
     entries.push({ raw, ui: uiData });
