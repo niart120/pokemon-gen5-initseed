@@ -1,3 +1,4 @@
+import type { SeedSourceMode } from '@/types/generation';
 import type { LocaleMap, LocaleText } from './types';
 
 type AbilityModeValue = 'none' | 'sync' | 'compound';
@@ -30,6 +31,22 @@ export const generationParamsBaseSeedLabel: LocaleText = {
 export const generationParamsBaseSeedPlaceholder: LocaleText = {
   ja: '1a2b3c4d5e6f7890',
   en: '1a2b3c4d5e6f7890',
+};
+
+export const generationParamsSeedSourceLabel: LocaleText = {
+  ja: 'Seed入力モード',
+  en: 'Seed Input Mode',
+};
+
+export const generationParamsSeedSourceOptionLabels: LocaleMap<Record<SeedSourceMode, string>> = {
+  ja: {
+    lcg: 'LCG Seed',
+    'boot-timing': '起動タイミング',
+  },
+  en: {
+    lcg: 'LCG Seed',
+    'boot-timing': 'Boot Timing',
+  },
 };
 
 export const generationParamsMinAdvanceLabel: LocaleText = {
@@ -115,6 +132,51 @@ export const generationParamsStopFirstShinyLabel: LocaleText = {
 export const generationParamsStopOnCapLabel: LocaleText = {
   ja: '上限到達で停止',
   en: 'Stop On Cap',
+};
+
+export const generationParamsBootTimingTimestampLabel: LocaleText = {
+  ja: '起動日時 (ローカル)',
+  en: 'Boot Time (Local)',
+};
+
+export const generationParamsBootTimingTimestampPlaceholder: LocaleText = {
+  ja: 'YYYY-MM-DD hh:mm:ss',
+  en: 'YYYY-MM-DD hh:mm:ss',
+};
+
+export const generationParamsBootTimingKeyInputLabel: LocaleText = {
+  ja: 'キー入力',
+  en: 'Key Input',
+};
+
+export const generationParamsBootTimingConfigureLabel: LocaleText = {
+  ja: 'Configure',
+  en: 'Configure',
+};
+
+export const generationParamsBootTimingKeyDialogTitle: LocaleText = {
+  ja: 'キー入力の設定',
+  en: 'Key Input Configuration',
+};
+
+export const generationParamsBootTimingKeyResetLabel: LocaleText = {
+  ja: 'Reset',
+  en: 'Reset',
+};
+
+export const generationParamsBootTimingKeyApplyLabel: LocaleText = {
+  ja: 'Apply',
+  en: 'Apply',
+};
+
+export const generationParamsBootTimingProfileLabel: LocaleText = {
+  ja: 'Device Profile 情報',
+  en: 'Device Profile Snapshot',
+};
+
+export const generationParamsBootTimingPairCountLabel: LocaleText = {
+  ja: '組',
+  en: 'pairs',
 };
 
 export const generationParamsScreenReaderAnnouncement: LocaleText = {

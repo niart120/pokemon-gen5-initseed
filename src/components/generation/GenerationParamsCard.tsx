@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -6,6 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Toggle } from '@/components/ui/toggle';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { resolveEncounterLocationName, resolveStaticEncounterName } from '@/data/encounters/i18n/display-name-resolver';
 import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
@@ -13,7 +17,9 @@ import { buildResolutionContext, enrichForSpecies } from '@/lib/initialization/b
 import { natureName } from '@/lib/utils/format-display';
 import { getIvTooltipEntries } from '@/lib/utils/individual-values-display';
 import { lcgSeedToMtSeed } from '@/lib/utils/lcg-seed';
+import { KEY_INPUT_DEFAULT, keyMaskToNames, keyNamesToMask, type KeyName } from '@/lib/utils/key-input';
 import { useLocale } from '@/lib/i18n/locale-context';
+import { formatKeyInputDisplay } from '@/lib/i18n/strings/search-results';
 import {
   generationParamsAbilityLabel,
   generationParamsAbilityOptionLabels,
@@ -38,10 +44,22 @@ import {
   generationParamsStopOnCapLabel,
   generationParamsSyncNatureLabel,
   generationParamsTypeUnavailablePlaceholder,
+  generationParamsSeedSourceLabel,
+  generationParamsSeedSourceOptionLabels,
+  generationParamsBootTimingTimestampLabel,
+  generationParamsBootTimingTimestampPlaceholder,
+  generationParamsBootTimingKeyInputLabel,
+  generationParamsBootTimingConfigureLabel,
+  generationParamsBootTimingKeyDialogTitle,
+  generationParamsBootTimingKeyResetLabel,
+  generationParamsBootTimingKeyApplyLabel,
+  generationParamsBootTimingProfileLabel,
+  generationParamsBootTimingPairCountLabel,
 } from '@/lib/i18n/strings/generation-params';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import { useAppStore } from '@/store/app-store';
-import type { GenerationParamsHex } from '@/types/generation';
+import { DEFAULT_GENERATION_DRAFT_PARAMS } from '@/store/generation-store';
+import type { BootTimingDraft, GenerationParamsHex, SeedSourceMode } from '@/types/generation';
 import {
   DomainEncounterType,
   DomainEncounterCategoryOptions,
@@ -52,7 +70,7 @@ import {
   listDomainEncounterTypeNamesByCategory,
   type DomainEncounterTypeCategoryKey,
 } from '@/types/domain';
-import { Gear } from '@phosphor-icons/react';
+import { Gear, GameController } from '@phosphor-icons/react';
 
 // Simple hex normalization guard
 function isHexLike(v: string) {
@@ -75,6 +93,21 @@ const DEFAULT_ENCOUNTER_CATEGORY: DomainEncounterTypeCategoryKey = (
 ) as DomainEncounterTypeCategoryKey;
 
 const SYNC_NATURE_IDS = Array.from({ length: 25 }, (_, id) => id);
+const SEED_SOURCE_OPTIONS: ReadonlyArray<SeedSourceMode> = ['lcg', 'boot-timing'];
+const SHOULDER_KEYS: KeyName[] = ['L', 'R'];
+const FACE_KEYS: KeyName[] = ['X', 'Y', 'A', 'B'];
+const START_SELECT_KEYS: KeyName[] = ['Select', 'Start'];
+const DPAD_LAYOUT: Array<Array<KeyName | null>> = [
+  [null, '[↑]', null],
+  ['[←]', null, '[→]'],
+  [null, '[↓]', null],
+];
+const KEY_ACCESSIBILITY_LABELS: Partial<Record<KeyName, string>> = {
+  '[↑]': 'Up',
+  '[↓]': 'Down',
+  '[←]': 'Left',
+  '[→]': 'Right',
+};
 
 export const GenerationParamsCard: React.FC = () => {
   const locale = useLocale();
@@ -96,6 +129,7 @@ export const GenerationParamsCard: React.FC = () => {
 
   const localized = React.useMemo(() => {
     const abilityLabels = resolveLocaleValue(generationParamsAbilityOptionLabels, locale);
+    const seedSourceOptions = resolveLocaleValue(generationParamsSeedSourceOptionLabels, locale);
     return {
       panelTitle: resolveLocaleValue(generationParamsPanelTitle, locale),
       sectionTitles: {
@@ -106,6 +140,10 @@ export const GenerationParamsCard: React.FC = () => {
       labels: {
         baseSeed: resolveLocaleValue(generationParamsBaseSeedLabel, locale),
         baseSeedPlaceholder: resolveLocaleValue(generationParamsBaseSeedPlaceholder, locale),
+        seedSource: resolveLocaleValue(generationParamsSeedSourceLabel, locale),
+        bootTimestamp: resolveLocaleValue(generationParamsBootTimingTimestampLabel, locale),
+        bootKeyInput: resolveLocaleValue(generationParamsBootTimingKeyInputLabel, locale),
+        bootProfile: resolveLocaleValue(generationParamsBootTimingProfileLabel, locale),
         minAdvance: resolveLocaleValue(generationParamsMinAdvanceLabel, locale),
         maxAdvances: resolveLocaleValue(generationParamsMaxAdvancesLabel, locale),
         encounterCategory: resolveLocaleValue(generationParamsEncounterCategoryLabel, locale),
@@ -123,6 +161,7 @@ export const GenerationParamsCard: React.FC = () => {
         notApplicable: resolveLocaleValue(generationParamsNotApplicablePlaceholder, locale),
         selectSpecies: resolveLocaleValue(generationParamsSelectSpeciesPlaceholder, locale),
         dataUnavailable: resolveLocaleValue(generationParamsDataUnavailablePlaceholder, locale),
+        bootTimestamp: resolveLocaleValue(generationParamsBootTimingTimestampPlaceholder, locale),
       },
       messages: {
         noTypesAvailable: resolveLocaleValue(generationParamsNoTypesAvailableLabel, locale),
@@ -130,6 +169,14 @@ export const GenerationParamsCard: React.FC = () => {
         screenReader: resolveLocaleValue(generationParamsScreenReaderAnnouncement, locale),
       },
       abilityLabels,
+      seedSourceOptions,
+      bootTiming: {
+        configure: resolveLocaleValue(generationParamsBootTimingConfigureLabel, locale),
+        dialogTitle: resolveLocaleValue(generationParamsBootTimingKeyDialogTitle, locale),
+        reset: resolveLocaleValue(generationParamsBootTimingKeyResetLabel, locale),
+        apply: resolveLocaleValue(generationParamsBootTimingKeyApplyLabel, locale),
+        pairsLabel: resolveLocaleValue(generationParamsBootTimingPairCountLabel, locale),
+      },
     };
   }, [locale]);
 
@@ -145,16 +192,17 @@ export const GenerationParamsCard: React.FC = () => {
     return getIvTooltipEntries(mtSeed, locale);
   }, [hexDraft.baseSeedHex, locale]);
 
-  const update = (partial: Partial<GenerationParamsHex>) => {
+  const update = useCallback((partial: Partial<GenerationParamsHex>) => {
+    const currentDraft = useAppStore.getState().draftParams;
     const next: Partial<GenerationParamsHex> = { ...partial };
-    const targetVersion = partial.version ?? draftParams.version ?? 'B';
+    const targetVersion = partial.version ?? currentDraft.version ?? 'B';
     if (partial.version !== undefined && (targetVersion === 'B' || targetVersion === 'W')) {
       next.memoryLink = false;
     }
     if (partial.newGame !== undefined) {
       if (!partial.newGame) {
         next.withSave = true;
-      } else if (draftParams.withSave === undefined && partial.withSave === undefined) {
+      } else if (currentDraft.withSave === undefined && partial.withSave === undefined) {
         next.withSave = true;
       }
     }
@@ -162,7 +210,32 @@ export const GenerationParamsCard: React.FC = () => {
       next.memoryLink = false;
     }
     setDraftParams(next);
-  };
+  }, [setDraftParams]);
+
+  const seedSourceMode = (hexDraft.seedSourceMode ?? 'lcg') as SeedSourceMode;
+  const isBootTimingMode = seedSourceMode === 'boot-timing';
+  const bootTiming: BootTimingDraft = hexDraft.bootTiming ?? DEFAULT_GENERATION_DRAFT_PARAMS.bootTiming;
+  const [isKeyDialogOpen, setIsKeyDialogOpen] = React.useState(false);
+  const [tempKeyMask, setTempKeyMask] = React.useState(bootTiming.keyMask);
+
+  React.useEffect(() => {
+    if (!isKeyDialogOpen) {
+      setTempKeyMask(bootTiming.keyMask);
+    }
+  }, [bootTiming.keyMask, isKeyDialogOpen]);
+
+  React.useEffect(() => {
+    if (!isBootTimingMode && isKeyDialogOpen) {
+      setIsKeyDialogOpen(false);
+    }
+  }, [isBootTimingMode, isKeyDialogOpen]);
+
+  const updateBootTiming = React.useCallback(
+    (partial: Partial<BootTimingDraft>) => {
+      setDraftParams({ bootTiming: { ...bootTiming, ...partial } as BootTimingDraft });
+    },
+    [bootTiming, setDraftParams],
+  );
 
   const abilityMode = (hexDraft.abilityMode ?? 'none') as NonNullable<GenerationParamsHex['abilityMode']>;
   const onAbilityChange = (mode: NonNullable<GenerationParamsHex['abilityMode']>) => {
@@ -170,6 +243,104 @@ export const GenerationParamsCard: React.FC = () => {
     update({ abilityMode: mode, syncEnabled: mode === 'sync' });
   };
   const syncActive = abilityMode === 'sync' && (hexDraft.syncEnabled ?? false);
+  const handleSeedSourceModeChange = React.useCallback((nextValue: string) => {
+    if (nextValue === 'lcg' || nextValue === 'boot-timing') {
+      setDraftParams({ seedSourceMode: nextValue as SeedSourceMode });
+    }
+  }, [setDraftParams]);
+
+  const bootTimestampValue = React.useMemo(() => formatDateTimeLocalValue(bootTiming.timestampIso), [bootTiming.timestampIso]);
+
+  const handleBootTimestampInput = React.useCallback((value: string) => {
+    if (!value) {
+      updateBootTiming({ timestampIso: undefined });
+      return;
+    }
+    const isoString = toIsoStringFromLocal(value);
+    if (isoString) {
+      updateBootTiming({ timestampIso: isoString });
+    }
+  }, [updateBootTiming]);
+
+  const bootKeyNames = React.useMemo(() => keyMaskToNames(bootTiming.keyMask), [bootTiming.keyMask]);
+  const bootKeyDisplay = formatKeyInputDisplay(bootKeyNames, locale);
+  const tempAvailableKeys = React.useMemo(() => keyMaskToNames(tempKeyMask), [tempKeyMask]);
+  const keyButtonDisabled = disabled || !isBootTimingMode;
+
+  const handleToggleBootKey = React.useCallback((key: KeyName) => {
+    setTempKeyMask((prev) => {
+      const current = keyMaskToNames(prev);
+      const next = current.includes(key)
+        ? (current.filter(k => k !== key) as KeyName[])
+        : [...current, key];
+      return keyNamesToMask(next);
+    });
+  }, []);
+
+  const renderKeyToggle = React.useCallback((key: KeyName, elementKey?: string) => {
+    const text = key.startsWith('[') && key.endsWith(']') ? key.slice(1, -1) : key;
+    return (
+      <Toggle
+        key={elementKey ?? key}
+        value={key}
+        aria-label={KEY_ACCESSIBILITY_LABELS[key] ?? key}
+        pressed={tempAvailableKeys.includes(key)}
+        onPressedChange={() => handleToggleBootKey(key)}
+        className="h-10 min-w-[3rem] px-3"
+      >
+        {text}
+      </Toggle>
+    );
+  }, [handleToggleBootKey, tempAvailableKeys]);
+
+  const handleResetBootKeys = React.useCallback(() => {
+    setTempKeyMask(KEY_INPUT_DEFAULT);
+  }, []);
+
+  const handleApplyBootKeys = React.useCallback(() => {
+    updateBootTiming({ keyMask: tempKeyMask });
+    setIsKeyDialogOpen(false);
+  }, [tempKeyMask, updateBootTiming]);
+
+  const handleKeyDialogOpenChange = React.useCallback((open: boolean) => {
+    if (!isBootTimingMode) {
+      setIsKeyDialogOpen(false);
+      return;
+    }
+    if (disabled && open) {
+      return;
+    }
+    setIsKeyDialogOpen(open);
+    if (!open) {
+      setTempKeyMask(bootTiming.keyMask);
+    }
+  }, [bootTiming.keyMask, disabled, isBootTimingMode]);
+
+  const openKeyDialog = React.useCallback(() => {
+    if (keyButtonDisabled) return;
+    setTempKeyMask(bootTiming.keyMask);
+    setIsKeyDialogOpen(true);
+  }, [bootTiming.keyMask, keyButtonDisabled]);
+
+  const localeTag = locale === 'ja' ? 'ja-JP' : 'en-US';
+  const pairCountFormatter = React.useMemo(() => new Intl.NumberFormat(localeTag), [localeTag]);
+  const timer0Count = Math.max(0, bootTiming.timer0Range.max - bootTiming.timer0Range.min + 1);
+  const vcountCount = Math.max(0, bootTiming.vcountRange.max - bootTiming.vcountRange.min + 1);
+  const pairCount = timer0Count * vcountCount;
+  const pairCountDisplay = `${pairCountFormatter.format(pairCount)} ${localized.bootTiming.pairsLabel}`;
+  const timer0RangeDisplay = formatHexRange(bootTiming.timer0Range, 4);
+  const vcountRangeDisplay = formatHexRange(bootTiming.vcountRange, 2);
+  const macDisplay = formatMacAddress(bootTiming.macAddress);
+  const profileSummaryLines = React.useMemo(() => {
+    const versionLabel = draftParams.version ?? 'B';
+    return [
+      `${versionLabel} (${bootTiming.romRegion}) · ${bootTiming.hardware}`,
+      `MAC ${macDisplay}`,
+      `Timer0 ${timer0RangeDisplay} · VCount ${vcountRangeDisplay}`,
+      `Timer0×VCount ${pairCountDisplay}`,
+    ];
+  }, [bootTiming.hardware, bootTiming.romRegion, draftParams.version, macDisplay, pairCountDisplay, timer0RangeDisplay, vcountRangeDisplay]);
+
   const encounterValue = hexDraft.encounterType ?? 0;
   const encounterType = React.useMemo(() => toDomainEncounterType(encounterValue), [encounterValue]);
   const encounterCategory = React.useMemo<DomainEncounterTypeCategoryKey>(() => {
@@ -330,88 +501,165 @@ export const GenerationParamsCard: React.FC = () => {
   }, [version, encounterType, encounterField, encounterSpeciesId, staticEncounterId, isLocationBased, staticOptions, setEncounterTable, setGenderRatios, setAbilityCatalog]);
 
   return (
-    <PanelCard
-      icon={<Gear size={20} className="opacity-80" />}
-      title={<span id="gen-params-title">{localized.panelTitle}</span>}
-      className={isStack ? 'max-h-200' : 'min-h-64'}
-      fullHeight={!isStack}
-      scrollMode={isStack ? 'parent' : 'content'}
-      aria-labelledby="gen-params-title"
-      role="form"
-    >
+    <>
+      <PanelCard
+        icon={<Gear size={20} className="opacity-80" />}
+        title={<span id="gen-params-title">{localized.panelTitle}</span>}
+        className={isStack ? 'max-h-200' : 'min-h-64'}
+        fullHeight={!isStack}
+        scrollMode={isStack ? 'parent' : 'content'}
+        aria-labelledby="gen-params-title"
+        role="form"
+      >
       {/* Profile-managed fields (Version, TID, SID, etc.) are configured via Device Profile panel. */}
       {/* Target (Range) */}
       <section aria-labelledby="gen-target" className="space-y-2" role="group">
         <h4 id="gen-target" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{localized.sectionTitles.target}</h4>
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Base Seed */}
-          <div className="flex flex-col gap-1 min-w-0">
-            <Label className="text-xs" htmlFor="base-seed">{localized.labels.baseSeed}</Label>
-            {baseSeedTooltipEntries && baseSeedTooltipEntries.length > 0 ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-2">
+            <Label className="text-xs" id="lbl-seed-source" htmlFor="seed-source">{localized.labels.seedSource}</Label>
+            <ToggleGroup
+              id="seed-source"
+              type="single"
+              value={seedSourceMode}
+              onValueChange={handleSeedSourceModeChange}
+              className="flex flex-wrap gap-2"
+              aria-labelledby="lbl-seed-source"
+            >
+              {SEED_SOURCE_OPTIONS.map(mode => (
+                <ToggleGroupItem
+                  key={mode}
+                  value={mode}
+                  className="px-4 py-2 text-xs"
+                  disabled={disabled}
+                >
+                  {localized.seedSourceOptions[mode]}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-1 min-w-0">
+              {isBootTimingMode ? (
+                <>
+                  <Label className="text-xs" htmlFor="boot-timestamp">{localized.labels.bootTimestamp}</Label>
                   <Input
-                    id="base-seed"
-                    className="font-mono h-9"
+                    id="boot-timestamp"
+                    type="datetime-local"
+                    step={1}
+                    className="h-9"
                     disabled={disabled}
-                    value={hexDraft.baseSeedHex ?? '0'}
-                    onChange={e => {
-                      const v = e.target.value;
-                      if (isHexLike(v)) update({ baseSeedHex: v.replace(/^0x/i, '') });
-                    }}
-                    placeholder={localized.labels.baseSeedPlaceholder}
+                    value={bootTimestampValue}
+                    onChange={e => handleBootTimestampInput(e.target.value)}
+                    placeholder={localized.placeholders.bootTimestamp}
                   />
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="space-y-1 text-left">
-                  {baseSeedTooltipEntries.map(entry => (
-                    <div key={entry.label} className="space-y-0.5">
-                      <div className="font-semibold leading-tight">{entry.label}</div>
-                      <div className="font-mono leading-tight">{entry.spread}</div>
-                      <div className="font-mono text-[10px] text-muted-foreground leading-tight">{entry.pattern}</div>
-                    </div>
-                  ))}
-                </TooltipContent>
-              </Tooltip>
-            ) : (
+                </>
+              ) : (
+                <>
+                  <Label className="text-xs" htmlFor="base-seed">{localized.labels.baseSeed}</Label>
+                  {baseSeedTooltipEntries && baseSeedTooltipEntries.length > 0 ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Input
+                          id="base-seed"
+                          className="font-mono h-9"
+                          disabled={disabled}
+                          value={hexDraft.baseSeedHex ?? '0'}
+                          onChange={e => {
+                            const v = e.target.value;
+                            if (isHexLike(v)) update({ baseSeedHex: v.replace(/^0x/i, '') });
+                          }}
+                          placeholder={localized.labels.baseSeedPlaceholder}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="space-y-1 text-left">
+                        {baseSeedTooltipEntries.map(entry => (
+                          <div key={entry.label} className="space-y-0.5">
+                            <div className="font-semibold leading-tight">{entry.label}</div>
+                            <div className="font-mono leading-tight">{entry.spread}</div>
+                            <div className="font-mono text-[10px] text-muted-foreground leading-tight">{entry.pattern}</div>
+                          </div>
+                        ))}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Input
+                      id="base-seed"
+                      className="font-mono h-9"
+                      disabled={disabled}
+                      value={hexDraft.baseSeedHex ?? '0'}
+                      onChange={e => {
+                        const v = e.target.value;
+                        if (isHexLike(v)) update({ baseSeedHex: v.replace(/^0x/i, '') });
+                      }}
+                      placeholder={localized.labels.baseSeedPlaceholder}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+            {/* Min Advance (offset) */}
+            <div className="flex flex-col gap-1 min-w-0">
+              <Label className="text-xs" htmlFor="min-advance">{localized.labels.minAdvance}</Label>
               <Input
-                id="base-seed"
-                className="font-mono h-9"
+                id="min-advance"
+                type="number"
+                inputMode="numeric"
+                className="h-9"
                 disabled={disabled}
-                value={hexDraft.baseSeedHex ?? '0'}
-                onChange={e => {
-                  const v = e.target.value;
-                  if (isHexLike(v)) update({ baseSeedHex: v.replace(/^0x/i, '') });
-                }}
-                placeholder={localized.labels.baseSeedPlaceholder}
+                value={parseInt(hexDraft.offsetHex ?? '0', 16)}
+                onChange={e => update({ offsetHex: Number(e.target.value).toString(16) })}
+                placeholder="0"
               />
+            </div>
+            {/* Max Advances */}
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs" htmlFor="max-adv">{localized.labels.maxAdvances}</Label>
+              <Input
+                id="max-adv"
+                type="number"
+                inputMode="numeric"
+                className="h-9"
+                disabled={disabled}
+                value={draftParams.maxAdvances ?? 0}
+                onChange={e => update({ maxAdvances: Number(e.target.value) })}
+              />
+            </div>
+            {isBootTimingMode && (
+              <>
+                <div className="flex flex-col gap-1 min-w-0 lg:col-span-3">
+                  <Label className="text-xs" id="lbl-boot-keys" htmlFor="boot-keys-display">{localized.labels.bootKeyInput}</Label>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div
+                      id="boot-keys-display"
+                      className="flex-1 min-h-[2.25rem] rounded-md border bg-muted/40 px-3 py-2 text-xs font-mono"
+                    >
+                      {bootKeyDisplay.length > 0 ? bootKeyDisplay : '—'}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={openKeyDialog}
+                      disabled={keyButtonDisabled}
+                    >
+                      {localized.bootTiming.configure}
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 min-w-0 lg:col-span-3">
+                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                    <GameController size={14} className="opacity-70" />
+                    <span>{localized.labels.bootProfile}</span>
+                  </div>
+                  <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs font-mono space-y-1">
+                    {profileSummaryLines.map(line => (
+                      <div key={line}>{line}</div>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
-          </div>
-          {/* Min Advance (offset) */}
-          <div className="flex flex-col gap-1 min-w-0">
-            <Label className="text-xs" htmlFor="min-advance">{localized.labels.minAdvance}</Label>
-            <Input
-              id="min-advance"
-              type="number"
-              inputMode="numeric"
-              className="h-9"
-              disabled={disabled}
-              value={parseInt(hexDraft.offsetHex ?? '0', 16)}
-              onChange={e => update({ offsetHex: Number(e.target.value).toString(16) })}
-              placeholder="0"
-            />
-          </div>
-          {/* Max Advances */}
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs" htmlFor="max-adv">{localized.labels.maxAdvances}</Label>
-            <Input
-              id="max-adv"
-              type="number"
-              inputMode="numeric"
-              className="h-9"
-              disabled={disabled}
-              value={draftParams.maxAdvances ?? 0}
-              onChange={e => update({ maxAdvances: Number(e.target.value) })}
-            />
           </div>
         </div>
       </section>
@@ -541,6 +789,81 @@ export const GenerationParamsCard: React.FC = () => {
           </div>
         </div>
       </section>
-    </PanelCard>
+      </PanelCard>
+      <Dialog open={isBootTimingMode && isKeyDialogOpen} onOpenChange={handleKeyDialogOpenChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{localized.bootTiming.dialogTitle}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="flex justify-center gap-3 flex-wrap">
+              {SHOULDER_KEYS.map((key, index) => renderKeyToggle(key, `shoulder-${index}`))}
+            </div>
+            <div className="grid grid-cols-3 gap-2 place-items-center">
+              {DPAD_LAYOUT.flatMap((row, rowIndex) =>
+                row.map((key, colIndex) =>
+                  key ? (
+                    renderKeyToggle(key, `dpad-${key}-${rowIndex}-${colIndex}`)
+                  ) : (
+                    <span key={`blank-${rowIndex}-${colIndex}`} className="w-12 h-10" />
+                  ),
+                ),
+              )}
+            </div>
+            <div className="flex justify-center gap-3 flex-wrap">
+              {START_SELECT_KEYS.map((key, index) => renderKeyToggle(key, `start-${index}`))}
+            </div>
+            <div className="flex justify-center gap-3 flex-wrap">
+              {FACE_KEYS.map((key, index) => renderKeyToggle(key, `face-${index}`))}
+            </div>
+            <div className="flex items-center justify-between border-t pt-3">
+              <Button type="button" variant="outline" size="sm" onClick={handleResetBootKeys}>
+                {localized.bootTiming.reset}
+              </Button>
+              <Button type="button" size="sm" onClick={handleApplyBootKeys}>
+                {localized.bootTiming.apply}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
+
+function formatDateTimeLocalValue(iso?: string): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (value: number) => value.toString().padStart(2, '0');
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+}
+
+function toIsoStringFromLocal(value: string): string | undefined {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+  return date.toISOString();
+}
+
+function formatHexRange(range: { min: number; max: number }, width: number): string {
+  const normalize = (input: number) => Math.max(0, input >>> 0);
+  const formatValue = (input: number) => `0x${normalize(input).toString(16).toUpperCase().padStart(width, '0')}`;
+  return `${formatValue(range.min)}-${formatValue(range.max)}`;
+}
+
+function formatMacAddress(address: readonly [number, number, number, number, number, number]): string {
+  return Array.from(address)
+    .map((value) => Math.max(0, Math.min(255, value))
+      .toString(16)
+      .toUpperCase()
+      .padStart(2, '0'))
+    .join(':');
+}
