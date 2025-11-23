@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { exportGenerationResults, adaptGenerationResults } from '@/lib/export/generation-exporter';
+import {
+  exportGenerationResults,
+  adaptGenerationResults,
+  CSV_HEADERS,
+  DISPLAY_COLUMN_COUNT,
+} from '@/lib/export/generation-exporter';
 import type { GenerationResult } from '@/types/generation';
 
 function makeDummy(i: number): GenerationResult {
@@ -34,33 +39,7 @@ describe('generation-exporter', () => {
     expect(lines[0].split(',')[0]).toBe('Advance');
     expect(lines.length).toBe(11); // header + 10 rows
     const headers = lines[0].split(',');
-    expect(headers).toEqual([
-      'Advance',
-      'NeedleDirection',
-      'NeedleDirectionValue',
-      'SpeciesName',
-      'AbilityName',
-      'Gender',
-      'NatureName',
-      'ShinyLabel',
-      'Level',
-      'HP',
-      'Attack',
-      'Defense',
-      'SpecialAttack',
-      'SpecialDefense',
-      'Speed',
-      'SeedHex',
-      'PIDHex',
-      'Timer0Hex',
-      'VCountHex',
-      'BootTimestamp',
-      'KeyInput',
-      'SeedSourceMode',
-      'DerivedSeedIndex',
-      'SeedSourceSeedHex',
-      'MacAddress',
-    ]);
+    expect(headers).toEqual(CSV_HEADERS.slice(0, DISPLAY_COLUMN_COUNT));
     expect(headers).not.toContain('SeedDec');
     // 1行目データ整合: seedHex/pidHex が 0x + lower-case
     const firstData = lines[1].split(',');

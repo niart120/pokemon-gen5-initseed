@@ -225,19 +225,21 @@ export function exportGenerationResults(
   options: GenerationExportOptions,
   context?: GenerationExportContext,
 ): string {
+  const adapted = adaptGenerationResults(results, context);
+  const includeAdvanced = Boolean(options.includeAdvancedFields);
   switch (options.format) {
     case 'csv':
-      return exportCsv(results, options, context);
+      return formatCsvExport(adapted, includeAdvanced);
     case 'json':
-      return exportJson(results, options, context);
+      return formatJsonExport(adapted, includeAdvanced);
     case 'txt':
-      return exportTxt(results, options, context);
+      return formatTxtExport(adapted, includeAdvanced);
     default:
       throw new Error('Unsupported format');
   }
 }
 
-const CSV_HEADERS = [
+export const CSV_HEADERS = [
   'Advance',
   'NeedleDirection',
   'NeedleDirectionValue',
@@ -276,15 +278,12 @@ const CSV_HEADERS = [
   'LevelRandDec',
 ];
 
-const DISPLAY_COLUMN_COUNT = 25;
+export const DISPLAY_COLUMN_COUNT = 25;
 
-function exportCsv(
-  results: GenerationResult[],
-  options: GenerationExportOptions,
-  ctx?: GenerationExportContext,
+function formatCsvExport(
+  adapted: AdaptedGenerationResult[],
+  includeAdvanced: boolean,
 ): string {
-  const adapted = adaptGenerationResults(results, ctx);
-  const includeAdvanced = Boolean(options.includeAdvancedFields);
   const headers = includeAdvanced
     ? CSV_HEADERS
     : CSV_HEADERS.slice(0, DISPLAY_COLUMN_COUNT);
@@ -338,13 +337,10 @@ function exportCsv(
   return lines.join('\n');
 }
 
-function exportJson(
-  results: GenerationResult[],
-  options: GenerationExportOptions,
-  ctx?: GenerationExportContext,
+function formatJsonExport(
+  adapted: AdaptedGenerationResult[],
+  includeAdvanced: boolean,
 ): string {
-  const adapted = adaptGenerationResults(results, ctx);
-  const includeAdvanced = Boolean(options.includeAdvancedFields);
   const bootTimingMeta = buildBootTimingMeta(adapted);
   const data = {
     exportDate: new Date().toISOString(),
@@ -396,13 +392,10 @@ function exportJson(
   return JSON.stringify(data, null, 2);
 }
 
-function exportTxt(
-  results: GenerationResult[],
-  options: GenerationExportOptions,
-  ctx?: GenerationExportContext,
+function formatTxtExport(
+  adapted: AdaptedGenerationResult[],
+  includeAdvanced: boolean,
 ): string {
-  const adapted = adaptGenerationResults(results, ctx);
-  const includeAdvanced = Boolean(options.includeAdvancedFields);
   const out: string[] = [];
   out.push('Generation Results Export (v2)');
   out.push(`Export Date: ${new Date().toISOString()}`);
