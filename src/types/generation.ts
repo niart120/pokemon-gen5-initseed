@@ -6,12 +6,35 @@
 
 import type { UnresolvedPokemonData } from './pokemon-raw';
 import { DomainGameMode } from '@/types/domain';
+import type { Hardware, ROMRegion } from '@/types/rom';
 import type {
   ResolvedPokemonData,
   SerializedResolutionContext,
 } from '@/types/pokemon-resolved';
 
 // --- Params ---
+export type SeedSourceMode = 'lcg' | 'boot-timing';
+
+export interface BootTimingDraft {
+  timestampIso?: string;
+  keyMask: number;
+  timer0Range: { min: number; max: number };
+  vcountRange: { min: number; max: number };
+  romRegion: ROMRegion;
+  hardware: Hardware;
+  macAddress: readonly [number, number, number, number, number, number];
+}
+
+const DEFAULT_BOOT_TIMING_PLACEHOLDER: BootTimingDraft = {
+  timestampIso: undefined,
+  keyMask: 0,
+  timer0Range: { min: 0, max: 0 },
+  vcountRange: { min: 0, max: 0 },
+  romRegion: 'JPN',
+  hardware: 'DS',
+  macAddress: [0, 0, 0, 0, 0, 0] as [number, number, number, number, number, number],
+};
+
 export interface GenerationParams {
   baseSeed: bigint;        // 初期Seed
   offset: bigint;          // 開始advance (MVP: 0 既定)
@@ -61,6 +84,8 @@ export interface GenerationParamsHex {
   newGame: boolean;
   /** True when starting with an existing save */
   withSave: boolean;
+  seedSourceMode: SeedSourceMode;
+  bootTiming: BootTimingDraft;
 }
 
 export function hexParamsToGenerationParams(h: GenerationParamsHex): GenerationParams {
@@ -104,6 +129,8 @@ export function generationParamsToHex(p: GenerationParams): GenerationParamsHex 
     memoryLink: p.memoryLink,
     newGame: p.newGame,
     withSave: p.withSave,
+    seedSourceMode: 'lcg',
+    bootTiming: { ...DEFAULT_BOOT_TIMING_PLACEHOLDER },
   };
 }
 
@@ -117,7 +144,15 @@ export type NormalizedGenerationParams = GenerationParams;
 
 // --- Result 型 ---
 // UnresolvedPokemonData が advance を含むため、そのまま公開APIとして利用する。
-export type GenerationResult = UnresolvedPokemonData;
+export type GenerationResult = UnresolvedPokemonData & {
+  seedSourceMode?: SeedSourceMode;
+  derivedSeedIndex?: number;
+  timer0?: number;
+  vcount?: number;
+  bootTimestampIso?: string;
+  keyMask?: number;
+  macAddress?: readonly [number, number, number, number, number, number];
+};
 
 export interface GenerationResultsPayload {
   results: GenerationResult[];

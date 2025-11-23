@@ -54,4 +54,10 @@ export interface UiReadyPokemonData {
   encounterType: number;
   stats?: CalculatedStats;
   ivs?: IndividualValues;
+  seedSourceMode?: 'lcg' | 'boot-timing';
+  derivedSeedIndex?: number;
+  timer0?: number;
+  vcount?: number;
+  bootTimestampIso?: string;
+  keyMask?: number;
 }

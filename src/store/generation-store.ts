@@ -1,6 +1,9 @@
 import { GenerationWorkerManager } from '@/lib/generation/generation-worker-manager';
-import type { GenerationParams, GenerationCompletion, GenerationResultsPayload, GenerationResult, GenerationParamsHex } from '@/types/generation';
+import type { GenerationParams, GenerationCompletion, GenerationResultsPayload, GenerationResult, GenerationParamsHex, BootTimingDraft } from '@/types/generation';
 import { validateGenerationParams, hexParamsToGenerationParams, generationParamsToHex, requiresStaticSelection } from '@/types/generation';
+import type { DeviceProfile } from '@/types/profile';
+import { createDefaultDeviceProfile } from '@/types/profile';
+import { KEY_INPUT_DEFAULT, normalizeKeyMask } from '@/lib/utils/key-input';
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
 import { isLocationBasedEncounter, listEncounterLocations, listEncounterSpeciesOptions } from '@/data/encounters/helpers';
@@ -54,7 +57,7 @@ export interface GenerationSliceState {
 }
 
 export interface GenerationSliceActions {
-  setDraftParams: (partial: Partial<GenerationParamsHex>) => void;
+  setDraftParams: (partial: DraftParamsUpdate) => void;
   setEncounterField: (field: string | undefined) => void;
   setEncounterSpeciesId: (speciesId: number | undefined) => void;
   setStaticEncounterId: (staticId: string | null | undefined) => void;
@@ -78,6 +81,97 @@ export interface GenerationSliceActions {
 
 export type GenerationSlice = GenerationSliceState & GenerationSliceActions;
 
+type BootTimingProfileSource = Pick<DeviceProfile, 'romRegion' | 'hardware' | 'timer0Range' | 'vcountRange' | 'macAddress'>;
+
+type DraftParamsUpdate = Partial<Omit<GenerationParamsHex, 'bootTiming'>> & {
+  bootTiming?: Partial<BootTimingDraft>;
+};
+
+const DEFAULT_DEVICE_PROFILE_FOR_GENERATION = createDefaultDeviceProfile();
+
+function ensureMacAddressTuple(
+  values: readonly number[] | undefined,
+  fallback: BootTimingDraft['macAddress'] = [0, 0, 0, 0, 0, 0],
+): BootTimingDraft['macAddress'] {
+  const result: number[] = [];
+  for (let i = 0; i < 6; i += 1) {
+    const fallbackValue = fallback[i] ?? 0;
+    const raw = values?.[i];
+    result.push(clampNumber(raw, 0, 255, fallbackValue));
+  }
+  return result as BootTimingDraft['macAddress'];
+}
+
+export function createBootTimingDraftFromProfile(profile: BootTimingProfileSource): BootTimingDraft {
+  return {
+    timestampIso: undefined,
+    keyMask: KEY_INPUT_DEFAULT,
+    timer0Range: { ...profile.timer0Range },
+    vcountRange: { ...profile.vcountRange },
+    romRegion: profile.romRegion,
+    hardware: profile.hardware,
+    macAddress: ensureMacAddressTuple(profile.macAddress),
+  };
+}
+
+export function cloneBootTimingDraft(source: BootTimingDraft): BootTimingDraft {
+  return {
+    timestampIso: source.timestampIso,
+    keyMask: source.keyMask,
+    timer0Range: { ...source.timer0Range },
+    vcountRange: { ...source.vcountRange },
+    romRegion: source.romRegion,
+    hardware: source.hardware,
+    macAddress: ensureMacAddressTuple(source.macAddress),
+  };
+}
+
+export function normalizeBootTimingDraft(
+  partial: Partial<BootTimingDraft> | undefined,
+  fallback: BootTimingDraft,
+): BootTimingDraft {
+  const base = fallback ?? createBootTimingDraftFromProfile(DEFAULT_DEVICE_PROFILE_FOR_GENERATION);
+  const timer0Range = normalizeNumericRange(partial?.timer0Range, base.timer0Range, 0, 0xFFFF);
+  const vcountRange = normalizeNumericRange(partial?.vcountRange, base.vcountRange, 0, 0xFF);
+  const keyMask = partial?.keyMask != null ? normalizeKeyMask(partial.keyMask) : base.keyMask;
+  return {
+    timestampIso: partial?.timestampIso ?? base.timestampIso,
+    keyMask,
+    timer0Range,
+    vcountRange,
+    romRegion: partial?.romRegion ?? base.romRegion,
+    hardware: partial?.hardware ?? base.hardware,
+    macAddress: ensureMacAddressTuple(partial?.macAddress, base.macAddress),
+  };
+}
+
+function normalizeNumericRange(
+  partial: { min?: number; max?: number } | undefined,
+  fallback: { min: number; max: number },
+  minBound: number,
+  maxBound: number,
+): { min: number; max: number } {
+  const nextMin = clampNumber(partial?.min, minBound, maxBound, fallback.min);
+  const nextMax = clampNumber(partial?.max, minBound, maxBound, fallback.max);
+  if (nextMin > nextMax) {
+    return { min: nextMax, max: nextMin };
+  }
+  return { min: nextMin, max: nextMax };
+}
+
+function clampNumber(value: number | undefined, min: number, max: number, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return clampToBounds(fallback, min, max);
+  }
+  return clampToBounds(Math.round(value), min, max);
+}
+
+function clampToBounds(value: number, min: number, max: number): number {
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
+
 function resolveShinyLock(base: GenerationParams, staticEncounterId: string | null | undefined): GenerationParams {
   if (!staticEncounterId || !requiresStaticSelection(base.encounterType)) {
     return { ...base, isShinyLocked: false };
@@ -96,21 +190,30 @@ export const DEFAULT_GENERATION_DRAFT_PARAMS: GenerationParamsHex = {
   offsetHex: '0',
   maxAdvances: 50,
   maxResults: 15000,
-  version: 'B',
+  version: DEFAULT_DEVICE_PROFILE_FOR_GENERATION.romVersion,
   encounterType: 0,
-  tid: 1,
-  sid: 2,
+  tid: DEFAULT_DEVICE_PROFILE_FOR_GENERATION.tid,
+  sid: DEFAULT_DEVICE_PROFILE_FOR_GENERATION.sid,
   syncEnabled: false,
   syncNatureId: 0,
   stopAtFirstShiny: false,
   stopOnCap: true,
   abilityMode: 'none',
-  shinyCharm: false,
+  shinyCharm: DEFAULT_DEVICE_PROFILE_FOR_GENERATION.shinyCharm,
   isShinyLocked: false,
-  memoryLink: false,
-  newGame: false,
-  withSave: true,
+  memoryLink: DEFAULT_DEVICE_PROFILE_FOR_GENERATION.memoryLink,
+  newGame: DEFAULT_DEVICE_PROFILE_FOR_GENERATION.newGame,
+  withSave: DEFAULT_DEVICE_PROFILE_FOR_GENERATION.withSave,
+  seedSourceMode: 'lcg',
+  bootTiming: createBootTimingDraftFromProfile(DEFAULT_DEVICE_PROFILE_FOR_GENERATION),
 };
+
+export function createDefaultGenerationDraftParams(): GenerationParamsHex {
+  return {
+    ...DEFAULT_GENERATION_DRAFT_PARAMS,
+    bootTiming: cloneBootTimingDraft(DEFAULT_GENERATION_DRAFT_PARAMS.bootTiming),
+  };
+}
 
 // 単一インスタンスマネージャ（UI からは slice 経由で操作）
 const manager = new GenerationWorkerManager();
@@ -136,9 +239,7 @@ export function createDefaultGenerationFilters(): GenerationFilters {
 
 export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): GenerationSlice => ({
   params: null,
-  draftParams: {
-    ...DEFAULT_GENERATION_DRAFT_PARAMS,
-  },
+  draftParams: createDefaultGenerationDraftParams(),
   // 動的Encounter UI用追加状態（WASMパラメータ未連動のため GenerationParamsHex 外）
   encounterField: undefined,
   encounterSpeciesId: undefined,
@@ -157,8 +258,13 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
 
   setDraftParams: (partial) => {
     set((state: GenerationSlice) => {
-      const prevDraft = state.draftParams;
-      const nextDraft = { ...prevDraft, ...partial } as GenerationParamsHex;
+      const prevDraft = (state.draftParams ?? createDefaultGenerationDraftParams()) as GenerationParamsHex;
+      const { bootTiming: partialBootTiming, ...rest } = partial;
+      const nextDraft = { ...prevDraft, ...rest } as GenerationParamsHex;
+      const baseBootTiming = prevDraft.bootTiming ?? DEFAULT_GENERATION_DRAFT_PARAMS.bootTiming;
+      nextDraft.bootTiming = partialBootTiming !== undefined
+        ? normalizeBootTimingDraft(partialBootTiming, baseBootTiming)
+        : cloneBootTimingDraft(baseBootTiming);
       const version = nextDraft.version ?? 'B';
       let encounterField = state.encounterField;
       let encounterSpeciesId = state.encounterSpeciesId;
@@ -432,7 +538,7 @@ function serializeResolutionContextForWorker(state: GenerationSlice): Serialized
 }
 
 function canBuildFullHex(d: Partial<GenerationParamsHex>): d is GenerationParamsHex {
-  const required: (keyof GenerationParamsHex)[] = ['baseSeedHex','offsetHex','maxAdvances','maxResults','version','encounterType','tid','sid','syncEnabled','syncNatureId','shinyCharm','isShinyLocked','stopAtFirstShiny','stopOnCap','memoryLink','newGame','withSave'];
+  const required: (keyof GenerationParamsHex)[] = ['baseSeedHex','offsetHex','maxAdvances','maxResults','version','encounterType','tid','sid','syncEnabled','syncNatureId','shinyCharm','isShinyLocked','stopAtFirstShiny','stopOnCap','memoryLink','newGame','withSave','seedSourceMode','bootTiming'];
   return required.every(k => (d as Record<string, unknown>)[k] !== undefined);
 }
 

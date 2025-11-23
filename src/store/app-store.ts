@@ -8,14 +8,14 @@ import type {
   SearchPreset,
   DailyTimeRange,
 } from '../types/search';
-import type { GenerationParamsHex } from '@/types/generation';
+import type { GenerationParamsHex, BootTimingDraft } from '@/types/generation';
 import type { ParallelSearchSettings, AggregatedProgress } from '../types/parallel';
 import type { DeviceProfile, DeviceProfileDraft } from '../types/profile';
 import { createDefaultDeviceProfile, createDeviceProfile, applyDeviceProfileDraft } from '../types/profile';
 import { DEMO_TARGET_SEEDS } from '../data/default-seeds';
 
 import type { GenerationSlice, GenerationFilters, ShinyFilterMode } from './generation-store';
-import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS, createDefaultGenerationFilters } from './generation-store';
+import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS, createDefaultGenerationDraftParams, createDefaultGenerationFilters, normalizeBootTimingDraft } from './generation-store';
 import { DEFAULT_LOCALE } from '@/types/i18n';
 import { DomainShinyType } from '@/types/domain';
 
@@ -210,13 +210,21 @@ function extractGenerationForPersist(state: AppStore): PersistedGenerationMinima
 
 function mergeDraftParams(restored: Partial<GenerationSlice['draftParams']> | undefined): GenerationSlice['draftParams'] {
   const source = (restored ?? {}) as Partial<GenerationParamsHex>;
-  const merged: GenerationParamsHex = { ...DEFAULT_GENERATION_DRAFT_PARAMS };
+  const merged: GenerationParamsHex = createDefaultGenerationDraftParams();
   type DraftKey = keyof GenerationParamsHex;
   for (const key of Object.keys(DEFAULT_GENERATION_DRAFT_PARAMS) as DraftKey[]) {
+    if (key === 'bootTiming') continue;
     const value = source[key];
     if (value !== undefined) {
       (merged as Record<DraftKey, unknown>)[key] = value;
     }
+  }
+  const restoredBootTiming = 'bootTiming' in source
+    ? (source.bootTiming as Partial<BootTimingDraft> | undefined)
+    : undefined;
+  merged.bootTiming = normalizeBootTimingDraft(restoredBootTiming, merged.bootTiming);
+  if (merged.seedSourceMode !== 'lcg' && merged.seedSourceMode !== 'boot-timing') {
+    merged.seedSourceMode = 'lcg';
   }
   return merged;
 }
@@ -397,6 +405,13 @@ export const useAppStore = create<AppStore>()(
           newGame: profile.newGame,
           withSave: profile.withSave,
           memoryLink: profile.memoryLink,
+          bootTiming: {
+            romRegion: profile.romRegion,
+            hardware: profile.hardware,
+            timer0Range: { ...profile.timer0Range },
+            vcountRange: { ...profile.vcountRange },
+            macAddress: profile.macAddress,
+          },
         });
       },
       locale: DEFAULT_LOCALE,
