@@ -9,12 +9,16 @@ import { useBootTimingDraft } from '@/hooks/generation/useBootTimingDraft';
 import type { KeyName } from '@/lib/utils/key-input';
 
 const SHOULDER_KEYS: KeyName[] = ['L', 'R'];
-const FACE_KEYS: KeyName[] = ['X', 'Y', 'A', 'B'];
 const START_SELECT_KEYS: KeyName[] = ['Select', 'Start'];
 const DPAD_LAYOUT: Array<Array<KeyName | null>> = [
   [null, '[↑]', null],
   ['[←]', null, '[→]'],
   [null, '[↓]', null],
+];
+const FACE_BUTTON_LAYOUT: Array<Array<KeyName | null>> = [
+  [null, 'X', null],
+  ['Y', null, 'A'],
+  [null, 'B', null],
 ];
 const KEY_ACCESSIBILITY_LABELS: Partial<Record<KeyName, string>> = {
   '[↑]': 'Up',
@@ -45,16 +49,19 @@ export const BootTimingControls: React.FC<BootTimingControlsProps> = ({ locale, 
   const controller = useBootTimingDraft({ locale, disabled, isActive });
   const { snapshot, dialog, handleTimestampInput } = controller;
 
-  const renderKeyToggle = React.useCallback((key: KeyName, elementKey?: string) => {
+  const renderKeyToggle = React.useCallback((key: KeyName, options?: { elementKey?: string; className?: string }) => {
     const text = key.startsWith('[') && key.endsWith(']') ? key.slice(1, -1) : key;
+    const baseClass = 'min-w-[3rem] px-3';
+    const mergedClass = options?.className ? `${baseClass} ${options.className}` : `${baseClass} h-10`;
+    const elementKey = options?.elementKey ?? key;
     return (
       <Toggle
-        key={elementKey ?? key}
+        key={elementKey}
         value={key}
         aria-label={KEY_ACCESSIBILITY_LABELS[key] ?? key}
         pressed={dialog.availableKeys.includes(key)}
         onPressedChange={() => dialog.toggleKey(key)}
-        className="h-10 min-w-[3rem] px-3"
+        className={mergedClass}
       >
         {text}
       </Toggle>
@@ -113,25 +120,53 @@ export const BootTimingControls: React.FC<BootTimingControlsProps> = ({ locale, 
             <DialogTitle>{labels.dialogTitle}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
-            <div className="flex justify-center gap-3 flex-wrap">
-              {SHOULDER_KEYS.map((key, index) => renderKeyToggle(key, `shoulder-${index}`))}
+            <div className="flex flex-wrap items-center justify-between gap-4 px-4 sm:px-8">
+              {SHOULDER_KEYS.map((key, index) => renderKeyToggle(key, {
+                elementKey: `shoulder-${index}`,
+                className: 'px-6 py-2 min-w-[3.5rem]',
+              }))}
             </div>
-            <div className="grid grid-cols-3 gap-2 place-items-center">
-              {DPAD_LAYOUT.flatMap((row, rowIndex) =>
-                row.map((key, colIndex) =>
-                  key ? (
-                    renderKeyToggle(key, `dpad-${key}-${rowIndex}-${colIndex}`)
-                  ) : (
-                    <span key={`blank-${rowIndex}-${colIndex}`} className="w-12 h-10" />
-                  ),
-                ),
-              )}
-            </div>
-            <div className="flex justify-center gap-3 flex-wrap">
-              {START_SELECT_KEYS.map((key, index) => renderKeyToggle(key, `start-${index}`))}
-            </div>
-            <div className="flex justify-center gap-3 flex-wrap">
-              {FACE_KEYS.map((key, index) => renderKeyToggle(key, `face-${index}`))}
+            <div className="grid gap-6 sm:grid-cols-3">
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="grid grid-cols-3 gap-1 font-arrows">
+                  {DPAD_LAYOUT.map((row, rowIndex) => (
+                    row.map((key, colIndex) => (
+                      key ? (
+                        renderKeyToggle(key, {
+                          elementKey: `dpad-${key}-${rowIndex}-${colIndex}`,
+                          className: 'w-12 h-12',
+                        })
+                      ) : (
+                        <span key={`dpad-blank-${rowIndex}-${colIndex}`} className="w-12 h-12" />
+                      )
+                    ))
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="flex flex-wrap justify-center gap-3">
+                  {START_SELECT_KEYS.map((key, index) => renderKeyToggle(key, {
+                    elementKey: `start-${index}`,
+                    className: 'px-4 py-2 min-w-[4rem]',
+                  }))}
+                </div>
+              </div>
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="grid grid-cols-3 gap-1">
+                  {FACE_BUTTON_LAYOUT.map((row, rowIndex) => (
+                    row.map((key, colIndex) => (
+                      key ? (
+                        renderKeyToggle(key, {
+                          elementKey: `face-${key}-${rowIndex}-${colIndex}`,
+                          className: 'w-12 h-12',
+                        })
+                      ) : (
+                        <span key={`face-blank-${rowIndex}-${colIndex}`} className="w-12 h-12" />
+                      )
+                    ))
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="flex items-center justify-between border-t pt-3">
               <Button type="button" variant="outline" size="sm" onClick={dialog.resetKeys}>
