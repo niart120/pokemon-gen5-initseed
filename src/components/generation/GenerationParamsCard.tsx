@@ -45,7 +45,6 @@ import {
   generationParamsBootTimingKeyResetLabel,
   generationParamsBootTimingKeyApplyLabel,
   generationParamsBootTimingProfileLabel,
-  generationParamsBootTimingPairCountLabel,
 } from '@/lib/i18n/strings/generation-params';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import type { GenerationParamsHex, SeedSourceMode } from '@/types/generation';
@@ -151,7 +150,6 @@ export const GenerationParamsCard: React.FC = () => {
         dialogTitle: resolveLocaleValue(generationParamsBootTimingKeyDialogTitle, locale),
         reset: resolveLocaleValue(generationParamsBootTimingKeyResetLabel, locale),
         apply: resolveLocaleValue(generationParamsBootTimingKeyApplyLabel, locale),
-        pairsLabel: resolveLocaleValue(generationParamsBootTimingPairCountLabel, locale),
       },
     };
   }, [locale]);
@@ -165,7 +163,6 @@ export const GenerationParamsCard: React.FC = () => {
     dialogTitle: localized.bootTiming.dialogTitle,
     reset: localized.bootTiming.reset,
     apply: localized.bootTiming.apply,
-    pairsLabel: localized.bootTiming.pairsLabel,
   }), [localized]);
   const typeSelectPlaceholder = noTypeOptions ? localized.placeholders.typeUnavailable : undefined;
   const locationSelectPlaceholder = locationOptionsLength ? localized.placeholders.selectOption : localized.placeholders.notApplicable;

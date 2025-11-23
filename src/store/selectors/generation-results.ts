@@ -24,6 +24,34 @@ export type FilteredRowsCache = {
 
 let _filteredRowsCache: FilteredRowsCache = null;
 
+function parseSingleFilter(value: string | undefined, maxValue: number): number | null {
+  if (!value) return null;
+  const cleaned = value.replace(/\s+/g, '').toUpperCase();
+  if (!cleaned) return null;
+
+  let base = 10;
+  let normalized = cleaned;
+  if (normalized.startsWith('0X')) {
+    base = 16;
+    normalized = normalized.slice(2);
+  } else if (/[A-F]/.test(normalized)) {
+    base = 16;
+  }
+
+  const pattern = base === 16 ? /^[0-9A-F]+$/ : /^[0-9]+$/;
+  if (!pattern.test(normalized)) {
+    return null;
+  }
+
+  const parsed = parseInt(normalized, base);
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+
+  const clamped = Math.min(Math.max(parsed, 0), maxValue);
+  return clamped;
+}
+
 function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonNullable<FilteredRowsCache> {
   const {
     results,
@@ -82,6 +110,11 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
   const levelRange = filters.levelRange;
   const hasLevelFilter = Boolean(levelRange && (levelRange.min != null || levelRange.max != null));
 
+  const timer0FilterValue = parseSingleFilter(filters.timer0Filter, 0xFFFF);
+  const vcountFilterValue = parseSingleFilter(filters.vcountFilter, 0xFF);
+  const hasTimer0Filter = timer0FilterValue != null;
+  const hasVcountFilter = vcountFilterValue != null;
+
   const entries: Array<{ raw: GenerationResult; ui: UiReadyPokemonData }> = [];
 
   for (let i = 0; i < results.length; i += 1) {
@@ -138,6 +171,16 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
         }
       }
       if (!ok) continue;
+    }
+
+    if (hasTimer0Filter) {
+      const value = raw.timer0;
+      if (typeof value !== 'number' || value !== timer0FilterValue) continue;
+    }
+
+    if (hasVcountFilter) {
+      const value = raw.vcount;
+      if (typeof value !== 'number' || value !== vcountFilterValue) continue;
     }
 
     if (raw.seedSourceMode) {

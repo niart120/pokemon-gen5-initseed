@@ -9,7 +9,6 @@ interface UseBootTimingDraftOptions {
   locale: 'ja' | 'en';
   disabled: boolean;
   isActive: boolean;
-  pairsLabel: string;
 }
 
 export interface BootTimingDialogState {
@@ -42,7 +41,7 @@ export interface BootTimingDraftController {
   handleTimestampInput: (value: string) => void;
 }
 
-export function useBootTimingDraft({ locale, disabled, isActive, pairsLabel }: UseBootTimingDraftOptions): BootTimingDraftController {
+export function useBootTimingDraft({ locale, disabled, isActive }: UseBootTimingDraftOptions): BootTimingDraftController {
   const bootTiming = useAppStore((state) => state.draftParams.bootTiming ?? DEFAULT_GENERATION_DRAFT_PARAMS.bootTiming);
   const version = useAppStore((state) => state.draftParams.version ?? 'B');
   const setDraftParams = useAppStore((state) => state.setDraftParams);
@@ -125,24 +124,16 @@ export function useBootTimingDraft({ locale, disabled, isActive, pairsLabel }: U
 
   const bootTimestampValue = React.useMemo(() => formatDateTimeLocalValue(bootTiming.timestampIso), [bootTiming.timestampIso]);
 
-  const localeTag = locale === 'ja' ? 'ja-JP' : 'en-US';
-  const pairCountFormatter = React.useMemo(() => new Intl.NumberFormat(localeTag), [localeTag]);
-  const timer0Count = Math.max(0, bootTiming.timer0Range.max - bootTiming.timer0Range.min + 1);
-  const vcountCount = Math.max(0, bootTiming.vcountRange.max - bootTiming.vcountRange.min + 1);
-  const pairCount = timer0Count * vcountCount;
-  const pairCountDisplay = `${pairCountFormatter.format(pairCount)} ${pairsLabel}`;
   const timer0RangeDisplay = formatHexRange(bootTiming.timer0Range, 4);
   const vcountRangeDisplay = formatHexRange(bootTiming.vcountRange, 2);
   const macDisplay = formatMacAddress(bootTiming.macAddress);
 
   const profileSummaryLines = React.useMemo(() => {
     return [
-      `${version} (${bootTiming.romRegion}) · ${bootTiming.hardware}`,
-      `MAC ${macDisplay}`,
+      `${version} (${bootTiming.romRegion}) · ${bootTiming.hardware} · MAC ${macDisplay}`,
       `Timer0 ${timer0RangeDisplay} · VCount ${vcountRangeDisplay}`,
-      `Timer0×VCount ${pairCountDisplay}`,
     ];
-  }, [bootTiming.hardware, bootTiming.romRegion, macDisplay, pairCountDisplay, timer0RangeDisplay, vcountRangeDisplay, version]);
+  }, [bootTiming.hardware, bootTiming.romRegion, macDisplay, timer0RangeDisplay, vcountRangeDisplay, version]);
 
   const dialogState: BootTimingDialogState = {
     isOpen: isKeyDialogOpen && isActive,

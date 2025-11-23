@@ -170,13 +170,8 @@ export const generationParamsBootTimingKeyApplyLabel: LocaleText = {
 };
 
 export const generationParamsBootTimingProfileLabel: LocaleText = {
-  ja: 'Device Profile 情報',
-  en: 'Device Profile Snapshot',
-};
-
-export const generationParamsBootTimingPairCountLabel: LocaleText = {
-  ja: '組',
-  en: 'pairs',
+  ja: 'Device Profile',
+  en: 'Device Profile',
 };
 
 export const generationParamsScreenReaderAnnouncement: LocaleText = {

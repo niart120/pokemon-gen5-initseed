@@ -50,14 +50,16 @@ const STAT_KEYS: StatKey[] = ['hp', 'attack', 'defense', 'specialAttack', 'speci
 const FILTER_FIELD_BASE_CLASS = 'flex flex-col gap-1 grow-0';
 const FILTER_FIELD_WIDTHS = {
   species: 'basis-[26ch] min-w-[22ch] max-w-[34ch]',
-  ability: 'basis-[24ch] min-w-[18ch] max-w-[30ch]',
-  gender: 'basis-[14ch] min-w-[10ch] max-w-[16ch]',
-  nature: 'basis-[20ch] min-w-[16ch] max-w-[24ch]',
-  shiny: 'basis-[18ch] min-w-[14ch] max-w-[20ch]',
-  level: 'basis-[12ch] min-w-[10ch] max-w-[14ch]',
+  ability: 'basis-[20ch] min-w-[14ch] max-w-[24ch]',
+  gender: 'basis-[14ch] min-w-[12ch] max-w-[16ch]',
+  nature: 'basis-[14ch] min-w-[12ch] max-w-[16ch]',
+  shiny: 'basis-[12ch] min-w-[10ch] max-w-[14ch]',
+  level: 'basis-[6ch] min-w-[6ch] max-w-[7ch]',
+  timer0: 'basis-[6ch] min-w-[6ch] max-w-[7ch]',
+  vcount: 'basis-[6ch] min-w-[6ch] max-w-[7ch]',
 } as const;
 const STAT_FIELD_BASE_CLASS = 'flex flex-col gap-1 grow-0';
-const STAT_FIELD_WIDTH = 'basis-[12ch] min-w-[10ch] max-w-[14ch]';
+const STAT_FIELD_WIDTH = 'basis-[6ch] min-w-[6ch] max-w-[7ch]';
 
 interface AbilityMeta {
   options: Array<{ index: 0 | 1 | 2; label: string }>;
@@ -169,6 +171,8 @@ const FilterPopoverField: React.FC<FilterPopoverFieldProps> = ({
     </div>
   );
 };
+
+const HEX_FILTER_INPUT_PATTERN = /^[0-9A-FX\s]*$/;
 
 export const GenerationResultsControlCard: React.FC = () => {
   const locale = useLocale();
@@ -287,6 +291,8 @@ export const GenerationResultsControlCard: React.FC = () => {
     [computeAbilityMeta, filters.speciesIds],
   );
   const levelValue = filters.levelRange?.min != null ? String(filters.levelRange.min) : '';
+  const timer0Value = filters.timer0Filter ?? '';
+  const vcountValue = filters.vcountFilter ?? '';
 
   const computeAvailableGenders = React.useCallback((speciesIds: number[]): Set<'M' | 'F' | 'N'> => {
     const genders = new Set<'M' | 'F' | 'N'>();
@@ -503,6 +509,28 @@ export const GenerationResultsControlCard: React.FC = () => {
     },
     [applyFilters, filters.levelRange],
   );
+
+  const handleTimer0FilterChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const raw = event.target.value.toUpperCase();
+      if (!HEX_FILTER_INPUT_PATTERN.test(raw)) {
+        return;
+      }
+      applyFilters({ timer0Filter: raw });
+    },
+    [applyFilters],
+  );
+
+  const handleVcountFilterChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const raw = event.target.value.toUpperCase();
+      if (!HEX_FILTER_INPUT_PATTERN.test(raw)) {
+        return;
+      }
+      applyFilters({ vcountFilter: raw });
+    },
+    [applyFilters],
+  );
   const speciesFieldDisabled = pokemonOptions.length === 0;
   const hasPokemonSelection = filters.speciesIds.length > 0;
   const abilityDisabled = !hasPokemonSelection || abilityMeta.options.length === 0;
@@ -698,6 +726,40 @@ export const GenerationResultsControlCard: React.FC = () => {
                   placeholder={anyLabel}
                   disabled={!statsAvailable}
                   aria-label={levelAriaLabel}
+                />
+              </div>
+              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.timer0)}>
+                <Label htmlFor="timer0-filter" className="text-[11px] font-medium text-muted-foreground">
+                  {fieldLabels.timer0}
+                </Label>
+                <Input
+                  id="timer0-filter"
+                  type="text"
+                  inputMode="text"
+                  value={timer0Value}
+                  onChange={handleTimer0FilterChange}
+                  className="h-10 w-full px-3 text-right font-mono uppercase"
+                  placeholder="0000"
+                  maxLength={6}
+                  spellCheck={false}
+                  autoComplete="off"
+                />
+              </div>
+              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.vcount)}>
+                <Label htmlFor="vcount-filter" className="text-[11px] font-medium text-muted-foreground">
+                  {fieldLabels.vcount}
+                </Label>
+                <Input
+                  id="vcount-filter"
+                  type="text"
+                  inputMode="text"
+                  value={vcountValue}
+                  onChange={handleVcountFilterChange}
+                  className="h-10 w-full px-3 text-right font-mono uppercase"
+                  placeholder="00"
+                  maxLength={4}
+                  spellCheck={false}
+                  autoComplete="off"
                 />
               </div>
             </div>

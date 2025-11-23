@@ -25,8 +25,6 @@ export function useResultDetailsClipboard(locale: 'ja' | 'en'): ResultDetailsCli
 
   const copyBootTimingToGeneration = useCallback((result: InitialSeedResult) => {
     const timestampIso = result.datetime.toISOString();
-    const timer0 = Number(result.timer0 ?? 0);
-    const vcount = Number(result.vcount ?? 0);
     const keyMask = result.keyCode != null ? keyCodeToMask(result.keyCode) : KEY_INPUT_DEFAULT;
 
     setDraftParams({
@@ -34,8 +32,6 @@ export function useResultDetailsClipboard(locale: 'ja' | 'en'): ResultDetailsCli
       bootTiming: {
         timestampIso,
         keyMask,
-        timer0Range: { min: timer0, max: timer0 },
-        vcountRange: { min: vcount, max: vcount },
       },
     });
     toast.success(resolveLocaleValue(bootTimingCopySuccess, locale));

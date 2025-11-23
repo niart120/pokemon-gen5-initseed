@@ -45,6 +45,8 @@ export interface GenerationFilters {
   genders: ('M' | 'F' | 'N')[];
   levelRange: StatRange | undefined;
   statRanges: StatRangeFilters;
+  timer0Filter?: string;
+  vcountFilter?: string;
 }
 
 export interface GenerationSliceState {
@@ -203,6 +205,8 @@ export function createDefaultGenerationFilters(): GenerationFilters {
     genders: [],
     levelRange: undefined,
     statRanges: {},
+    timer0Filter: undefined,
+    vcountFilter: undefined,
   };
 }
 
@@ -459,38 +463,41 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
     const nextAbility = partial.abilityIndices ? [...partial.abilityIndices] : current.abilityIndices;
     const nextGenders = partial.genders ? [...partial.genders] as ('M' | 'F' | 'N')[] : current.genders;
 
-    let nextLevelRange = current.levelRange;
-    if (Object.prototype.hasOwnProperty.call(partial, 'levelRange')) {
-      const range = partial.levelRange;
-      if (!range) {
-        nextLevelRange = undefined;
-      } else {
-        const hasMin = range.min != null;
-        const hasMax = range.max != null;
-        nextLevelRange = hasMin || hasMax
-          ? {
-              min: hasMin ? range.min : undefined,
-              max: hasMax ? range.max : undefined,
-            }
-          : undefined;
-      }
-    }
+    const normalizeRange = (range?: StatRange | null): StatRange | undefined => {
+      if (!range) return undefined;
+      const hasMin = range.min != null;
+      const hasMax = range.max != null;
+      if (!hasMin && !hasMax) return undefined;
+      return {
+        min: hasMin ? range.min : undefined,
+        max: hasMax ? range.max : undefined,
+      };
+    };
+
+    const normalizeFilterText = (value?: string): string | undefined => {
+      if (typeof value !== 'string') return undefined;
+      const trimmed = value.trim();
+      return trimmed.length ? trimmed.toUpperCase() : undefined;
+    };
+
+    const hasLevelUpdate = Object.prototype.hasOwnProperty.call(partial, 'levelRange');
+    const nextLevelRange = hasLevelUpdate ? normalizeRange(partial.levelRange) : current.levelRange;
 
     let nextStatRanges = current.statRanges;
     if (partial.statRanges) {
       nextStatRanges = {};
       const entries = Object.entries(partial.statRanges) as Array<[keyof StatRangeFilters, StatRange | undefined]>;
       for (const [key, range] of entries) {
-        if (!range) continue;
-        const hasMin = range.min != null;
-        const hasMax = range.max != null;
-        if (!hasMin && !hasMax) continue;
-        nextStatRanges[key] = {
-          min: hasMin ? range.min : undefined,
-          max: hasMax ? range.max : undefined,
-        };
+        const normalized = normalizeRange(range);
+        if (!normalized) continue;
+        nextStatRanges[key] = normalized;
       }
     }
+
+    const hasTimer0Update = Object.prototype.hasOwnProperty.call(partial, 'timer0Filter');
+    const hasVcountUpdate = Object.prototype.hasOwnProperty.call(partial, 'vcountFilter');
+    const nextTimer0Filter = hasTimer0Update ? normalizeFilterText(partial.timer0Filter) : current.timer0Filter;
+    const nextVcountFilter = hasVcountUpdate ? normalizeFilterText(partial.vcountFilter) : current.vcountFilter;
 
     const next: GenerationFilters = {
       sortField: nextSortField,
@@ -502,6 +509,8 @@ export const createGenerationSlice = (set: SetFn, get: GetFn<GenerationSlice>): 
       genders: nextGenders,
       levelRange: nextLevelRange,
       statRanges: nextStatRanges,
+      timer0Filter: nextTimer0Filter,
+      vcountFilter: nextVcountFilter,
     };
 
     return { filters: next } as Partial<GenerationSlice>;

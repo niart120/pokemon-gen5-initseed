@@ -10,6 +10,8 @@ enum FieldKey {
   Nature = 'nature',
   Shiny = 'shiny',
   Level = 'level',
+  Timer0 = 'timer0',
+  VCount = 'vcount',
 }
 
 export const generationResultsControlTitle: LocaleText = {
@@ -40,6 +42,8 @@ export const generationResultsControlFieldLabels: LocaleMap<Record<FieldKey, str
     nature: '性格',
     shiny: '色違い',
     level: 'Lv',
+    timer0: 'Timer0',
+    vcount: 'VCount',
   },
   en: {
     species: 'Species',
@@ -48,6 +52,8 @@ export const generationResultsControlFieldLabels: LocaleMap<Record<FieldKey, str
     nature: 'Nature',
     shiny: 'Shiny',
     level: 'Lv',
+    timer0: 'Timer0',
+    vcount: 'VCount',
   },
 };
 
