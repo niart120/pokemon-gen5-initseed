@@ -177,6 +177,13 @@ impl PersonalityRNG {
         results
     }
 
+    /// 指定した分率 (n * rand >> 32) を計算するユーティリティ。
+    /// 主にBW系の「n分率」計算で使用する。
+    pub fn roll_fraction(&mut self, numerator: u32) -> u32 {
+        debug_assert!(numerator > 0, "fraction numerator must be positive");
+        (((self.next() as u64).wrapping_mul(numerator as u64)) >> 32) as u32
+    }
+
     /// 内部使用用：Seed値から指定ステップ後の値を計算
     /// ジャンプテーブルを使用した高速計算（将来的な最適化用）
     ///
@@ -201,7 +208,8 @@ impl PersonalityRNG {
     /// 1ステップ進めた後のSeed
     #[inline]
     pub fn next_seed(seed: u64) -> u64 {
-        seed.wrapping_mul(LCG_MULTIPLIER).wrapping_add(LCG_INCREMENT)
+        seed.wrapping_mul(LCG_MULTIPLIER)
+            .wrapping_add(LCG_INCREMENT)
     }
 
     /// 線形合同法のアフィン変換をsteps分まとめて計算
@@ -259,7 +267,9 @@ mod tests {
         let mut rng = PersonalityRNG::new(1);
 
         // 既知のSeed値での計算結果を検証
-        let expected_seed = 1u64.wrapping_mul(LCG_MULTIPLIER).wrapping_add(LCG_INCREMENT);
+        let expected_seed = 1u64
+            .wrapping_mul(LCG_MULTIPLIER)
+            .wrapping_add(LCG_INCREMENT);
         let actual_value = rng.next();
         let expected_value = (expected_seed >> 32) as u32;
 
