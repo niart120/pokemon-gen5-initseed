@@ -90,6 +90,7 @@ fn hidden_power_computation_and_filters() {
         ability: AbilitySlot::One,
         shiny: ShinyType::Normal,
         pid: 0,
+        hidden_power: hidden_power_from_iv(&maxed),
     };
 
     let mut filter = IndividualFilter::default();
@@ -117,6 +118,7 @@ fn hidden_power_computation_and_filters() {
         ability: AbilitySlot::Hidden,
         shiny: ShinyType::Normal,
         pid: 0,
+        hidden_power: hidden_power_from_iv(&unresolved),
     };
 
     assert!(!matches_filter(&resolved_unknown, &filter));

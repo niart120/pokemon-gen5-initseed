@@ -327,6 +327,7 @@ pub struct ResolvedEgg {
     pub ability: AbilitySlot,
     pub shiny: ShinyType,
     pub pid: u32,
+    pub hidden_power: HiddenPowerInfo,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -464,6 +465,8 @@ pub fn resolve_egg_iv(
         };
     }
 
+    let hidden_power = hidden_power_from_iv(&resolved);
+
     Ok(ResolvedEgg {
         ivs: resolved,
         nature: pending.nature,
@@ -471,6 +474,7 @@ pub fn resolve_egg_iv(
         ability: pending.ability,
         shiny: pending.shiny,
         pid: pending.pid,
+        hidden_power,
     })
 }
 
@@ -506,7 +510,7 @@ pub fn matches_filter(egg: &ResolvedEgg, filter: &IndividualFilter) -> bool {
     }
 
     if filter.hidden_power_type.is_some() || filter.hidden_power_power.is_some() {
-        match hidden_power_from_iv(&egg.ivs) {
+        match egg.hidden_power {
             HiddenPowerInfo::Unknown => return false,
             HiddenPowerInfo::Known { r#type, power } => {
                 if let Some(expected_type) = filter.hidden_power_type {

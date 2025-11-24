@@ -74,7 +74,7 @@ pub struct ParentsIVs {
 3. **PendingEgg の生成**: `derive_pending_egg(next_seed, &conditions)` を呼び、性格・遺伝スロット・PID 等を含む `PendingEgg` を得る。戻りの Seed は `PersonalityRNG::current_seed()` で取得する。
 4. **IV 解決**:
     - 初期化時に計算した `iv_sources` をそのまま利用する。
-    - `resolve_egg_iv(&pending, &iv_sources)` を実行し `ResolvedEgg` を得る。
+    - `resolve_egg_iv(&pending, &iv_sources)` を実行し `ResolvedEgg` を得る。ここでめざめるパワーのタイプ/威力 (`HiddenPowerInfo`) も決定済みとなり、列挙結果で再計算する必要はない。
 5. **フィルタ適用 (任意)**:
     - `filter` が設定されている場合のみ `matches_filter(&resolved, filter)` を実行。
     - `false` の結果は UI に返さずスキップするが、試行分の advance はすでに加算済みとして扱う。
@@ -103,7 +103,7 @@ pub struct EnumeratedEggData {
 }
 ```
 - `advance`: `user_offset` からの試行インデックス。フィルタで棄却された試行も Advance を占有する。
-- `egg`: `resolve_egg_iv` の戻り値。`wasm_bindgen` でゲッターを公開する。
+- `egg`: `resolve_egg_iv` の戻り値。`hidden_power` を含むため UI 側での追加計算は不要。`wasm_bindgen` でゲッターを公開する。
 - `is_stable`: `resolve_npc_advance` の判定値。
 
 ### 5.3 列挙器クラス

@@ -38,7 +38,7 @@
 | `InheritanceSlot` | `struct { stat: StatIndex, parent: ParentRole }` | 3 スロット分を `PendingEgg.inherits` に格納 |
 | `PendingEgg` | `struct { inherits: [InheritanceSlot;3], nature: Nature, gender: Gender, ability: AbilitySlot, shiny: ShinyType, pid: u32 }` | 個体値未確定のタマゴデータ |
 | `IVResolutionConditions` | `struct { male: IvSet, female: IvSet, rng: IvSet }` | `resolve_egg_iv` の入力。`rng` は 0-31 のみ |
-| `ResolvedEgg` | `struct { ivs: IvSet, nature: Nature, gender: Gender, ability: AbilitySlot, shiny: ShinyType, pid: u32 }` | 個体値決定後のタマゴデータ |
+| `ResolvedEgg` | `struct { ivs: IvSet, nature: Nature, gender: Gender, ability: AbilitySlot, shiny: ShinyType, pid: u32, hidden_power: HiddenPowerInfo }` | 個体値決定後のタマゴデータ。めざめるパワーのタイプ/威力をキャッシュ |
 | `StatRange` | `struct { min: IvValue, max: IvValue }` | inclusive 範囲。`{0,32}` で無条件 |
 | `IndividualFilter` | `struct { iv_ranges: [StatRange;6], nature: Option<Nature>, gender: Option<Gender>, ability: Option<AbilitySlot>, shiny: Option<ShinyType>, hidden_power_type: Option<HiddenPowerType>, hidden_power_power: Option<u8> }` | フロントエンド検索条件 |
 
@@ -139,31 +139,29 @@ PendingEgg {
 - **前提**: `iv_sources.male/female` は 0-32 を含む `IvSet`、`rng` は 0-31 限定。値域外は `InvalidIvValue` を返す。
 - **処理**:
 ```
-let mut rng_iter = iv_sources.rng.iter();
-for slot in 0..6 {
-  resolved[slot] = match inheritance_of(slot) {
-    ParentRole::Male => iv_sources.male[slot],
-    ParentRole::Female => iv_sources.female[slot]
+let mut resolved = iv_sources.rng;
+for slot in pending.inherits {
+  let idx = slot.stat as usize;
+  resolved[idx] = match slot.parent {
+    ParentRole::Male => iv_sources.male[idx],
+    ParentRole::Female => iv_sources.female[idx],
   };
-  debug_assert!(resolved[slot] <= 32);
 }
+let hidden_power = hidden_power_from_iv(&resolved);
 ```
-- **伝播ルール**: 親が Unknown=32 の場合はそのまま保持。`Random` ソースは Unknown を生成しない。
-- **結果**: `ResolvedEgg { ivs: resolved, ..pending.clone() }` を返却。
+- **伝播ルール**: 親が Unknown=32 の場合はそのまま保持。`rng` ソースは Unknown を生成しない。
+- **結果**: `ResolvedEgg { ivs: resolved, hidden_power, ..pending.clone() }` を返却し、以降の工程で再計算を不要化。
 
 ### 3.3 `matches_filter`
 - **署名**: `fn matches_filter(egg: &ResolvedEgg, filter: &IndividualFilter) -> bool`
 - **判定順**:
   1. **個体値**: 各ステータスについて `filter.iv_ranges[i].min <= egg.ivs[i] <= filter.iv_ranges[i].max` を適用。Unknown=32 も同じ比較式で扱う。
-  2. **Hidden Power**: `hidden_power_from_iv` の結果が `Known { .. }` の場合のみ、タイプ/威力条件を比較。`Unknown` のまま条件が `Some` なら即 `false`。
+  2. **Hidden Power**: `egg.hidden_power` が `Known { .. }` の場合のみ、タイプ/威力条件を比較。`Unknown` のまま条件が `Some` なら即 `false`。
   3. **Optional 条件**: `nature`/`gender`/`ability`/`shiny` で `Some` が指定されている場合に完全一致を要求。`None` はスキップ。
 - **戻り値**: すべての条件を満たす場合に `true`。評価は短絡的に行い、最初の不一致で `false` を返す。
-
-### 3.4 `hidden_power_from_iv`
 ```
 pub fn hidden_power_from_iv(iv: &IvSet) -> HiddenPowerInfo {
   if iv.iter().any(|&v| v == IvValue::UNKNOWN) {
-    return HiddenPowerInfo::Unknown;
   }
   let type_bits = ((iv[0] & 1)     )
     | ((iv[1] & 1) << 1)
@@ -183,8 +181,6 @@ pub fn hidden_power_from_iv(iv: &IvSet) -> HiddenPowerInfo {
 }
 ```
 - Unknown が含まれる限り Hidden Power は決定不可とする。
-- `matches_filter` は `Known` と照合。UI では Unknown を表示 (例: `?/?`).
-
 - `matches_filter` は `Known` と照合。UI では Unknown を表示 (例: `?/?`).
 
 ### 3.5 `resolve_npc_advance`
