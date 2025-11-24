@@ -1,6 +1,6 @@
 mod datetime_codes;
-mod egg_seed_enumerator;
 mod egg_iv;
+mod egg_seed_enumerator;
 mod encounter_calculator;
 mod integrated_search;
 mod mt19937;
@@ -21,8 +21,8 @@ pub use egg_iv::{
     derive_pending_egg, derive_pending_egg_with_state, hidden_power_from_iv, matches_filter,
     resolve_egg_iv, resolve_npc_advance, AbilitySlot, EggIvError, EverstonePlan, Gender,
     GenderRatio, GenerationConditions, HiddenPowerInfo, HiddenPowerType, IVResolutionConditions,
-    IndividualFilter, InheritanceSlot, IvSet, IvValue, Nature, ParentRole, PendingEgg,
-    ResolvedEgg, StatIndex, StatRange, TrainerIds, IV_VALUE_UNKNOWN,
+    IndividualFilter, InheritanceSlot, IvSet, IvValue, Nature, ParentRole, PendingEgg, ResolvedEgg,
+    StatIndex, StatRange, TrainerIds, IV_VALUE_UNKNOWN,
 };
 pub use egg_seed_enumerator::{derive_mt_seed, EggSeedEnumerator, EnumeratedEggData, ParentsIVs};
 pub use encounter_calculator::{EncounterCalculator, EncounterType, GameVersion};

@@ -58,7 +58,11 @@ impl EggSeedEnumerator {
     ) -> EggSeedEnumerator {
         let game_offset = calculate_game_offset(base_seed, game_mode) as u64;
         let (combined_offset, overflowed) = game_offset.overflowing_add(user_offset);
-        let total_offset = if overflowed { u64::MAX } else { combined_offset };
+        let total_offset = if overflowed {
+            u64::MAX
+        } else {
+            combined_offset
+        };
         let (mul, add) = PersonalityRNG::lcg_affine_for_steps(total_offset);
         let current_seed = PersonalityRNG::lcg_apply(base_seed, mul, add);
 
@@ -90,11 +94,8 @@ impl EggSeedEnumerator {
             self.next_advance = self.next_advance.saturating_add(1);
 
             let (seed_after_npc, is_stable) = if self.consider_npc_consumption {
-                let (next_seed, _consumed, stable) = resolve_npc_advance(
-                    self.current_seed,
-                    NPC_FRAME_THRESHOLD,
-                    NPC_FRAME_SLACK,
-                );
+                let (next_seed, _consumed, stable) =
+                    resolve_npc_advance(self.current_seed, NPC_FRAME_THRESHOLD, NPC_FRAME_SLACK);
                 (next_seed, stable)
             } else {
                 (self.current_seed, false)
@@ -161,7 +162,7 @@ pub(crate) fn generate_rng_iv_set(mt_seed: u32) -> IvSet {
 
 #[cfg(test)]
 mod tests {
-    use super::{generate_rng_iv_set, derive_mt_seed};
+    use super::{derive_mt_seed, generate_rng_iv_set};
 
     #[test]
     fn generate_rng_iv_set_repeats_deterministically() {

@@ -103,8 +103,7 @@ fn egg_seed_enumerator_reports_npc_stability() {
     let offset = calculate_game_offset(base_seed, game_mode) as u64;
     let (mul, add) = PersonalityRNG::lcg_affine_for_steps(offset);
     let seed_after_offset = PersonalityRNG::lcg_apply(base_seed, mul, add);
-    let (_npc_seed, _frames, expected_stable) =
-        resolve_npc_advance(seed_after_offset, 96, 30);
+    let (_npc_seed, _frames, expected_stable) = resolve_npc_advance(seed_after_offset, 96, 30);
 
     let mut enumerator = EggSeedEnumerator::new(
         base_seed,
