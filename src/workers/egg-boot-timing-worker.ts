@@ -14,6 +14,14 @@ import { EggGameMode } from '@/types/egg';
 import { initWasm, getWasm, isWasmReady } from '@/lib/core/wasm-interface';
 import { keyCodeToNames } from '@/lib/utils/key-input';
 import romParameters from '@/data/rom-parameters';
+import type { Hardware } from '@/types/rom';
+
+// Hardware別のframe値
+const HARDWARE_FRAME_VALUES: Record<Hardware, number> = {
+  DS: 8,
+  DS_LITE: 6,
+  '3DS': 9
+};
 
 interface InternalState {
   params: EggBootTimingSearchParams | null;
@@ -315,13 +323,14 @@ function executeSearch(params: EggBootTimingSearchParams): EggBootTimingSearchRe
   // IndividualFilterJs 構築（filterDisabledがtrueの場合はnullを渡す）
   const filter = params.filterDisabled ? null : buildFilter(wasmAny, params.filter);
 
-  // Searcher構築 - frameはパラメータから取得
+  // Searcher構築 - frameはhardwareから導出
+  const frameValue = HARDWARE_FRAME_VALUES[params.hardware];
   const searcher = new wasmAny.EggBootTimingSearcher(
     new Uint8Array(params.macAddress),
     new Uint32Array(nazo),
     params.hardware,
     params.keyInputMask,
-    params.frame,
+    frameValue,
     params.timeRange.hour.start,
     params.timeRange.hour.end,
     params.timeRange.minute.start,

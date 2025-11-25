@@ -67,9 +67,6 @@ export interface EggBootTimingSearchParams {
   /** 時刻範囲フィルター（1日の中で検索する時間帯） */
   timeRange: DailyTimeRange;
 
-  /** Frame (初期フレーム値) */
-  frame: number;
-
   // === 孵化条件パラメータ ===
 
   /** 生成条件 */
@@ -455,7 +452,6 @@ export function createDefaultEggBootTimingSearchParams(): EggBootTimingSearchPar
       minute: { start: 0, end: 59 },
       second: { start: 0, end: 59 },
     },
-    frame: 8,
     conditions: defaultConditions,
     parents: defaultParents,
     filter: null,

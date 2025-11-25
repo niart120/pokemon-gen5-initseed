@@ -18,7 +18,6 @@ export interface DeviceProfile {
   macAddress: readonly [number, number, number, number, number, number];
   tid: number;
   sid: number;
-  frame: number;
   shinyCharm: boolean;
   newGame: boolean;
   withSave: boolean;
@@ -65,7 +64,6 @@ export function applyDeviceProfileDraft(
     macAddress: draft.macAddress ?? [...profile.macAddress],
     tid: draft.tid ?? profile.tid,
     sid: draft.sid ?? profile.sid,
-    frame: draft.frame ?? profile.frame,
     shinyCharm: draft.shinyCharm ?? profile.shinyCharm,
     newGame: draft.newGame ?? profile.newGame,
     withSave: draft.withSave ?? profile.withSave,
@@ -106,7 +104,6 @@ export function normalizeDraft(draft: DeviceProfileDraft): Omit<DeviceProfile, '
     macAddress: normalizeMac(draft.macAddress),
     tid: clampNumber(draft.tid, 0, 65535),
     sid: clampNumber(draft.sid, 0, 65535),
-    frame: clampNumber(draft.frame, 1, 100),
     shinyCharm: Boolean(draft.shinyCharm),
     newGame,
     withSave,
@@ -127,7 +124,6 @@ export function createDefaultDeviceProfile(): DeviceProfile {
     macAddress: [0x00, 0x1B, 0x2C, 0x3D, 0x4E, 0x5F],
     tid: 1,
     sid: 2,
-    frame: 8,
     shinyCharm: false,
     newGame: false,
     withSave: true,
@@ -148,7 +144,6 @@ export function deviceProfileToDraft(profile: DeviceProfile): DeviceProfileDraft
     macAddress: Array.from(profile.macAddress),
     tid: profile.tid,
     sid: profile.sid,
-    frame: profile.frame,
     shinyCharm: profile.shinyCharm,
     newGame: profile.newGame,
     withSave: profile.withSave,

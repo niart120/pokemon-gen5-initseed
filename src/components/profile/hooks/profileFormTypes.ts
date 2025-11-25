@@ -14,7 +14,6 @@ export interface ProfileFormState {
   timer0Max: string;
   vcountMin: string;
   vcountMax: string;
-  frame: number;
   macSegments: string[];
   tid: string;
   sid: string;

@@ -247,8 +247,6 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
           // Timer0/VCountはProfileから取得
           timer0Range: { ...profile.timer0Range },
           vcountRange: { ...profile.vcountRange },
-          // FrameはProfileから取得
-          frame: profile.frame,
           // TID/SIDもプロファイルから
           conditions: {
             ...state.draftParams.conditions,

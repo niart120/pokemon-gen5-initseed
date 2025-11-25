@@ -104,7 +104,6 @@ describe('egg-boot-timing-search-store', () => {
         vcountRange: { min: 0x61, max: 0x61 },
         tid: 11111,
         sid: 22222,
-        frame: 8,
         shinyCharm: false,
         newGame: false,
         withSave: true,

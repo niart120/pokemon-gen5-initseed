@@ -35,7 +35,6 @@ export function buildDraftFromCurrentState(label: string, base: DeviceProfile | 
     macAddress,
     tid: typeof generationDraft.tid === 'number' ? generationDraft.tid : 0,
     sid: typeof generationDraft.sid === 'number' ? generationDraft.sid : 0,
-    frame: base?.frame ?? 8,
     shinyCharm,
     newGame,
     withSave,
