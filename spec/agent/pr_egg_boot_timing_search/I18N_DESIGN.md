@@ -321,8 +321,8 @@ export const eggBootTimingResultsEmptyMessage: LocaleText = {
 };
 
 export const eggBootTimingResultsCountLabel: LocaleText = {
-  ja: '件',
-  en: 'results',
+  ja: '件の結果',
+  en: 'result(s)',
 };
 
 // ===========================
@@ -406,7 +406,9 @@ export const eggBootTimingValidationErrors: LocaleMap<Record<string, string>> = 
 
 /**
  * BCP47ロケール識別子マッピング
- * NOTE: 共通ユーティリティとして src/lib/i18n/strings/common.ts への移動を検討
+ * NOTE: src/lib/i18n/strings/common.ts に共通定義として移動を検討
+ * 実装時は以下のように共通化する:
+ * import { BCP47_BY_LOCALE } from '@/lib/i18n/strings/common';
  */
 const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
   ja: 'ja-JP',
@@ -510,6 +512,7 @@ export function formatEggBootTimingDatetime(
 /**
  * 結果件数フォーマット
  * NOTE: eggBootTimingResultsCountLabel と一貫性のあるフォーマット
+ * 日本語ではスペースなし（例: 100件の結果）、英語ではスペースあり（例: 100 result(s)）
  */
 export function formatEggBootTimingResultsCount(
   count: number,
@@ -518,7 +521,8 @@ export function formatEggBootTimingResultsCount(
   const formatter = getNumberFormatter(locale);
   const countStr = formatter.format(count);
   const suffix = eggBootTimingResultsCountLabel[locale];
-  return `${countStr} ${suffix}`;
+  const separator = locale === 'ja' ? '' : ' ';
+  return `${countStr}${separator}${suffix}`;
 }
 
 /**
