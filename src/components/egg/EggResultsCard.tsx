@@ -31,6 +31,11 @@ export const EggResultsCard: React.FC = () => {
   const isBootTimingMode = draftParams.seedSourceMode === 'boot-timing';
   const filteredResults = getFilteredResults();
 
+  // advanceでソート
+  const sortedResults = React.useMemo(() => {
+    return [...filteredResults].sort((a, b) => a.advance - b.advance);
+  }, [filteredResults]);
+
   const hpTypeNames = hiddenPowerTypeNames[locale] ?? hiddenPowerTypeNames.en;
   const shinyLabels = resolveLocaleValue(eggResultShinyLabels, locale);
   const genderLabels = resolveLocaleValue(eggResultGenderLabels, locale);
@@ -67,7 +72,7 @@ export const EggResultsCard: React.FC = () => {
   return (
     <PanelCard
       icon={<Table size={20} className="opacity-80" />}
-      title={<span id="egg-results-title">{eggResultsPanelTitle[locale]} ({filteredResults.length}/{results.length})</span>}
+      title={<span id="egg-results-title">{eggResultsPanelTitle[locale]} ({sortedResults.length}/{results.length})</span>}
       className={isStack ? 'min-h-64' : undefined}
       fullHeight={!isStack}
       scrollMode="content"
@@ -102,14 +107,14 @@ export const EggResultsCard: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredResults.length === 0 ? (
+            {sortedResults.length === 0 ? (
               <tr>
                 <td colSpan={totalColSpan} className="text-center py-8 text-muted-foreground">
                   {eggResultsEmptyMessage[locale]}
                 </td>
               </tr>
             ) : (
-              filteredResults.map((row, i) => (
+              sortedResults.map((row, i) => (
                 <tr key={i} className="border-b hover:bg-muted/50" data-testid="egg-result-row">
                   <td className="py-1 px-2 font-mono">{row.advance}</td>
                   {isBootTimingMode && (

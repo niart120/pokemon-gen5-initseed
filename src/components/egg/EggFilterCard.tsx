@@ -27,7 +27,6 @@ import {
   eggFilterAbilityOptions,
   eggFilterShinyOptions,
   eggFilterIvUnknownLabel,
-  eggFilterBootTimingTitle,
   eggFilterTimer0Label,
   eggFilterVcountLabel,
   eggFilterTimer0Placeholder,
@@ -210,8 +209,8 @@ export const EggFilterCard: React.FC = () => {
             </div>
           </div>
 
-          {/* めざパフィルター: 2列グリッド */}
-          <div className="grid grid-cols-2 gap-2 mt-3">
+          {/* めざパ・Boot-Timingフィルター: 4列グリッド */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
             {/* めざパタイプフィルター */}
             <div className="flex flex-col gap-1">
               <Label className="text-xs">{eggFilterHpTypeLabel[locale]}</Label>
@@ -249,6 +248,32 @@ export const EggFilterCard: React.FC = () => {
                 disabled={disabled || filterDisabled}
                 placeholder={eggFilterNoSelection[locale]}
                 className="text-xs"
+              />
+            </div>
+
+            {/* Timer0 フィルター */}
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs" htmlFor="egg-filter-timer0">{eggFilterTimer0Label[locale]}</Label>
+              <Input
+                id="egg-filter-timer0"
+                value={bootTimingFilters.timer0Filter ?? ''}
+                onChange={(e) => updateBootTimingFilters({ timer0Filter: e.target.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase() })}
+                disabled={disabled || !isBootTimingMode}
+                placeholder={isBootTimingMode ? eggFilterTimer0Placeholder[locale] : eggFilterBootTimingDisabledHint[locale]}
+                className="font-mono text-xs"
+              />
+            </div>
+
+            {/* VCount フィルター */}
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs" htmlFor="egg-filter-vcount">{eggFilterVcountLabel[locale]}</Label>
+              <Input
+                id="egg-filter-vcount"
+                value={bootTimingFilters.vcountFilter ?? ''}
+                onChange={(e) => updateBootTimingFilters({ vcountFilter: e.target.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase() })}
+                disabled={disabled || !isBootTimingMode}
+                placeholder={isBootTimingMode ? eggFilterVcountPlaceholder[locale] : eggFilterBootTimingDisabledHint[locale]}
+                className="font-mono text-xs"
               />
             </div>
           </div>
@@ -301,39 +326,6 @@ export const EggFilterCard: React.FC = () => {
             </div>
           </section>
 
-          {/* Boot-Timing フィルター */}
-          <section className="space-y-2 mt-3" role="group">
-            <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
-              {eggFilterBootTimingTitle[locale]}
-            </h4>
-            <div className="grid grid-cols-2 gap-2">
-              {/* Timer0 フィルター */}
-              <div className="flex flex-col gap-1">
-                <Label className="text-xs" htmlFor="egg-filter-timer0">{eggFilterTimer0Label[locale]}</Label>
-                <Input
-                  id="egg-filter-timer0"
-                  value={bootTimingFilters.timer0Filter ?? ''}
-                  onChange={(e) => updateBootTimingFilters({ timer0Filter: e.target.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase() })}
-                  disabled={disabled || !isBootTimingMode}
-                  placeholder={isBootTimingMode ? eggFilterTimer0Placeholder[locale] : eggFilterBootTimingDisabledHint[locale]}
-                  className="font-mono text-xs"
-                />
-              </div>
-
-              {/* VCount フィルター */}
-              <div className="flex flex-col gap-1">
-                <Label className="text-xs" htmlFor="egg-filter-vcount">{eggFilterVcountLabel[locale]}</Label>
-                <Input
-                  id="egg-filter-vcount"
-                  value={bootTimingFilters.vcountFilter ?? ''}
-                  onChange={(e) => updateBootTimingFilters({ vcountFilter: e.target.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase() })}
-                  disabled={disabled || !isBootTimingMode}
-                  placeholder={isBootTimingMode ? eggFilterVcountPlaceholder[locale] : eggFilterBootTimingDisabledHint[locale]}
-                  className="font-mono text-xs"
-                />
-              </div>
-            </div>
-          </section>
         </>
     </PanelCard>
   );
