@@ -8,6 +8,7 @@ import {
   type EggCompletion,
   type IvSet,
   type HiddenPowerInfo,
+  EggGameMode,
   validateEggParams,
 } from '@/types/egg';
 import {
@@ -27,6 +28,29 @@ const state: InternalState = {
   running: false,
   stopRequested: false,
 };
+
+/**
+ * EggGameMode から WASM GameMode への変換
+ * EggGameMode は簡易的な4値、GameMode は詳細な8値
+ */
+function eggGameModeToWasm(mode: EggGameMode): number {
+  // WASM GameMode enum values:
+  // BwNewGameWithSave = 0, BwNewGameNoSave = 1, BwContinue = 2
+  // Bw2NewGameWithMemoryLinkSave = 3, Bw2NewGameNoMemoryLinkSave = 4, Bw2NewGameNoSave = 5
+  // Bw2ContinueWithMemoryLink = 6, Bw2ContinueNoMemoryLink = 7
+  switch (mode) {
+    case EggGameMode.BwNew:
+      return 0; // BwNewGameWithSave (デフォルトでセーブありを想定)
+    case EggGameMode.BwContinue:
+      return 2; // BwContinue
+    case EggGameMode.Bw2New:
+      return 5; // Bw2NewGameNoSave (デフォルト)
+    case EggGameMode.Bw2Continue:
+      return 7; // Bw2ContinueNoMemoryLink (デフォルト)
+    default:
+      return 2; // BwContinue as fallback
+  }
+}
 
 const ctx = self as typeof self & { onclose?: () => void };
 const post = (message: EggWorkerResponse) => ctx.postMessage(message);
@@ -87,7 +111,7 @@ async function ensureWasm() {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildEverstone(wasm: any, plan: EggGenerationParams['conditions']['everstone']) {
   if (plan.type === 'none') {
-    return wasm.EverstonePlanJs.none();
+    return wasm.EverstonePlanJs.None;
   } else {
     return wasm.EverstonePlanJs.fixed(plan.nature);
   }
@@ -237,7 +261,7 @@ function executeEnumeration(params: EggGenerationParams) {
     parentsIVs,
     filter,
     params.considerNpcConsumption,
-    params.gameMode
+    eggGameModeToWasm(params.gameMode)
   );
 
   // 列挙ループ
