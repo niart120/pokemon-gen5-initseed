@@ -96,13 +96,29 @@ UI (EggResultsCard)
 - Worker通信では BigInt → Number 変換
 - UI では16進数文字列で管理
 
-### 3. Unknown IV (32) の取り扱い
-- 親IVに Unknown が含まれる場合、子に伝播
-- フィルター範囲 {0, 32} で Unknown を許可
+### 3. Unknown IV (32) の入力仕様
+- **親個体IV入力**: 0-31 を基本とし、チェックボックスで Unknown (32) を設定
+  - チェックボックス OFF: 数値入力フィールドで 0-31 を入力
+  - チェックボックス ON: 入力無効化、値は自動的に 32 (Unknown)
+- **フィルターIV範囲**: 0-31 を基本とし、チェックボックスで任意範囲指定を有効化
+  - チェックボックス OFF: 範囲入力 0-31 のみ
+  - チェックボックス ON: 範囲上限が 32 に強制設定され、Unknown を許可
 
 ### 4. パフォーマンス最適化
 - バッチ処理による結果送信
 - 表示上限設定によるメモリ管理
+
+### 5. 起動時間検索モード（拡張設計）
+- 既存の GenerationPanel の boot-timing モードと同様のアーキテクチャを採用
+- **Worker経路**: 同一 `egg-worker.ts` を使用し、DerivedSeedRunState で複数Seed候補を順次処理
+- **WASM経路**: EggSeedEnumerator は変更なし（baseSeedパラメータで制御）
+- 結果テーブルに Timer0/VCount 情報を表示可能
+
+### 6. BW2版 EggPanel（将来拡張設計）
+- **共通化**: Worker、WorkerManager、WASM、フィルターUI、結果表示は共通利用
+- **分離**: Panel レイアウト、パラメータカード（Memory Link対応等）
+- **GameMode**: EggSeedEnumerator の gameMode 引数で BW/BW2 の offset 計算を切替
+- **コンポーネント構成**: `src/components/egg/common/`, `bw/`, `bw2/` で整理
 
 ## 参照ドキュメント
 

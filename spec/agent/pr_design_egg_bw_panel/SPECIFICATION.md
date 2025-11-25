@@ -1086,9 +1086,61 @@ export function EggBWPanel() {
 - Worker通信では BigInt を Number に変換
 - UI では16進数文字列で管理
 
-### 9.3 Unknown IV (32)
-- 親IVに Unknown (32) が含まれる場合、子に伝播
-- フィルター範囲 {0, 32} で Unknown を許可
+### 9.3 Unknown IV (32) の入力仕様
+
+#### 9.3.1 親個体IV入力
+- **基本入力範囲**: 0-31（数値入力フィールド）
+- **Unknown (32) の設定方法**: チェックボックスによる切り替え
+  - チェックボックス OFF: 数値入力フィールドで 0-31 を入力可能
+  - チェックボックス ON: 入力フィールドは無効化され、値は自動的に 32 (Unknown) に設定
+
+```typescript
+/**
+ * 親IV入力の状態
+ */
+export interface ParentIvInputState {
+  value: number;        // 0-31 の値（チェック時は無効）
+  isUnknown: boolean;   // true の場合、実際の値は 32 (Unknown)
+}
+
+/**
+ * IvSetへの変換
+ */
+function toIvSet(inputs: ParentIvInputState[]): IvSet {
+  return inputs.map(input => input.isUnknown ? 32 : input.value) as IvSet;
+}
+```
+
+#### 9.3.2 フィルター IV範囲入力
+- **基本入力範囲**: 0-31（範囲スライダーまたは数値入力）
+- **任意範囲指定モード**: チェックボックスで有効化
+  - チェックボックス OFF: 範囲入力 0-31 のみ（Unknown を含む個体はフィルター不可）
+  - チェックボックス ON: 範囲上限が自動的に 32 に強制設定され、Unknown を許可
+
+```typescript
+/**
+ * フィルターIV範囲入力の状態
+ */
+export interface FilterIvRangeInputState {
+  min: number;           // 0-31
+  max: number;           // 0-31（includeUnknown=true時は32に強制）
+  includeUnknown: boolean; // Unknownを含める場合はtrue
+}
+
+/**
+ * StatRangeへの変換
+ */
+function toStatRange(input: FilterIvRangeInputState): StatRange {
+  return {
+    min: input.min,
+    max: input.includeUnknown ? 32 : input.max,
+  };
+}
+```
+
+#### 9.3.3 UI表示
+- Unknown IV は結果テーブルで `?` または `不明` として表示
+- めざめるパワーは Unknown IV を含む場合 `?/?` と表示
 
 ### 9.4 パフォーマンス
 - 大量個体生成時はバッチ処理
@@ -1097,3 +1149,209 @@ export function EggBWPanel() {
 ### 9.5 国際化
 - すべてのUI文字列は i18n 対応
 - `src/lib/i18n/strings/egg-*.ts` にラベル定義
+
+## 10. 拡張設計: 起動時間検索モード
+
+### 10.1 概要
+起動時間から初期Seedを導出し、複数のTimer0/VCount候補に対してタマゴ個体生成を実行する機能。
+既存の GenerationPanel の boot-timing モードと同様のアーキテクチャを採用する。
+
+### 10.2 Worker/WASM経路
+
+#### 10.2.1 アーキテクチャ図
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    EggBWPanel                                │
+│  ┌────────────────┐  ┌───────────────────────────────────┐  │
+│  │ Mode Switch    │  │  起動時間パラメータ / Seed入力    │  │
+│  │ [LCG] [Boot]   │  │  (BootTimingDraft or SeedHex)     │  │
+│  └────────────────┘  └───────────────────────────────────┘  │
+└────────────────────────────────┬────────────────────────────┘
+                                 │
+                                 ▼
+        ┌────────────────────────────────────────────────┐
+        │              egg-store.ts                       │
+        │  seedSourceMode: 'lcg' | 'boot-timing'         │
+        │  bootTimingDraft?: BootTimingDraft             │
+        └────────────────────────┬───────────────────────┘
+                                 │
+         ┌───────────────────────┴───────────────────────┐
+         │ if seedSourceMode === 'boot-timing'            │
+         ▼                                                │
+┌────────────────────────────────┐                        │
+│ deriveBootTimingEggSeedJobs()  │                        │
+│ - Timer0/VCount範囲からSeed導出 │                        │
+│ - 複数のDerivedSeedJobを生成    │                        │
+└────────────────┬───────────────┘                        │
+                 │                                        │
+                 ▼                                        ▼
+        ┌────────────────────────────────────────────────────┐
+        │              EggWorkerManager                       │
+        │  - 単一Seedモード: 1つのジョブを実行               │
+        │  - 起動時間モード: 複数ジョブを順次実行            │
+        │    (DerivedSeedRunState で進捗管理)               │
+        └────────────────────────┬───────────────────────────┘
+                                 │
+                                 ▼ (同一Worker)
+                    ┌─────────────────────────┐
+                    │    egg-worker.ts         │
+                    │  EggSeedEnumerator使用   │
+                    └────────────┬─────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │  EggSeedEnumerator      │
+                    │     (WASM/Rust)         │
+                    └─────────────────────────┘
+```
+
+#### 10.2.2 起動時間検索の処理フロー
+
+1. **UI入力**: ユーザーが `seedSourceMode = 'boot-timing'` を選択
+2. **BootTimingDraft収集**: タイムスタンプ、Timer0/VCount範囲、MACアドレス等
+3. **Seed導出**: `deriveBootTimingEggSeedJobs()` で候補Seedリストを生成
+4. **順次実行**: EggWorkerManager が DerivedSeedRunState を管理し、各Seedに対して個体生成
+5. **結果集約**: 全Seed候補の結果を統合して表示
+
+#### 10.2.3 型定義拡張
+
+```typescript
+/**
+ * 起動時間検索用パラメータ (UI入力)
+ */
+export interface EggBootTimingDraft {
+  timestampIso?: string;
+  keyMask: number;
+  timer0Range: { min: number; max: number };
+  vcountRange: { min: number; max: number };
+  romRegion: ROMRegion;
+  hardware: Hardware;
+  macAddress: readonly [number, number, number, number, number, number];
+}
+
+/**
+ * 導出されたSeedジョブ
+ */
+export interface DerivedEggSeedJob {
+  params: EggGenerationParams;
+  metadata: {
+    seedSourceMode: 'boot-timing';
+    derivedSeedIndex: number;
+    timer0: number;
+    vcount: number;
+    keyMask: number;
+    bootTimestampIso: string;
+    macAddress: readonly [number, number, number, number, number, number];
+    seedSourceSeedHex: string;
+  };
+}
+
+/**
+ * 起動時間検索の進捗状態
+ */
+export interface DerivedEggSeedRunState {
+  readonly jobs: DerivedEggSeedJob[];
+  readonly cursor: number;
+  readonly total: number;
+  readonly aggregate: {
+    processedCount: number;
+    filteredCount: number;
+    elapsedMs: number;
+  };
+  readonly abortRequested: boolean;
+}
+```
+
+### 10.3 実装方針
+- 既存の `src/lib/generation/boot-timing-derivation.ts` のパターンを踏襲
+- `src/lib/egg/boot-timing-egg-derivation.ts` として同様の機能を実装
+- EggWorkerManager に `startBootTimingGeneration()` メソッドを追加
+- 結果テーブルに Timer0/VCount 情報を表示可能にする
+
+## 11. 拡張設計: BW2版 EggPanel
+
+### 11.1 概要
+BW2 ではタマゴ生成ロジックに差異がある可能性があるため、将来的に `EggBW2Panel` として独立実装する場合の経路を定義する。
+
+### 11.2 共通化と差分の方針
+
+#### 11.2.1 共通化するコンポーネント
+| レイヤー | コンポーネント | 共通化 |
+|---------|---------------|--------|
+| WASM | EggSeedEnumerator | ✅ GameMode パラメータで BW/BW2 を切り替え |
+| Worker | egg-worker.ts | ✅ 同一Worker、GameMode で制御 |
+| Manager | EggWorkerManager | ✅ 共通利用可能 |
+| Store | egg-store.ts (コア機能) | ✅ 共通化可能 |
+| UI | EggFilterCard | ✅ フィルター機能は共通 |
+| UI | EggResultsCard | ✅ 結果表示は共通 |
+| UI | EggRunCard | ✅ 実行制御は共通 |
+
+#### 11.2.2 分離するコンポーネント
+| レイヤー | コンポーネント | 分離理由 |
+|---------|---------------|---------|
+| UI | EggBWPanel / EggBW2Panel | ゲーム固有のレイアウト・ラベル |
+| UI | EggParamsCard | ゲーム固有のパラメータ（Memory Link等） |
+| Store | ゲーム固有の Draft 初期値 | GameMode デフォルト値が異なる |
+
+### 11.3 実装経路
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    App.tsx                                   │
+│  ┌────────────────┐  ┌────────────────┐                     │
+│  │   EggBWPanel   │  │  EggBW2Panel   │                     │
+│  │  (BW専用UI)    │  │  (BW2専用UI)   │                     │
+│  └───────┬────────┘  └───────┬────────┘                     │
+│          │                   │                               │
+│          └─────────┬─────────┘                               │
+│                    ▼                                         │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │           共通コンポーネント (src/components/egg/)     │   │
+│  │  - EggFilterCard (共通)                               │   │
+│  │  - EggResultsCard (共通)                              │   │
+│  │  - EggRunCard (共通)                                  │   │
+│  │  - EggParamsCardBase (共通ベース) ← 各Panel固有拡張   │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                共通レイヤー                                   │
+│  - egg-store.ts (Zustand)                                   │
+│    - gameMode: 0 (BwNew) | 1 (BwContinue) | 2 (Bw2New) |   │
+│              3 (Bw2Continue)                                 │
+│  - EggWorkerManager                                          │
+│  - egg-worker.ts → EggSeedEnumerator (WASM)                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 11.4 GameMode による制御
+
+```typescript
+/**
+ * GameMode 定義 (既存 WASM と同一)
+ */
+export enum EggGameMode {
+  BwNew = 0,
+  BwContinue = 1,
+  Bw2New = 2,
+  Bw2Continue = 3,
+}
+
+/**
+ * Panel ごとのデフォルト GameMode
+ */
+const EGG_BW_PANEL_DEFAULT_GAME_MODE = EggGameMode.BwContinue;
+const EGG_BW2_PANEL_DEFAULT_GAME_MODE = EggGameMode.Bw2Continue;
+```
+
+### 11.5 BW2固有の考慮事項
+- Memory Link 状態の有無（BW2のみ）
+- ゲーム固有のオフセット計算（既にWASM側で GameMode として対応済み）
+- UI ラベル・説明文の差異（i18n で対応）
+
+### 11.6 実装順序（将来）
+1. **Phase A**: 共通コンポーネントのベース化（EggParamsCardBase 抽出）
+2. **Phase B**: EggBW2Panel 作成（BW2固有パラメータUI）
+3. **Phase C**: Memory Link 対応（BW2のみ）
+4. **Phase D**: テスト・ドキュメント更新
