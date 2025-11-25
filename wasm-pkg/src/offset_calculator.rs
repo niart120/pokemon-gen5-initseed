@@ -211,11 +211,11 @@ impl OffsetCalculator {
             [100, 100, 100, 100, 100], // L6
         ];
 
-        for level in 0..6 {
+        for thresholds in &PT_TABLES {
             // L1からL6まで
-            for j in 0..5 {
+            for &threshold in thresholds.iter().take(5) {
                 // 各レベルで最大5つの閾値をチェック
-                if PT_TABLES[level][j] == 100 {
+                if threshold == 100 {
                     // 確率が100なら、次のレベルへ
                     break;
                 }
@@ -224,7 +224,7 @@ impl OffsetCalculator {
                 // 仕様書の計算式: r = ((rand_value as u64 * 101) >> 32) as u32
                 let r = ((rand_value as u64 * 101) >> 32) as u32;
 
-                if r <= PT_TABLES[level][j] {
+                if r <= threshold {
                     // 取得した確率がテーブルの値以下なら次のレベルへ
                     break;
                 }
@@ -274,11 +274,10 @@ impl OffsetCalculator {
         }
     }
 
-    /// チラーミィPID決定（BW）
+    /// チラーミPID決定（BW）
     fn generate_chiramii_pid(&mut self) -> u32 {
-        let rand_value = self.next_rand();
         // BWではxor 0x00010000の分岐あり（実装詳細は要確認）
-        rand_value
+        self.next_rand()
     }
 
     /// チラーミィID決定（BW：0固定）

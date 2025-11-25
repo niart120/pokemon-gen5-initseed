@@ -32,6 +32,10 @@
    - Worker 連携戦略
    - バッチ計画とフォールバック
    - テスト計画と導入ステップ
+5. **[06-egg-iv-handling.md](./06-egg-iv-handling.md)** - タマゴ個体値 Unknown 仕様
+   - Unknown(32) のデータ表現
+   - resolve/match/hidden power の演算ルール
+   - テスト観点と実装メモ
 
 ## 関連ドキュメント
 

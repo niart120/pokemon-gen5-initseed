@@ -4,7 +4,7 @@ use wasm_bindgen::prelude::*;
 
 /// 色違いタイプ列挙型
 #[wasm_bindgen]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShinyType {
     /// 通常（色違いでない）
     Normal = 0,

@@ -4,3 +4,4 @@ export { MainContent } from './MainContent';
 export { HelpPanel } from './HelpPanel';
 export { OptionPanel } from './OptionPanel';
 export { SearchPanel } from './SearchPanel';
+export { EggGenerationPanel } from './EggGenerationPanel';

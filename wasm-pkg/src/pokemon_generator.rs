@@ -803,7 +803,11 @@ impl SeedEnumerator {
     ) -> SeedEnumerator {
         let game_offset = calculate_game_offset(base_seed, game_mode) as u64;
         let (combined_offset, overflowed) = game_offset.overflowing_add(user_offset);
-        let total_offset = if overflowed { u64::MAX } else { combined_offset };
+        let total_offset = if overflowed {
+            u64::MAX
+        } else {
+            combined_offset
+        };
         let (m_off, a_off) = PersonalityRNG::lcg_affine_for_steps(total_offset);
         let current_seed = PersonalityRNG::lcg_apply(base_seed, m_off, a_off);
         SeedEnumerator {
