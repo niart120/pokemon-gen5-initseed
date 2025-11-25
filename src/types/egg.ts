@@ -74,9 +74,8 @@ export interface EggGenerationConditions {
   hasNidoranFlag: boolean;        // ニドラン系/バルビート系
   everstone: EverstonePlan;       // かわらずのいし
   usesDitto: boolean;             // メタモン利用
-  allowHiddenAbility: boolean;    // 夢特性許可
-  femaleParentHasHidden: boolean; // 親♀が夢特性を持つか
-  rerollCount: number;            // PIDリロール回数 (0-5, 国際孵化用)
+  femaleParentAbility: 0 | 1 | 2; // 親♀の特性 (0=特性1, 1=特性2, 2=隠れ特性)
+  masudaMethod: boolean;          // 国際孵化 (true=reroll 3, false=reroll 0)
   tid: number;                    // 0-65535
   sid: number;                    // 0-65535
   genderRatio: GenderRatioConfig;
@@ -247,7 +246,6 @@ export function filterIvRangeInputToStatRange(input: FilterIvRangeInputState): S
 // === バリデーション ===
 
 const MAX_COUNT = 100000;
-const MAX_REROLL = 5;
 const MAX_TID_SID = 65535;
 
 /**
@@ -258,10 +256,6 @@ export function validateEggParams(params: EggGenerationParams): string[] {
 
   if (params.count < 1 || params.count > MAX_COUNT) {
     errors.push(`count must be 1-${MAX_COUNT}`);
-  }
-
-  if (params.conditions.rerollCount < 0 || params.conditions.rerollCount > MAX_REROLL) {
-    errors.push(`rerollCount must be 0-${MAX_REROLL}`);
   }
 
   if (params.conditions.tid < 0 || params.conditions.tid > MAX_TID_SID) {
@@ -362,9 +356,8 @@ export function createDefaultEggConditions(): EggGenerationConditions {
     hasNidoranFlag: false,
     everstone: { type: 'none' },
     usesDitto: false,
-    allowHiddenAbility: false,
-    femaleParentHasHidden: false,
-    rerollCount: 0,
+    femaleParentAbility: 0,
+    masudaMethod: false,
     tid: 0,
     sid: 0,
     genderRatio: {

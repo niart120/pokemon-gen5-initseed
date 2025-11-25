@@ -30,14 +30,19 @@ export const eggParamsBaseSeedLabel: LocaleText = {
   en: 'Base Seed',
 };
 
+export const eggParamsBaseSeedPlaceholder: LocaleText = {
+  ja: '例: 1234567890ABCDEF',
+  en: 'e.g. 1234567890ABCDEF',
+};
+
 export const eggParamsUserOffsetLabel: LocaleText = {
-  ja: '開始advance',
-  en: 'Start Advance',
+  ja: '開始消費',
+  en: 'Start Frame',
 };
 
 export const eggParamsCountLabel: LocaleText = {
-  ja: '列挙上限',
-  en: 'Enumeration Limit',
+  ja: '最大消費数',
+  en: 'Max Frames',
 };
 
 export const eggParamsGameModeLabel: LocaleText = {
@@ -86,33 +91,54 @@ export const eggParamsEverstoneNone: LocaleText = {
 };
 
 export const eggParamsGenderRatioLabel: LocaleText = {
-  ja: '性別比閾値 (0-255)',
-  en: 'Gender Ratio Threshold (0-255)',
+  ja: '性別比',
+  en: 'Gender Ratio',
 };
 
-export const eggParamsGenderlessLabel: LocaleText = {
-  ja: '無性別',
-  en: 'Genderless',
+/**
+ * 性別比選択肢
+ * 閾値は実際のゲーム内判定に基づく
+ */
+export type GenderRatioPreset = {
+  threshold: number;
+  genderless: boolean;
+  label: LocaleText;
 };
+
+export const eggGenderRatioPresets: GenderRatioPreset[] = [
+  { threshold: 127, genderless: false, label: { ja: '♂1:♀1', en: '♂1:♀1' } },
+  { threshold: 64, genderless: false, label: { ja: '♂3:♀1', en: '♂3:♀1' } },
+  { threshold: 31, genderless: false, label: { ja: '♂7:♀1', en: '♂7:♀1' } },
+  { threshold: 191, genderless: false, label: { ja: '♂1:♀3', en: '♂1:♀3' } },
+  { threshold: 0, genderless: true, label: { ja: '性別不明', en: 'Genderless' } },
+];
 
 export const eggParamsNidoranFlagLabel: LocaleText = {
-  ja: 'ニドラン系/バルビート系',
-  en: 'Nidoran/Volbeat Family',
+  ja: 'ニドラン♂♀ / イルミーゼ・バルビート',
+  en: 'Nidoran♂♀ / Illumise・Volbeat',
 };
 
-export const eggParamsAllowHiddenLabel: LocaleText = {
-  ja: '夢特性許可',
-  en: 'Allow Hidden Ability',
+export const eggParamsFemaleAbilityLabel: LocaleText = {
+  ja: '♀親の特性',
+  en: 'Female Parent Ability',
 };
 
-export const eggParamsFemaleHiddenLabel: LocaleText = {
-  ja: '親♀が夢特性を持つ',
-  en: 'Female Parent Has Hidden Ability',
+export const eggParamsFemaleAbilityOptions: LocaleMap<Record<0 | 1 | 2, string>> = {
+  ja: {
+    0: '特性1',
+    1: '特性2',
+    2: '隠れ特性',
+  },
+  en: {
+    0: 'Ability 1',
+    1: 'Ability 2',
+    2: 'Hidden Ability',
+  },
 };
 
-export const eggParamsRerollCountLabel: LocaleText = {
-  ja: '国際孵化リロール回数 (0-5)',
-  en: 'Masuda Method Reroll Count (0-5)',
+export const eggParamsMasudaMethodLabel: LocaleText = {
+  ja: '国際孵化',
+  en: 'Masuda Method',
 };
 
 export const eggParamsTidLabel: LocaleText = {

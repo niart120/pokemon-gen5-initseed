@@ -106,13 +106,12 @@ describe('egg types', () => {
       expect(errors[0]).toContain('count');
     });
 
-    it('detects invalid rerollCount', () => {
+    it('accepts valid femaleParentAbility values', () => {
       const hex = createDefaultEggParamsHex();
-      hex.conditions.rerollCount = 6;
+      hex.conditions.femaleParentAbility = 2;
       const params = hexParamsToEggParams(hex);
       const errors = validateEggParams(params);
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some(e => e.includes('rerollCount'))).toBe(true);
+      expect(errors.length).toBe(0);
     });
 
     it('detects invalid TID', () => {
@@ -258,7 +257,8 @@ describe('egg types', () => {
       expect(conditions.hasNidoranFlag).toBe(false);
       expect(conditions.everstone).toEqual({ type: 'none' });
       expect(conditions.usesDitto).toBe(false);
-      expect(conditions.rerollCount).toBe(0);
+      expect(conditions.masudaMethod).toBe(false);
+      expect(conditions.femaleParentAbility).toBe(0);
       expect(conditions.tid).toBe(0);
       expect(conditions.sid).toBe(0);
       expect(conditions.genderRatio.threshold).toBe(127);

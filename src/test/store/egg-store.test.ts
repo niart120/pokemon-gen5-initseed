@@ -43,10 +43,10 @@ describe('egg-store', () => {
 
     it('should update multiple conditions', () => {
       const { updateDraftConditions } = useEggStore.getState();
-      updateDraftConditions({ usesDitto: true, rerollCount: 5 });
+      updateDraftConditions({ usesDitto: true, masudaMethod: true });
       const state = useEggStore.getState();
       expect(state.draftParams.conditions.usesDitto).toBe(true);
-      expect(state.draftParams.conditions.rerollCount).toBe(5);
+      expect(state.draftParams.conditions.masudaMethod).toBe(true);
     });
   });
 
@@ -84,12 +84,12 @@ describe('egg-store', () => {
       expect(useEggStore.getState().params).toBeNull();
     });
 
-    it('should fail validation for invalid rerollCount', () => {
+    it('should accept valid femaleParentAbility values', () => {
       const { updateDraftConditions, validateDraft } = useEggStore.getState();
-      updateDraftConditions({ rerollCount: 10 });
+      updateDraftConditions({ femaleParentAbility: 2 });
       const valid = validateDraft();
-      expect(valid).toBe(false);
-      expect(useEggStore.getState().validationErrors.length).toBeGreaterThan(0);
+      expect(valid).toBe(true);
+      expect(useEggStore.getState().draftParams.conditions.femaleParentAbility).toBe(2);
     });
 
     it('should fail validation for invalid parent IV', () => {

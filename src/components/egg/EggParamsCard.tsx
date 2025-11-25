@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -9,6 +9,7 @@ import { Gear } from '@phosphor-icons/react';
 import { useEggStore } from '@/store/egg-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import { natureName } from '@/lib/utils/format-display';
 import { DOMAIN_NATURE_COUNT } from '@/types/domain';
 import type { IvSet } from '@/types/egg';
@@ -16,6 +17,7 @@ import {
   eggParamsPanelTitle,
   eggParamsSectionTitles,
   eggParamsBaseSeedLabel,
+  eggParamsBaseSeedPlaceholder,
   eggParamsUserOffsetLabel,
   eggParamsCountLabel,
   eggParentsMaleLabel,
@@ -24,11 +26,11 @@ import {
   eggParamsEverstoneLabel,
   eggParamsEverstoneNone,
   eggParamsGenderRatioLabel,
-  eggParamsGenderlessLabel,
+  eggGenderRatioPresets,
   eggParamsNidoranFlagLabel,
-  eggParamsAllowHiddenLabel,
-  eggParamsFemaleHiddenLabel,
-  eggParamsRerollCountLabel,
+  eggParamsFemaleAbilityLabel,
+  eggParamsFemaleAbilityOptions,
+  eggParamsMasudaMethodLabel,
   eggParamsNpcConsumptionLabel,
 } from '@/lib/i18n/strings/egg-params';
 
@@ -57,6 +59,17 @@ export const EggParamsCard: React.FC = () => {
   const locale = useLocale();
   const disabled = status === 'running' || status === 'starting';
 
+  const femaleAbilityOptions = resolveLocaleValue(eggParamsFemaleAbilityOptions, locale);
+
+  // 性別比プリセットの選択値を計算
+  const genderRatioValue = useMemo(() => {
+    const { threshold, genderless } = draftParams.conditions.genderRatio;
+    const preset = eggGenderRatioPresets.find(
+      p => p.threshold === threshold && p.genderless === genderless
+    );
+    return preset ? `${preset.threshold}-${preset.genderless}` : 'custom';
+  }, [draftParams.conditions.genderRatio]);
+
   const handleIvChange = (
     parent: 'male' | 'female',
     index: number,
@@ -74,6 +87,20 @@ export const EggParamsCard: React.FC = () => {
     }
   };
 
+  const handleGenderRatioChange = (value: string) => {
+    const preset = eggGenderRatioPresets.find(
+      p => `${p.threshold}-${p.genderless}` === value
+    );
+    if (preset) {
+      updateDraftConditions({
+        genderRatio: {
+          threshold: preset.threshold,
+          genderless: preset.genderless,
+        },
+      });
+    }
+  };
+
   return (
     <PanelCard
       icon={<Gear size={20} className="opacity-80" />}
@@ -88,48 +115,52 @@ export const EggParamsCard: React.FC = () => {
       <section className="space-y-3" role="group">
         <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggParamsSectionTitles.basic[locale]}</h4>
 
-        {/* 初期Seed */}
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs" htmlFor="egg-base-seed">{eggParamsBaseSeedLabel[locale]}</Label>
-          <Input
-            id="egg-base-seed"
-            data-testid="egg-base-seed"
-            value={draftParams.baseSeedHex}
-            onChange={(e) => updateDraftParams({ baseSeedHex: normalizeHexInput(e.target.value) })}
-            disabled={disabled}
-            placeholder="1234567890ABCDEF"
-            className="font-mono text-xs"
-          />
-        </div>
-
-        {/* 開始advance */}
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs" htmlFor="egg-user-offset">{eggParamsUserOffsetLabel[locale]}</Label>
-          <Input
-            id="egg-user-offset"
-            data-testid="egg-user-offset"
-            value={draftParams.userOffsetHex}
-            onChange={(e) => updateDraftParams({ userOffsetHex: normalizeHexInput(e.target.value) })}
-            disabled={disabled}
-            placeholder="0"
-            className="font-mono text-xs"
-          />
-        </div>
-
-        {/* 列挙上限 */}
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs" htmlFor="egg-count">{eggParamsCountLabel[locale]}</Label>
-          <Input
-            id="egg-count"
-            data-testid="egg-count"
-            type="number"
-            min={1}
-            max={100000}
-            value={draftParams.count}
-            onChange={(e) => updateDraftParams({ count: Math.max(1, Math.min(100000, parseInt(e.target.value) || 1)) })}
-            disabled={disabled}
-            className="text-xs"
-          />
+        <div className="space-y-3">
+          {/* 初期Seed / 開始消費 / 最大消費数: 横並び */}
+          <div className="grid grid-cols-3 gap-1">
+            <div className="flex flex-col gap-1">
+            <Label className="text-xs" htmlFor="egg-base-seed">{eggParamsBaseSeedLabel[locale]}</Label>
+            <Input
+              id="egg-base-seed"
+              data-testid="egg-base-seed"
+              value={draftParams.baseSeedHex}
+              onChange={(e) => updateDraftParams({ baseSeedHex: normalizeHexInput(e.target.value) })}
+              disabled={disabled}
+              placeholder={eggParamsBaseSeedPlaceholder[locale]}
+              className="font-mono text-xs"
+            />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs" htmlFor="egg-user-offset">{eggParamsUserOffsetLabel[locale]}</Label>
+              <Input
+                id="egg-user-offset"
+                data-testid="egg-user-offset"
+                type="number"
+                min={0}
+                value={parseInt(draftParams.userOffsetHex, 16) || 0}
+                onChange={(e) => {
+                  const num = Math.max(0, parseInt(e.target.value) || 0);
+                  updateDraftParams({ userOffsetHex: num.toString(16).toUpperCase() });
+                }}
+                disabled={disabled}
+                className="text-xs"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs" htmlFor="egg-count">{eggParamsCountLabel[locale]}</Label>
+              <Input
+                id="egg-count"
+                data-testid="egg-count"
+                type="number"
+                min={1}
+                max={100000}
+                value={draftParams.count}
+                onChange={(e) => updateDraftParams({ count: Math.max(1, Math.min(100000, parseInt(e.target.value) || 1)) })}
+                disabled={disabled}
+                className="text-xs"
+              />
+            </div>
+          </div>
         </div>
       </section>
 
@@ -182,17 +213,6 @@ export const EggParamsCard: React.FC = () => {
             ))}
           </div>
         </div>
-
-        {/* メタモン利用 */}
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="egg-uses-ditto"
-            checked={draftParams.conditions.usesDitto}
-            onCheckedChange={(checked) => updateDraftConditions({ usesDitto: !!checked })}
-            disabled={disabled}
-          />
-          <Label htmlFor="egg-uses-ditto" className="text-xs">{eggParamsUsesDittoLabel[locale]}</Label>
-        </div>
       </section>
 
       <Separator className="my-3" />
@@ -201,133 +221,127 @@ export const EggParamsCard: React.FC = () => {
       <section className="space-y-3" role="group">
         <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggParamsSectionTitles.conditions[locale]}</h4>
 
-        {/* かわらずのいし */}
-        <div className="space-y-1">
-          <Label className="text-xs">{eggParamsEverstoneLabel[locale]}</Label>
-          <Select
-            value={draftParams.conditions.everstone.type === 'none' ? 'none' : `fixed-${(draftParams.conditions.everstone as { type: 'fixed'; nature: number }).nature}`}
-            onValueChange={(v) => {
-              if (v === 'none') {
-                updateDraftConditions({ everstone: { type: 'none' } });
-              } else {
-                const nature = parseInt(v.replace('fixed-', ''));
-                updateDraftConditions({ everstone: { type: 'fixed', nature } });
-              }
-            }}
-            disabled={disabled}
-          >
-            <SelectTrigger className="text-xs">
-              <SelectValue placeholder="選択" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none" className="text-xs">{eggParamsEverstoneNone[locale]}</SelectItem>
-              {Array.from({ length: DOMAIN_NATURE_COUNT }, (_, i) => (
-                <SelectItem key={i} value={`fixed-${i}`} className="text-xs">
-                  {natureName(i, locale)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* セレクト系: 横2列 */}
+        <div className="grid grid-cols-3 gap-2">
+          {/* 性別比 */}
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">{eggParamsGenderRatioLabel[locale]}</Label>
+            <Select
+              value={genderRatioValue}
+              onValueChange={handleGenderRatioChange}
+              disabled={disabled}
+            >
+              <SelectTrigger className="text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {eggGenderRatioPresets.map((preset) => (
+                  <SelectItem
+                    key={`${preset.threshold}-${preset.genderless}`}
+                    value={`${preset.threshold}-${preset.genderless}`}
+                    className="text-xs"
+                  >
+                    {preset.label[locale]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* ♀親の特性 */}
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">{eggParamsFemaleAbilityLabel[locale]}</Label>
+            <Select
+              value={String(draftParams.conditions.femaleParentAbility)}
+              onValueChange={(v) => updateDraftConditions({ femaleParentAbility: Number(v) as 0 | 1 | 2 })}
+              disabled={disabled}
+            >
+              <SelectTrigger className="text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {([0, 1, 2] as const).map((ability) => (
+                  <SelectItem key={ability} value={String(ability)} className="text-xs">
+                    {femaleAbilityOptions[ability]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* かわらずのいし */}
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">{eggParamsEverstoneLabel[locale]}</Label>
+            <Select
+              value={draftParams.conditions.everstone.type === 'none' ? 'none' : `fixed-${(draftParams.conditions.everstone as { type: 'fixed'; nature: number }).nature}`}
+              onValueChange={(v) => {
+                if (v === 'none') {
+                  updateDraftConditions({ everstone: { type: 'none' } });
+                } else {
+                  const nature = parseInt(v.replace('fixed-', ''));
+                  updateDraftConditions({ everstone: { type: 'fixed', nature } });
+                }
+              }}
+              disabled={disabled}
+            >
+              <SelectTrigger className="text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none" className="text-xs">{eggParamsEverstoneNone[locale]}</SelectItem>
+                {Array.from({ length: DOMAIN_NATURE_COUNT }, (_, i) => (
+                  <SelectItem key={i} value={`fixed-${i}`} className="text-xs">
+                    {natureName(i, locale)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+        {/* チェックボックス群: 2列グリッド */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+          {/* メタモン利用 */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="egg-uses-ditto"
+              checked={draftParams.conditions.usesDitto}
+              onCheckedChange={(checked) => updateDraftConditions({ usesDitto: !!checked })}
+              disabled={disabled}
+            />
+            <Label htmlFor="egg-uses-ditto" className="text-xs">{eggParamsUsesDittoLabel[locale]}</Label>
+          </div>
 
-        {/* 性別比 */}
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">{eggParamsGenderRatioLabel[locale]}</Label>
-          <Input
-            type="number"
-            min={0}
-            max={255}
-            value={draftParams.conditions.genderRatio.threshold}
-            onChange={(e) => updateDraftConditions({
-              genderRatio: {
-                ...draftParams.conditions.genderRatio,
-                threshold: Math.max(0, Math.min(255, parseInt(e.target.value) || 127)),
-              }
-            })}
-            disabled={disabled}
-            className="text-xs"
-          />
-        </div>
+          {/* 国際孵化 */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="egg-masuda"
+              checked={draftParams.conditions.masudaMethod}
+              onCheckedChange={(checked) => updateDraftConditions({ masudaMethod: !!checked })}
+              disabled={disabled}
+            />
+            <Label htmlFor="egg-masuda" className="text-xs">{eggParamsMasudaMethodLabel[locale]}</Label>
+          </div>
 
-        {/* 無性別 */}
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="egg-genderless"
-            checked={draftParams.conditions.genderRatio.genderless}
-            onCheckedChange={(checked) => updateDraftConditions({
-              genderRatio: {
-                ...draftParams.conditions.genderRatio,
-                genderless: !!checked,
-              }
-            })}
-            disabled={disabled}
-          />
-          <Label htmlFor="egg-genderless" className="text-xs">{eggParamsGenderlessLabel[locale]}</Label>
-        </div>
+          {/* ニドラン系 */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="egg-nidoran"
+              checked={draftParams.conditions.hasNidoranFlag}
+              onCheckedChange={(checked) => updateDraftConditions({ hasNidoranFlag: !!checked })}
+              disabled={disabled}
+            />
+            <Label htmlFor="egg-nidoran" className="text-xs">{eggParamsNidoranFlagLabel[locale]}</Label>
+          </div>
 
-        {/* ニドラン系 */}
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="egg-nidoran"
-            checked={draftParams.conditions.hasNidoranFlag}
-            onCheckedChange={(checked) => updateDraftConditions({ hasNidoranFlag: !!checked })}
-            disabled={disabled}
-          />
-          <Label htmlFor="egg-nidoran" className="text-xs">{eggParamsNidoranFlagLabel[locale]}</Label>
-        </div>
-
-        {/* 夢特性許可 */}
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="egg-allow-hidden"
-            checked={draftParams.conditions.allowHiddenAbility}
-            onCheckedChange={(checked) => updateDraftConditions({ allowHiddenAbility: !!checked })}
-            disabled={disabled}
-          />
-          <Label htmlFor="egg-allow-hidden" className="text-xs">{eggParamsAllowHiddenLabel[locale]}</Label>
-        </div>
-
-        {/* 親♀夢特性 */}
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="egg-female-hidden"
-            checked={draftParams.conditions.femaleParentHasHidden}
-            onCheckedChange={(checked) => updateDraftConditions({ femaleParentHasHidden: !!checked })}
-            disabled={disabled}
-          />
-          <Label htmlFor="egg-female-hidden" className="text-xs">{eggParamsFemaleHiddenLabel[locale]}</Label>
-        </div>
-
-        {/* 国際孵化リロール */}
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">{eggParamsRerollCountLabel[locale]}</Label>
-          <Input
-            type="number"
-            min={0}
-            max={5}
-            value={draftParams.conditions.rerollCount}
-            onChange={(e) => updateDraftConditions({ rerollCount: Math.max(0, Math.min(5, parseInt(e.target.value) || 0)) })}
-            disabled={disabled}
-            className="text-xs"
-          />
-        </div>
-      </section>
-
-      <Separator className="my-3" />
-
-      {/* その他設定セクション */}
-      <section className="space-y-3" role="group">
-        <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggParamsSectionTitles.other[locale]}</h4>
-
-        {/* NPC消費考慮 */}
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="egg-npc-consumption"
-            checked={draftParams.considerNpcConsumption}
-            onCheckedChange={(checked) => updateDraftParams({ considerNpcConsumption: !!checked })}
-            disabled={disabled}
-          />
-          <Label htmlFor="egg-npc-consumption" className="text-xs">{eggParamsNpcConsumptionLabel[locale]}</Label>
+          {/* NPC消費考慮 */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="egg-npc-consumption"
+              checked={draftParams.considerNpcConsumption}
+              onCheckedChange={(checked) => updateDraftParams({ considerNpcConsumption: !!checked })}
+              disabled={disabled}
+            />
+            <Label htmlFor="egg-npc-consumption" className="text-xs">{eggParamsNpcConsumptionLabel[locale]}</Label>
+          </div>
         </div>
       </section>
     </PanelCard>

@@ -244,9 +244,12 @@ function executeEnumeration(params: EggGenerationParams) {
   conditions.has_nidoran_flag = params.conditions.hasNidoranFlag;
   conditions.set_everstone(buildEverstone(wasmAny, params.conditions.everstone));
   conditions.uses_ditto = params.conditions.usesDitto;
-  conditions.allow_hidden_ability = params.conditions.allowHiddenAbility;
-  conditions.female_parent_has_hidden = params.conditions.femaleParentHasHidden;
-  conditions.reroll_count = params.conditions.rerollCount;
+  // femaleParentAbility === 2 (隠れ特性) の場合のみ夢特性判定を有効化
+  const isHiddenAbilityParent = params.conditions.femaleParentAbility === 2;
+  conditions.allow_hidden_ability = isHiddenAbilityParent;
+  conditions.female_parent_has_hidden = isHiddenAbilityParent;
+  // 国際孵化: masudaMethod が true の場合は reroll_count = 3
+  conditions.reroll_count = params.conditions.masudaMethod ? 3 : 0;
   conditions.set_trainer_ids(new wasmAny.TrainerIds(params.conditions.tid, params.conditions.sid));
   conditions.set_gender_ratio(new wasmAny.GenderRatio(
     params.conditions.genderRatio.threshold,
