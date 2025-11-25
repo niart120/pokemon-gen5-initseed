@@ -50,45 +50,45 @@ export const eggFilterNoSelection: LocaleText = {
   en: 'Any',
 };
 
-export const eggFilterGenderOptions: LocaleMap<Record<'' | 'male' | 'female' | 'genderless', string>> = {
+export const eggFilterGenderOptions: LocaleMap<Record<'none' | 'male' | 'female' | 'genderless', string>> = {
   ja: {
-    '': '指定なし',
+    'none': '指定なし',
     male: '♂',
     female: '♀',
     genderless: '無性別',
   },
   en: {
-    '': 'Any',
+    'none': 'Any',
     male: '♂',
     female: '♀',
     genderless: 'Genderless',
   },
 };
 
-export const eggFilterAbilityOptions: LocaleMap<Record<'' | '0' | '1' | '2', string>> = {
+export const eggFilterAbilityOptions: LocaleMap<Record<'none' | '0' | '1' | '2', string>> = {
   ja: {
-    '': '指定なし',
+    'none': '指定なし',
     '0': '特性1',
     '1': '特性2',
     '2': '夢特性',
   },
   en: {
-    '': 'Any',
+    'none': 'Any',
     '0': 'Ability 1',
     '1': 'Ability 2',
     '2': 'Hidden',
   },
 };
 
-export const eggFilterShinyOptions: LocaleMap<Record<'' | '0' | '1' | '2', string>> = {
+export const eggFilterShinyOptions: LocaleMap<Record<'none' | '0' | '1' | '2', string>> = {
   ja: {
-    '': '指定なし',
+    'none': '指定なし',
     '0': '通常',
     '1': '正方形色違い',
     '2': '星型色違い',
   },
   en: {
-    '': 'Any',
+    'none': 'Any',
     '0': 'Normal',
     '1': 'Square Shiny',
     '2': 'Star Shiny',

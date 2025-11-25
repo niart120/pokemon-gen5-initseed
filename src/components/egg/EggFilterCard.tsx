@@ -142,15 +142,15 @@ export const EggFilterCard: React.FC = () => {
           <div className="flex flex-col gap-1 mt-3">
             <Label className="text-xs">{eggFilterNatureLabel[locale]}</Label>
             <Select
-              value={filter.nature !== undefined ? String(filter.nature) : ''}
-              onValueChange={(v) => updateFilter({ nature: v ? Number(v) : undefined })}
+              value={filter.nature !== undefined ? String(filter.nature) : 'none'}
+              onValueChange={(v) => updateFilter({ nature: v !== 'none' ? Number(v) : undefined })}
               disabled={disabled}
             >
               <SelectTrigger className="text-xs">
                 <SelectValue placeholder={eggFilterNoSelection[locale]} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="" className="text-xs">{eggFilterNoSelection[locale]}</SelectItem>
+                <SelectItem value="none" className="text-xs">{eggFilterNoSelection[locale]}</SelectItem>
                 {Array.from({ length: DOMAIN_NATURE_COUNT }, (_, i) => (
                   <SelectItem key={i} value={String(i)} className="text-xs">
                     {natureName(i, locale)}
@@ -164,8 +164,8 @@ export const EggFilterCard: React.FC = () => {
           <div className="flex flex-col gap-1 mt-3">
             <Label className="text-xs">{eggFilterGenderLabel[locale]}</Label>
             <Select
-              value={filter.gender || ''}
-              onValueChange={(v) => updateFilter({ gender: v ? v as 'male' | 'female' | 'genderless' : undefined })}
+              value={filter.gender || 'none'}
+              onValueChange={(v) => updateFilter({ gender: v !== 'none' ? v as 'male' | 'female' | 'genderless' : undefined })}
               disabled={disabled}
             >
               <SelectTrigger className="text-xs">
@@ -185,8 +185,8 @@ export const EggFilterCard: React.FC = () => {
           <div className="flex flex-col gap-1 mt-3">
             <Label className="text-xs">{eggFilterAbilityLabel[locale]}</Label>
             <Select
-              value={filter.ability !== undefined ? String(filter.ability) : ''}
-              onValueChange={(v) => updateFilter({ ability: v ? Number(v) as 0 | 1 | 2 : undefined })}
+              value={filter.ability !== undefined ? String(filter.ability) : 'none'}
+              onValueChange={(v) => updateFilter({ ability: v !== 'none' ? Number(v) as 0 | 1 | 2 : undefined })}
               disabled={disabled}
             >
               <SelectTrigger className="text-xs">
@@ -206,8 +206,8 @@ export const EggFilterCard: React.FC = () => {
           <div className="flex flex-col gap-1 mt-3">
             <Label className="text-xs">{eggFilterShinyLabel[locale]}</Label>
             <Select
-              value={filter.shiny !== undefined ? String(filter.shiny) : ''}
-              onValueChange={(v) => updateFilter({ shiny: v ? Number(v) as 0 | 1 | 2 : undefined })}
+              value={filter.shiny !== undefined ? String(filter.shiny) : 'none'}
+              onValueChange={(v) => updateFilter({ shiny: v !== 'none' ? Number(v) as 0 | 1 | 2 : undefined })}
               disabled={disabled}
             >
               <SelectTrigger className="text-xs">
@@ -227,15 +227,15 @@ export const EggFilterCard: React.FC = () => {
           <div className="flex flex-col gap-1 mt-3">
             <Label className="text-xs">{eggFilterHpTypeLabel[locale]}</Label>
             <Select
-              value={filter.hiddenPowerType !== undefined ? String(filter.hiddenPowerType) : ''}
-              onValueChange={(v) => updateFilter({ hiddenPowerType: v ? Number(v) : undefined })}
+              value={filter.hiddenPowerType !== undefined ? String(filter.hiddenPowerType) : 'none'}
+              onValueChange={(v) => updateFilter({ hiddenPowerType: v !== 'none' ? Number(v) : undefined })}
               disabled={disabled}
             >
               <SelectTrigger className="text-xs">
                 <SelectValue placeholder={eggFilterNoSelection[locale]} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="" className="text-xs">{eggFilterNoSelection[locale]}</SelectItem>
+                <SelectItem value="none" className="text-xs">{eggFilterNoSelection[locale]}</SelectItem>
                 {hpTypeNames.map((name, i) => (
                   <SelectItem key={i} value={String(i)} className="text-xs">
                     {name}

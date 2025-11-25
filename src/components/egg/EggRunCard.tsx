@@ -9,19 +9,14 @@ import {
   eggRunPanelTitle,
   eggRunControlsLabel,
   eggRunStatusPrefix,
-  eggRunResultsLabel,
-  eggRunProcessedLabel,
-  eggRunFilteredLabel,
-  eggRunElapsedLabel,
   eggRunButtonLabels,
   getEggRunStatusLabel,
   formatEggRunProgress,
-  formatEggRunElapsed,
 } from '@/lib/i18n/strings/egg-run';
 
 /**
  * EggRunCard
- * タマゴ生成の実行制御カード
+ * タマゴ生成の実行制御カード (GenerationRunCard と同等のシンプルな表示)
  */
 export const EggRunCard: React.FC = () => {
   const {
@@ -30,7 +25,6 @@ export const EggRunCard: React.FC = () => {
     startGeneration,
     stopGeneration,
     status,
-    lastCompletion,
     results,
     draftParams,
   } = useEggStore();
@@ -49,6 +43,10 @@ export const EggRunCard: React.FC = () => {
   }, [startGeneration, validateDraft]);
 
   const canStart = status === 'idle' || status === 'completed' || status === 'error';
+
+  const pct = draftParams.count > 0 ? (results.length / draftParams.count) * 100 : 0;
+  const advancesDisplay = formatEggRunProgress(results.length, draftParams.count, locale);
+  const percentDisplay = `${pct.toFixed(1)}%`;
 
   return (
     <PanelCard
@@ -77,23 +75,21 @@ export const EggRunCard: React.FC = () => {
           </Button>
         )}
         {(isRunning || isStopping) && (
-          <Button size="sm" variant="destructive" onClick={stopGeneration} disabled={isStopping} className="flex-1" data-testid="egg-stop-btn">
+          <Button size="sm" variant="destructive" onClick={stopGeneration} disabled={isStopping} data-testid="egg-stop-btn">
             <Square size={16} className="mr-2" />
-            {isStopping ? eggRunButtonLabels.stopping[locale] : eggRunButtonLabels.stop[locale]}
+            {eggRunButtonLabels.stop[locale]}
           </Button>
         )}
+        <div className="text-xs text-muted-foreground ml-auto">
+          {eggRunStatusPrefix[locale]} {getEggRunStatusLabel(status, locale)}
+        </div>
       </div>
-      {/* Status */}
-      <div className="text-xs text-muted-foreground mt-2 space-y-1">
-        <div>{eggRunStatusPrefix[locale]} {getEggRunStatusLabel(status, locale)}</div>
-        <div>{eggRunResultsLabel[locale]} {formatEggRunProgress(results.length, draftParams.count, locale)}</div>
-        {lastCompletion && (
-          <>
-            <div>{eggRunProcessedLabel[locale]} {lastCompletion.processedCount.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US')}</div>
-            <div>{eggRunFilteredLabel[locale]} {lastCompletion.filteredCount.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US')}</div>
-            <div>{eggRunElapsedLabel[locale]} {formatEggRunElapsed(lastCompletion.elapsedMs, locale)}</div>
-          </>
-        )}
+      {/* Result summary */}
+      <div className="space-y-1" aria-label="Results">
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+          <span>{percentDisplay}</span>
+          <span>{advancesDisplay}</span>
+        </div>
       </div>
     </PanelCard>
   );
