@@ -45,12 +45,12 @@ export const eggParamsCountLabel: LocaleText = {
 };
 
 export const eggParentsMaleLabel: LocaleText = {
-  ja: '♂親 IV',
+  ja: '♂親 個体値',
   en: '♂ Parent IV',
 };
 
 export const eggParentsFemaleLabel: LocaleText = {
-  ja: '♀親 IV',
+  ja: '♀親 個体値',
   en: '♀ Parent IV',
 };
 
