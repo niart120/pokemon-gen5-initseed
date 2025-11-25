@@ -27,20 +27,9 @@ import {
   eggFilterAbilityOptions,
   eggFilterShinyOptions,
 } from '@/lib/i18n/strings/egg-filter';
+import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
 
 const STAT_NAMES = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
-
-// めざパタイプ名
-const HP_TYPE_NAMES = {
-  ja: [
-    'かくとう', 'ひこう', 'どく', 'じめん', 'いわ', 'むし', 'ゴースト', 'はがね',
-    'ほのお', 'みず', 'くさ', 'でんき', 'エスパー', 'こおり', 'ドラゴン', 'あく',
-  ],
-  en: [
-    'Fighting', 'Flying', 'Poison', 'Ground', 'Rock', 'Bug', 'Ghost', 'Steel',
-    'Fire', 'Water', 'Grass', 'Electric', 'Psychic', 'Ice', 'Dragon', 'Dark',
-  ],
-} as const;
 
 /**
  * EggFilterCard
@@ -58,7 +47,7 @@ export const EggFilterCard: React.FC = () => {
   const genderOptions = resolveLocaleValue(eggFilterGenderOptions, locale);
   const abilityOptions = resolveLocaleValue(eggFilterAbilityOptions, locale);
   const shinyOptions = resolveLocaleValue(eggFilterShinyOptions, locale);
-  const hpTypeNames = HP_TYPE_NAMES[locale] ?? HP_TYPE_NAMES.en;
+  const hpTypeNames = hiddenPowerTypeNames[locale] ?? hiddenPowerTypeNames.en;
 
   const updateFilter = (updates: Partial<EggIndividualFilter>) => {
     updateDraftParams({

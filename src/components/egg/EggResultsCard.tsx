@@ -17,18 +17,7 @@ import {
   eggResultStableLabels,
   eggResultUnknownHp,
 } from '@/lib/i18n/strings/egg-results';
-
-// めざパタイプ名
-const HP_TYPE_NAMES = {
-  ja: [
-    'かくとう', 'ひこう', 'どく', 'じめん', 'いわ', 'むし', 'ゴースト', 'はがね',
-    'ほのお', 'みず', 'くさ', 'でんき', 'エスパー', 'こおり', 'ドラゴン', 'あく',
-  ],
-  en: [
-    'Fighting', 'Flying', 'Poison', 'Ground', 'Rock', 'Bug', 'Ghost', 'Steel',
-    'Fire', 'Water', 'Grass', 'Electric', 'Psychic', 'Ice', 'Dragon', 'Dark',
-  ],
-} as const;
+import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
 
 /**
  * EggResultsCard
@@ -39,7 +28,7 @@ export const EggResultsCard: React.FC = () => {
   const { isStack } = useResponsiveLayout();
   const locale = useLocale();
 
-  const hpTypeNames = HP_TYPE_NAMES[locale] ?? HP_TYPE_NAMES.en;
+  const hpTypeNames = hiddenPowerTypeNames[locale] ?? hiddenPowerTypeNames.en;
   const shinyLabels = resolveLocaleValue(eggResultShinyLabels, locale);
   const genderLabels = resolveLocaleValue(eggResultGenderLabels, locale);
   const abilityLabels = resolveLocaleValue(eggResultAbilityLabels, locale);
