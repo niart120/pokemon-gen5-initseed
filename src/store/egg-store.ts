@@ -7,8 +7,10 @@ import {
   hexParamsToEggParams,
   validateEggParams,
   createDefaultEggParamsHex,
+  deriveEggGameMode,
 } from '@/types/egg';
 import { EggWorkerManager } from '@/lib/egg/egg-worker-manager';
+import type { DeviceProfile } from '@/types/profile';
 
 export type EggStatus = 'idle' | 'starting' | 'running' | 'stopping' | 'completed' | 'error';
 
@@ -34,6 +36,7 @@ interface EggStore {
   updateDraftConditions: (updates: Partial<EggGenerationParamsHex['conditions']>) => void;
   updateDraftParentsMale: (ivs: EggGenerationParamsHex['parents']['male']) => void;
   updateDraftParentsFemale: (ivs: EggGenerationParamsHex['parents']['female']) => void;
+  applyProfile: (profile: DeviceProfile) => void;
   validateDraft: () => boolean;
   startGeneration: () => Promise<void>;
   stopGeneration: () => void;
@@ -80,6 +83,21 @@ export const useEggStore = create<EggStore>((set, get) => ({
       draftParams: {
         ...state.draftParams,
         parents: { ...state.draftParams.parents, female: ivs },
+      },
+    }));
+  },
+
+  applyProfile: (profile) => {
+    const gameMode = deriveEggGameMode(profile.romVersion, profile.newGame);
+    set((state) => ({
+      draftParams: {
+        ...state.draftParams,
+        gameMode,
+        conditions: {
+          ...state.draftParams.conditions,
+          tid: profile.tid,
+          sid: profile.sid,
+        },
       },
     }));
   },

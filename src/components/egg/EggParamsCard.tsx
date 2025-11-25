@@ -9,18 +9,15 @@ import { Gear } from '@phosphor-icons/react';
 import { useEggStore } from '@/store/egg-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
-import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import { natureName } from '@/lib/utils/format-display';
 import { DOMAIN_NATURE_COUNT } from '@/types/domain';
-import { EggGameMode, type IvSet } from '@/types/egg';
+import type { IvSet } from '@/types/egg';
 import {
   eggParamsPanelTitle,
   eggParamsSectionTitles,
   eggParamsBaseSeedLabel,
   eggParamsUserOffsetLabel,
   eggParamsCountLabel,
-  eggParamsGameModeLabel,
-  eggParamsGameModeOptions,
   eggParentsMaleLabel,
   eggParentsFemaleLabel,
   eggParamsUsesDittoLabel,
@@ -32,8 +29,6 @@ import {
   eggParamsAllowHiddenLabel,
   eggParamsFemaleHiddenLabel,
   eggParamsRerollCountLabel,
-  eggParamsTidLabel,
-  eggParamsSidLabel,
   eggParamsNpcConsumptionLabel,
 } from '@/lib/i18n/strings/egg-params';
 
@@ -61,8 +56,6 @@ export const EggParamsCard: React.FC = () => {
   const { isStack } = useResponsiveLayout();
   const locale = useLocale();
   const disabled = status === 'running' || status === 'starting';
-
-  const gameModeOptions = resolveLocaleValue(eggParamsGameModeOptions, locale);
 
   const handleIvChange = (
     parent: 'male' | 'female',
@@ -137,27 +130,6 @@ export const EggParamsCard: React.FC = () => {
             disabled={disabled}
             className="text-xs"
           />
-        </div>
-
-        {/* GameMode */}
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs" htmlFor="egg-game-mode">{eggParamsGameModeLabel[locale]}</Label>
-          <Select
-            value={String(draftParams.gameMode)}
-            onValueChange={(v) => updateDraftParams({ gameMode: Number(v) as EggGameMode })}
-            disabled={disabled}
-          >
-            <SelectTrigger id="egg-game-mode" className="text-xs">
-              <SelectValue placeholder="選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(gameModeOptions).map(([value, label]) => (
-                <SelectItem key={value} value={value} className="text-xs">
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
       </section>
 
@@ -338,34 +310,6 @@ export const EggParamsCard: React.FC = () => {
             disabled={disabled}
             className="text-xs"
           />
-        </div>
-
-        {/* TID/SID */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs">{eggParamsTidLabel[locale]}</Label>
-            <Input
-              type="number"
-              min={0}
-              max={65535}
-              value={draftParams.conditions.tid}
-              onChange={(e) => updateDraftConditions({ tid: Math.max(0, Math.min(65535, parseInt(e.target.value) || 0)) })}
-              disabled={disabled}
-              className="text-xs"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs">{eggParamsSidLabel[locale]}</Label>
-            <Input
-              type="number"
-              min={0}
-              max={65535}
-              value={draftParams.conditions.sid}
-              onChange={(e) => updateDraftConditions({ sid: Math.max(0, Math.min(65535, parseInt(e.target.value) || 0)) })}
-              disabled={disabled}
-              className="text-xs"
-            />
-          </div>
         </div>
       </section>
 

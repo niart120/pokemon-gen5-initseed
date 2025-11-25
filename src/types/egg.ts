@@ -130,6 +130,17 @@ export enum EggGameMode {
 }
 
 /**
+ * ROMバージョンとnewGameフラグからEggGameModeを導出
+ */
+export function deriveEggGameMode(romVersion: string, newGame: boolean): EggGameMode {
+  const isBw2 = romVersion === 'B2' || romVersion === 'W2';
+  if (isBw2) {
+    return newGame ? EggGameMode.Bw2New : EggGameMode.Bw2Continue;
+  }
+  return newGame ? EggGameMode.BwNew : EggGameMode.BwContinue;
+}
+
+/**
  * タマゴ生成パラメータ
  */
 export interface EggGenerationParams {
