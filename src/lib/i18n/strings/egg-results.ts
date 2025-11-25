@@ -1,8 +1,8 @@
 import type { LocaleText, LocaleMap } from './types';
 
 export const eggResultsPanelTitle: LocaleText = {
-  ja: '生成結果',
-  en: 'Generation Results',
+  ja: 'Results',
+  en: 'Results',
 };
 
 export const eggResultsEmptyMessage: LocaleText = {
@@ -58,37 +58,37 @@ const HEADER_DEFINITIONS: Record<EggResultHeaderKey, HeaderDefinition> = {
   },
   hp: {
     label: {
-      ja: 'HP',
+      ja: 'H',
       en: 'HP',
     },
   },
   atk: {
     label: {
-      ja: 'Atk',
+      ja: 'A',
       en: 'Atk',
     },
   },
   def: {
     label: {
-      ja: 'Def',
+      ja: 'B',
       en: 'Def',
     },
   },
   spa: {
     label: {
-      ja: 'SpA',
+      ja: 'C',
       en: 'SpA',
     },
   },
   spd: {
     label: {
-      ja: 'SpD',
+      ja: 'D',
       en: 'SpD',
     },
   },
   spe: {
     label: {
-      ja: 'Spe',
+      ja: 'S',
       en: 'Spe',
     },
   },

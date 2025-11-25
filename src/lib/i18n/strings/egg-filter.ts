@@ -1,8 +1,8 @@
 import type { LocaleText, LocaleMap } from './types';
 
 export const eggFilterPanelTitle: LocaleText = {
-  ja: 'フィルター設定',
-  en: 'Filter Settings',
+  ja: 'Filter',
+  en: 'Filter',
 };
 
 export const eggFilterDisabledLabel: LocaleText = {

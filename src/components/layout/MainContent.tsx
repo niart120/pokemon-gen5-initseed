@@ -30,7 +30,7 @@ export function MainContent() {
             </TabsTrigger>
             <TabsTrigger value="egg" className="flex items-center gap-2">
               <Egg size={16} />
-              Egg
+              Generation(Egg)
             </TabsTrigger>
             <TabsTrigger value="help" className="flex items-center gap-2">
               <Info size={16} />

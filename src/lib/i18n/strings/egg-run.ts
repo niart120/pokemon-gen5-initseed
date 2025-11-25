@@ -9,8 +9,8 @@ const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
 };
 
 export const eggRunPanelTitle: LocaleText = {
-  ja: '実行制御',
-  en: 'Execution Control',
+  ja: 'Generation Control',
+  en: 'Generation Control',
 };
 
 export const eggRunControlsLabel: LocaleText = {
@@ -45,19 +45,19 @@ export const eggRunElapsedLabel: LocaleText = {
 
 export const eggRunButtonLabels = {
   start: {
-    ja: '開始',
-    en: 'Start',
+    ja: 'Generate',
+    en: 'Generate',
   } satisfies LocaleText,
   starting: {
-    ja: '開始中...',
-    en: 'Starting...',
+    ja: '生成中...',
+    en: 'Generating...',
   } satisfies LocaleText,
   stop: {
-    ja: '停止',
+    ja: 'Stop',
     en: 'Stop',
   } satisfies LocaleText,
   stopping: {
-    ja: '停止中...',
+    ja: 'Stopping...',
     en: 'Stopping...',
   } satisfies LocaleText,
 };

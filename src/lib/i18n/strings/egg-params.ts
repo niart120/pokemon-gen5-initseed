@@ -2,8 +2,8 @@ import type { LocaleText, LocaleMap } from './types';
 import type { EggGameMode } from '@/types/egg';
 
 export const eggParamsPanelTitle: LocaleText = {
-  ja: 'タマゴ生成パラメータ',
-  en: 'Egg Generation Parameters',
+  ja: 'Generation Parameters',
+  en: 'Generation Parameters',
 };
 
 export const eggParamsSectionTitles = {
@@ -43,26 +43,6 @@ export const eggParamsUserOffsetLabel: LocaleText = {
 export const eggParamsCountLabel: LocaleText = {
   ja: '最大消費数',
   en: 'Max Frames',
-};
-
-export const eggParamsGameModeLabel: LocaleText = {
-  ja: 'ゲームモード',
-  en: 'Game Mode',
-};
-
-export const eggParamsGameModeOptions: LocaleMap<Record<EggGameMode, string>> = {
-  ja: {
-    0: 'BW 新規',
-    1: 'BW 続きから',
-    2: 'BW2 新規',
-    3: 'BW2 続きから',
-  },
-  en: {
-    0: 'BW New Game',
-    1: 'BW Continue',
-    2: 'BW2 New Game',
-    3: 'BW2 Continue',
-  },
 };
 
 export const eggParentsMaleLabel: LocaleText = {
