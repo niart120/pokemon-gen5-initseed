@@ -99,3 +99,35 @@ export const eggFilterIvUnknownLabel: LocaleText = {
   ja: '任意',
   en: 'Any',
 };
+
+// === Boot-Timing Filters ===
+
+export const eggFilterBootTimingTitle: LocaleText = {
+  ja: 'Boot-Timing フィルター',
+  en: 'Boot-Timing Filters',
+};
+
+export const eggFilterTimer0Label: LocaleText = {
+  ja: 'Timer0',
+  en: 'Timer0',
+};
+
+export const eggFilterVcountLabel: LocaleText = {
+  ja: 'VCount',
+  en: 'VCount',
+};
+
+export const eggFilterTimer0Placeholder: LocaleText = {
+  ja: '例: 10A0',
+  en: 'e.g. 10A0',
+};
+
+export const eggFilterVcountPlaceholder: LocaleText = {
+  ja: '例: 5C',
+  en: 'e.g. 5C',
+};
+
+export const eggFilterBootTimingDisabledHint: LocaleText = {
+  ja: 'Boot-Timing時のみ有効',
+  en: 'Available in Boot-Timing mode',
+};

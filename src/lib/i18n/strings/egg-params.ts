@@ -160,3 +160,56 @@ export const eggParamsIvUnknownLabel: LocaleText = {
   ja: '不明',
   en: 'Unknown',
 };
+
+// === Boot-Timing Labels ===
+
+export const eggSeedSourceModeLabel: LocaleText = {
+  ja: 'Seed入力モード',
+  en: 'Seed Input Mode',
+};
+
+export const eggSeedSourceModeOptions = {
+  lcg: {
+    ja: 'LCG (直接入力)',
+    en: 'LCG (Direct)',
+  } satisfies LocaleText,
+  'boot-timing': {
+    ja: 'Boot-Timing',
+    en: 'Boot-Timing',
+  } satisfies LocaleText,
+};
+
+export const eggBootTimingLabels = {
+  timestamp: {
+    ja: '起動時刻',
+    en: 'Boot Time',
+  } satisfies LocaleText,
+  timestampPlaceholder: {
+    ja: '起動時刻を入力',
+    en: 'Enter boot time',
+  } satisfies LocaleText,
+  keyInput: {
+    ja: 'キー入力',
+    en: 'Key Input',
+  } satisfies LocaleText,
+  profile: {
+    ja: 'プロファイル情報',
+    en: 'Profile Info',
+  } satisfies LocaleText,
+  configure: {
+    ja: '設定',
+    en: 'Configure',
+  } satisfies LocaleText,
+  dialogTitle: {
+    ja: 'キー入力設定',
+    en: 'Key Input Settings',
+  } satisfies LocaleText,
+  reset: {
+    ja: 'リセット',
+    en: 'Reset',
+  } satisfies LocaleText,
+  apply: {
+    ja: '適用',
+    en: 'Apply',
+  } satisfies LocaleText,
+};

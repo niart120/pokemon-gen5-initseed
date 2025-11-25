@@ -3,6 +3,9 @@
  * Based on: spec/agent/pr_design_egg_bw_panel/SPECIFICATION.md
  */
 
+import type { Hardware, ROMRegion, ROMVersion } from '@/types/rom';
+import type { KeyName } from '@/lib/utils/key-input';
+
 // === 基本型 ===
 
 /**
@@ -166,6 +169,104 @@ export interface EggGenerationParamsHex {
   filterDisabled: boolean;
   considerNpcConsumption: boolean;
   gameMode: EggGameMode;
+  // Boot-Timing 対応
+  seedSourceMode: EggSeedSourceMode;
+  bootTiming: EggBootTimingDraft;
+}
+
+// === Boot-Timing Enumeration 型 ===
+
+/**
+ * Seed入力モード
+ */
+export type EggSeedSourceMode = 'lcg' | 'boot-timing';
+
+/**
+ * 起動時間パラメータ (UI入力)
+ */
+export interface EggBootTimingDraft {
+  timestampIso?: string;
+  keyMask: number;
+  timer0Range: { min: number; max: number };
+  vcountRange: { min: number; max: number };
+  romVersion: ROMVersion;
+  romRegion: ROMRegion;
+  hardware: Hardware;
+  macAddress: readonly [number, number, number, number, number, number];
+}
+
+/**
+ * デフォルト Boot-Timing Draft
+ */
+export function createDefaultEggBootTimingDraft(): EggBootTimingDraft {
+  return {
+    timestampIso: undefined,
+    keyMask: 0,
+    timer0Range: { min: 0, max: 0 },
+    vcountRange: { min: 0, max: 0 },
+    romVersion: 'B',
+    romRegion: 'JPN',
+    hardware: 'DS',
+    macAddress: [0, 0, 0, 0, 0, 0],
+  };
+}
+
+/**
+ * 導出されたSeedのメタデータ
+ */
+export interface DerivedEggSeedMetadata {
+  readonly seedSourceMode: 'boot-timing';
+  readonly derivedSeedIndex: number;
+  readonly timer0: number;
+  readonly vcount: number;
+  readonly keyMask: number;
+  readonly keyCode: number;
+  readonly bootTimestampIso: string;
+  readonly macAddress: readonly [number, number, number, number, number, number];
+  readonly seedSourceSeedHex: string;
+}
+
+/**
+ * 導出されたSeedジョブ
+ */
+export interface DerivedEggSeedJob {
+  params: EggGenerationParams;
+  metadata: DerivedEggSeedMetadata;
+}
+
+/**
+ * Boot-Timing実行時の集計情報
+ */
+export interface DerivedEggSeedAggregate {
+  processedCount: number;
+  filteredCount: number;
+  elapsedMs: number;
+}
+
+/**
+ * 起動時間列挙の進捗状態
+ */
+export interface DerivedEggSeedRunState {
+  readonly jobs: DerivedEggSeedJob[];
+  readonly cursor: number;
+  readonly total: number;
+  readonly aggregate: DerivedEggSeedAggregate;
+  readonly abortRequested: boolean;
+}
+
+/**
+ * 列挙された個体データ（boot-timing用拡張）
+ */
+export interface EnumeratedEggDataWithBootTiming extends EnumeratedEggData {
+  // Boot-Timing モード時に付与されるメタデータ
+  seedSourceMode?: EggSeedSourceMode;
+  derivedSeedIndex?: number;
+  seedSourceSeedHex?: string;
+  timer0?: number;
+  vcount?: number;
+  bootTimestampIso?: string;
+  keyInputNames?: KeyName[];
+  macAddress?: readonly [number, number, number, number, number, number];
 }
 
 /**
@@ -222,6 +323,8 @@ export function eggParamsToHex(p: EggGenerationParams): EggGenerationParamsHex {
     filterDisabled: false,
     considerNpcConsumption: p.considerNpcConsumption,
     gameMode: p.gameMode,
+    seedSourceMode: 'lcg',
+    bootTiming: createDefaultEggBootTimingDraft(),
   };
 }
 
@@ -409,5 +512,7 @@ export function createDefaultEggParamsHex(): EggGenerationParamsHex {
     filterDisabled: false,
     considerNpcConsumption: false,
     gameMode: EggGameMode.BwContinue,
+    seedSourceMode: 'lcg',
+    bootTiming: createDefaultEggBootTimingDraft(),
   };
 }

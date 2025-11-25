@@ -5,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Gear } from '@phosphor-icons/react';
 import { useEggStore } from '@/store/egg-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
@@ -12,7 +13,8 @@ import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import { natureName } from '@/lib/utils/format-display';
 import { DOMAIN_NATURE_COUNT } from '@/types/domain';
-import type { IvSet } from '@/types/egg';
+import type { IvSet, EggSeedSourceMode } from '@/types/egg';
+import { EggBootTimingControls, type EggBootTimingLabels } from './EggBootTimingControls';
 import {
   eggParamsPanelTitle,
   eggParamsSectionTitles,
@@ -33,6 +35,9 @@ import {
   eggParamsMasudaMethodLabel,
   eggParamsNpcConsumptionLabel,
   eggParamsIvUnknownLabel,
+  eggSeedSourceModeLabel,
+  eggSeedSourceModeOptions,
+  eggBootTimingLabels,
 } from '@/lib/i18n/strings/egg-params';
 
 const STAT_NAMES = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
@@ -61,6 +66,18 @@ export const EggParamsCard: React.FC = () => {
   const disabled = status === 'running' || status === 'starting';
 
   const femaleAbilityOptions = resolveLocaleValue(eggParamsFemaleAbilityOptions, locale);
+
+  // Boot-Timing ラベル解決
+  const bootTimingLabelsResolved: EggBootTimingLabels = useMemo(() => ({
+    timestamp: eggBootTimingLabels.timestamp[locale],
+    timestampPlaceholder: eggBootTimingLabels.timestampPlaceholder[locale],
+    keyInput: eggBootTimingLabels.keyInput[locale],
+    profile: eggBootTimingLabels.profile[locale],
+    configure: eggBootTimingLabels.configure[locale],
+    dialogTitle: eggBootTimingLabels.dialogTitle[locale],
+    reset: eggBootTimingLabels.reset[locale],
+    apply: eggBootTimingLabels.apply[locale],
+  }), [locale]);
 
   // 性別比プリセットの選択値を計算
   const genderRatioValue = useMemo(() => {
@@ -134,51 +151,118 @@ export const EggParamsCard: React.FC = () => {
         <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggParamsSectionTitles.basic[locale]}</h4>
 
         <div className="space-y-3">
-          {/* 初期Seed / 開始消費 / 最大消費数: 横並び */}
-          <div className="grid grid-cols-3 gap-1">
-            <div className="flex flex-col gap-1">
-            <Label className="text-xs" htmlFor="egg-base-seed">{eggParamsBaseSeedLabel[locale]}</Label>
-            <Input
-              id="egg-base-seed"
-              data-testid="egg-base-seed"
-              value={draftParams.baseSeedHex}
-              onChange={(e) => updateDraftParams({ baseSeedHex: normalizeHexInput(e.target.value) })}
+          {/* Seed入力モード切り替え */}
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">{eggSeedSourceModeLabel[locale]}</Label>
+            <ToggleGroup
+              type="single"
+              value={draftParams.seedSourceMode}
+              onValueChange={(value) => {
+                if (value) updateDraftParams({ seedSourceMode: value as EggSeedSourceMode });
+              }}
               disabled={disabled}
-              placeholder={eggParamsBaseSeedPlaceholder[locale]}
-              className="font-mono text-xs"
-            />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs" htmlFor="egg-user-offset">{eggParamsUserOffsetLabel[locale]}</Label>
-              <Input
-                id="egg-user-offset"
-                data-testid="egg-user-offset"
-                type="number"
-                min={0}
-                value={parseInt(draftParams.userOffsetHex, 16) || 0}
-                onChange={(e) => {
-                  const num = Math.max(0, parseInt(e.target.value) || 0);
-                  updateDraftParams({ userOffsetHex: num.toString(16).toUpperCase() });
-                }}
-                disabled={disabled}
-                className="text-xs"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs" htmlFor="egg-count">{eggParamsCountLabel[locale]}</Label>
-              <Input
-                id="egg-count"
-                data-testid="egg-count"
-                type="number"
-                min={1}
-                max={100000}
-                value={draftParams.count}
-                onChange={(e) => updateDraftParams({ count: Math.max(1, Math.min(100000, parseInt(e.target.value) || 1)) })}
-                disabled={disabled}
-                className="text-xs"
-              />
-            </div>
+              className="justify-start"
+            >
+              <ToggleGroupItem value="lcg" aria-label="LCG mode" className="text-xs px-3 h-8">
+                {eggSeedSourceModeOptions.lcg[locale]}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="boot-timing" aria-label="Boot-Timing mode" className="text-xs px-3 h-8">
+                {eggSeedSourceModeOptions['boot-timing'][locale]}
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
+
+          {/* LCGモード: 初期Seed入力 */}
+          {draftParams.seedSourceMode === 'lcg' && (
+            <div className="grid grid-cols-3 gap-1">
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs" htmlFor="egg-base-seed">{eggParamsBaseSeedLabel[locale]}</Label>
+                <Input
+                  id="egg-base-seed"
+                  data-testid="egg-base-seed"
+                  value={draftParams.baseSeedHex}
+                  onChange={(e) => updateDraftParams({ baseSeedHex: normalizeHexInput(e.target.value) })}
+                  disabled={disabled}
+                  placeholder={eggParamsBaseSeedPlaceholder[locale]}
+                  className="font-mono text-xs"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs" htmlFor="egg-user-offset">{eggParamsUserOffsetLabel[locale]}</Label>
+                <Input
+                  id="egg-user-offset"
+                  data-testid="egg-user-offset"
+                  type="number"
+                  min={0}
+                  value={parseInt(draftParams.userOffsetHex, 16) || 0}
+                  onChange={(e) => {
+                    const num = Math.max(0, parseInt(e.target.value) || 0);
+                    updateDraftParams({ userOffsetHex: num.toString(16).toUpperCase() });
+                  }}
+                  disabled={disabled}
+                  className="text-xs"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs" htmlFor="egg-count">{eggParamsCountLabel[locale]}</Label>
+                <Input
+                  id="egg-count"
+                  data-testid="egg-count"
+                  type="number"
+                  min={1}
+                  max={100000}
+                  value={draftParams.count}
+                  onChange={(e) => updateDraftParams({ count: Math.max(1, Math.min(100000, parseInt(e.target.value) || 1)) })}
+                  disabled={disabled}
+                  className="text-xs"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Boot-Timingモード: 起動時間パラメータ入力 */}
+          {draftParams.seedSourceMode === 'boot-timing' && (
+            <div className="space-y-3">
+              <EggBootTimingControls
+                locale={locale}
+                disabled={disabled}
+                isActive={draftParams.seedSourceMode === 'boot-timing'}
+                labels={bootTimingLabelsResolved}
+              />
+              <div className="grid grid-cols-2 gap-1">
+                <div className="flex flex-col gap-1">
+                  <Label className="text-xs" htmlFor="egg-user-offset-bt">{eggParamsUserOffsetLabel[locale]}</Label>
+                  <Input
+                    id="egg-user-offset-bt"
+                    data-testid="egg-user-offset-bt"
+                    type="number"
+                    min={0}
+                    value={parseInt(draftParams.userOffsetHex, 16) || 0}
+                    onChange={(e) => {
+                      const num = Math.max(0, parseInt(e.target.value) || 0);
+                      updateDraftParams({ userOffsetHex: num.toString(16).toUpperCase() });
+                    }}
+                    disabled={disabled}
+                    className="text-xs"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label className="text-xs" htmlFor="egg-count-bt">{eggParamsCountLabel[locale]}</Label>
+                  <Input
+                    id="egg-count-bt"
+                    data-testid="egg-count-bt"
+                    type="number"
+                    min={1}
+                    max={100000}
+                    value={draftParams.count}
+                    onChange={(e) => updateDraftParams({ count: Math.max(1, Math.min(100000, parseInt(e.target.value) || 1)) })}
+                    disabled={disabled}
+                    className="text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

@@ -6,7 +6,7 @@ import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import { natureName } from '@/lib/utils/format-display';
-import { IV_UNKNOWN } from '@/types/egg';
+import { IV_UNKNOWN, type EnumeratedEggDataWithBootTiming } from '@/types/egg';
 import {
   eggResultsPanelTitle,
   eggResultsEmptyMessage,
@@ -24,9 +24,12 @@ import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
  * タマゴ生成結果表示カード
  */
 export const EggResultsCard: React.FC = () => {
-  const { results, draftParams } = useEggStore();
+  const { results, draftParams, getFilteredResults } = useEggStore();
   const { isStack } = useResponsiveLayout();
   const locale = useLocale();
+
+  const isBootTimingMode = draftParams.seedSourceMode === 'boot-timing';
+  const filteredResults = getFilteredResults();
 
   const hpTypeNames = hiddenPowerTypeNames[locale] ?? hiddenPowerTypeNames.en;
   const shinyLabels = resolveLocaleValue(eggResultShinyLabels, locale);
@@ -45,10 +48,26 @@ export const EggResultsCard: React.FC = () => {
     return `${hpTypeNames[hp.hpType] || '?'}/${hp.power}`;
   };
 
+  const formatTimer0 = (row: EnumeratedEggDataWithBootTiming): string => {
+    if (row.timer0 === undefined) return '-';
+    return `0x${row.timer0.toString(16).toUpperCase().padStart(4, '0')}`;
+  };
+
+  const formatVcount = (row: EnumeratedEggDataWithBootTiming): string => {
+    if (row.vcount === undefined) return '-';
+    return `0x${row.vcount.toString(16).toUpperCase().padStart(2, '0')}`;
+  };
+
+  // Boot-Timing モード時の列数計算
+  const baseColSpan = 13;
+  const npcColSpan = draftParams.considerNpcConsumption ? 1 : 0;
+  const bootTimingColSpan = isBootTimingMode ? 2 : 0;
+  const totalColSpan = baseColSpan + npcColSpan + bootTimingColSpan;
+
   return (
     <PanelCard
       icon={<Table size={20} className="opacity-80" />}
-      title={<span id="egg-results-title">{eggResultsPanelTitle[locale]} ({results.length}/{draftParams.count})</span>}
+      title={<span id="egg-results-title">{eggResultsPanelTitle[locale]} ({filteredResults.length}/{results.length})</span>}
       className={isStack ? 'min-h-64' : undefined}
       fullHeight={!isStack}
       scrollMode="content"
@@ -59,6 +78,12 @@ export const EggResultsCard: React.FC = () => {
           <thead className="sticky top-0 bg-background z-10">
             <tr className="border-b">
               <th className="text-left py-1 px-2 font-medium">{getEggResultHeader('advance', locale)}</th>
+              {isBootTimingMode && (
+                <>
+                  <th className="text-left py-1 px-2 font-medium font-mono">Timer0</th>
+                  <th className="text-left py-1 px-2 font-medium font-mono">VCount</th>
+                </>
+              )}
               <th className="text-center py-1 px-1 font-medium">{getEggResultHeader('hp', locale)}</th>
               <th className="text-center py-1 px-1 font-medium">{getEggResultHeader('atk', locale)}</th>
               <th className="text-center py-1 px-1 font-medium">{getEggResultHeader('def', locale)}</th>
@@ -77,16 +102,22 @@ export const EggResultsCard: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {results.length === 0 ? (
+            {filteredResults.length === 0 ? (
               <tr>
-                <td colSpan={draftParams.considerNpcConsumption ? 14 : 13} className="text-center py-8 text-muted-foreground">
+                <td colSpan={totalColSpan} className="text-center py-8 text-muted-foreground">
                   {eggResultsEmptyMessage[locale]}
                 </td>
               </tr>
             ) : (
-              results.map((row, i) => (
+              filteredResults.map((row, i) => (
                 <tr key={i} className="border-b hover:bg-muted/50" data-testid="egg-result-row">
                   <td className="py-1 px-2 font-mono">{row.advance}</td>
+                  {isBootTimingMode && (
+                    <>
+                      <td className="py-1 px-2 font-mono text-[10px]">{formatTimer0(row)}</td>
+                      <td className="py-1 px-2 font-mono text-[10px]">{formatVcount(row)}</td>
+                    </>
+                  )}
                   <td className="text-center py-1 px-1 font-mono">{formatIv(row.egg.ivs[0])}</td>
                   <td className="text-center py-1 px-1 font-mono">{formatIv(row.egg.ivs[1])}</td>
                   <td className="text-center py-1 px-1 font-mono">{formatIv(row.egg.ivs[2])}</td>
