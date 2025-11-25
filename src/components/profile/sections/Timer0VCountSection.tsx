@@ -113,7 +113,10 @@ export function Timer0VCountSection({
           min={1}
           max={100}
           value={frame}
-          onChange={(event) => onFrameChange(parseInt(event.target.value) || 8)}
+          onChange={(event) => {
+            const parsed = parseInt(event.target.value, 10);
+            onFrameChange(Number.isNaN(parsed) ? 8 : parsed);
+          }}
           disabled={disabled}
           className="h-9 w-full min-w-0 px-2"
           placeholder="8"

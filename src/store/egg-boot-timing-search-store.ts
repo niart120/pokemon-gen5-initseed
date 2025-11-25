@@ -18,7 +18,7 @@ import {
 import type { EggGenerationConditions, ParentsIVs, IvSet, EggIndividualFilter } from '@/types/egg';
 import type { DeviceProfile } from '@/types/profile';
 import type { DailyTimeRange } from '@/types/search';
-import { EggBootTimingWorkerManager } from '@/lib/egg/boot-timing-egg-worker-manager';
+import { EggBootTimingWorkerManager } from '@/lib/egg';
 
 /**
  * 検索実行状態
