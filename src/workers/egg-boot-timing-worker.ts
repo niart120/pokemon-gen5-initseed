@@ -156,14 +156,17 @@ function buildEverstone(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildFilter(wasm: any, filter: EggBootTimingSearchParams['filter']) {
+function buildFilter(wasm: any, filter: NonNullable<EggBootTimingSearchParams['filter']>) {
   const wasmFilter = new wasm.IndividualFilterJs();
 
-  if (!filter) return wasmFilter;
-
-  for (let i = 0; i < 6; i++) {
-    const range = filter.ivRanges[i];
-    wasmFilter.set_iv_range(i, range.min, range.max);
+  // ivRanges の設定（各ステータスのIV範囲を設定）
+  if (filter.ivRanges && Array.isArray(filter.ivRanges)) {
+    for (let i = 0; i < 6; i++) {
+      const range = filter.ivRanges[i];
+      if (range && typeof range.min === 'number' && typeof range.max === 'number') {
+        wasmFilter.set_iv_range(i, range.min, range.max);
+      }
+    }
   }
 
   if (filter.nature !== undefined) {
@@ -320,8 +323,12 @@ function executeSearch(params: EggBootTimingSearchParams): EggBootTimingSearchRe
     )
   );
 
-  // IndividualFilterJs 構築（filterDisabledがtrueの場合はnullを渡す）
-  const filter = params.filterDisabled ? null : buildFilter(wasmAny, params.filter);
+  // IndividualFilterJs 構築
+  // - filterDisabled が true の場合は null を渡す
+  // - params.filter が null の場合も null を渡す（フィルター未設定）
+  const filter = params.filterDisabled || !params.filter
+    ? null
+    : buildFilter(wasmAny, params.filter);
 
   // Searcher構築 - frameはhardwareから導出
   const frameValue = HARDWARE_FRAME_VALUES[params.hardware];

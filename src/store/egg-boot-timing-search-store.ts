@@ -310,7 +310,12 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
             }
           },
           onComplete: (completion) => {
-            get()._onComplete(completion);
+            // 停止による完了か、通常完了かで処理を分岐
+            if (completion.reason === 'stopped') {
+              get()._onStopped();
+            } else {
+              get()._onComplete(completion);
+            }
           },
           onError: (error) => {
             get()._onError(error.message);
