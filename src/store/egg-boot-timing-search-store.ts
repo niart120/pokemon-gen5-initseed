@@ -285,11 +285,15 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
     getFilteredResults: () => {
       const { results, resultFilters } = get();
       return results.filter((result) => {
-        if (resultFilters.shinyOnly) {
-          return result.egg.egg.shiny !== 0;
+        // 色違いフィルター
+        if (resultFilters.shinyOnly && result.egg.egg.shiny === 0) {
+          return false;
         }
+        // 性格フィルター
         if (resultFilters.natures && resultFilters.natures.length > 0) {
-          return resultFilters.natures.includes(result.egg.egg.nature);
+          if (!resultFilters.natures.includes(result.egg.egg.nature)) {
+            return false;
+          }
         }
         return true;
       });

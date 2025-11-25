@@ -13,6 +13,10 @@ import { Input } from '@/components/ui/input';
 import { useEggBootTimingSearchStore } from '@/store/egg-boot-timing-search-store';
 import { useLocale } from '@/lib/i18n/locale-context';
 
+// デフォルト値定数
+const DEFAULT_FRAME = 8;
+const DEFAULT_ADVANCE_COUNT = 1000;
+
 export function EggSearchParamsCard() {
   const locale = useLocale();
   const { draftParams, updateDraftParams, status } = useEggBootTimingSearchStore();
@@ -99,7 +103,7 @@ export function EggSearchParamsCard() {
             max={255}
             value={draftParams.frame}
             onChange={(e) =>
-              updateDraftParams({ frame: parseInt(e.target.value, 10) || 8 })
+              updateDraftParams({ frame: parseInt(e.target.value, 10) || DEFAULT_FRAME })
             }
             disabled={isRunning}
           />
@@ -130,7 +134,7 @@ export function EggSearchParamsCard() {
             max={100000}
             value={draftParams.advanceCount}
             onChange={(e) =>
-              updateDraftParams({ advanceCount: parseInt(e.target.value, 10) || 1000 })
+              updateDraftParams({ advanceCount: parseInt(e.target.value, 10) || DEFAULT_ADVANCE_COUNT })
             }
             disabled={isRunning}
           />
