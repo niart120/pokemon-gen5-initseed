@@ -5,7 +5,7 @@ import { useEggStore } from '@/store/egg-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
-import { natureName } from '@/lib/utils/format-display';
+import { natureName, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
 import { IV_UNKNOWN, type EnumeratedEggDataWithBootTiming } from '@/types/egg';
 import {
   eggResultsPanelTitle,
@@ -63,8 +63,21 @@ export const EggResultsCard: React.FC = () => {
     return `0x${row.vcount.toString(16).toUpperCase().padStart(2, '0')}`;
   };
 
+  // Seedから方向を計算
+  const getDirection = (row: EnumeratedEggDataWithBootTiming): { arrow: string; value: number } | null => {
+    if (!row.seedSourceSeedHex) return null;
+    try {
+      const seed = BigInt(row.seedSourceSeedHex);
+      const value = calculateNeedleDirection(seed);
+      const arrow = needleDirectionArrow(value);
+      return { arrow, value };
+    } catch {
+      return null;
+    }
+  };
+
   // Boot-Timing モード時の列数計算
-  const baseColSpan = 13;
+  const baseColSpan = 15; // advance + dir + v + ability + gender + nature + shiny + 6 IVs + pid + hp
   const npcColSpan = draftParams.considerNpcConsumption ? 1 : 0;
   const bootTimingColSpan = isBootTimingMode ? 2 : 0;
   const totalColSpan = baseColSpan + npcColSpan + bootTimingColSpan;
@@ -83,6 +96,8 @@ export const EggResultsCard: React.FC = () => {
           <thead className="sticky top-0 bg-background z-10">
             <tr className="border-b">
               <th className="text-left py-1 px-2 font-bold">{getEggResultHeader('advance', locale)}</th>
+              <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('dir', locale)}</th>
+              <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('dirValue', locale)}</th>
               <th className="text-left py-1 px-2 font-bold">{getEggResultHeader('ability', locale)}</th>
               <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('gender', locale)}</th>
               <th className="text-left py-1 px-2 font-bold">{getEggResultHeader('nature', locale)}</th>
@@ -117,6 +132,8 @@ export const EggResultsCard: React.FC = () => {
               sortedResults.map((row, i) => (
                 <tr key={i} className="border-b hover:bg-muted/50" data-testid="egg-result-row">
                   <td className="py-1 px-2 font-mono">{row.advance}</td>
+                  <td className="text-center py-1 px-1">{getDirection(row)?.arrow ?? '-'}</td>
+                  <td className="text-center py-1 px-1 font-mono">{getDirection(row)?.value ?? '-'}</td>
                   <td className="py-1 px-2">{abilityLabels[row.egg.ability as 0 | 1 | 2] || row.egg.ability}</td>
                   <td className="text-center py-1 px-1">{genderLabels[row.egg.gender] || row.egg.gender}</td>
                   <td className="py-1 px-2">{natureName(row.egg.nature, locale)}</td>

@@ -222,6 +222,9 @@ export const useEggStore = create<EggStore>((set, get) => ({
       return;
     }
 
+    // LCGモード用のbaseSeedHexを保持
+    const baseSeedHex = `0x${params.baseSeed.toString(16).toUpperCase().padStart(16, '0')}`;
+
     // Worker初期化
     const manager = existingManager || new EggWorkerManager();
 
@@ -230,7 +233,13 @@ export const useEggStore = create<EggStore>((set, get) => ({
     manager
       .onResults((payload) => {
         set((state) => {
-          const newResults = [...state.results, ...payload.results];
+          // LCGモード: baseSeedHexを付与
+          const enrichedResults: EnumeratedEggDataWithBootTiming[] = payload.results.map(r => ({
+            ...r,
+            seedSourceMode: 'lcg' as const,
+            seedSourceSeedHex: baseSeedHex,
+          }));
+          const newResults = [...state.results, ...enrichedResults];
           // 上限を超えたら古い結果を削除
           if (newResults.length > MAX_DISPLAY_RESULTS) {
             return {

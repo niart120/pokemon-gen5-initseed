@@ -12,6 +12,8 @@ export const eggResultsEmptyMessage: LocaleText = {
 
 type EggResultHeaderKey =
   | 'advance'
+  | 'dir'
+  | 'dirValue'
   | 'hp'
   | 'atk'
   | 'def'
@@ -40,6 +42,18 @@ const HEADER_DEFINITIONS: Record<EggResultHeaderKey, HeaderDefinition> = {
     sr: {
       ja: 'advance',
       en: 'advance',
+    },
+  },
+  dir: {
+    label: {
+      ja: 'Dir',
+      en: 'Dir',
+    },
+  },
+  dirValue: {
+    label: {
+      ja: 'v',
+      en: 'v',
     },
   },
   hp: {
