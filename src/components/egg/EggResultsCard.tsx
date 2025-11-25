@@ -65,8 +65,8 @@ export const EggResultsCard: React.FC = () => {
 
   // Seedから方向を計算
   const getDirection = (row: EnumeratedEggDataWithBootTiming): { arrow: string; value: number } | null => {
-    // lcgSeedHexを優先使用（各個体生成時のLCG Seed）
-    const seedHex = row.lcgSeedHex;
+    // egg.lcgSeedHexを使用（各個体生成時のLCG Seed）
+    const seedHex = row.egg.lcgSeedHex;
     if (!seedHex) return null;
     try {
       const seed = BigInt(seedHex);

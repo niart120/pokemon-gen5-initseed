@@ -442,6 +442,7 @@ pub struct IVResolutionConditions {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ResolvedEgg {
+    pub lcg_seed: u64,
     pub ivs: IvSet,
     pub nature: Nature,
     pub gender: Gender,
@@ -640,6 +641,7 @@ pub fn derive_pending_egg_with_state(
 pub fn resolve_egg_iv(
     pending: &PendingEgg,
     iv_sources: &IVResolutionConditions,
+    lcg_seed: u64,
 ) -> Result<ResolvedEgg, EggIvError> {
     validate_iv_set(&iv_sources.male, true)?;
     validate_iv_set(&iv_sources.female, true)?;
@@ -657,6 +659,7 @@ pub fn resolve_egg_iv(
     let hidden_power = hidden_power_from_iv(&resolved);
 
     Ok(ResolvedEgg {
+        lcg_seed,
         ivs: resolved,
         nature: pending.nature,
         gender: pending.gender,

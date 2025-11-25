@@ -12,6 +12,7 @@ import {
 import type { EnumeratedEggDataWithBootTiming, ResolvedEgg } from '@/types/egg';
 
 const createMockEgg = (): ResolvedEgg => ({
+  lcgSeedHex: '0x0123456789ABCDEF',
   ivs: [31, 31, 31, 31, 31, 31],
   nature: 0,
   gender: 'male',
@@ -23,7 +24,6 @@ const createMockEgg = (): ResolvedEgg => ({
 
 const createMockResult = (overrides?: Partial<EnumeratedEggDataWithBootTiming>): EnumeratedEggDataWithBootTiming => ({
   advance: 100,
-  lcgSeedHex: '0x0123456789ABCDEF',
   egg: createMockEgg(),
   isStable: true,
   seedSourceMode: 'boot-timing',

@@ -20,16 +20,14 @@ pub struct ParentsIVs {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EnumeratedEggData {
     pub advance: u64,
-    pub lcg_seed: u64,
     pub egg: ResolvedEgg,
     pub is_stable: bool,
 }
 
 impl EnumeratedEggData {
-    fn new(advance: u64, lcg_seed: u64, egg: ResolvedEgg, is_stable: bool) -> Self {
+    fn new(advance: u64, egg: ResolvedEgg, is_stable: bool) -> Self {
         EnumeratedEggData {
             advance,
-            lcg_seed,
             egg,
             is_stable,
         }
@@ -106,7 +104,7 @@ impl EggSeedEnumerator {
 
             let (pending, _) =
                 derive_pending_egg_with_state(seed_after_npc, &self.conditions);
-            let resolved = resolve_egg_iv(&pending, &self.iv_sources)?;
+            let resolved = resolve_egg_iv(&pending, &self.iv_sources, rng)?;
 
             self.produced = self.produced.saturating_add(1);
 
@@ -122,7 +120,6 @@ impl EggSeedEnumerator {
             if passes {
                 return Ok(Some(EnumeratedEggData::new(
                     current_advance,
-                    rng,
                     resolved,
                     is_stable,
                 )));
@@ -277,13 +274,13 @@ impl EggSeedEnumeratorJs {
                 // Convert EnumeratedEggData to JS-compatible object
                 let obj = js_sys::Object::new();
                 js_sys::Reflect::set(&obj, &"advance".into(), &JsValue::from_f64(data.advance as f64)).ok();
-                // lcg_seed as hex string (BigInt互換)
-                let lcg_seed_hex = format!("0x{:016X}", data.lcg_seed);
-                js_sys::Reflect::set(&obj, &"lcg_seed_hex".into(), &JsValue::from_str(&lcg_seed_hex)).ok();
                 js_sys::Reflect::set(&obj, &"is_stable".into(), &JsValue::from_bool(data.is_stable)).ok();
 
                 // Create egg object
                 let egg_obj = js_sys::Object::new();
+                // lcg_seed as hex string (BigInt互換)
+                let lcg_seed_hex = format!("0x{:016X}", data.egg.lcg_seed);
+                js_sys::Reflect::set(&egg_obj, &"lcg_seed_hex".into(), &JsValue::from_str(&lcg_seed_hex)).ok();
                 let ivs = js_sys::Array::new();
                 for iv in &data.egg.ivs {
                     ivs.push(&JsValue::from(*iv));

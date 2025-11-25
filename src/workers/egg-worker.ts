@@ -193,10 +193,11 @@ function parseEnumeratedEggData(raw: any): EnumeratedEggData | null {
 
   try {
     const advance = Number(raw.advance);
-    const lcgSeedHex = raw.lcg_seed_hex ?? raw.lcgSeedHex ?? '0x0';
     const egg = raw.egg;
+    const lcgSeedHex = egg.lcg_seed_hex ?? egg.lcgSeedHex ?? '0x0';
 
     const resolvedEgg = {
+      lcgSeedHex,
       ivs: [
         egg.ivs[0], egg.ivs[1], egg.ivs[2],
         egg.ivs[3], egg.ivs[4], egg.ivs[5]
@@ -211,7 +212,6 @@ function parseEnumeratedEggData(raw: any): EnumeratedEggData | null {
 
     return {
       advance,
-      lcgSeedHex,
       egg: resolvedEgg,
       isStable: raw.is_stable ?? raw.isStable ?? false,
     };

@@ -101,6 +101,7 @@ export interface EggIndividualFilter {
  * 生成された個体データ
  */
 export interface ResolvedEgg {
+  lcgSeedHex: string;   // LCG Seed (hex string)
   ivs: IvSet;
   nature: number;         // 0-24
   gender: 'male' | 'female' | 'genderless';
@@ -115,7 +116,6 @@ export interface ResolvedEgg {
  */
 export interface EnumeratedEggData {
   advance: number;        // bigint → number に変換
-  lcgSeedHex: string;     // その個体生成時のLCG Seed (hex string)
   egg: ResolvedEgg;
   isStable: boolean;      // NPC消費考慮時の安定性
 }
