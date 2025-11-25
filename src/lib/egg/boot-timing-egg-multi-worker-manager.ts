@@ -190,8 +190,8 @@ export class EggBootTimingMultiWorkerManager {
 
     // チャンク用パラメータを構築
     const chunkStartDatetime = chunk.startDatetime;
-    // rangeSecondsをdateRangeに変換
-    const chunkEndDatetime = new Date(chunkStartDatetime.getTime() + (chunk.rangeSeconds - 1) * 1000);
+    // rangeSecondsをdateRangeに変換（チャンクの終了日時を正確に計算）
+    const chunkEndDatetime = chunk.endDatetime;
     
     const chunkParams: EggBootTimingSearchParams = {
       ...params,

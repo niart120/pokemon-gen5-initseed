@@ -359,7 +359,6 @@ describe('Egg Boot Timing Worker Manager Tests', () => {
     it('should generate correct chunks for 7-day search with filters', () => {
       // 実際の検索シナリオ: 7日間、3時間の時間帯制限
       const params = createTestParams({
-        rangeSeconds: 604800, // 7 days
         timeRange: {
           hour: { start: 12, end: 14 }, // 3時間
           minute: { start: 0, end: 59 },
@@ -390,7 +389,14 @@ describe('Egg Boot Timing Worker Manager Tests', () => {
     it('should calculate appropriate batch size for realistic search', () => {
       // 現実的な検索シナリオ: 1年×100消費
       const params = createTestParams({
-        rangeSeconds: 31536000, // 1 year
+        dateRange: {
+          startYear: 2025,
+          startMonth: 1,
+          startDay: 1,
+          endYear: 2025,
+          endMonth: 12,
+          endDay: 31,
+        },
         advanceCount: 100,
       });
 
@@ -401,7 +407,8 @@ describe('Egg Boot Timing Worker Manager Tests', () => {
       expect(batchSize).toBeLessThanOrEqual(86400); // 最大1日
       
       // 妥当なバッチ数になることを確認
-      const estimatedBatches = Math.ceil(params.rangeSeconds / batchSize);
+      const totalRangeSeconds = 365 * 24 * 60 * 60;
+      const estimatedBatches = Math.ceil(totalRangeSeconds / batchSize);
       expect(estimatedBatches).toBeLessThanOrEqual(1000);
     });
   });

@@ -312,8 +312,8 @@ function executeSearch(params: EggBootTimingSearchParams): EggBootTimingSearchRe
     )
   );
 
-  // IndividualFilterJs 構築
-  const filter = buildFilter(wasmAny, params.filter);
+  // IndividualFilterJs 構築（filterDisabledがtrueの場合はnullを渡す）
+  const filter = params.filterDisabled ? null : buildFilter(wasmAny, params.filter);
 
   // Searcher構築 - frameはデフォルト値8を使用
   const DEFAULT_FRAME = 8;
@@ -354,7 +354,8 @@ function executeSearch(params: EggBootTimingSearchParams): EggBootTimingSearchRe
       dateRange.endDay
     );
     // rangeSecondsは日付範囲から計算（終了日 - 開始日 + 1日分の秒数）
-    const daysDiff = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    // Math.floorを使用して日数を正確に計算（両端含む）
+    const daysDiff = Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
     const rangeSeconds = daysDiff * 24 * 60 * 60;
 
     const wasmResults = searcher.search_eggs_integrated_simd(

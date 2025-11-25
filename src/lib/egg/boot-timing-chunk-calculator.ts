@@ -62,7 +62,8 @@ export function calculateEggBootTimingChunks(
     dateRange.endMonth - 1,
     dateRange.endDay
   );
-  const daysDiff = Math.max(1, Math.ceil((endDatetime.getTime() - startDatetime.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+  // 日数計算: Math.floorを使用して日数を正確に計算（両端含む）
+  const daysDiff = Math.max(1, Math.floor((endDatetime.getTime() - startDatetime.getTime()) / (1000 * 60 * 60 * 24)) + 1);
   const totalSeconds = daysDiff * 24 * 60 * 60;
   const secondsPerWorker = Math.ceil(totalSeconds / maxWorkers);
 
@@ -136,7 +137,8 @@ export function calculateBatchSize(params: EggBootTimingSearchParams): number {
     dateRange.endMonth - 1,
     dateRange.endDay
   );
-  const daysDiff = Math.max(1, Math.ceil((endDatetime.getTime() - startDatetime.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+  // 日数計算: Math.floorを使用して日数を正確に計算（両端含む）
+  const daysDiff = Math.max(1, Math.floor((endDatetime.getTime() - startDatetime.getTime()) / (1000 * 60 * 60 * 24)) + 1);
   const totalRangeSeconds = daysDiff * 24 * 60 * 60;
 
   // 検索範囲から目標バッチ数に基づくバッチサイズを計算
