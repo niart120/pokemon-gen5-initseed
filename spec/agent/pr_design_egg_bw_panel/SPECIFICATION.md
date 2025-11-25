@@ -1179,57 +1179,87 @@ function toStatRange(input: FilterIvRangeInputState): StatRange {
 - すべてのUI文字列は i18n 対応
 - `src/lib/i18n/strings/egg-*.ts` にラベル定義
 
-## 10. 拡張設計: 起動時間関連機能
+## 10. 拡張設計: 起動時間列挙モード（Boot Timing Enumeration）
 
 ### 10.1 概要
-起動時間に関連する機能として、以下の2つの異なるモードが必要となる:
+起動時間に関連する機能として、EggGenerationPanel において以下の2つの入力モードを提供する:
 
-| モード | 目的 | 入力 | 出力 |
-|--------|------|------|------|
-| **起動時間列挙モード** | 指定した起動時間候補（Timer0/VCount範囲）から個体を列挙 | 起動時間パラメータ + フィルター | 各候補の個体一覧 |
-| **起動時間検索モード** | 条件を満たす個体が得られる起動時間を検索 | 目標条件 + 日時範囲 + 消費範囲 | 条件を満たす起動時間リスト |
+| モード | SeedSourceMode | 入力 | 出力 |
+|--------|----------------|------|------|
+| **LCG直接入力** | `'lcg'` | 初期Seed（16進数） | 単一Seedからの個体一覧 |
+| **起動時間列挙** | `'boot-timing'` | 起動時間パラメータ（Timer0/VCount範囲） | 各候補Seedからの個体一覧（統合表示） |
 
-### 10.2 起動時間列挙モード（Boot Timing Enumeration）
+### 10.2 アーキテクチャ
 
-#### 10.2.1 概要
-起動時間から初期Seedを導出し、複数のTimer0/VCount候補に対してタマゴ個体生成を実行する機能。
-既存の GenerationPanel の boot-timing モードと同様のアーキテクチャを採用する。
+#### 10.2.1 既存実装パターンの踏襲
+既存の `GenerationPanel` で実装済みの boot-timing モードと同様のアーキテクチャを採用する。
+
+**参照ファイル**:
+- `src/lib/generation/boot-timing-derivation.ts` - Seed導出ロジック
+- `src/store/modules/boot-timing-runner.ts` - DerivedSeedRunState 管理
+- `src/store/utils/boot-timing-draft.ts` - BootTimingDraft ユーティリティ
+- `src/components/generation/boot-timing/BootTimingControls.tsx` - UIコンポーネント
+- `src/hooks/generation/useBootTimingDraft.ts` - 状態管理フック
 
 #### 10.2.2 アーキテクチャ図
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    EggGenerationPanel                                │
-│  ┌────────────────┐  ┌───────────────────────────────────┐  │
-│  │ Mode Switch    │  │  起動時間パラメータ / Seed入力    │  │
-│  │ [LCG] [Boot]   │  │  (BootTimingDraft or SeedHex)     │  │
-│  └────────────────┘  └───────────────────────────────────┘  │
-└────────────────────────────────┬────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                       EggGenerationPanel                              │
+│  ┌─────────────────────────────────────────────────────────────────┐ │
+│  │                      EggParamsCard                               │ │
+│  │  ┌──────────────────┐  ┌──────────────────────────────────────┐ │ │
+│  │  │  Seed Source     │  │  Seed入力 / BootTiming パラメータ     │ │ │
+│  │  │  [LCG] [Boot]    │  │  (モードに応じて切替)                │ │ │
+│  │  └──────────────────┘  └──────────────────────────────────────┘ │ │
+│  │                                                                  │ │
+│  │  ┌─────────────────────────────────────────────────────────────┐│ │
+│  │  │ LCG モード時:                                                ││ │
+│  │  │   - 初期Seed入力 (16進数)                                   ││ │
+│  │  │                                                              ││ │
+│  │  │ Boot-Timing モード時:                                        ││ │
+│  │  │   - タイムスタンプ入力 (datetime-local)                     ││ │
+│  │  │   - キー入力設定ダイアログ                                  ││ │
+│  │  │   - プロファイル情報表示                                     ││ │
+│  │  │     (MAC, Timer0/VCount範囲, ROM Region, Hardware)          ││ │
+│  │  └─────────────────────────────────────────────────────────────┘│ │
+│  └─────────────────────────────────────────────────────────────────┘ │
+└────────────────────────────────┬─────────────────────────────────────┘
                                  │
                                  ▼
         ┌────────────────────────────────────────────────┐
         │              egg-store.ts                       │
         │  seedSourceMode: 'lcg' | 'boot-timing'         │
-        │  bootTimingDraft?: BootTimingDraft             │
+        │  bootTimingDraft: EggBootTimingDraft           │
+        │  derivedSeedState: DerivedEggSeedRunState|null │
         └────────────────────────┬───────────────────────┘
                                  │
          ┌───────────────────────┴───────────────────────┐
-         │ if seedSourceMode === 'boot-timing'            │
-         ▼                                                │
-┌────────────────────────────────┐                        │
-│ deriveBootTimingEggSeedJobs()  │                        │
-│ - Timer0/VCount範囲からSeed導出 │                        │
-│ - 複数のDerivedSeedJobを生成    │                        │
-└────────────────┬───────────────┘                        │
-                 │                                        │
-                 ▼                                        ▼
+         │ startGeneration() 実行時                       │
+         │                                                │
+         ▼ (lcg モード)                                   ▼ (boot-timing モード)
+┌──────────────────────┐                    ┌──────────────────────────────┐
+│ 単一Seed実行          │                    │ deriveBootTimingEggSeedJobs()│
+│ params.baseSeed使用   │                    │ - Timer0/VCount範囲から     │
+│                      │                    │   候補Seedリストを生成       │
+└──────────┬───────────┘                    └──────────────┬───────────────┘
+           │                                               │
+           │                                               ▼
+           │                                  ┌────────────────────────────┐
+           │                                  │ DerivedEggSeedRunState作成 │
+           │                                  │ - jobs: DerivedEggSeedJob[]│
+           │                                  │ - cursor: 0                │
+           │                                  │ - total: jobs.length       │
+           │                                  └──────────────┬─────────────┘
+           │                                                 │
+           ▼                                                 ▼
         ┌────────────────────────────────────────────────────┐
         │              EggWorkerManager                       │
         │  - 単一Seedモード: 1つのジョブを実行               │
-        │  - 起動時間モード: 複数ジョブを順次実行            │
-        │    (DerivedSeedRunState で進捗管理)               │
+        │  - 起動時間モード: ジョブを cursor順に実行         │
+        │    完了後、次のジョブへ自動遷移                    │
         └────────────────────────┬───────────────────────────┘
                                  │
-                                 ▼ (同一Worker)
+                                 ▼ (同一Worker再利用)
                     ┌─────────────────────────┐
                     │    egg-worker.ts         │
                     │  EggSeedEnumerator使用   │
@@ -1244,17 +1274,41 @@ function toStatRange(input: FilterIvRangeInputState): StatRange {
 
 #### 10.2.3 処理フロー
 
-1. **UI入力**: ユーザーが `seedSourceMode = 'boot-timing'` を選択
-2. **BootTimingDraft収集**: タイムスタンプ、Timer0/VCount範囲、MACアドレス等
-3. **Seed導出**: `deriveBootTimingEggSeedJobs()` で候補Seedリストを生成
-4. **順次実行**: EggWorkerManager が DerivedSeedRunState を管理し、各Seedに対して個体生成
-5. **結果集約**: 全Seed候補の結果を統合して表示
+**LCG モード**:
+1. ユーザーが `seedSourceMode = 'lcg'` を選択（デフォルト）
+2. 16進数で初期Seedを入力
+3. 開始ボタン押下
+4. EggWorkerManager が単一ジョブを実行
+5. 結果をテーブル表示
 
-#### 10.2.4 型定義拡張
+**Boot-Timing モード**:
+1. ユーザーが `seedSourceMode = 'boot-timing'` を選択
+2. タイムスタンプを入力（datetime-local）
+3. キー入力設定（ダイアログで設定）
+4. プロファイル情報を確認（MAC, Timer0/VCount範囲等）
+5. 開始ボタン押下
+6. `deriveBootTimingEggSeedJobs()` で候補Seedリストを生成
+7. `DerivedEggSeedRunState` を初期化
+8. EggWorkerManager が各ジョブを順次実行
+9. 各ジョブの結果を統合表示（Timer0/VCount列付き）
+10. 全ジョブ完了で終了
+
+### 10.3 型定義
+
+#### 10.3.1 ファイル: `src/types/egg.ts` への追加
 
 ```typescript
+import type { Hardware, ROMRegion } from '@/types/rom';
+import type { KeyName } from '@/lib/utils/key-input';
+
 /**
- * 起動時間検索用パラメータ (UI入力)
+ * Seed入力モード (GenerationPanelと同様)
+ */
+export type EggSeedSourceMode = 'lcg' | 'boot-timing';
+
+/**
+ * 起動時間パラメータ (UI入力)
+ * 既存 BootTimingDraft と同じ構造を採用
  */
 export interface EggBootTimingDraft {
   timestampIso?: string;
@@ -1267,51 +1321,804 @@ export interface EggBootTimingDraft {
 }
 
 /**
+ * 導出されたSeedのメタデータ
+ */
+export interface DerivedEggSeedMetadata {
+  readonly seedSourceMode: 'boot-timing';
+  readonly derivedSeedIndex: number;
+  readonly timer0: number;
+  readonly vcount: number;
+  readonly keyMask: number;
+  readonly keyCode: number;
+  readonly bootTimestampIso: string;
+  readonly macAddress: readonly [number, number, number, number, number, number];
+  readonly seedSourceSeedHex: string;
+}
+
+/**
  * 導出されたSeedジョブ
  */
 export interface DerivedEggSeedJob {
   params: EggGenerationParams;
-  metadata: {
-    seedSourceMode: 'boot-timing';
-    derivedSeedIndex: number;
-    timer0: number;
-    vcount: number;
-    keyMask: number;
-    bootTimestampIso: string;
-    macAddress: readonly [number, number, number, number, number, number];
-    seedSourceSeedHex: string;
-  };
+  metadata: DerivedEggSeedMetadata;
 }
 
 /**
- * 起動時間検索の進捗状態
+ * Boot-Timing実行時の集計情報
+ */
+export interface DerivedEggSeedAggregate {
+  processedCount: number;
+  filteredCount: number;
+  elapsedMs: number;
+}
+
+/**
+ * 起動時間列挙の進捗状態
  */
 export interface DerivedEggSeedRunState {
   readonly jobs: DerivedEggSeedJob[];
   readonly cursor: number;
   readonly total: number;
-  readonly aggregate: {
-    processedCount: number;
-    filteredCount: number;
-    elapsedMs: number;
-  };
+  readonly aggregate: DerivedEggSeedAggregate;
   readonly abortRequested: boolean;
+}
+
+/**
+ * 列挙された個体データ（boot-timing用拡張）
+ */
+export interface EnumeratedEggDataWithBootTiming extends EnumeratedEggData {
+  // Boot-Timing モード時に付与されるメタデータ
+  seedSourceMode?: EggSeedSourceMode;
+  derivedSeedIndex?: number;
+  seedSourceSeedHex?: string;
+  timer0?: number;
+  vcount?: number;
+  bootTimestampIso?: string;
+  keyInputNames?: KeyName[];
+  macAddress?: readonly [number, number, number, number, number, number];
 }
 ```
 
-### 10.3 起動時間列挙の実装方針
-- 既存の `src/lib/generation/boot-timing-derivation.ts` のパターンを踏襲
-- `src/lib/egg/boot-timing-egg-derivation.ts` として同様の機能を実装
-- EggWorkerManager に `startBootTimingGeneration()` メソッドを追加
-- 結果テーブルに Timer0/VCount 情報を表示可能にする
+#### 10.3.2 パラメータ型への追加
 
-### 10.4 起動時間検索モード（Boot Timing Search）- SearchPanel類似機能
+```typescript
+/**
+ * UI用16進数パラメータ (boot-timing対応)
+ */
+export interface EggGenerationParamsHex {
+  baseSeedHex: string;
+  userOffsetHex: string;
+  count: number;
+  conditions: EggGenerationConditions;
+  parents: ParentsIVs;
+  filter: EggIndividualFilter | null;
+  considerNpcConsumption: boolean;
+  gameMode: number;
+  // Boot-Timing 対応追加
+  seedSourceMode: EggSeedSourceMode;
+  bootTiming: EggBootTimingDraft;
+}
+```
 
-#### 10.4.1 概要
-SearchPanel と類似の機能で、一定期間・一定消費数範囲内で条件を満たす起動時刻が存在するかを検索する。
-これは「起動時間列挙」とは逆方向の検索であり、目標個体条件から起動時間を逆算する。
+### 10.4 Seed導出ロジック
 
-#### 10.4.2 入力と出力
+#### 10.4.1 ファイル: `src/lib/egg/boot-timing-egg-derivation.ts`
+
+```typescript
+import { SeedCalculator } from '@/lib/core/seed-calculator';
+import type { EggGenerationParams, EggGenerationParamsHex, EggSeedSourceMode } from '@/types/egg';
+import type { SearchConditions } from '@/types/search';
+import { KEY_INPUT_DEFAULT, keyMaskToKeyCode } from '@/lib/utils/key-input';
+import { hexParamsToEggParams } from '@/types/egg';
+
+const seedCalculator = new SeedCalculator();
+export const EGG_BOOT_TIMING_PAIR_LIMIT = 512;
+
+export interface DerivedEggSeedMetadata {
+  readonly seedSourceMode: 'boot-timing';
+  readonly derivedSeedIndex: number;
+  readonly timer0: number;
+  readonly vcount: number;
+  readonly keyMask: number;
+  readonly keyCode: number;
+  readonly bootTimestampIso: string;
+  readonly macAddress: readonly [number, number, number, number, number, number];
+  readonly seedSourceSeedHex: string;
+}
+
+export interface DerivedEggSeedJob {
+  params: EggGenerationParams;
+  metadata: DerivedEggSeedMetadata;
+}
+
+export type EggBootTimingDerivationResult =
+  | { ok: true; jobs: DerivedEggSeedJob[] }
+  | { ok: false; error: string };
+
+/**
+ * Boot-Timing パラメータから複数のSeedジョブを導出
+ */
+export function deriveBootTimingEggSeedJobs(
+  draft: EggGenerationParamsHex,
+  options?: { maxPairs?: number }
+): EggBootTimingDerivationResult {
+  const planResult = buildEggBootTimingDerivationPlan(draft, options);
+  if (!planResult.ok) {
+    return planResult;
+  }
+  const entries = buildEggBootTimingMessageEntries(planResult.plan);
+  const jobs = entries.map(entry => buildDerivedEggSeedJob(draft, entry));
+  return { ok: true, jobs };
+}
+
+interface EggBootTimingDerivationPlan {
+  timestampIso: string;
+  datetime: Date;
+  timer0Range: { min: number; max: number };
+  vcountRange: { min: number; max: number };
+  baseConditions: Partial<SearchConditions>;
+  keyMask: number;
+  keyCode: number;
+  macAddress: readonly [number, number, number, number, number, number];
+  gameMode: number;
+}
+
+interface EggBootTimingMessageEntry {
+  seed: bigint;
+  metadata: DerivedEggSeedMetadata;
+}
+
+type EggBootTimingPlanResult =
+  | { ok: true; plan: EggBootTimingDerivationPlan }
+  | { ok: false; error: string };
+
+export function buildEggBootTimingDerivationPlan(
+  draft: EggGenerationParamsHex,
+  options?: { maxPairs?: number },
+): EggBootTimingPlanResult {
+  const bootTiming = draft.bootTiming;
+  if (!bootTiming) {
+    return { ok: false, error: 'boot-timing data unavailable' };
+  }
+
+  const timestampIso = bootTiming.timestampIso;
+  if (!timestampIso) {
+    return { ok: false, error: 'boot-timing timestamp missing' };
+  }
+  const datetime = new Date(timestampIso);
+  if (Number.isNaN(datetime.getTime())) {
+    return { ok: false, error: 'boot-timing timestamp invalid' };
+  }
+
+  const timer0Range = bootTiming.timer0Range;
+  const vcountRange = bootTiming.vcountRange;
+  if (!timer0Range || !vcountRange) {
+    return { ok: false, error: 'timer0/vcount range missing' };
+  }
+  const timer0Span = timer0Range.max - timer0Range.min + 1;
+  const vcountSpan = vcountRange.max - vcountRange.min + 1;
+  if (timer0Span <= 0 || vcountSpan <= 0) {
+    return { ok: false, error: 'timer0/vcount range invalid' };
+  }
+  const pairCount = timer0Span * vcountSpan;
+  const maxPairs = options?.maxPairs ?? EGG_BOOT_TIMING_PAIR_LIMIT;
+  if (pairCount > maxPairs) {
+    return { ok: false, error: `timer0/vcount combinations exceed limit (${pairCount} > ${maxPairs})` };
+  }
+
+  const macAddress = bootTiming.macAddress;
+  const keyMask = bootTiming.keyMask ?? KEY_INPUT_DEFAULT;
+  const keyCode = keyMaskToKeyCode(keyMask);
+
+  return {
+    ok: true,
+    plan: {
+      timestampIso,
+      datetime,
+      timer0Range,
+      vcountRange,
+      baseConditions: {
+        romRegion: bootTiming.romRegion,
+        hardware: bootTiming.hardware,
+        keyInput: keyMask,
+        macAddress: Array.from(macAddress),
+      },
+      keyMask,
+      keyCode,
+      macAddress,
+      gameMode: draft.gameMode,
+    },
+  };
+}
+
+export function buildEggBootTimingMessageEntries(
+  plan: EggBootTimingDerivationPlan,
+  calculator: SeedCalculator = seedCalculator,
+): EggBootTimingMessageEntry[] {
+  const entries: EggBootTimingMessageEntry[] = [];
+  let derivedSeedIndex = 0;
+  
+  for (let timer0 = plan.timer0Range.min; timer0 <= plan.timer0Range.max; timer0 += 1) {
+    for (let vcount = plan.vcountRange.min; vcount <= plan.vcountRange.max; vcount += 1) {
+      const message = calculator.generateMessage(
+        plan.baseConditions as SearchConditions,
+        timer0,
+        vcount,
+        plan.datetime,
+        plan.keyCode,
+      );
+      const { lcgSeed } = calculator.calculateSeed(message);
+      const seedSourceSeedHex = `0x${lcgSeed.toString(16).toUpperCase().padStart(16, '0')}`;
+      
+      entries.push({
+        seed: lcgSeed,
+        metadata: {
+          seedSourceMode: 'boot-timing',
+          derivedSeedIndex,
+          timer0,
+          vcount,
+          keyMask: plan.keyMask,
+          keyCode: plan.keyCode,
+          bootTimestampIso: plan.timestampIso,
+          macAddress: [...plan.macAddress] as DerivedEggSeedMetadata['macAddress'],
+          seedSourceSeedHex,
+        },
+      });
+      derivedSeedIndex += 1;
+    }
+  }
+  return entries;
+}
+
+export function buildDerivedEggSeedJob(
+  draft: EggGenerationParamsHex,
+  entry: EggBootTimingMessageEntry,
+): DerivedEggSeedJob {
+  const nextHex: EggGenerationParamsHex = {
+    ...draft,
+    baseSeedHex: entry.seed.toString(16),
+  };
+  const params = hexParamsToEggParams(nextHex);
+  return {
+    params,
+    metadata: entry.metadata,
+  };
+}
+```
+
+### 10.5 Boot-Timing Runner モジュール
+
+#### 10.5.1 ファイル: `src/store/modules/egg-boot-timing-runner.ts`
+
+```typescript
+import type { EggCompletion } from '@/types/egg';
+import type { DerivedEggSeedJob, DerivedEggSeedAggregate, DerivedEggSeedRunState } from '@/types/egg';
+
+export function createDerivedEggSeedState(jobs: DerivedEggSeedJob[]): DerivedEggSeedRunState {
+  return {
+    jobs,
+    cursor: 0,
+    total: jobs.length,
+    aggregate: {
+      processedCount: 0,
+      filteredCount: 0,
+      elapsedMs: 0,
+    },
+    abortRequested: false,
+  };
+}
+
+export function shouldAppendDerivedEggResults(state: DerivedEggSeedRunState | null): boolean {
+  return Boolean(state && state.cursor > 0);
+}
+
+export function currentDerivedEggSeedJob(state: DerivedEggSeedRunState | null): DerivedEggSeedJob | null {
+  if (!state) return null;
+  return state.jobs[state.cursor] ?? null;
+}
+
+export function markDerivedEggSeedAbort(state: DerivedEggSeedRunState | null): DerivedEggSeedRunState | null {
+  if (!state) return null;
+  if (state.abortRequested) return state;
+  return { ...state, abortRequested: true };
+}
+
+export interface DerivedEggSeedAdvanceResult {
+  nextState: DerivedEggSeedRunState | null;
+  nextJob: DerivedEggSeedJob | null;
+  finalCompletion: EggCompletion | null;
+  aggregate: DerivedEggSeedAggregate;
+}
+
+export function advanceDerivedEggSeedState(
+  state: DerivedEggSeedRunState,
+  completion: EggCompletion,
+): DerivedEggSeedAdvanceResult {
+  const aggregate: DerivedEggSeedAggregate = {
+    processedCount: state.aggregate.processedCount + completion.totalCount,
+    filteredCount: state.aggregate.filteredCount + completion.filteredCount,
+    elapsedMs: state.aggregate.elapsedMs + completion.elapsedMs,
+  };
+  const nextCursor = state.cursor + 1;
+  const hasMore = nextCursor < state.total;
+  
+  if (!hasMore) {
+    const finalCompletion: EggCompletion = {
+      ...completion,
+      totalCount: aggregate.processedCount,
+      filteredCount: aggregate.filteredCount,
+      elapsedMs: aggregate.elapsedMs,
+    };
+    return {
+      nextState: null,
+      nextJob: null,
+      finalCompletion,
+      aggregate,
+    };
+  }
+
+  return {
+    nextState: {
+      ...state,
+      cursor: nextCursor,
+      aggregate,
+    },
+    nextJob: state.jobs[nextCursor],
+    finalCompletion: null,
+    aggregate,
+  };
+}
+```
+
+### 10.6 UI コンポーネント設計
+
+#### 10.6.1 EggParamsCard への Boot-Timing 統合
+
+**レイアウト構造**:
+```
+EggParamsCard
+├── Target Section (目標設定)
+│   ├── Seed Source Toggle: [LCG] [Boot-Timing]
+│   │
+│   ├── (LCG モード時)
+│   │   └── 初期Seed入力フィールド (16進数)
+│   │
+│   ├── (Boot-Timing モード時)
+│   │   ├── タイムスタンプ入力 (datetime-local)
+│   │   ├── キー入力設定 (表示 + 設定ダイアログボタン)
+│   │   └── プロファイル情報表示
+│   │       ├── MAC Address
+│   │       ├── Timer0 Range
+│   │       ├── VCount Range
+│   │       ├── ROM Region
+│   │       └── Hardware
+│   │
+│   ├── 開始advance入力
+│   └── 列挙上限入力
+│
+├── Parent Info Section (親個体情報)
+│   └── ... (既存)
+│
+├── Generation Conditions Section (生成条件)
+│   └── ... (既存)
+│
+└── Other Settings Section (その他設定)
+    └── ... (既存)
+```
+
+#### 10.6.2 Boot-Timing コントロールの再利用
+
+既存の `BootTimingControls` コンポーネントを再利用する:
+
+```typescript
+// src/components/egg/EggParamsCard.tsx 内での使用例
+
+import { BootTimingControls, type BootTimingLabels } from '@/components/generation/boot-timing/BootTimingControls';
+
+// EggParamsCard 内
+{isBootTimingMode ? (
+  <BootTimingControls
+    locale={locale}
+    disabled={disabled}
+    isActive={isBootTimingMode}
+    labels={bootTimingLabels}
+  />
+) : (
+  <div className="flex flex-col gap-1 min-w-0">
+    <Label className="text-xs" htmlFor="base-seed">{localized.labels.baseSeed}</Label>
+    <Input
+      id="base-seed"
+      className="font-mono h-9"
+      disabled={disabled}
+      value={hexDraft.baseSeedHex ?? '0'}
+      onChange={e => updateDraft({ baseSeedHex: e.target.value })}
+      placeholder={localized.labels.baseSeedPlaceholder}
+    />
+  </div>
+)}
+```
+
+#### 10.6.3 Boot-Timing 用フック
+
+`useBootTimingDraft` フックを egg 用にラップして使用:
+
+```typescript
+// src/hooks/egg/useEggBootTimingDraft.ts
+
+import { useBootTimingDraft } from '@/hooks/generation/useBootTimingDraft';
+import { useEggStore } from '@/store/egg-store';
+
+export function useEggBootTimingDraft(options: { locale: 'ja' | 'en'; disabled: boolean; isActive: boolean }) {
+  const { draftParams, updateDraftParams } = useEggStore();
+  
+  // 既存の useBootTimingDraft を内部的に利用し、
+  // egg-store 専用のアダプタとして機能
+  return useBootTimingDraft({
+    ...options,
+    bootTimingDraft: draftParams.bootTiming,
+    onUpdate: (partial) => updateDraftParams({ bootTiming: partial }),
+  });
+}
+```
+
+### 10.7 Store 拡張
+
+#### 10.7.1 egg-store.ts への追加フィールド
+
+```typescript
+// src/store/egg-store.ts
+
+interface EggStore {
+  // 既存フィールド
+  draftParams: EggGenerationParamsHex;
+  // ...
+
+  // Boot-Timing 対応追加
+  derivedSeedState: DerivedEggSeedRunState | null;
+  activeSeedMetadata: DerivedEggSeedMetadata | null;
+}
+
+const DEFAULT_DRAFT: EggGenerationParamsHex = {
+  // 既存
+  baseSeedHex: '0',
+  userOffsetHex: '0',
+  count: 100,
+  // ...
+  
+  // Boot-Timing 対応追加
+  seedSourceMode: 'lcg',
+  bootTiming: createDefaultEggBootTimingDraft(),
+};
+
+function createDefaultEggBootTimingDraft(): EggBootTimingDraft {
+  return {
+    timestampIso: undefined,
+    keyMask: 0,
+    timer0Range: { min: 0, max: 0 },
+    vcountRange: { min: 0, max: 0 },
+    romRegion: 'JPN',
+    hardware: 'DS',
+    macAddress: [0, 0, 0, 0, 0, 0],
+  };
+}
+```
+
+#### 10.7.2 startGeneration アクションの Boot-Timing 対応
+
+```typescript
+startGeneration: async () => {
+  const { draftParams, workerManager } = get();
+  
+  // バリデーション
+  get().validateDraft();
+  const { validationErrors, params } = get();
+  if (validationErrors.length > 0 || !params) {
+    return;
+  }
+  
+  // Boot-Timing モード判定
+  if (draftParams.seedSourceMode === 'boot-timing') {
+    // Boot-Timing モード: 複数Seedジョブを導出
+    const derivationResult = deriveBootTimingEggSeedJobs(draftParams);
+    if (!derivationResult.ok) {
+      set({ status: 'error', errorMessage: derivationResult.error });
+      return;
+    }
+    
+    const derivedState = createDerivedEggSeedState(derivationResult.jobs);
+    const firstJob = derivedState.jobs[0];
+    if (!firstJob) {
+      set({ status: 'error', errorMessage: 'No seed jobs generated' });
+      return;
+    }
+    
+    set({
+      derivedSeedState: derivedState,
+      activeSeedMetadata: firstJob.metadata,
+      results: [],
+      status: 'starting',
+    });
+    
+    // 最初のジョブを開始
+    await startSingleJob(firstJob);
+  } else {
+    // LCG モード: 単一Seed実行
+    set({
+      derivedSeedState: null,
+      activeSeedMetadata: null,
+      results: [],
+      status: 'starting',
+    });
+    
+    await startSingleJob({ params, metadata: null });
+  }
+},
+```
+
+### 10.8 結果テーブルの Boot-Timing 対応
+
+#### 10.8.1 追加列の表示
+
+Boot-Timing モード時は結果テーブルに以下の列を追加表示:
+
+| 列名 | 説明 | 表示条件 |
+|------|------|---------|
+| Timer0 | 該当個体の Timer0 値 | Boot-Timing モード時のみ |
+| VCount | 該当個体の VCount 値 | Boot-Timing モード時のみ |
+| Seed | 導出された初期Seed | Boot-Timing モード時のみ |
+
+#### 10.8.2 Timer0/VCount フィルタリング
+
+Boot-Timing モード時は、結果テーブルに対して Timer0/VCount でのフィルタリングを有効化する。
+
+**モード別フィルター有効状態**:
+
+| フィルター項目 | LCG モード | Boot-Timing モード |
+|---------------|-----------|-------------------|
+| IV範囲 | ✅ 有効 | ✅ 有効 |
+| 性格 | ✅ 有効 | ✅ 有効 |
+| 性別 | ✅ 有効 | ✅ 有効 |
+| 特性 | ✅ 有効 | ✅ 有効 |
+| 色違い | ✅ 有効 | ✅ 有効 |
+| **Timer0** | ❌ **disabled** | ✅ 有効 |
+| **VCount** | ❌ **disabled** | ✅ 有効 |
+| めざパタイプ/威力 | ✅ 有効 | ✅ 有効 |
+
+**フィルター状態の型定義**:
+
+```typescript
+// src/store/egg-store.ts
+
+export interface EggFilters {
+  // 共通フィルター（常に有効）
+  ivRanges: [StatRange, StatRange, StatRange, StatRange, StatRange, StatRange];
+  natureIds: number[];
+  genders: ('male' | 'female' | 'genderless')[];
+  abilityIndices: (0 | 1)[];
+  shinyMode: 'all' | 'shiny' | 'non-shiny';
+  hiddenPowerType?: number;
+  hiddenPowerPower?: number;
+  
+  // Boot-Timing モード専用フィルター
+  timer0Filter?: string;   // 16進数文字列（例: "10A0"）、LCGモード時は無視
+  vcountFilter?: string;   // 16進数文字列（例: "5C"）、LCGモード時は無視
+}
+```
+
+**UIコンポーネント実装**:
+
+```typescript
+// src/components/egg/EggFilterCard.tsx
+
+// Boot-Timing モード判定
+const isBootTimingMode = seedSourceMode === 'boot-timing';
+
+// Timer0/VCount フィルター入力
+<div className="flex flex-col gap-1 min-w-0">
+  <Label className="text-xs" htmlFor="timer0-filter">Timer0</Label>
+  <Input
+    id="timer0-filter"
+    className="font-mono h-9"
+    disabled={!isBootTimingMode}  // LCGモード時は disabled
+    value={filters.timer0Filter ?? ''}
+    onChange={e => updateFilters({ timer0Filter: e.target.value })}
+    placeholder={isBootTimingMode ? "例: 10A0" : "Boot-Timing時のみ"}
+  />
+</div>
+
+<div className="flex flex-col gap-1 min-w-0">
+  <Label className="text-xs" htmlFor="vcount-filter">VCount</Label>
+  <Input
+    id="vcount-filter"
+    className="font-mono h-9"
+    disabled={!isBootTimingMode}  // LCGモード時は disabled
+    value={filters.vcountFilter ?? ''}
+    onChange={e => updateFilters({ vcountFilter: e.target.value })}
+    placeholder={isBootTimingMode ? "例: 5C" : "Boot-Timing時のみ"}
+  />
+</div>
+```
+
+**フィルタリングロジック**:
+
+```typescript
+// src/lib/egg/egg-filter.ts
+
+export function applyEggFilters(
+  results: EnumeratedEggDataWithBootTiming[],
+  filters: EggFilters,
+  seedSourceMode: EggSeedSourceMode,
+): EnumeratedEggDataWithBootTiming[] {
+  return results.filter(result => {
+    // 共通フィルター適用
+    if (!matchesIvRanges(result.ivs, filters.ivRanges)) return false;
+    if (!matchesNature(result.nature, filters.natureIds)) return false;
+    if (!matchesGender(result.gender, filters.genders)) return false;
+    if (!matchesAbility(result.ability, filters.abilityIndices)) return false;
+    if (!matchesShiny(result.isShiny, filters.shinyMode)) return false;
+    if (!matchesHiddenPower(result.hiddenPower, filters)) return false;
+    
+    // Boot-Timing モード専用フィルター
+    if (seedSourceMode === 'boot-timing') {
+      if (filters.timer0Filter && !matchesTimer0(result.timer0, filters.timer0Filter)) {
+        return false;
+      }
+      if (filters.vcountFilter && !matchesVcount(result.vcount, filters.vcountFilter)) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+}
+
+function matchesTimer0(timer0: number | undefined, filter: string): boolean {
+  if (!timer0) return false;
+  const filterValue = parseInt(filter, 16);
+  if (Number.isNaN(filterValue)) return true; // 無効な入力は全てマッチ
+  return timer0 === filterValue;
+}
+
+function matchesVcount(vcount: number | undefined, filter: string): boolean {
+  if (!vcount) return false;
+  const filterValue = parseInt(filter, 16);
+  if (Number.isNaN(filterValue)) return true; // 無効な入力は全てマッチ
+  return vcount === filterValue;
+}
+```
+
+#### 10.8.3 EggResultsCard への実装
+
+```typescript
+// src/components/egg/EggResultsCard.tsx
+
+// Boot-Timing モード判定
+const isBootTimingMode = seedSourceMode === 'boot-timing';
+
+// テーブルヘッダー
+const tableHeaders = [
+  'Advance',
+  ...(isBootTimingMode ? ['Timer0', 'VCount', 'Seed'] : []),
+  'IVs',
+  'Nature',
+  'Ability',
+  'Gender',
+  'Shiny',
+  'HP Type',
+  'HP Power',
+];
+
+// 結果行のレンダリング
+{results.map(result => (
+  <tr key={result.advance}>
+    <td>{result.advance}</td>
+    {isBootTimingMode && (
+      <>
+        <td>{result.timer0?.toString(16).toUpperCase()}</td>
+        <td>{result.vcount?.toString(16).toUpperCase()}</td>
+        <td className="font-mono">{result.seedSourceSeedHex}</td>
+      </>
+    )}
+    {/* ... 他の列 */}
+  </tr>
+))}
+```
+
+### 10.9 バリデーション
+
+#### 10.9.1 Boot-Timing バリデーション
+
+```typescript
+function validateEggBootTimingInputs(draft: EggBootTimingDraft): string[] {
+  const errors: string[] = [];
+  
+  if (!draft.timestampIso) {
+    errors.push('boot-timing timestamp required');
+  } else {
+    const time = Date.parse(draft.timestampIso);
+    if (Number.isNaN(time)) {
+      errors.push('boot-timing timestamp invalid');
+    }
+  }
+
+  const timer0Min = draft.timer0Range.min;
+  const timer0Max = draft.timer0Range.max;
+  if (timer0Min < 0 || timer0Min > 0xFFFF || timer0Max < 0 || timer0Max > 0xFFFF) {
+    errors.push('timer0 range out of bounds');
+  } else if (timer0Min > timer0Max) {
+    errors.push('timer0 range invalid');
+  }
+
+  const vcountMin = draft.vcountRange.min;
+  const vcountMax = draft.vcountRange.max;
+  if (vcountMin < 0 || vcountMin > 0xFF || vcountMax < 0 || vcountMax > 0xFF) {
+    errors.push('vcount range out of bounds');
+  } else if (vcountMin > vcountMax) {
+    errors.push('vcount range invalid');
+  }
+
+  const timer0Span = timer0Max - timer0Min + 1;
+  const vcountSpan = vcountMax - vcountMin + 1;
+  const pairCount = timer0Span > 0 && vcountSpan > 0 ? timer0Span * vcountSpan : 0;
+  if (pairCount <= 0) {
+    errors.push('timer0/vcount range produces no combinations');
+  } else if (pairCount > EGG_BOOT_TIMING_PAIR_LIMIT) {
+    errors.push(`timer0/vcount combinations exceed limit (${pairCount} > ${EGG_BOOT_TIMING_PAIR_LIMIT})`);
+  }
+
+  return errors;
+}
+```
+
+### 10.10 実装ファイル一覧
+
+| ファイル | 種別 | 説明 |
+|---------|------|------|
+| `src/types/egg.ts` | 型定義 | Boot-Timing関連型を追加 |
+| `src/lib/egg/boot-timing-egg-derivation.ts` | 新規 | Seed導出ロジック |
+| `src/store/modules/egg-boot-timing-runner.ts` | 新規 | DerivedSeedRunState管理 |
+| `src/store/egg-store.ts` | 修正 | Boot-Timing状態・アクション追加 |
+| `src/hooks/egg/useEggBootTimingDraft.ts` | 新規 | Boot-Timing用フック |
+| `src/components/egg/EggParamsCard.tsx` | 修正 | Boot-Timingコントロール統合 |
+| `src/components/egg/EggResultsCard.tsx` | 修正 | Timer0/VCount列追加 |
+
+### 10.11 テスト戦略
+
+#### 10.11.1 単体テスト
+
+- `boot-timing-egg-derivation.test.ts`: Seed導出ロジックのテスト
+- `egg-boot-timing-runner.test.ts`: RunState管理のテスト
+- バリデーション関数のテスト
+
+#### 10.11.2 統合テスト
+
+- Boot-Timing モード選択 → Seed導出 → Worker実行 → 結果表示のE2Eフロー
+- 複数Seedジョブの順次実行確認
+- 結果の統合表示確認
+
+### 10.12 実装順序
+
+1. **Phase 1**: 型定義追加 (`src/types/egg.ts`)
+2. **Phase 2**: Seed導出ロジック実装 (`boot-timing-egg-derivation.ts`)
+3. **Phase 3**: RunState管理実装 (`egg-boot-timing-runner.ts`)
+4. **Phase 4**: Store拡張 (`egg-store.ts`)
+5. **Phase 5**: フック実装 (`useEggBootTimingDraft.ts`)
+6. **Phase 6**: UIコンポーネント修正 (`EggParamsCard.tsx`, `EggResultsCard.tsx`)
+7. **Phase 7**: テスト作成・実行
+
+---
+
+## 11. 将来拡張: 起動時間検索モード（Boot Timing Search）
+
+### 11.1 概要
+起動時間検索モードは、目標個体条件から起動時間を逆算する機能である。
+これは EggGenerationPanel とは別の `EggSearchPanel` として将来実装予定。
+
+本機能は第10章の「起動時間列挙モード」とは逆方向の検索であり、以下の点で異なる:
+- **列挙モード**: 起動時間 → 個体一覧
+- **検索モード**: 目標条件 → 起動時間リスト
+
+### 11.2 入力と出力
 - **入力**:
   - 目標個体条件（IV、性格、性別、特性、色違い等）
   - 日時範囲（開始日時 ～ 終了日時）
@@ -1321,7 +2128,7 @@ SearchPanel と類似の機能で、一定期間・一定消費数範囲内で�
 - **出力**: 
   - 条件を満たす起動時間・Timer0・VCount・消費数のリスト
 
-#### 10.4.3 アーキテクチャ図
+### 11.3 アーキテクチャ図
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                  EggSearchPanel (将来実装)                   │
@@ -1365,7 +2172,7 @@ SearchPanel と類似の機能で、一定期間・一定消費数範囲内で�
         └────────────────────────────────────────────────┘
 ```
 
-#### 10.4.4 検索フロー
+### 11.4 検索フロー
 
 1. **条件入力**: 目標個体条件、日時範囲、消費範囲を入力
 2. **検索空間構築**: 日時×Timer0×VCount の組み合わせを列挙
@@ -1373,7 +2180,7 @@ SearchPanel と類似の機能で、一定期間・一定消費数範囲内で�
 4. **結果収集**: 条件を満たす起動時間・消費数のリストを生成
 5. **結果表示**: 発見した起動時間候補を表示
 
-#### 10.4.5 型定義
+### 11.5 型定義
 
 ```typescript
 /**
@@ -1414,19 +2221,21 @@ export interface EggSearchResult {
 }
 ```
 
-#### 10.4.6 実装方針（将来実装）
+### 11.6 実装方針（将来実装）
 - 既存の SearchPanel のアーキテクチャを参考に設計
 - 別途 `EggSearchPanel` として独立実装（EggGenerationPanel とは別Panel）
 - 専用の `egg-search-worker.ts` と `EggSearchWorkerManager` を用意
 - 並列処理による検索高速化
 
-## 11. 拡張設計: BW2版 EggPanel
+---
 
-### 11.1 概要
+## 12. 拡張設計: BW2版 EggPanel
+
+### 12.1 概要
 BW2 のタマゴ生成ロジックは BW とは**根本的に異なる**ため、WASM レイヤーから完全に独立した実装が必要となる。
 BW2 用の `EggBW2SeedEnumerator` (仮称) は未実装であり、将来的に独立して開発される予定。
 
-### 11.2 BW と BW2 のロジック差異
+### 12.2 BW と BW2 のロジック差異
 
 | 項目 | BW | BW2 |
 |------|-----|------|
@@ -1435,7 +2244,7 @@ BW2 用の `EggBW2SeedEnumerator` (仮称) は未実装であり、将来的に�
 | **PID 決定** | `EggSeedEnumerator` 内で一体的に処理 | **独立したインタフェース** (未実装) |
 | **WASM 実装** | `EggSeedEnumerator` | **`EggBW2IVGenerator` + `EggBW2PIDGenerator`** (仮称、未実装) |
 
-### 11.3 アーキテクチャ図（将来構想）
+### 12.3 アーキテクチャ図（将来構想）
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -1471,9 +2280,9 @@ BW2 用の `EggBW2SeedEnumerator` (仮称) は未実装であり、将来的に�
 └─────────────────────┘    └─────────────────────────────────┘
 ```
 
-### 11.4 共通化と差分の方針
+### 12.4 共通化と差分の方針
 
-#### 11.4.1 共通化可能なコンポーネント（UI層のみ）
+#### 12.4.1 共通化可能なコンポーネント（UI層のみ）
 | レイヤー | コンポーネント | 共通化可否 |
 |---------|---------------|-----------|
 | UI | EggResultsCard | ⚠️ 一部共通化可能（結果表示形式が同じ場合） |
@@ -1481,7 +2290,7 @@ BW2 用の `EggBW2SeedEnumerator` (仮称) は未実装であり、将来的に�
 | UI | 基本レイアウト | ⚠️ スタイルは共通化可能 |
 | 型定義 | ResolvedEgg (結果型) | ⚠️ 出力形式が揃えば共通化可能 |
 
-#### 11.4.2 分離が必要なコンポーネント
+#### 12.4.2 分離が必要なコンポーネント
 | レイヤー | コンポーネント | 分離理由 |
 |---------|---------------|---------|
 | **WASM** | Enumerator/Generator | **ロジックが根本的に異なる** |
@@ -1491,7 +2300,7 @@ BW2 用の `EggBW2SeedEnumerator` (仮称) は未実装であり、将来的に�
 | **UI** | EggParamsCard | **入力パラメータが異なる** |
 | **UI** | EggFilterCard | **フィルター条件が異なる可能性** |
 
-### 11.5 パラメータの流用可能性
+### 12.5 パラメータの流用可能性
 
 一部のUIパラメータは流用可能だが、バックエンドへの渡し方は完全に異なる:
 
@@ -1515,7 +2324,7 @@ interface EggBW2Params extends CommonEggUIParams {
 }
 ```
 
-### 11.6 BW2 WASM インタフェース（将来構想）
+### 12.6 BW2 WASM インタフェース（将来構想）
 
 BW2 では個体値生成と性格値生成が独立したインタフェースを持つ予定:
 
@@ -1535,7 +2344,7 @@ interface EggBW2PIDGenerator {
 // これらは EggSeedEnumerator (BW用) とは完全に異なる実装となる
 ```
 
-### 11.7 実装順序（将来）
+### 12.7 実装順序（将来）
 
 1. **Phase A**: BW2 WASM ロジックの設計・仕様策定
 2. **Phase B**: `EggBW2IVGenerator`, `EggBW2PIDGenerator` の Rust 実装
@@ -1543,7 +2352,7 @@ interface EggBW2PIDGenerator {
 4. **Phase D**: `EggBW2Store`, `EggBW2GenerationPanel` の UI 実装
 5. **Phase E**: テスト・ドキュメント更新
 
-### 11.8 注意事項
+### 12.8 注意事項
 
 - BW2 の WASM 実装は**未実装**であり、本仕様書は将来的なアーキテクチャ構想を示すもの
 - BW と BW2 で `EggSeedEnumerator` を共有する設計は**採用しない**
