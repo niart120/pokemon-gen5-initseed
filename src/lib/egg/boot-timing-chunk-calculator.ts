@@ -89,26 +89,32 @@ export function calculateEggBootTimingChunks(
 
 /**
  * バッチサイズ計算
- * メモリと応答性のバランスを考慮してバッチサイズを決定
+ *
+ * 想定される検索シナリオ:
+ * - 片親6V(他方不明)で色違い(1/8192)×希望性格(1/25)×夢特性(2/5)を検索
+ * - 検索範囲: 1年(31,536,000秒) × 100消費程度
+ * - Timer0/VCount/KeyCodeの組み合わせ数: 通常数個〜数十個程度
+ *
+ * 設計方針:
+ * - 進捗更新のオーバーヘッドを抑えるため、十分な時間範囲をまとめて処理
+ * - 最小バッチサイズは3600秒(1時間)を確保し、大規模検索での効率を維持
+ * - UIの応答性より検索効率を優先（検索自体が長時間かかる想定）
  */
 export function calculateBatchSize(params: EggBootTimingSearchParams): number {
-  // 基本バッチサイズ: 60秒分
-  const BASE_BATCH_SECONDS = 60;
+  // 想定される大規模検索シナリオ（1年検索）に対応するバッチサイズ
+  // 1年 = 31,536,000秒を適切な数のバッチに分割
+  // 目標: 100〜1000程度のバッチ数で全体を処理
+  const TARGET_BATCH_COUNT = 500;
 
-  // Timer0/VCount/KeyCodeの組み合わせ数
-  const timer0Count = params.timer0Range.max - params.timer0Range.min + 1;
-  const vcountCount = params.vcountRange.max - params.vcountRange.min + 1;
-  const keyCombinations = countValidKeyCombinations(params.keyInputMask);
+  // 最小バッチサイズ: 1時間(3600秒) - 大規模検索での効率を確保
+  const MIN_BATCH_SECONDS = 3600;
 
-  const combinationsPerSecond = timer0Count * vcountCount * keyCombinations;
+  // 最大バッチサイズ: 1日(86400秒) - メモリ使用量の上限
+  const MAX_BATCH_SECONDS = 86400;
 
-  // 組み合わせ数が多い場合はバッチサイズを小さくして応答性を確保
-  if (combinationsPerSecond > 1000) {
-    return Math.max(
-      10,
-      Math.floor(BASE_BATCH_SECONDS / (combinationsPerSecond / 100))
-    );
-  }
+  // 検索範囲から目標バッチ数に基づくバッチサイズを計算
+  const calculatedBatchSize = Math.ceil(params.rangeSeconds / TARGET_BATCH_COUNT);
 
-  return BASE_BATCH_SECONDS;
+  // 最小・最大の範囲内に収める
+  return Math.max(MIN_BATCH_SECONDS, Math.min(MAX_BATCH_SECONDS, calculatedBatchSize));
 }
