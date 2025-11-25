@@ -64,6 +64,9 @@ describe('generateIndividualValues with seed templates', () => {
       const others = [values.h, values.b, values.c, values.d, values.s];
       expect(others).toEqual([31, 31, 31, 31, 31]);
     },
+    'V0VVVV': values => {
+      expect(values).toEqual({ h: 31, a: 0, b: 31, c: 31, d: 31, s: 31 });
+    },
     'V0VVV0': values => {
       expect(values).toEqual({ h: 31, a: 0, b: 31, c: 31, d: 31, s: 0 });
     },

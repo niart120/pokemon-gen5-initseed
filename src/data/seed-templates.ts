@@ -146,6 +146,57 @@ export const SEED_TEMPLATES: SeedTemplate[] = [
     ],
   },
 
+  {
+    name: 'BW 孵化 6V',
+    description: 'ブラック・ホワイト 孵化（消費7） 6V（5種類）',
+    seeds: [
+      0xCCDA2EAF,
+      0x95943C17,
+      0x9E443917,
+      0x288144C5,
+      0x8B39431B,
+    ],
+  },
+  {
+    name: 'BW 孵化 5VA0',
+    description: 'ブラック・ホワイト 孵化（消費7） 5VA0（2種類）',
+    seeds: [
+      0x25B4C159,
+      0xC825A2F0,
+    ],
+  },
+  {
+    name: 'BW 孵化 5VS0',
+    description: 'ブラック・ホワイト 孵化（消費7） 5VS0（8種類）',
+    seeds: [
+      0x479B959F,
+      0xE1C396FB,
+      0x08CBE836,
+      0x33AC78EE,
+      0x50B3EC3D,
+      0x26F4371B,
+      0x435E8BB3,
+      0x52E6FE61,
+    ],
+  },
+  {
+    name: 'BW 孵化 V0VVV0',
+    description: 'ブラック・ホワイト 孵化（消費7） V0VVV0（4種類）',
+    seeds: [
+      0x63E3D233,
+      0x6737B419,
+      0xB4F1C576,
+      0xEE571EEC,
+    ],
+  },
+  {
+    name: 'BW 孵化 V2UVVV めざ氷',
+    description: 'ブラック・ホワイト 孵化（消費7） V2UVVV（めざ氷 1種類）',
+    seeds: [
+      0xD07DE3A6,
+    ],
+  },
+
   // 既存のテストサンプルはそのまま残す
   {
     name: 'テストサンプル',
