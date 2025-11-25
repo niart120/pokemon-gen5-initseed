@@ -105,8 +105,139 @@ export const EggFilterCard: React.FC = () => {
 
       {draftParams.filter && (
         <>
+          {/* 性格・性別・特性・色違い: 4列グリッド */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {/* 性格フィルター */}
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">{eggFilterNatureLabel[locale]}</Label>
+              <Select
+                value={filter.nature !== undefined ? String(filter.nature) : 'none'}
+                onValueChange={(v) => updateFilter({ nature: v !== 'none' ? Number(v) : undefined })}
+                disabled={disabled}
+              >
+                <SelectTrigger className="text-xs">
+                  <SelectValue placeholder={eggFilterNoSelection[locale]} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none" className="text-xs">{eggFilterNoSelection[locale]}</SelectItem>
+                  {Array.from({ length: DOMAIN_NATURE_COUNT }, (_, i) => (
+                    <SelectItem key={i} value={String(i)} className="text-xs">
+                      {natureName(i, locale)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 性別フィルター */}
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">{eggFilterGenderLabel[locale]}</Label>
+              <Select
+                value={filter.gender || 'none'}
+                onValueChange={(v) => updateFilter({ gender: v !== 'none' ? v as 'male' | 'female' | 'genderless' : undefined })}
+                disabled={disabled}
+              >
+                <SelectTrigger className="text-xs">
+                  <SelectValue placeholder={eggFilterNoSelection[locale]} />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(genderOptions).map(([value, label]) => (
+                    <SelectItem key={value} value={value} className="text-xs">
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 特性フィルター */}
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">{eggFilterAbilityLabel[locale]}</Label>
+              <Select
+                value={filter.ability !== undefined ? String(filter.ability) : 'none'}
+                onValueChange={(v) => updateFilter({ ability: v !== 'none' ? Number(v) as 0 | 1 | 2 : undefined })}
+                disabled={disabled}
+              >
+                <SelectTrigger className="text-xs">
+                  <SelectValue placeholder={eggFilterNoSelection[locale]} />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(abilityOptions).map(([value, label]) => (
+                    <SelectItem key={value} value={value} className="text-xs">
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 色違いフィルター */}
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">{eggFilterShinyLabel[locale]}</Label>
+              <Select
+                value={filter.shiny !== undefined ? String(filter.shiny) : 'none'}
+                onValueChange={(v) => updateFilter({ shiny: v !== 'none' ? Number(v) as 0 | 1 | 2 : undefined })}
+                disabled={disabled}
+              >
+                <SelectTrigger className="text-xs">
+                  <SelectValue placeholder={eggFilterNoSelection[locale]} />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(shinyOptions).map(([value, label]) => (
+                    <SelectItem key={value} value={value} className="text-xs">
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* めざパフィルター: 2列グリッド */}
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            {/* めざパタイプフィルター */}
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">{eggFilterHpTypeLabel[locale]}</Label>
+              <Select
+                value={filter.hiddenPowerType !== undefined ? String(filter.hiddenPowerType) : 'none'}
+                onValueChange={(v) => updateFilter({ hiddenPowerType: v !== 'none' ? Number(v) : undefined })}
+                disabled={disabled}
+              >
+                <SelectTrigger className="text-xs">
+                  <SelectValue placeholder={eggFilterNoSelection[locale]} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none" className="text-xs">{eggFilterNoSelection[locale]}</SelectItem>
+                  {hpTypeNames.map((name, i) => (
+                    <SelectItem key={i} value={String(i)} className="text-xs">
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* めざパ威力フィルター */}
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">{eggFilterHpPowerLabel[locale]}</Label>
+              <Input
+                type="number"
+                min={30}
+                max={70}
+                value={filter.hiddenPowerPower ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  updateFilter({ hiddenPowerPower: v ? Math.max(30, Math.min(70, parseInt(v))) : undefined });
+                }}
+                disabled={disabled}
+                placeholder={eggFilterNoSelection[locale]}
+                className="text-xs"
+              />
+            </div>
+          </div>
+
           {/* IV範囲フィルター */}
-          <section className="space-y-2" role="group">
+          <section className="space-y-2 mt-3" role="group">
             <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggFilterIvRangeTitle[locale]}</h4>
             <div className="space-y-2">
               {STAT_NAMES.map((stat, i) => (
@@ -137,131 +268,6 @@ export const EggFilterCard: React.FC = () => {
               ))}
             </div>
           </section>
-
-          {/* 性格フィルター */}
-          <div className="flex flex-col gap-1 mt-3">
-            <Label className="text-xs">{eggFilterNatureLabel[locale]}</Label>
-            <Select
-              value={filter.nature !== undefined ? String(filter.nature) : 'none'}
-              onValueChange={(v) => updateFilter({ nature: v !== 'none' ? Number(v) : undefined })}
-              disabled={disabled}
-            >
-              <SelectTrigger className="text-xs">
-                <SelectValue placeholder={eggFilterNoSelection[locale]} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none" className="text-xs">{eggFilterNoSelection[locale]}</SelectItem>
-                {Array.from({ length: DOMAIN_NATURE_COUNT }, (_, i) => (
-                  <SelectItem key={i} value={String(i)} className="text-xs">
-                    {natureName(i, locale)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 性別フィルター */}
-          <div className="flex flex-col gap-1 mt-3">
-            <Label className="text-xs">{eggFilterGenderLabel[locale]}</Label>
-            <Select
-              value={filter.gender || 'none'}
-              onValueChange={(v) => updateFilter({ gender: v !== 'none' ? v as 'male' | 'female' | 'genderless' : undefined })}
-              disabled={disabled}
-            >
-              <SelectTrigger className="text-xs">
-                <SelectValue placeholder={eggFilterNoSelection[locale]} />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(genderOptions).map(([value, label]) => (
-                  <SelectItem key={value} value={value} className="text-xs">
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 特性フィルター */}
-          <div className="flex flex-col gap-1 mt-3">
-            <Label className="text-xs">{eggFilterAbilityLabel[locale]}</Label>
-            <Select
-              value={filter.ability !== undefined ? String(filter.ability) : 'none'}
-              onValueChange={(v) => updateFilter({ ability: v !== 'none' ? Number(v) as 0 | 1 | 2 : undefined })}
-              disabled={disabled}
-            >
-              <SelectTrigger className="text-xs">
-                <SelectValue placeholder={eggFilterNoSelection[locale]} />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(abilityOptions).map(([value, label]) => (
-                  <SelectItem key={value} value={value} className="text-xs">
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 色違いフィルター */}
-          <div className="flex flex-col gap-1 mt-3">
-            <Label className="text-xs">{eggFilterShinyLabel[locale]}</Label>
-            <Select
-              value={filter.shiny !== undefined ? String(filter.shiny) : 'none'}
-              onValueChange={(v) => updateFilter({ shiny: v !== 'none' ? Number(v) as 0 | 1 | 2 : undefined })}
-              disabled={disabled}
-            >
-              <SelectTrigger className="text-xs">
-                <SelectValue placeholder={eggFilterNoSelection[locale]} />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(shinyOptions).map(([value, label]) => (
-                  <SelectItem key={value} value={value} className="text-xs">
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* めざパタイプフィルター */}
-          <div className="flex flex-col gap-1 mt-3">
-            <Label className="text-xs">{eggFilterHpTypeLabel[locale]}</Label>
-            <Select
-              value={filter.hiddenPowerType !== undefined ? String(filter.hiddenPowerType) : 'none'}
-              onValueChange={(v) => updateFilter({ hiddenPowerType: v !== 'none' ? Number(v) : undefined })}
-              disabled={disabled}
-            >
-              <SelectTrigger className="text-xs">
-                <SelectValue placeholder={eggFilterNoSelection[locale]} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none" className="text-xs">{eggFilterNoSelection[locale]}</SelectItem>
-                {hpTypeNames.map((name, i) => (
-                  <SelectItem key={i} value={String(i)} className="text-xs">
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* めざパ威力フィルター */}
-          <div className="flex flex-col gap-1 mt-3">
-            <Label className="text-xs">{eggFilterHpPowerLabel[locale]}</Label>
-            <Input
-              type="number"
-              min={30}
-              max={70}
-              value={filter.hiddenPowerPower ?? ''}
-              onChange={(e) => {
-                const v = e.target.value;
-                updateFilter({ hiddenPowerPower: v ? Math.max(30, Math.min(70, parseInt(v))) : undefined });
-              }}
-              disabled={disabled}
-              placeholder={eggFilterNoSelection[locale]}
-              className="text-xs"
-            />
-          </div>
         </>
       )}
     </PanelCard>
