@@ -37,7 +37,7 @@ fn resolve_egg_iv_propagates_unknown_values() {
     let female: IvSet = [0, 1, IV_VALUE_UNKNOWN, 3, 4, 5];
     let rng: IvSet = [1, 2, 3, 4, 5, 6];
 
-    let resolved = resolve_egg_iv(&pending, &IVResolutionConditions { male, female, rng })
+    let resolved = resolve_egg_iv(&pending, &IVResolutionConditions { male, female, rng }, 0)
         .expect("resolve succeeds");
 
     assert_eq!(resolved.ivs[StatIndex::Hp.as_usize()], 1);
@@ -56,7 +56,7 @@ fn matches_filter_handles_unknown_ranges() {
     let female: IvSet = [IV_VALUE_UNKNOWN; 6];
     let rng: IvSet = [10, 11, 12, 13, 14, 15];
 
-    let resolved = resolve_egg_iv(&pending, &IVResolutionConditions { male, female, rng })
+    let resolved = resolve_egg_iv(&pending, &IVResolutionConditions { male, female, rng }, 0)
         .expect("resolve succeeds");
 
     let mut loose_filter = IndividualFilter::default();
@@ -84,6 +84,7 @@ fn hidden_power_computation_and_filters() {
     }
 
     let resolved_known = ResolvedEgg {
+        lcg_seed: 0,
         ivs: maxed,
         nature: Nature::Hardy,
         gender: Gender::Male,
@@ -112,6 +113,7 @@ fn hidden_power_computation_and_filters() {
     ));
 
     let resolved_unknown = ResolvedEgg {
+        lcg_seed: 0,
         ivs: unresolved,
         nature: Nature::Hardy,
         gender: Gender::Female,

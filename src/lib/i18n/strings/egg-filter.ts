@@ -36,13 +36,13 @@ export const eggFilterShinyLabel: LocaleText = {
 };
 
 export const eggFilterHpTypeLabel: LocaleText = {
-  ja: 'めざパタイプ',
-  en: 'Hidden Power Type',
+  ja: 'めざパ(タイプ)',
+  en: 'Hidden Power (Type)',
 };
 
 export const eggFilterHpPowerLabel: LocaleText = {
-  ja: 'めざパ威力 (30-70)',
-  en: 'Hidden Power Power (30-70)',
+  ja: 'めざパ(威力)',
+  en: 'Hidden Power (Power)',
 };
 
 export const eggFilterNoSelection: LocaleText = {
@@ -83,28 +83,21 @@ export const eggFilterAbilityOptions: LocaleMap<Record<'none' | '0' | '1' | '2',
 export const eggFilterShinyOptions: LocaleMap<Record<'none' | '0' | '1' | '2', string>> = {
   ja: {
     'none': '指定なし',
-    '0': '通常',
-    '1': '正方形色違い',
-    '2': '星型色違い',
+    '0': '-',
+    '1': '◇',
+    '2': '☆',
   },
   en: {
     'none': 'Any',
-    '0': 'Normal',
-    '1': 'Square Shiny',
-    '2': 'Star Shiny',
+    '0': '-',
+    '1': '◇',
+    '2': '☆',
   },
 };
 
 export const eggFilterIvUnknownLabel: LocaleText = {
   ja: '任意',
   en: 'Any',
-};
-
-// === Boot-Timing Filters ===
-
-export const eggFilterBootTimingTitle: LocaleText = {
-  ja: 'Boot-Timing フィルター',
-  en: 'Boot-Timing Filters',
 };
 
 export const eggFilterTimer0Label: LocaleText = {
