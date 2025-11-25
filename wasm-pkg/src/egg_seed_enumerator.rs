@@ -1,10 +1,12 @@
 use crate::egg_iv::{
     derive_pending_egg_with_state, matches_filter, resolve_egg_iv, resolve_npc_advance, EggIvError,
-    GenerationConditions, IVResolutionConditions, IndividualFilter, IvSet, ResolvedEgg,
+    GenerationConditions, GenerationConditionsJs, IVResolutionConditions, IndividualFilter,
+    IndividualFilterJs, IvSet, ResolvedEgg,
 };
 use crate::mt19937::Mt19937;
 use crate::offset_calculator::{calculate_game_offset, GameMode};
 use crate::personality_rng::PersonalityRNG;
+use wasm_bindgen::prelude::*;
 
 const NPC_FRAME_THRESHOLD: u8 = 96;
 const NPC_FRAME_SLACK: u8 = 30;
@@ -171,5 +173,151 @@ mod tests {
         let first = generate_rng_iv_set(mt_seed);
         let second = generate_rng_iv_set(mt_seed);
         assert_eq!(first, second);
+    }
+}
+
+// ========================================
+// WASM-bindgen wrappers for JS interop
+// ========================================
+
+/// WASM wrapper for ParentsIVs
+#[wasm_bindgen]
+pub struct ParentsIVsJs {
+    male: IvSet,
+    female: IvSet,
+}
+
+#[wasm_bindgen]
+impl ParentsIVsJs {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> ParentsIVsJs {
+        ParentsIVsJs {
+            male: [0; 6],
+            female: [0; 6],
+        }
+    }
+
+    #[wasm_bindgen(setter = male)]
+    pub fn set_male(&mut self, ivs: Vec<u8>) {
+        if ivs.len() >= 6 {
+            self.male = [ivs[0], ivs[1], ivs[2], ivs[3], ivs[4], ivs[5]];
+        }
+    }
+
+    #[wasm_bindgen(setter = female)]
+    pub fn set_female(&mut self, ivs: Vec<u8>) {
+        if ivs.len() >= 6 {
+            self.female = [ivs[0], ivs[1], ivs[2], ivs[3], ivs[4], ivs[5]];
+        }
+    }
+}
+
+impl ParentsIVsJs {
+    pub fn to_internal(&self) -> ParentsIVs {
+        ParentsIVs {
+            male: self.male,
+            female: self.female,
+        }
+    }
+}
+
+impl Default for ParentsIVsJs {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// WASM wrapper for EggSeedEnumerator
+#[wasm_bindgen]
+pub struct EggSeedEnumeratorJs {
+    inner: EggSeedEnumerator,
+}
+
+#[wasm_bindgen]
+impl EggSeedEnumeratorJs {
+    #[wasm_bindgen(constructor)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        base_seed: u64,
+        user_offset: u64,
+        count: u32,
+        conditions: &GenerationConditionsJs,
+        parents: &ParentsIVsJs,
+        filter: Option<IndividualFilterJs>,
+        consider_npc_consumption: bool,
+        game_mode: GameMode,
+    ) -> EggSeedEnumeratorJs {
+        let internal_filter = filter.as_ref().map(|f| f.to_internal());
+        let internal_conditions = conditions.to_internal();
+        let internal_parents = parents.to_internal();
+
+        EggSeedEnumeratorJs {
+            inner: EggSeedEnumerator::new(
+                base_seed,
+                user_offset,
+                count,
+                internal_conditions,
+                internal_parents,
+                internal_filter,
+                consider_npc_consumption,
+                game_mode,
+            ),
+        }
+    }
+
+    /// Returns the next egg as a JsValue or undefined if exhausted
+    pub fn next_egg(&mut self) -> JsValue {
+        match self.inner.next_egg() {
+            Ok(Some(data)) => {
+                // Convert EnumeratedEggData to JS-compatible object
+                let obj = js_sys::Object::new();
+                js_sys::Reflect::set(&obj, &"advance".into(), &JsValue::from_f64(data.advance as f64)).ok();
+                js_sys::Reflect::set(&obj, &"is_stable".into(), &JsValue::from_bool(data.is_stable)).ok();
+
+                // Create egg object
+                let egg_obj = js_sys::Object::new();
+                let ivs = js_sys::Array::new();
+                for iv in &data.egg.ivs {
+                    ivs.push(&JsValue::from(*iv));
+                }
+                js_sys::Reflect::set(&egg_obj, &"ivs".into(), &ivs).ok();
+                js_sys::Reflect::set(&egg_obj, &"nature".into(), &JsValue::from(data.egg.nature as u8)).ok();
+                js_sys::Reflect::set(&egg_obj, &"gender".into(), &JsValue::from(match data.egg.gender {
+                    crate::egg_iv::Gender::Male => 0u8,
+                    crate::egg_iv::Gender::Female => 1u8,
+                    crate::egg_iv::Gender::Genderless => 2u8,
+                })).ok();
+                js_sys::Reflect::set(&egg_obj, &"ability".into(), &JsValue::from(data.egg.ability as u8)).ok();
+                js_sys::Reflect::set(&egg_obj, &"shiny".into(), &JsValue::from(data.egg.shiny as u8)).ok();
+                js_sys::Reflect::set(&egg_obj, &"pid".into(), &JsValue::from(data.egg.pid)).ok();
+
+                // Hidden power
+                let hp_obj = match data.egg.hidden_power {
+                    crate::egg_iv::HiddenPowerInfo::Known { r#type, power } => {
+                        let hp = js_sys::Object::new();
+                        js_sys::Reflect::set(&hp, &"type".into(), &"known".into()).ok();
+                        js_sys::Reflect::set(&hp, &"hp_type".into(), &JsValue::from(r#type as u8)).ok();
+                        js_sys::Reflect::set(&hp, &"power".into(), &JsValue::from(power)).ok();
+                        hp
+                    }
+                    crate::egg_iv::HiddenPowerInfo::Unknown => {
+                        let hp = js_sys::Object::new();
+                        js_sys::Reflect::set(&hp, &"type".into(), &"unknown".into()).ok();
+                        hp
+                    }
+                };
+                js_sys::Reflect::set(&egg_obj, &"hidden_power".into(), &hp_obj).ok();
+
+                js_sys::Reflect::set(&obj, &"egg".into(), &egg_obj).ok();
+                obj.into()
+            }
+            Ok(None) => JsValue::UNDEFINED,
+            Err(_) => JsValue::UNDEFINED,
+        }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn remaining(&self) -> u32 {
+        self.inner.remaining()
     }
 }

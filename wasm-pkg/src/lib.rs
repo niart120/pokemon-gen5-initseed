@@ -19,12 +19,16 @@ mod tests;
 pub use datetime_codes::{DateCodeGenerator, TimeCodeGenerator};
 pub use egg_iv::{
     derive_pending_egg, derive_pending_egg_with_state, hidden_power_from_iv, matches_filter,
-    resolve_egg_iv, resolve_npc_advance, AbilitySlot, EggIvError, EverstonePlan, Gender,
-    GenderRatio, GenerationConditions, HiddenPowerInfo, HiddenPowerType, IVResolutionConditions,
-    IndividualFilter, InheritanceSlot, IvSet, IvValue, Nature, ParentRole, PendingEgg, ResolvedEgg,
-    StatIndex, StatRange, TrainerIds, IV_VALUE_UNKNOWN,
+    resolve_egg_iv, resolve_npc_advance, AbilitySlot, EggIvError, EverstonePlan, EverstonePlanJs,
+    Gender, GenderRatio, GenerationConditions, GenerationConditionsJs, HiddenPowerInfo,
+    HiddenPowerType, IVResolutionConditions, IndividualFilter, IndividualFilterJs, InheritanceSlot,
+    IvSet, IvValue, Nature, ParentRole, PendingEgg, ResolvedEgg, StatIndex, StatRange, TrainerIds,
+    IV_VALUE_UNKNOWN,
 };
-pub use egg_seed_enumerator::{derive_mt_seed, EggSeedEnumerator, EnumeratedEggData, ParentsIVs};
+pub use egg_seed_enumerator::{
+    derive_mt_seed, EggSeedEnumerator, EggSeedEnumeratorJs, EnumeratedEggData, ParentsIVs,
+    ParentsIVsJs,
+};
 pub use encounter_calculator::{EncounterCalculator, EncounterType, GameVersion};
 pub use integrated_search::{IntegratedSeedSearcher, SearchResult};
 pub use offset_calculator::{

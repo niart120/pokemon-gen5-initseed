@@ -87,9 +87,9 @@ async function ensureWasm() {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildEverstone(wasm: any, plan: EggGenerationParams['conditions']['everstone']) {
   if (plan.type === 'none') {
-    return wasm.EverstonePlan.None;
+    return wasm.EverstonePlanJs.none();
   } else {
-    return wasm.EverstonePlan.fixed(plan.nature);
+    return wasm.EverstonePlanJs.fixed(plan.nature);
   }
 }
 
@@ -97,7 +97,7 @@ function buildEverstone(wasm: any, plan: EggGenerationParams['conditions']['ever
 function buildFilter(wasm: any, filter: EggGenerationParams['filter']) {
   if (!filter) return null;
 
-  const wasmFilter = new wasm.IndividualFilter();
+  const wasmFilter = new wasm.IndividualFilterJs();
 
   // IV範囲設定
   for (let i = 0; i < 6; i++) {
@@ -195,8 +195,8 @@ function executeEnumeration(params: EggGenerationParams) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const wasmAny = wasm as any;
 
-  if (!wasmAny.EggSeedEnumerator) {
-    throw new Error('EggSeedEnumerator not exposed in WASM');
+  if (!wasmAny.EggSeedEnumeratorJs) {
+    throw new Error('EggSeedEnumeratorJs not exposed in WASM');
   }
 
   const results: EnumeratedEggData[] = [];
@@ -206,30 +206,30 @@ function executeEnumeration(params: EggGenerationParams) {
 
   const startTime = performance.now();
 
-  // ParentsIVs 構築
-  const parentsIVs = new wasmAny.ParentsIVs();
+  // ParentsIVsJs 構築
+  const parentsIVs = new wasmAny.ParentsIVsJs();
   parentsIVs.male = params.parents.male;
   parentsIVs.female = params.parents.female;
 
-  // GenerationConditions 構築
-  const conditions = new wasmAny.GenerationConditions();
+  // GenerationConditionsJs 構築
+  const conditions = new wasmAny.GenerationConditionsJs();
   conditions.has_nidoran_flag = params.conditions.hasNidoranFlag;
-  conditions.everstone = buildEverstone(wasmAny, params.conditions.everstone);
+  conditions.set_everstone(buildEverstone(wasmAny, params.conditions.everstone));
   conditions.uses_ditto = params.conditions.usesDitto;
   conditions.allow_hidden_ability = params.conditions.allowHiddenAbility;
   conditions.female_parent_has_hidden = params.conditions.femaleParentHasHidden;
   conditions.reroll_count = params.conditions.rerollCount;
-  conditions.trainer_ids = new wasmAny.TrainerIds(params.conditions.tid, params.conditions.sid);
-  conditions.gender_ratio = new wasmAny.GenderRatio(
+  conditions.set_trainer_ids(new wasmAny.TrainerIds(params.conditions.tid, params.conditions.sid));
+  conditions.set_gender_ratio(new wasmAny.GenderRatio(
     params.conditions.genderRatio.threshold,
     params.conditions.genderRatio.genderless
-  );
+  ));
 
-  // IndividualFilter 構築
+  // IndividualFilterJs 構築
   const filter = buildFilter(wasmAny, params.filter);
 
-  // EggSeedEnumerator 作成
-  const enumerator = new wasmAny.EggSeedEnumerator(
+  // EggSeedEnumeratorJs 作成
+  const enumerator = new wasmAny.EggSeedEnumeratorJs(
     params.baseSeed,
     params.userOffset,
     params.count,

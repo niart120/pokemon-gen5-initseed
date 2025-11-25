@@ -1,6 +1,7 @@
 use crate::personality_rng::PersonalityRNG;
 use crate::pid_shiny_checker::{ShinyChecker, ShinyType};
 use std::convert::TryInto;
+use wasm_bindgen::prelude::*;
 
 /// Unknown IV sentinel value shared between Rust/WASM/TS
 pub const IV_VALUE_UNKNOWN: IvValue = 32;
@@ -74,9 +75,25 @@ pub enum HiddenPowerInfo {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[wasm_bindgen]
 pub struct StatRange {
     pub min: IvValue,
     pub max: IvValue,
+}
+
+#[wasm_bindgen]
+impl StatRange {
+    #[wasm_bindgen(constructor)]
+    pub fn new(min: IvValue, max: IvValue) -> Self {
+        StatRange { min, max }
+    }
+
+    pub fn contains(&self, value: IvValue) -> bool {
+        if self.min > self.max {
+            return false;
+        }
+        value >= self.min && value <= self.max
+    }
 }
 
 impl StatRange {
@@ -85,13 +102,6 @@ impl StatRange {
             min: 0,
             max: IV_VALUE_UNKNOWN,
         }
-    }
-
-    pub fn contains(&self, value: IvValue) -> bool {
-        if self.min > self.max {
-            return false;
-        }
-        value >= self.min && value <= self.max
     }
 }
 
@@ -109,13 +119,34 @@ pub enum Gender {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[wasm_bindgen]
 pub struct GenderRatio {
     pub threshold: u8,
     pub genderless: bool,
 }
 
+#[wasm_bindgen]
 impl GenderRatio {
-    pub fn resolve(&self, gender_value: u8) -> Gender {
+    #[wasm_bindgen(constructor)]
+    pub fn new(threshold: u8, genderless: bool) -> Self {
+        GenderRatio { threshold, genderless }
+    }
+
+    pub fn resolve(&self, gender_value: u8) -> u8 {
+        if self.genderless {
+            return 2; // Genderless
+        }
+
+        if gender_value < self.threshold {
+            1 // Female
+        } else {
+            0 // Male
+        }
+    }
+}
+
+impl GenderRatio {
+    pub fn resolve_enum(&self, gender_value: u8) -> Gender {
         if self.genderless {
             return Gender::Genderless;
         }
@@ -273,14 +304,41 @@ pub enum EverstonePlan {
     Fixed(Nature),
 }
 
+/// WASM wrapper for EverstonePlan
+#[wasm_bindgen]
+pub struct EverstonePlanJs {
+    inner: EverstonePlan,
+}
+
+#[wasm_bindgen]
+impl EverstonePlanJs {
+    #[wasm_bindgen(getter = None)]
+    pub fn none() -> EverstonePlanJs {
+        EverstonePlanJs { inner: EverstonePlan::None }
+    }
+
+    pub fn fixed(nature_index: u8) -> EverstonePlanJs {
+        EverstonePlanJs { inner: EverstonePlan::Fixed(Nature::from_index(nature_index)) }
+    }
+}
+
+impl EverstonePlanJs {
+    pub fn unwrap(&self) -> EverstonePlan {
+        self.inner
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[wasm_bindgen]
 pub struct TrainerIds {
     pub tid: u16,
     pub sid: u16,
     pub tsv: u16,
 }
 
+#[wasm_bindgen]
 impl TrainerIds {
+    #[wasm_bindgen(constructor)]
     pub fn new(tid: u16, sid: u16) -> Self {
         TrainerIds {
             tid,
@@ -300,6 +358,69 @@ pub struct GenerationConditions {
     pub reroll_count: u8,
     pub trainer_ids: TrainerIds,
     pub gender_ratio: GenderRatio,
+}
+
+/// WASM wrapper for GenerationConditions
+#[wasm_bindgen]
+pub struct GenerationConditionsJs {
+    pub has_nidoran_flag: bool,
+    pub uses_ditto: bool,
+    pub allow_hidden_ability: bool,
+    pub female_parent_has_hidden: bool,
+    pub reroll_count: u8,
+    everstone: EverstonePlan,
+    trainer_ids: TrainerIds,
+    gender_ratio: GenderRatio,
+}
+
+#[wasm_bindgen]
+impl GenerationConditionsJs {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> GenerationConditionsJs {
+        GenerationConditionsJs {
+            has_nidoran_flag: false,
+            uses_ditto: false,
+            allow_hidden_ability: false,
+            female_parent_has_hidden: false,
+            reroll_count: 0,
+            everstone: EverstonePlan::None,
+            trainer_ids: TrainerIds::new(0, 0),
+            gender_ratio: GenderRatio::new(127, false),
+        }
+    }
+
+    pub fn set_everstone(&mut self, plan: &EverstonePlanJs) {
+        self.everstone = plan.unwrap();
+    }
+
+    pub fn set_trainer_ids(&mut self, ids: &TrainerIds) {
+        self.trainer_ids = *ids;
+    }
+
+    pub fn set_gender_ratio(&mut self, ratio: &GenderRatio) {
+        self.gender_ratio = *ratio;
+    }
+}
+
+impl GenerationConditionsJs {
+    pub fn to_internal(&self) -> GenerationConditions {
+        GenerationConditions {
+            has_nidoran_flag: self.has_nidoran_flag,
+            everstone: self.everstone,
+            uses_ditto: self.uses_ditto,
+            allow_hidden_ability: self.allow_hidden_ability,
+            female_parent_has_hidden: self.female_parent_has_hidden,
+            reroll_count: self.reroll_count,
+            trainer_ids: self.trainer_ids,
+            gender_ratio: self.gender_ratio,
+        }
+    }
+}
+
+impl Default for GenerationConditionsJs {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -352,6 +473,74 @@ impl Default for IndividualFilter {
             hidden_power_type: None,
             hidden_power_power: None,
         }
+    }
+}
+
+/// WASM wrapper for IndividualFilter
+#[wasm_bindgen]
+pub struct IndividualFilterJs {
+    inner: IndividualFilter,
+}
+
+#[wasm_bindgen]
+impl IndividualFilterJs {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> IndividualFilterJs {
+        IndividualFilterJs { inner: IndividualFilter::default() }
+    }
+
+    pub fn set_iv_range(&mut self, stat_index: u8, min: u8, max: u8) {
+        if (stat_index as usize) < STAT_COUNT {
+            self.inner.iv_ranges[stat_index as usize] = StatRange::new(min, max);
+        }
+    }
+
+    pub fn set_nature(&mut self, nature_index: u8) {
+        self.inner.nature = Some(Nature::from_index(nature_index));
+    }
+
+    pub fn set_gender(&mut self, gender: u8) {
+        self.inner.gender = Some(match gender {
+            0 => Gender::Male,
+            1 => Gender::Female,
+            _ => Gender::Genderless,
+        });
+    }
+
+    pub fn set_ability(&mut self, ability: u8) {
+        self.inner.ability = Some(match ability {
+            0 => AbilitySlot::One,
+            1 => AbilitySlot::Two,
+            _ => AbilitySlot::Hidden,
+        });
+    }
+
+    pub fn set_shiny(&mut self, shiny: u8) {
+        self.inner.shiny = Some(match shiny {
+            0 => ShinyType::Normal,
+            1 => ShinyType::Square,
+            _ => ShinyType::Star,
+        });
+    }
+
+    pub fn set_hidden_power_type(&mut self, hp_type: u8) {
+        self.inner.hidden_power_type = Some(HiddenPowerType::from_index(hp_type));
+    }
+
+    pub fn set_hidden_power_power(&mut self, power: u8) {
+        self.inner.hidden_power_power = Some(power);
+    }
+}
+
+impl IndividualFilterJs {
+    pub fn to_internal(&self) -> IndividualFilter {
+        self.inner.clone()
+    }
+}
+
+impl Default for IndividualFilterJs {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -424,7 +613,7 @@ pub fn derive_pending_egg_with_state(
     let gender = match nidoran_roll {
         Some(0) => Gender::Female,
         Some(_) => Gender::Male,
-        None => conditions.gender_ratio.resolve((pid & 0xFF) as u8),
+        None => conditions.gender_ratio.resolve_enum((pid & 0xFF) as u8),
     };
 
     let mut ability = AbilitySlot::from_bit(((pid >> 16) & 1) as u8);
