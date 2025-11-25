@@ -558,15 +558,15 @@ pub fn derive_pending_egg_with_state(
     let mut rng = PersonalityRNG::new(seed);
     let TrainerIds { tid, sid, .. } = conditions.trainer_ids;
 
-    let nature_roll = rng.next();
+    let nature_idx = rng.roll_fraction(25) as u8;
     let nature = match conditions.everstone {
-        EverstonePlan::None => Nature::from_roll(nature_roll),
+        EverstonePlan::None => Nature::from_index(nature_idx),
         EverstonePlan::Fixed(parent_nature) => {
             let inherit = (rng.next() >> 31) == 0;
             if inherit {
                 parent_nature
             } else {
-                Nature::from_roll(nature_roll)
+                Nature::from_index(nature_idx)
             }
         }
     };
@@ -578,13 +578,13 @@ pub fn derive_pending_egg_with_state(
 
     let mut inherits_vec: Vec<InheritanceSlot> = Vec::with_capacity(MAX_INHERIT_SLOTS);
     while inherits_vec.len() < MAX_INHERIT_SLOTS {
-        let stat_roll = (((rng.next() as u64).wrapping_mul(6)) >> 32) as u8;
+        let stat_roll = rng.roll_fraction(6) as u8;
         let stat = StatIndex::from_u8(stat_roll)
             .unwrap_or_else(|| panic!("stat roll out of range: {}", stat_roll));
+        let parent_bit = rng.next() >> 31;
         if inherits_vec.iter().any(|slot| slot.stat == stat) {
             continue;
         }
-        let parent_bit = rng.next() >> 31;
         inherits_vec.push(InheritanceSlot::new(stat, ParentRole::from_bit(parent_bit)));
     }
 
@@ -599,7 +599,7 @@ pub fn derive_pending_egg_with_state(
 
     let mut chosen_pid: Option<(u32, ShinyType)> = None;
     for attempt in 0..=(conditions.reroll_count as u32) {
-        let pid = rng.next();
+        let pid = rng.roll_fraction(0xffffffff) as u32;
         let shiny_value = ShinyChecker::get_shiny_value(tid, sid, pid);
         let shiny_type = ShinyChecker::get_shiny_type(shiny_value);
         if shiny_type != ShinyType::Normal || attempt == conditions.reroll_count as u32 {

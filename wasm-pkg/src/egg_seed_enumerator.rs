@@ -94,7 +94,6 @@ impl EggSeedEnumerator {
 
             let current_advance = self.next_advance;
             self.next_advance = self.next_advance.saturating_add(1);
-
             let (seed_after_npc, is_stable) = if self.consider_npc_consumption {
                 let (next_seed, _consumed, stable) =
                     resolve_npc_advance(self.current_seed, NPC_FRAME_THRESHOLD, NPC_FRAME_SLACK);
@@ -107,7 +106,7 @@ impl EggSeedEnumerator {
                 derive_pending_egg_with_state(seed_after_npc, &self.conditions);
             let resolved = resolve_egg_iv(&pending, &self.iv_sources)?;
 
-            self.current_seed = final_seed;
+            self.current_seed = PersonalityRNG::next_seed(self.current_seed);
             self.produced = self.produced.saturating_add(1);
 
             let passes = self

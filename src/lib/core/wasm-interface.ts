@@ -11,6 +11,15 @@ import type {
   EncounterType as WasmEncounterType,
   GameVersion as WasmGameVersion,
   GameMode as WasmGameMode,
+  // Egg generation types
+  EggSeedEnumeratorJs as WasmEggSeedEnumeratorJs,
+  ParentsIVsJs as WasmParentsIVsJs,
+  GenerationConditionsJs as WasmGenerationConditionsJs,
+  EverstonePlanJs as WasmEverstonePlanJs,
+  IndividualFilterJs as WasmIndividualFilterJs,
+  TrainerIds as WasmTrainerIds,
+  GenderRatio as WasmGenderRatio,
+  StatRange as WasmStatRange,
 } from '../../wasm/wasm_pkg';
 // Local type alias for internal interface references
 type WasmSearchResult = import('../../wasm/wasm_pkg').SearchResult;
@@ -61,6 +70,16 @@ export interface WasmModule {
   GameVersion: typeof WasmGameVersion;
   GameMode: typeof WasmGameMode;
 
+  // 追加: タマゴ生成API
+  EggSeedEnumeratorJs: typeof WasmEggSeedEnumeratorJs;
+  ParentsIVsJs: typeof WasmParentsIVsJs;
+  GenerationConditionsJs: typeof WasmGenerationConditionsJs;
+  EverstonePlanJs: typeof WasmEverstonePlanJs;
+  IndividualFilterJs: typeof WasmIndividualFilterJs;
+  TrainerIds: typeof WasmTrainerIds;
+  GenderRatio: typeof WasmGenderRatio;
+  StatRange: typeof WasmStatRange;
+
   calculate_game_offset(initial_seed: bigint, mode: number): number;
   sha1_hash_batch(messages: Uint32Array): Uint32Array;
 }
@@ -110,6 +129,15 @@ export async function initWasm(): Promise<WasmModule> {
         EncounterType: module.EncounterType,
         GameVersion: module.GameVersion,
         GameMode: module.GameMode,
+        // タマゴ生成API
+        EggSeedEnumeratorJs: module.EggSeedEnumeratorJs,
+        ParentsIVsJs: module.ParentsIVsJs,
+        GenerationConditionsJs: module.GenerationConditionsJs,
+        EverstonePlanJs: module.EverstonePlanJs,
+        IndividualFilterJs: module.IndividualFilterJs,
+        TrainerIds: module.TrainerIds,
+        GenderRatio: module.GenderRatio,
+        StatRange: module.StatRange,
         calculate_game_offset: module.calculate_game_offset,
         sha1_hash_batch: module.sha1_hash_batch,
       } as unknown as WasmModule;

@@ -79,7 +79,9 @@ ctx.onmessage = (ev: MessageEvent<EggWorkerRequest>) => {
 };
 
 async function handleStart(params: EggGenerationParams) {
-  if (state.running) return;
+  if (state.running) {
+    return;
+  }
 
   const errors = validateEggParams(params);
   if (errors.length) {
@@ -105,7 +107,9 @@ async function handleStart(params: EggGenerationParams) {
 }
 
 async function ensureWasm() {
-  if (!isWasmReady()) await initWasm();
+  if (!isWasmReady()) {
+    await initWasm();
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
