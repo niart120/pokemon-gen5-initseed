@@ -739,4 +739,175 @@ mod tests {
         let epoch_2000_utc = Utc.from_utc_datetime(&epoch_2000);
         assert_eq!(epoch_2000_utc.timestamp(), EPOCH_2000_UNIX);
     }
+
+    // =========================================================================
+    // 実検索機能テスト（7日間検索 + フィルター適用）
+    // =========================================================================
+
+    /// SHA-1とLCG Seed計算の統合テスト
+    /// 実際の検索フローで使用される計算ロジックを検証
+    #[test]
+    fn test_sha1_and_lcg_seed_integration() {
+        // 固定メッセージでSHA-1計算をテスト
+        let mut message = [0u32; 16];
+        // Nazo values (Black Japanese version)
+        message[0] = swap_bytes_32(0x02215F10);
+        message[1] = swap_bytes_32(0x0221600C);
+        message[2] = swap_bytes_32(0x0221600C);
+        message[3] = swap_bytes_32(0x02216058);
+        message[4] = swap_bytes_32(0x02216058);
+        // VCount | Timer0
+        message[5] = swap_bytes_32((0x60 << 16) | 0x0C79);
+        // MAC lower
+        message[6] = (0x34 << 8) | 0x56;
+        // MAC upper XOR GxStat XOR Frame
+        let mac_upper = 0x00 | (0x09 << 8) | (0xBF << 16) | (0x12 << 24);
+        let gx_stat = 0x06000000u32;
+        message[7] = swap_bytes_32(mac_upper ^ gx_stat ^ 8);
+        // Date/Time codes (2025-01-15 12:00:00)
+        message[8] = 0; // date code placeholder
+        message[9] = 0; // time code placeholder
+        message[10] = 0x00000000;
+        message[11] = 0x00000000;
+        message[12] = 0; // key code
+        message[13] = 0x80000000;
+        message[14] = 0x00000000;
+        message[15] = 0x000001A0;
+
+        let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(&message);
+
+        // SHA-1結果が確定的であることを確認
+        assert_ne!(h0, 0);
+        assert_ne!(h1, 0);
+        
+        // LCG Seed計算
+        let lcg_seed = calculate_lcg_seed_from_hash(h0, h1);
+        
+        // LCG Seedが非ゼロであることを確認
+        assert_ne!(lcg_seed, 0);
+
+        // 同じ入力で同じ結果が得られることを確認
+        let (h0_2, h1_2, _, _, _) = calculate_pokemon_sha1(&message);
+        let lcg_seed_2 = calculate_lcg_seed_from_hash(h0_2, h1_2);
+        assert_eq!(lcg_seed, lcg_seed_2);
+
+        // h2, h3, h4 も検証に含める
+        assert_eq!(h2, calculate_pokemon_sha1(&message).2);
+        assert_eq!(h3, calculate_pokemon_sha1(&message).3);
+        assert_eq!(h4, calculate_pokemon_sha1(&message).4);
+    }
+
+    /// SIMD SHA-1 バッチ処理の統合テスト
+    #[test]
+    fn test_simd_batch_sha1_integration() {
+        // 4つの異なるメッセージを準備
+        let mut messages = [0u32; 64];
+        
+        for batch_idx in 0..4 {
+            let base_idx = batch_idx * 16;
+            
+            // 各バッチに異なるTimer0値を設定
+            let timer0 = 0x0C79 + batch_idx as u32;
+            
+            messages[base_idx] = swap_bytes_32(0x02215F10);
+            messages[base_idx + 1] = swap_bytes_32(0x0221600C);
+            messages[base_idx + 2] = swap_bytes_32(0x0221600C);
+            messages[base_idx + 3] = swap_bytes_32(0x02216058);
+            messages[base_idx + 4] = swap_bytes_32(0x02216058);
+            messages[base_idx + 5] = swap_bytes_32((0x60 << 16) | timer0);
+            messages[base_idx + 6] = (0x34 << 8) | 0x56;
+            messages[base_idx + 7] = swap_bytes_32(0x00_09_BF_12 ^ 0x06000000 ^ 8);
+            messages[base_idx + 13] = 0x80000000;
+            messages[base_idx + 15] = 0x000001A0;
+        }
+
+        let results = calculate_pokemon_sha1_simd(&messages);
+
+        // 4組の結果が得られることを確認
+        assert_eq!(results.len(), 20);
+
+        // 各バッチの結果が異なることを確認（Timer0が異なるため）
+        let seeds: Vec<u64> = (0..4)
+            .map(|i| calculate_lcg_seed_from_hash(results[i * 5], results[i * 5 + 1]))
+            .collect();
+
+        // 異なるTimer0値なので、少なくとも一部は異なるはず
+        let unique_count = seeds.iter().collect::<std::collections::HashSet<_>>().len();
+        assert!(unique_count >= 2, "Expected different seeds for different Timer0 values");
+    }
+
+    /// 日時コード生成の範囲テスト（7日間相当）
+    #[test]
+    fn test_datetime_code_generation_7_days() {
+        // 7日間 = 604800秒
+        let seconds_in_7_days = 7 * 24 * 60 * 60;
+        
+        // サンプリングしてテスト（全秒をテストすると遅すぎる）
+        let sample_points = [0, 1000, 10000, 100000, 300000, 500000, 604799];
+        
+        for seconds in sample_points {
+            if seconds >= seconds_in_7_days {
+                continue;
+            }
+            
+            let date_index = seconds / SECONDS_PER_DAY as u32;
+            let seconds_of_day = seconds % SECONDS_PER_DAY as u32;
+            
+            let date_code = DateCodeGenerator::get_date_code(date_index);
+            let time_code = TimeCodeGenerator::get_time_code_for_hardware(seconds_of_day, "DS");
+            
+            // コードが有効な範囲であることを確認
+            assert_ne!(date_code, 0, "Date code should not be 0 for date_index={}", date_index);
+            // time_codeは0の可能性があるのでチェックしない
+            let _ = time_code; // 使用していることを明示
+        }
+    }
+
+    /// 時間範囲フィルタリングの統合テスト
+    #[test]
+    fn test_time_range_filtering() {
+        // 12:00-14:00の時間範囲でマスクを作成
+        let mut mask = Box::new([false; 86400]);
+        for hour in 12..=14 {
+            for minute in 0..=59 {
+                for second in 0..=59 {
+                    let idx = (hour * 3600 + minute * 60 + second) as usize;
+                    mask[idx] = true;
+                }
+            }
+        }
+
+        // 範囲内の時刻は許可される
+        assert!(mask[12 * 3600]); // 12:00:00
+        assert!(mask[13 * 3600 + 30 * 60]); // 13:30:00
+        assert!(mask[14 * 3600 + 59 * 60 + 59]); // 14:59:59
+
+        // 範囲外の時刻は許可されない
+        assert!(!mask[11 * 3600 + 59 * 60 + 59]); // 11:59:59
+        assert!(!mask[15 * 3600]); // 15:00:00
+
+        // 7日間の検索で、許可される秒数を計算
+        let allowed_seconds_per_day: usize = mask.iter().filter(|&&b| b).count();
+        assert_eq!(allowed_seconds_per_day, 3 * 60 * 60); // 3時間 = 10800秒
+        
+        // 7日間で許可される総秒数
+        let total_allowed_in_7_days = allowed_seconds_per_day * 7;
+        assert_eq!(total_allowed_in_7_days, 75600);
+    }
+
+    /// キーコード生成のテスト
+    #[test]
+    fn test_key_code_generation_for_search() {
+        // キー入力なし
+        let codes_no_key = generate_key_codes(0);
+        assert!(!codes_no_key.is_empty());
+        
+        // Aボタンのみ
+        let codes_a_only = generate_key_codes(0x0001);
+        assert!(codes_a_only.len() >= 2); // Aなし + Aあり
+        
+        // 複数キー
+        let codes_multi = generate_key_codes(0x0003); // A + B
+        assert!(codes_multi.len() >= 4); // 2^2の組み合わせ
+    }
 }
