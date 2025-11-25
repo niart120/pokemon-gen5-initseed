@@ -620,7 +620,7 @@ impl IntegratedSeedSearcher {
         }
 
         // バッチサイズが4未満の場合はスカラ計算にフォールバック
-        for i in 0..batch_size {
+        for (i, &second) in seconds_batch.iter().enumerate().take(batch_size) {
             let mut single_message = [0u32; 16];
             let base_idx = i * 16;
             single_message.copy_from_slice(&messages[base_idx..base_idx + 16]);
@@ -631,7 +631,7 @@ impl IntegratedSeedSearcher {
             self.check_and_add_result(
                 seed,
                 &hash_values,
-                seconds_batch[i],
+                second,
                 key_code,
                 params,
                 target_seeds,

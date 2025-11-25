@@ -1,3 +1,10 @@
+// wasm_bindgen types cannot implement Default trait, so we suppress these warnings
+#![allow(clippy::new_without_default)]
+// Some WASM API functions require many arguments by design
+#![allow(clippy::too_many_arguments)]
+// PersonalityRNG::next is intentionally named to match common RNG patterns
+#![allow(clippy::should_implement_trait)]
+
 mod datetime_codes;
 mod egg_iv;
 mod egg_seed_enumerator;

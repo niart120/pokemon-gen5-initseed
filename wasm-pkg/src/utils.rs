@@ -184,9 +184,9 @@ impl NumberUtils {
     /// 16進数文字列
     pub fn u32_to_hex_string(value: u32, uppercase: bool) -> String {
         if uppercase {
-            format!("{:08X}", value)
+            format!("{value:08X}")
         } else {
-            format!("{:08x}", value)
+            format!("{value:08x}")
         }
     }
 

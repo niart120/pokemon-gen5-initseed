@@ -111,7 +111,7 @@ impl EggSeedEnumerator {
             let passes = self
                 .filter
                 .as_ref()
-                .map_or(true, |filter| matches_filter(&resolved, filter));
+                .is_none_or(|filter| matches_filter(&resolved, filter));
 
             self.current_seed = PersonalityRNG::next_seed(self.current_seed);
             let current_advance = self.next_advance;
