@@ -124,3 +124,13 @@ export const eggFilterBootTimingDisabledHint: LocaleText = {
   ja: 'Boot-Timing時のみ有効',
   en: 'Available in Boot-Timing mode',
 };
+
+/**
+ * ステータス名（IV範囲フィルター用）
+ * JPN: H/A/B/C/D/S 表記
+ * ENG: HP/Atk/Def/SpA/SpD/Spe 表記
+ */
+export const eggFilterStatNames: LocaleMap<[string, string, string, string, string, string]> = {
+  ja: ['H', 'A', 'B', 'C', 'D', 'S'],
+  en: ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'],
+};

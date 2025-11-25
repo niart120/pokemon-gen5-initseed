@@ -32,10 +32,9 @@ import {
   eggFilterTimer0Placeholder,
   eggFilterVcountPlaceholder,
   eggFilterBootTimingDisabledHint,
+  eggFilterStatNames,
 } from '@/lib/i18n/strings/egg-filter';
 import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
-
-const STAT_NAMES = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
 
 /**
  * EggFilterCard
@@ -56,6 +55,7 @@ export const EggFilterCard: React.FC = () => {
   const abilityOptions = resolveLocaleValue(eggFilterAbilityOptions, locale);
   const shinyOptions = resolveLocaleValue(eggFilterShinyOptions, locale);
   const hpTypeNames = hiddenPowerTypeNames[locale] ?? hiddenPowerTypeNames.en;
+  const statNames = resolveLocaleValue(eggFilterStatNames, locale);
 
   const updateFilter = (updates: Partial<EggIndividualFilter>) => {
     updateDraftParams({
@@ -282,7 +282,7 @@ export const EggFilterCard: React.FC = () => {
           <section className="space-y-2 mt-3" role="group">
             <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggFilterIvRangeTitle[locale]}</h4>
             <div className="space-y-2">
-              {STAT_NAMES.map((stat, i) => {
+              {statNames.map((stat, i) => {
                 const isUnknown = isIvRangeUnknown(i);
                 return (
                   <div key={i} className="flex items-center gap-2">

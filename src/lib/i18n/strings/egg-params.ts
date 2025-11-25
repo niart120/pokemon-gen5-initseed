@@ -1,5 +1,4 @@
 import type { LocaleText, LocaleMap } from './types';
-import type { EggGameMode } from '@/types/egg';
 
 export const eggParamsPanelTitle: LocaleText = {
   ja: 'Generation Parameters',
@@ -157,6 +156,16 @@ export const eggSeedSourceModeOptions = {
     ja: 'Boot-Timing',
     en: 'Boot-Timing',
   } satisfies LocaleText,
+};
+
+/**
+ * ステータス名（親IV入力用）
+ * JPN: H/A/B/C/D/S 表記
+ * ENG: HP/Atk/Def/SpA/SpD/Spe 表記
+ */
+export const eggParamsStatNames: LocaleMap<[string, string, string, string, string, string]> = {
+  ja: ['H', 'A', 'B', 'C', 'D', 'S'],
+  en: ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'],
 };
 
 export const eggBootTimingLabels = {

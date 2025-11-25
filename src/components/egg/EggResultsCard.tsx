@@ -24,7 +24,7 @@ import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
  * タマゴ生成結果表示カード
  */
 export const EggResultsCard: React.FC = () => {
-  const { results, draftParams, getFilteredResults } = useEggStore();
+  const { draftParams, getFilteredResults } = useEggStore();
   const { isStack } = useResponsiveLayout();
   const locale = useLocale();
 

@@ -10,11 +10,11 @@ import { Gear } from '@phosphor-icons/react';
 import { useEggStore } from '@/store/egg-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
-import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import { natureName } from '@/lib/utils/format-display';
 import { DOMAIN_NATURE_COUNT } from '@/types/domain';
 import type { IvSet, EggSeedSourceMode } from '@/types/egg';
 import { EggBootTimingControls, type EggBootTimingLabels } from './EggBootTimingControls';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import {
   eggParamsPanelTitle,
   eggParamsSectionTitles,
@@ -38,9 +38,8 @@ import {
   eggSeedSourceModeLabel,
   eggSeedSourceModeOptions,
   eggBootTimingLabels,
+  eggParamsStatNames,
 } from '@/lib/i18n/strings/egg-params';
-
-const STAT_NAMES = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
 
 // 16進数入力の正規化
 function normalizeHexInput(value: string): string {
@@ -66,6 +65,7 @@ export const EggParamsCard: React.FC = () => {
   const disabled = status === 'running' || status === 'starting';
 
   const femaleAbilityOptions = resolveLocaleValue(eggParamsFemaleAbilityOptions, locale);
+  const statNames = resolveLocaleValue(eggParamsStatNames, locale);
 
   // Boot-Timing ラベル解決
   const bootTimingLabelsResolved: EggBootTimingLabels = useMemo(() => ({
@@ -276,7 +276,7 @@ export const EggParamsCard: React.FC = () => {
         <div className="space-y-1">
           <Label className="text-xs">{eggParentsMaleLabel[locale]}</Label>
           <div className="grid grid-cols-6 gap-1">
-            {STAT_NAMES.map((stat, i) => {
+            {statNames.map((stat, i) => {
               const isUnknown = draftParams.parents.male[i] === 32;
               return (
                 <div key={i} className="flex flex-col items-center">
@@ -314,7 +314,7 @@ export const EggParamsCard: React.FC = () => {
         <div className="space-y-1">
           <Label className="text-xs">{eggParentsFemaleLabel[locale]}</Label>
           <div className="grid grid-cols-6 gap-1">
-            {STAT_NAMES.map((stat, i) => {
+            {statNames.map((stat, i) => {
               const isUnknown = draftParams.parents.female[i] === 32;
               return (
                 <div key={i} className="flex flex-col items-center">
