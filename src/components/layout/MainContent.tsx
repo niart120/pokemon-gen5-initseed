@@ -29,13 +29,13 @@ export function MainContent() {
               <Sparkle size={16} />
               Generation
             </TabsTrigger>
-            <TabsTrigger value="egg" className="flex items-center gap-2">
-              <Egg size={16} />
-              Generation(Egg)
-            </TabsTrigger>
             <TabsTrigger value="egg-search" className="flex items-center gap-2">
               <Egg size={16} />
               Search(Egg)
+            </TabsTrigger>
+            <TabsTrigger value="egg" className="flex items-center gap-2">
+              <Egg size={16} />
+              Generation(Egg)
             </TabsTrigger>
             <TabsTrigger value="help" className="flex items-center gap-2">
               <Info size={16} />
@@ -51,12 +51,12 @@ export function MainContent() {
             <GenerationPanel />
           </TabsContent>
 
-          <TabsContent value="egg" className="flex-1 min-h-0 overflow-hidden">
-            <EggGenerationPanel />
-          </TabsContent>
-
           <TabsContent value="egg-search" className="flex-1 min-h-0 overflow-hidden">
             <EggSearchPanel />
+          </TabsContent>
+
+          <TabsContent value="egg" className="flex-1 min-h-0 overflow-hidden">
+            <EggGenerationPanel />
           </TabsContent>
 
           <TabsContent value="help" className="flex-1 min-h-0 overflow-hidden">

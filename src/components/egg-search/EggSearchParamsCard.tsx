@@ -12,6 +12,10 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useEggBootTimingSearchStore } from '@/store/egg-boot-timing-search-store';
 import { useLocale } from '@/lib/i18n/locale-context';
+import {
+  eggSearchParamsCardTitle,
+  eggSearchParamsLabels,
+} from '@/lib/i18n/strings/egg-search';
 
 // デフォルト値定数
 const DEFAULT_FRAME = 8;
@@ -22,16 +26,6 @@ export function EggSearchParamsCard() {
   const { draftParams, updateDraftParams, status } = useEggBootTimingSearchStore();
   
   const isRunning = status === 'running' || status === 'starting' || status === 'stopping';
-
-  const labels = {
-    title: locale === 'ja' ? '検索条件' : 'Search Parameters',
-    startDatetime: locale === 'ja' ? '開始日時' : 'Start Date/Time',
-    rangeSeconds: locale === 'ja' ? '検索範囲（秒）' : 'Search Range (seconds)',
-    frame: locale === 'ja' ? 'フレーム' : 'Frame',
-    userOffset: locale === 'ja' ? '開始Advance' : 'Start Advance',
-    advanceCount: locale === 'ja' ? '検索Advance数' : 'Advance Count',
-    keyInput: locale === 'ja' ? 'キー入力マスク' : 'Key Input Mask',
-  };
 
   // 日時をローカルタイムで表示するためのフォーマット
   const formatDatetimeLocal = (isoString: string): string => {
@@ -60,13 +54,13 @@ export function EggSearchParamsCard() {
   return (
     <PanelCard
       icon={<Sliders size={20} className="opacity-80" />}
-      title={labels.title}
+      title={eggSearchParamsCardTitle[locale]}
       scrollMode="content"
     >
       <div className="space-y-4">
         {/* 開始日時 */}
         <div className="space-y-2">
-          <Label htmlFor="start-datetime">{labels.startDatetime}</Label>
+          <Label htmlFor="start-datetime">{eggSearchParamsLabels.startDatetime[locale]}</Label>
           <Input
             id="start-datetime"
             type="datetime-local"
@@ -79,7 +73,7 @@ export function EggSearchParamsCard() {
 
         {/* 検索範囲（秒） */}
         <div className="space-y-2">
-          <Label htmlFor="range-seconds">{labels.rangeSeconds}</Label>
+          <Label htmlFor="range-seconds">{eggSearchParamsLabels.rangeSeconds[locale]}</Label>
           <Input
             id="range-seconds"
             type="number"
@@ -95,7 +89,7 @@ export function EggSearchParamsCard() {
 
         {/* フレーム */}
         <div className="space-y-2">
-          <Label htmlFor="frame">{labels.frame}</Label>
+          <Label htmlFor="frame">{eggSearchParamsLabels.frame[locale]}</Label>
           <Input
             id="frame"
             type="number"
@@ -111,7 +105,7 @@ export function EggSearchParamsCard() {
 
         {/* 開始Advance */}
         <div className="space-y-2">
-          <Label htmlFor="user-offset">{labels.userOffset}</Label>
+          <Label htmlFor="user-offset">{eggSearchParamsLabels.userOffset[locale]}</Label>
           <Input
             id="user-offset"
             type="number"
@@ -126,7 +120,7 @@ export function EggSearchParamsCard() {
 
         {/* 検索Advance数 */}
         <div className="space-y-2">
-          <Label htmlFor="advance-count">{labels.advanceCount}</Label>
+          <Label htmlFor="advance-count">{eggSearchParamsLabels.advanceCount[locale]}</Label>
           <Input
             id="advance-count"
             type="number"
@@ -142,7 +136,7 @@ export function EggSearchParamsCard() {
 
         {/* キー入力マスク */}
         <div className="space-y-2">
-          <Label htmlFor="key-input-mask">{labels.keyInput}</Label>
+          <Label htmlFor="key-input-mask">{eggSearchParamsLabels.keyInput[locale]}</Label>
           <Input
             id="key-input-mask"
             type="text"
