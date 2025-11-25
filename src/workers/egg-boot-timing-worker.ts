@@ -312,16 +312,17 @@ function executeSearch(params: EggBootTimingSearchParams): EggBootTimingSearchRe
     )
   );
 
-  // IndividualFilterJs 構築
-  const filter = buildFilter(wasmAny, params.filter);
+  // IndividualFilterJs 構築（filterDisabledがtrueの場合はnullを渡す）
+  const filter = params.filterDisabled ? null : buildFilter(wasmAny, params.filter);
 
-  // Searcher構築
+  // Searcher構築 - frameはデフォルト値8を使用
+  const DEFAULT_FRAME = 8;
   const searcher = new wasmAny.EggBootTimingSearcher(
     new Uint8Array(params.macAddress),
     new Uint32Array(nazo),
     params.hardware,
     params.keyInputMask,
-    params.frame,
+    DEFAULT_FRAME,
     params.timeRange.hour.start,
     params.timeRange.hour.end,
     params.timeRange.minute.start,
@@ -340,17 +341,31 @@ function executeSearch(params: EggBootTimingSearchParams): EggBootTimingSearchRe
   const results: EggBootTimingSearchResult[] = [];
 
   try {
-    // 検索実行
-    const startDate = new Date(params.startDatetimeIso);
+    // 検索実行 - dateRangeから開始日を使用し、日付範囲を計算
+    const { dateRange } = params;
+    const startDate = new Date(
+      dateRange.startYear,
+      dateRange.startMonth - 1,
+      dateRange.startDay
+    );
+    const endDate = new Date(
+      dateRange.endYear,
+      dateRange.endMonth - 1,
+      dateRange.endDay
+    );
+    // rangeSecondsは日付範囲から計算（終了日 - 開始日 + 1日分の秒数）
+    // Math.floorを使用して日数を正確に計算（両端含む）
+    const daysDiff = Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    const rangeSeconds = daysDiff * 24 * 60 * 60;
 
     const wasmResults = searcher.search_eggs_integrated_simd(
-      startDate.getUTCFullYear(),
-      startDate.getUTCMonth() + 1,
-      startDate.getUTCDate(),
-      startDate.getUTCHours(),
-      startDate.getUTCMinutes(),
-      startDate.getUTCSeconds(),
-      params.rangeSeconds,
+      startDate.getFullYear(),
+      startDate.getMonth() + 1,
+      startDate.getDate(),
+      0,  // 開始時刻は0時から
+      0,
+      0,
+      rangeSeconds,
       params.timer0Range.min,
       params.timer0Range.max,
       params.vcountRange.min,

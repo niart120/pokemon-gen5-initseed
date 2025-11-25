@@ -50,8 +50,21 @@ export function calculateEggBootTimingChunks(
 ): EggBootTimingWorkerChunk[] {
   const operationsPerSecond = getOperationsPerSecond(params);
 
-  const startDatetime = new Date(params.startDatetimeIso);
-  const totalSeconds = params.rangeSeconds;
+  // dateRangeから開始日と日数を計算
+  const { dateRange } = params;
+  const startDatetime = new Date(
+    dateRange.startYear,
+    dateRange.startMonth - 1,
+    dateRange.startDay
+  );
+  const endDatetime = new Date(
+    dateRange.endYear,
+    dateRange.endMonth - 1,
+    dateRange.endDay
+  );
+  // 日数計算: Math.floorを使用して日数を正確に計算（両端含む）
+  const daysDiff = Math.max(1, Math.floor((endDatetime.getTime() - startDatetime.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+  const totalSeconds = daysDiff * 24 * 60 * 60;
   const secondsPerWorker = Math.ceil(totalSeconds / maxWorkers);
 
   const chunks: EggBootTimingWorkerChunk[] = [];
@@ -112,8 +125,24 @@ export function calculateBatchSize(params: EggBootTimingSearchParams): number {
   // 最大バッチサイズ: 1日(86400秒) - メモリ使用量の上限
   const MAX_BATCH_SECONDS = 86400;
 
+  // dateRangeから日数を計算
+  const { dateRange } = params;
+  const startDatetime = new Date(
+    dateRange.startYear,
+    dateRange.startMonth - 1,
+    dateRange.startDay
+  );
+  const endDatetime = new Date(
+    dateRange.endYear,
+    dateRange.endMonth - 1,
+    dateRange.endDay
+  );
+  // 日数計算: Math.floorを使用して日数を正確に計算（両端含む）
+  const daysDiff = Math.max(1, Math.floor((endDatetime.getTime() - startDatetime.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+  const totalRangeSeconds = daysDiff * 24 * 60 * 60;
+
   // 検索範囲から目標バッチ数に基づくバッチサイズを計算
-  const calculatedBatchSize = Math.ceil(params.rangeSeconds / TARGET_BATCH_COUNT);
+  const calculatedBatchSize = Math.ceil(totalRangeSeconds / TARGET_BATCH_COUNT);
 
   // 最小・最大の範囲内に収める
   return Math.max(MIN_BATCH_SECONDS, Math.min(MAX_BATCH_SECONDS, calculatedBatchSize));

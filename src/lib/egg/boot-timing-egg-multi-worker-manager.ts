@@ -189,10 +189,20 @@ export class EggBootTimingMultiWorkerManager {
     });
 
     // チャンク用パラメータを構築
+    const chunkStartDatetime = chunk.startDatetime;
+    // rangeSecondsをdateRangeに変換（チャンクの終了日時を正確に計算）
+    const chunkEndDatetime = chunk.endDatetime;
+    
     const chunkParams: EggBootTimingSearchParams = {
       ...params,
-      startDatetimeIso: chunk.startDatetime.toISOString(),
-      rangeSeconds: chunk.rangeSeconds,
+      dateRange: {
+        startYear: chunkStartDatetime.getFullYear(),
+        startMonth: chunkStartDatetime.getMonth() + 1,
+        startDay: chunkStartDatetime.getDate(),
+        endYear: chunkEndDatetime.getFullYear(),
+        endMonth: chunkEndDatetime.getMonth() + 1,
+        endDay: chunkEndDatetime.getDate(),
+      },
     };
 
     // 検索開始リクエスト
