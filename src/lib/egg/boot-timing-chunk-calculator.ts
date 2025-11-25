@@ -7,6 +7,15 @@ import type { EggBootTimingSearchParams } from '@/types/egg-boot-timing-search';
 import { countValidKeyCombinations } from '@/lib/utils/key-input';
 
 /**
+ * デフォルトのWorker数を取得（環境に応じて調整）
+ */
+export function getDefaultWorkerCount(): number {
+  return typeof navigator !== 'undefined'
+    ? navigator.hardwareConcurrency || 4
+    : 4;
+}
+
+/**
  * Worker に割り当てるチャンク情報
  */
 export interface EggBootTimingWorkerChunk {
@@ -37,9 +46,7 @@ function getOperationsPerSecond(params: EggBootTimingSearchParams): number {
  */
 export function calculateEggBootTimingChunks(
   params: EggBootTimingSearchParams,
-  maxWorkers: number = typeof navigator !== 'undefined'
-    ? navigator.hardwareConcurrency || 4
-    : 4
+  maxWorkers: number = getDefaultWorkerCount()
 ): EggBootTimingWorkerChunk[] {
   const operationsPerSecond = getOperationsPerSecond(params);
 

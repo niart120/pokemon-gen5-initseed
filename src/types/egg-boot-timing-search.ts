@@ -9,9 +9,9 @@ import type {
   EggGenerationConditions,
   ParentsIVs,
   EggIndividualFilter,
-  EggGameMode,
   EnumeratedEggData,
 } from '@/types/egg';
+import { EggGameMode } from '@/types/egg';
 import type { KeyName } from '@/lib/utils/key-input';
 
 // === 検索パラメータ ===
@@ -439,7 +439,7 @@ export function createDefaultEggBootTimingSearchParams(): EggBootTimingSearchPar
     parents: defaultParents,
     filter: null,
     considerNpcConsumption: false,
-    gameMode: 1, // EggGameMode.BwContinue
+    gameMode: EggGameMode.BwContinue,
     userOffset: 0,
     advanceCount: 1000,
     maxResults: 10000,

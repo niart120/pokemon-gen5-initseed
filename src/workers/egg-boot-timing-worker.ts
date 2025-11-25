@@ -296,7 +296,9 @@ function executeSearch(params: EggBootTimingSearchParams): EggBootTimingSearchRe
   conditions.has_nidoran_flag = params.conditions.hasNidoranFlag;
   conditions.set_everstone(buildEverstone(wasmAny, params.conditions.everstone));
   conditions.uses_ditto = params.conditions.usesDitto;
-  const isHiddenAbilityParent = params.conditions.femaleParentAbility === 2;
+  // femaleParentAbility: 0=Ability1, 1=Ability2, 2=HiddenAbility
+  const HIDDEN_ABILITY_SLOT = 2;
+  const isHiddenAbilityParent = params.conditions.femaleParentAbility === HIDDEN_ABILITY_SLOT;
   conditions.allow_hidden_ability = isHiddenAbilityParent;
   conditions.female_parent_has_hidden = isHiddenAbilityParent;
   conditions.reroll_count = params.conditions.masudaMethod ? 3 : 0;

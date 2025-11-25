@@ -13,6 +13,7 @@ import { isEggBootTimingWorkerResponse } from '@/types/egg-boot-timing-search';
 import {
   calculateEggBootTimingChunks,
   calculateBatchSize,
+  getDefaultWorkerCount,
   type EggBootTimingWorkerChunk,
 } from './boot-timing-chunk-calculator';
 
@@ -86,8 +87,7 @@ export class EggBootTimingMultiWorkerManager {
   };
 
   constructor(
-    private maxWorkers: number =
-      typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4
+    private maxWorkers: number = getDefaultWorkerCount()
   ) {}
 
   /**
@@ -98,10 +98,7 @@ export class EggBootTimingMultiWorkerManager {
       console.warn('Cannot change worker count during active search');
       return;
     }
-    const maxHwConcurrency =
-      typeof navigator !== 'undefined'
-        ? navigator.hardwareConcurrency || 4
-        : 4;
+    const maxHwConcurrency = getDefaultWorkerCount();
     this.maxWorkers = Math.max(1, Math.min(count, maxHwConcurrency));
   }
 

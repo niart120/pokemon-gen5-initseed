@@ -4,6 +4,7 @@ export { EggBootTimingMultiWorkerManager } from './boot-timing-egg-multi-worker-
 export {
   calculateEggBootTimingChunks,
   calculateBatchSize,
+  getDefaultWorkerCount,
 } from './boot-timing-chunk-calculator';
 export type { EggBootTimingWorkerChunk } from './boot-timing-chunk-calculator';
 export type {
