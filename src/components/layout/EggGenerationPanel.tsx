@@ -1,8 +1,8 @@
 import React from 'react';
-import { EggParamsCard } from './EggParamsCard';
-import { EggFilterCard } from './EggFilterCard';
-import { EggRunCard } from './EggRunCard';
-import { EggResultsCard } from './EggResultsCard';
+import { EggParamsCard } from '@/components/egg/EggParamsCard';
+import { EggFilterCard } from '@/components/egg/EggFilterCard';
+import { EggRunCard } from '@/components/egg/EggRunCard';
+import { EggResultsCard } from '@/components/egg/EggResultsCard';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { LEFT_COLUMN_WIDTH_CLAMP } from './constants';
 import { getResponsiveSizes } from '@/lib/utils/responsive-sizes';

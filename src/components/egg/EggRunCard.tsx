@@ -4,6 +4,20 @@ import { Button } from '@/components/ui/button';
 import { Play, Square, ChartBar } from '@phosphor-icons/react';
 import { useEggStore } from '@/store/egg-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
+import { useLocale } from '@/lib/i18n/locale-context';
+import {
+  eggRunPanelTitle,
+  eggRunControlsLabel,
+  eggRunStatusPrefix,
+  eggRunResultsLabel,
+  eggRunProcessedLabel,
+  eggRunFilteredLabel,
+  eggRunElapsedLabel,
+  eggRunButtonLabels,
+  getEggRunStatusLabel,
+  formatEggRunProgress,
+  formatEggRunElapsed,
+} from '@/lib/i18n/strings/egg-run';
 
 /**
  * EggRunCard
@@ -22,6 +36,7 @@ export const EggRunCard: React.FC = () => {
   } = useEggStore();
 
   const { isStack } = useResponsiveLayout();
+  const locale = useLocale();
   const isStarting = status === 'starting';
   const isRunning = status === 'running';
   const isStopping = status === 'stopping';
@@ -34,12 +49,11 @@ export const EggRunCard: React.FC = () => {
   }, [startGeneration, validateDraft]);
 
   const canStart = status === 'idle' || status === 'completed' || status === 'error';
-  const pct = draftParams.count > 0 ? (results.length / draftParams.count) * 100 : 0;
 
   return (
     <PanelCard
       icon={<ChartBar size={20} className="opacity-80" />}
-      title={<span id="egg-run-title">実行制御</span>}
+      title={<span id="egg-run-title">{eggRunPanelTitle[locale]}</span>}
       className={isStack ? 'max-h-96' : undefined}
       fullHeight={!isStack}
       scrollMode={isStack ? 'parent' : 'content'}
@@ -55,29 +69,29 @@ export const EggRunCard: React.FC = () => {
         </div>
       )}
       {/* Controls */}
-      <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="制御ボタン">
+      <div className="flex items-center gap-2 flex-wrap" role="group" aria-label={eggRunControlsLabel[locale]}>
         {canStart && (
           <Button size="sm" onClick={handleStart} disabled={isStarting} className="flex-1" data-testid="egg-start-btn">
             <Play size={16} className="mr-2" />
-            {isStarting ? '開始中...' : '開始'}
+            {isStarting ? eggRunButtonLabels.starting[locale] : eggRunButtonLabels.start[locale]}
           </Button>
         )}
         {(isRunning || isStopping) && (
           <Button size="sm" variant="destructive" onClick={stopGeneration} disabled={isStopping} className="flex-1" data-testid="egg-stop-btn">
             <Square size={16} className="mr-2" />
-            {isStopping ? '停止中...' : '停止'}
+            {isStopping ? eggRunButtonLabels.stopping[locale] : eggRunButtonLabels.stop[locale]}
           </Button>
         )}
       </div>
       {/* Status */}
       <div className="text-xs text-muted-foreground mt-2 space-y-1">
-        <div>ステータス: {status}</div>
-        <div>結果: {results.length} / {draftParams.count} ({pct.toFixed(1)}%)</div>
+        <div>{eggRunStatusPrefix[locale]} {getEggRunStatusLabel(status, locale)}</div>
+        <div>{eggRunResultsLabel[locale]} {formatEggRunProgress(results.length, draftParams.count, locale)}</div>
         {lastCompletion && (
           <>
-            <div>処理済み: {lastCompletion.processedCount}</div>
-            <div>フィルター後: {lastCompletion.filteredCount}</div>
-            <div>実行時間: {lastCompletion.elapsedMs.toFixed(0)}ms</div>
+            <div>{eggRunProcessedLabel[locale]} {lastCompletion.processedCount.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US')}</div>
+            <div>{eggRunFilteredLabel[locale]} {lastCompletion.filteredCount.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US')}</div>
+            <div>{eggRunElapsedLabel[locale]} {formatEggRunElapsed(lastCompletion.elapsedMs, locale)}</div>
           </>
         )}
       </div>

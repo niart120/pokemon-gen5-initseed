@@ -7,44 +7,40 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { Funnel } from '@phosphor-icons/react';
 import { useEggStore } from '@/store/egg-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import { natureName } from '@/lib/utils/format-display';
+import { DOMAIN_NATURE_COUNT } from '@/types/domain';
 import { createDefaultEggFilter, type StatRange, type EggIndividualFilter } from '@/types/egg';
-
-// 性格名配列
-const NATURE_NAMES = [
-  'がんばりや', 'さみしがり', 'ゆうかん', 'いじっぱり', 'やんちゃ',
-  'ずぶとい', 'すなお', 'のんき', 'わんぱく', 'のうてんき',
-  'おくびょう', 'せっかち', 'まじめ', 'ようき', 'むじゃき',
-  'ひかえめ', 'おっとり', 'れいせい', 'てれや', 'うっかりや',
-  'おだやか', 'おとなしい', 'なまいき', 'しんちょう', 'きまぐれ',
-];
+import {
+  eggFilterPanelTitle,
+  eggFilterEnabledLabel,
+  eggFilterIvRangeTitle,
+  eggFilterNatureLabel,
+  eggFilterGenderLabel,
+  eggFilterAbilityLabel,
+  eggFilterShinyLabel,
+  eggFilterHpTypeLabel,
+  eggFilterHpPowerLabel,
+  eggFilterNoSelection,
+  eggFilterGenderOptions,
+  eggFilterAbilityOptions,
+  eggFilterShinyOptions,
+} from '@/lib/i18n/strings/egg-filter';
 
 const STAT_NAMES = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
 
-const HP_TYPE_NAMES = [
-  'かくとう', 'ひこう', 'どく', 'じめん', 'いわ', 'むし', 'ゴースト', 'はがね',
-  'ほのお', 'みず', 'くさ', 'でんき', 'エスパー', 'こおり', 'ドラゴン', 'あく',
-];
-
-const GENDER_OPTIONS = [
-  { value: '', label: '指定なし' },
-  { value: 'male', label: '♂' },
-  { value: 'female', label: '♀' },
-  { value: 'genderless', label: '無性別' },
-];
-
-const ABILITY_OPTIONS = [
-  { value: '', label: '指定なし' },
-  { value: '0', label: '特性1' },
-  { value: '1', label: '特性2' },
-  { value: '2', label: '夢特性' },
-];
-
-const SHINY_OPTIONS = [
-  { value: '', label: '指定なし' },
-  { value: '0', label: '通常' },
-  { value: '1', label: '正方形色違い' },
-  { value: '2', label: '星型色違い' },
-];
+// めざパタイプ名
+const HP_TYPE_NAMES = {
+  ja: [
+    'かくとう', 'ひこう', 'どく', 'じめん', 'いわ', 'むし', 'ゴースト', 'はがね',
+    'ほのお', 'みず', 'くさ', 'でんき', 'エスパー', 'こおり', 'ドラゴン', 'あく',
+  ],
+  en: [
+    'Fighting', 'Flying', 'Poison', 'Ground', 'Rock', 'Bug', 'Ghost', 'Steel',
+    'Fire', 'Water', 'Grass', 'Electric', 'Psychic', 'Ice', 'Dragon', 'Dark',
+  ],
+} as const;
 
 /**
  * EggFilterCard
@@ -53,9 +49,16 @@ const SHINY_OPTIONS = [
 export const EggFilterCard: React.FC = () => {
   const { draftParams, updateDraftParams, status } = useEggStore();
   const { isStack } = useResponsiveLayout();
+  const locale = useLocale();
   const disabled = status === 'running' || status === 'starting';
 
   const filter = draftParams.filter || createDefaultEggFilter();
+
+  // Localized options
+  const genderOptions = resolveLocaleValue(eggFilterGenderOptions, locale);
+  const abilityOptions = resolveLocaleValue(eggFilterAbilityOptions, locale);
+  const shinyOptions = resolveLocaleValue(eggFilterShinyOptions, locale);
+  const hpTypeNames = HP_TYPE_NAMES[locale] ?? HP_TYPE_NAMES.en;
 
   const updateFilter = (updates: Partial<EggIndividualFilter>) => {
     updateDraftParams({
@@ -87,7 +90,7 @@ export const EggFilterCard: React.FC = () => {
   return (
     <PanelCard
       icon={<Funnel size={20} className="opacity-80" />}
-      title={<span id="egg-filter-title">フィルター設定</span>}
+      title={<span id="egg-filter-title">{eggFilterPanelTitle[locale]}</span>}
       className={isStack ? 'max-h-96' : undefined}
       fullHeight={!isStack}
       scrollMode={isStack ? 'parent' : 'content'}
@@ -108,14 +111,14 @@ export const EggFilterCard: React.FC = () => {
           }}
           disabled={disabled}
         />
-        <Label htmlFor="egg-filter-enabled" className="text-xs">フィルターを有効にする</Label>
+        <Label htmlFor="egg-filter-enabled" className="text-xs">{eggFilterEnabledLabel[locale]}</Label>
       </div>
 
       {draftParams.filter && (
         <>
           {/* IV範囲フィルター */}
           <section className="space-y-2" role="group">
-            <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">個体値範囲</h4>
+            <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggFilterIvRangeTitle[locale]}</h4>
             <div className="space-y-2">
               {STAT_NAMES.map((stat, i) => (
                 <div key={i} className="flex items-center gap-2">
@@ -148,20 +151,20 @@ export const EggFilterCard: React.FC = () => {
 
           {/* 性格フィルター */}
           <div className="flex flex-col gap-1 mt-3">
-            <Label className="text-xs">性格</Label>
+            <Label className="text-xs">{eggFilterNatureLabel[locale]}</Label>
             <Select
               value={filter.nature !== undefined ? String(filter.nature) : ''}
               onValueChange={(v) => updateFilter({ nature: v ? Number(v) : undefined })}
               disabled={disabled}
             >
               <SelectTrigger className="text-xs">
-                <SelectValue placeholder="指定なし" />
+                <SelectValue placeholder={eggFilterNoSelection[locale]} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="" className="text-xs">指定なし</SelectItem>
-                {NATURE_NAMES.map((name, i) => (
+                <SelectItem value="" className="text-xs">{eggFilterNoSelection[locale]}</SelectItem>
+                {Array.from({ length: DOMAIN_NATURE_COUNT }, (_, i) => (
                   <SelectItem key={i} value={String(i)} className="text-xs">
-                    {name}
+                    {natureName(i, locale)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -170,19 +173,19 @@ export const EggFilterCard: React.FC = () => {
 
           {/* 性別フィルター */}
           <div className="flex flex-col gap-1 mt-3">
-            <Label className="text-xs">性別</Label>
+            <Label className="text-xs">{eggFilterGenderLabel[locale]}</Label>
             <Select
               value={filter.gender || ''}
               onValueChange={(v) => updateFilter({ gender: v ? v as 'male' | 'female' | 'genderless' : undefined })}
               disabled={disabled}
             >
               <SelectTrigger className="text-xs">
-                <SelectValue placeholder="指定なし" />
+                <SelectValue placeholder={eggFilterNoSelection[locale]} />
               </SelectTrigger>
               <SelectContent>
-                {GENDER_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                    {opt.label}
+                {Object.entries(genderOptions).map(([value, label]) => (
+                  <SelectItem key={value} value={value} className="text-xs">
+                    {label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -191,19 +194,19 @@ export const EggFilterCard: React.FC = () => {
 
           {/* 特性フィルター */}
           <div className="flex flex-col gap-1 mt-3">
-            <Label className="text-xs">特性</Label>
+            <Label className="text-xs">{eggFilterAbilityLabel[locale]}</Label>
             <Select
               value={filter.ability !== undefined ? String(filter.ability) : ''}
               onValueChange={(v) => updateFilter({ ability: v ? Number(v) as 0 | 1 | 2 : undefined })}
               disabled={disabled}
             >
               <SelectTrigger className="text-xs">
-                <SelectValue placeholder="指定なし" />
+                <SelectValue placeholder={eggFilterNoSelection[locale]} />
               </SelectTrigger>
               <SelectContent>
-                {ABILITY_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                    {opt.label}
+                {Object.entries(abilityOptions).map(([value, label]) => (
+                  <SelectItem key={value} value={value} className="text-xs">
+                    {label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -212,19 +215,19 @@ export const EggFilterCard: React.FC = () => {
 
           {/* 色違いフィルター */}
           <div className="flex flex-col gap-1 mt-3">
-            <Label className="text-xs">色違い</Label>
+            <Label className="text-xs">{eggFilterShinyLabel[locale]}</Label>
             <Select
               value={filter.shiny !== undefined ? String(filter.shiny) : ''}
               onValueChange={(v) => updateFilter({ shiny: v ? Number(v) as 0 | 1 | 2 : undefined })}
               disabled={disabled}
             >
               <SelectTrigger className="text-xs">
-                <SelectValue placeholder="指定なし" />
+                <SelectValue placeholder={eggFilterNoSelection[locale]} />
               </SelectTrigger>
               <SelectContent>
-                {SHINY_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                    {opt.label}
+                {Object.entries(shinyOptions).map(([value, label]) => (
+                  <SelectItem key={value} value={value} className="text-xs">
+                    {label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -233,18 +236,18 @@ export const EggFilterCard: React.FC = () => {
 
           {/* めざパタイプフィルター */}
           <div className="flex flex-col gap-1 mt-3">
-            <Label className="text-xs">めざパタイプ</Label>
+            <Label className="text-xs">{eggFilterHpTypeLabel[locale]}</Label>
             <Select
               value={filter.hiddenPowerType !== undefined ? String(filter.hiddenPowerType) : ''}
               onValueChange={(v) => updateFilter({ hiddenPowerType: v ? Number(v) : undefined })}
               disabled={disabled}
             >
               <SelectTrigger className="text-xs">
-                <SelectValue placeholder="指定なし" />
+                <SelectValue placeholder={eggFilterNoSelection[locale]} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="" className="text-xs">指定なし</SelectItem>
-                {HP_TYPE_NAMES.map((name, i) => (
+                <SelectItem value="" className="text-xs">{eggFilterNoSelection[locale]}</SelectItem>
+                {hpTypeNames.map((name, i) => (
                   <SelectItem key={i} value={String(i)} className="text-xs">
                     {name}
                   </SelectItem>
@@ -255,7 +258,7 @@ export const EggFilterCard: React.FC = () => {
 
           {/* めざパ威力フィルター */}
           <div className="flex flex-col gap-1 mt-3">
-            <Label className="text-xs">めざパ威力 (30-70)</Label>
+            <Label className="text-xs">{eggFilterHpPowerLabel[locale]}</Label>
             <Input
               type="number"
               min={30}
@@ -266,7 +269,7 @@ export const EggFilterCard: React.FC = () => {
                 updateFilter({ hiddenPowerPower: v ? Math.max(30, Math.min(70, parseInt(v))) : undefined });
               }}
               disabled={disabled}
-              placeholder="指定なし"
+              placeholder={eggFilterNoSelection[locale]}
               className="text-xs"
             />
           </div>
