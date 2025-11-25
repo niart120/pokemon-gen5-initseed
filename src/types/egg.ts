@@ -163,6 +163,7 @@ export interface EggGenerationParamsHex {
   conditions: EggGenerationConditions;
   parents: ParentsIVs;
   filter: EggIndividualFilter | null;
+  filterDisabled: boolean;
   considerNpcConsumption: boolean;
   gameMode: EggGameMode;
 }
@@ -218,6 +219,7 @@ export function eggParamsToHex(p: EggGenerationParams): EggGenerationParamsHex {
     conditions: p.conditions,
     parents: p.parents,
     filter: p.filter,
+    filterDisabled: false,
     considerNpcConsumption: p.considerNpcConsumption,
     gameMode: p.gameMode,
   };
@@ -404,6 +406,7 @@ export function createDefaultEggParamsHex(): EggGenerationParamsHex {
     conditions: createDefaultEggConditions(),
     parents: createDefaultParentsIVs(),
     filter: null,
+    filterDisabled: false,
     considerNpcConsumption: false,
     gameMode: EggGameMode.BwContinue,
   };

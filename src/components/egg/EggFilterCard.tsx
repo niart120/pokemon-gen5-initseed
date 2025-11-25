@@ -14,7 +14,7 @@ import { DOMAIN_NATURE_COUNT } from '@/types/domain';
 import { createDefaultEggFilter, type StatRange, type EggIndividualFilter } from '@/types/egg';
 import {
   eggFilterPanelTitle,
-  eggFilterEnabledLabel,
+  eggFilterDisabledLabel,
   eggFilterIvRangeTitle,
   eggFilterNatureLabel,
   eggFilterGenderLabel,
@@ -43,6 +43,7 @@ export const EggFilterCard: React.FC = () => {
   const disabled = status === 'running' || status === 'starting';
 
   const filter = draftParams.filter || createDefaultEggFilter();
+  const filterDisabled = draftParams.filterDisabled ?? false;
 
   // Localized options
   const genderOptions = resolveLocaleValue(eggFilterGenderOptions, locale);
@@ -90,14 +91,6 @@ export const EggFilterCard: React.FC = () => {
     return range.min === 0 && range.max === 32;
   };
 
-  const clearFilter = () => {
-    updateDraftParams({ filter: null });
-  };
-
-  const enableFilter = () => {
-    updateDraftParams({ filter: createDefaultEggFilter() });
-  };
-
   return (
     <PanelCard
       icon={<Funnel size={20} className="opacity-80" />}
@@ -108,26 +101,21 @@ export const EggFilterCard: React.FC = () => {
       aria-labelledby="egg-filter-title"
       role="form"
     >
-      {/* フィルター有効/無効 */}
+      {/* フィルター無効化チェック */}
       <div className="flex items-center gap-2 mb-3">
         <Checkbox
-          id="egg-filter-enabled"
-          checked={draftParams.filter !== null}
+          id="egg-filter-disabled"
+          checked={filterDisabled}
           onCheckedChange={(checked) => {
-            if (checked) {
-              enableFilter();
-            } else {
-              clearFilter();
-            }
+            updateDraftParams({ filterDisabled: !!checked });
           }}
           disabled={disabled}
         />
-        <Label htmlFor="egg-filter-enabled" className="text-xs">{eggFilterEnabledLabel[locale]}</Label>
+        <Label htmlFor="egg-filter-disabled" className="text-xs">{eggFilterDisabledLabel[locale]}</Label>
       </div>
 
-      {draftParams.filter && (
-        <>
-          {/* 性格・性別・特性・色違い: 4列グリッド */}
+      <>
+        {/* 性格・性別・特性・色違い: 4列グリッド */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {/* 性格フィルター */}
             <div className="flex flex-col gap-1">
@@ -135,7 +123,7 @@ export const EggFilterCard: React.FC = () => {
               <Select
                 value={filter.nature !== undefined ? String(filter.nature) : 'none'}
                 onValueChange={(v) => updateFilter({ nature: v !== 'none' ? Number(v) : undefined })}
-                disabled={disabled}
+                disabled={disabled || filterDisabled}
               >
                 <SelectTrigger className="text-xs">
                   <SelectValue placeholder={eggFilterNoSelection[locale]} />
@@ -157,7 +145,7 @@ export const EggFilterCard: React.FC = () => {
               <Select
                 value={filter.gender || 'none'}
                 onValueChange={(v) => updateFilter({ gender: v !== 'none' ? v as 'male' | 'female' | 'genderless' : undefined })}
-                disabled={disabled}
+                disabled={disabled || filterDisabled}
               >
                 <SelectTrigger className="text-xs">
                   <SelectValue placeholder={eggFilterNoSelection[locale]} />
@@ -178,7 +166,7 @@ export const EggFilterCard: React.FC = () => {
               <Select
                 value={filter.ability !== undefined ? String(filter.ability) : 'none'}
                 onValueChange={(v) => updateFilter({ ability: v !== 'none' ? Number(v) as 0 | 1 | 2 : undefined })}
-                disabled={disabled}
+                disabled={disabled || filterDisabled}
               >
                 <SelectTrigger className="text-xs">
                   <SelectValue placeholder={eggFilterNoSelection[locale]} />
@@ -199,7 +187,7 @@ export const EggFilterCard: React.FC = () => {
               <Select
                 value={filter.shiny !== undefined ? String(filter.shiny) : 'none'}
                 onValueChange={(v) => updateFilter({ shiny: v !== 'none' ? Number(v) as 0 | 1 | 2 : undefined })}
-                disabled={disabled}
+                disabled={disabled || filterDisabled}
               >
                 <SelectTrigger className="text-xs">
                   <SelectValue placeholder={eggFilterNoSelection[locale]} />
@@ -223,7 +211,7 @@ export const EggFilterCard: React.FC = () => {
               <Select
                 value={filter.hiddenPowerType !== undefined ? String(filter.hiddenPowerType) : 'none'}
                 onValueChange={(v) => updateFilter({ hiddenPowerType: v !== 'none' ? Number(v) : undefined })}
-                disabled={disabled}
+                disabled={disabled || filterDisabled}
               >
                 <SelectTrigger className="text-xs">
                   <SelectValue placeholder={eggFilterNoSelection[locale]} />
@@ -251,7 +239,7 @@ export const EggFilterCard: React.FC = () => {
                   const v = e.target.value;
                   updateFilter({ hiddenPowerPower: v ? Math.max(30, Math.min(70, parseInt(v))) : undefined });
                 }}
-                disabled={disabled}
+                disabled={disabled || filterDisabled}
                 placeholder={eggFilterNoSelection[locale]}
                 className="text-xs"
               />
@@ -273,7 +261,7 @@ export const EggFilterCard: React.FC = () => {
                       max={31}
                       value={isUnknown ? '' : filter.ivRanges[i].min}
                       onChange={(e) => handleIvRangeChange(i, 'min', parseInt(e.target.value) || 0)}
-                      disabled={disabled || isUnknown}
+                      disabled={disabled || filterDisabled || isUnknown}
                       className="text-xs h-7 w-14 text-center"
                       placeholder={isUnknown ? '?' : 'min'}
                     />
@@ -284,7 +272,7 @@ export const EggFilterCard: React.FC = () => {
                       max={31}
                       value={isUnknown ? '' : filter.ivRanges[i].max}
                       onChange={(e) => handleIvRangeChange(i, 'max', parseInt(e.target.value) || 31)}
-                      disabled={disabled || isUnknown}
+                      disabled={disabled || filterDisabled || isUnknown}
                       className="text-xs h-7 w-14 text-center"
                       placeholder={isUnknown ? '?' : 'max'}
                     />
@@ -293,7 +281,7 @@ export const EggFilterCard: React.FC = () => {
                         id={`egg-filter-iv-unknown-${i}`}
                         checked={isUnknown}
                         onCheckedChange={(checked) => handleIvRangeUnknownChange(i, !!checked)}
-                        disabled={disabled}
+                        disabled={disabled || filterDisabled}
                         className="h-3 w-3"
                       />
                       <Label htmlFor={`egg-filter-iv-unknown-${i}`} className="text-[10px] text-muted-foreground cursor-pointer">
@@ -306,7 +294,6 @@ export const EggFilterCard: React.FC = () => {
             </div>
           </section>
         </>
-      )}
     </PanelCard>
   );
 };

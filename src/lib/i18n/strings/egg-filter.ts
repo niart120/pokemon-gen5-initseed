@@ -5,9 +5,9 @@ export const eggFilterPanelTitle: LocaleText = {
   en: 'Filter Settings',
 };
 
-export const eggFilterEnabledLabel: LocaleText = {
-  ja: 'フィルターを有効にする',
-  en: 'Enable Filter',
+export const eggFilterDisabledLabel: LocaleText = {
+  ja: 'フィルターを無効にする',
+  en: 'Disable Filter',
 };
 
 export const eggFilterIvRangeTitle: LocaleText = {
