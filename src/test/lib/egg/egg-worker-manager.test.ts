@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EggWorkerManager } from './egg-worker-manager';
+import { EggWorkerManager } from '@/lib/egg/egg-worker-manager';
 import {
   createDefaultEggParamsHex,
   hexParamsToEggParams,

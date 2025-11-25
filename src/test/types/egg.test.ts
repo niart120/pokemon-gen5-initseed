@@ -15,7 +15,7 @@ import {
   type EggGenerationParamsHex,
   type ParentIvInputState,
   type FilterIvRangeInputState,
-} from './egg';
+} from '@/types/egg';
 
 describe('egg types', () => {
   describe('hexParamsToEggParams', () => {

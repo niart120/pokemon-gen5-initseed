@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useEggStore } from './egg-store';
+import { useEggStore } from '@/store/egg-store';
 import { EggGameMode, createDefaultEggParamsHex } from '@/types/egg';
 
 describe('egg-store', () => {

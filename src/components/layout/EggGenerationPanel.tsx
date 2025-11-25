@@ -4,7 +4,7 @@ import { EggFilterCard } from './EggFilterCard';
 import { EggRunCard } from './EggRunCard';
 import { EggResultsCard } from './EggResultsCard';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
-import { LEFT_COLUMN_WIDTH_CLAMP } from '@/components/layout/constants';
+import { LEFT_COLUMN_WIDTH_CLAMP } from './constants';
 import { getResponsiveSizes } from '@/lib/utils/responsive-sizes';
 
 /**
