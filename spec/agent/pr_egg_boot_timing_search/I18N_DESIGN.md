@@ -404,6 +404,10 @@ export const eggBootTimingValidationErrors: LocaleMap<Record<string, string>> = 
 // ヘルパー関数
 // ===========================
 
+/**
+ * BCP47ロケール識別子マッピング
+ * NOTE: 共通ユーティリティとして src/lib/i18n/strings/common.ts への移動を検討
+ */
 const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
   ja: 'ja-JP',
   en: 'en-US',
@@ -505,6 +509,7 @@ export function formatEggBootTimingDatetime(
 
 /**
  * 結果件数フォーマット
+ * NOTE: eggBootTimingResultsCountLabel と一貫性のあるフォーマット
  */
 export function formatEggBootTimingResultsCount(
   count: number,
@@ -512,7 +517,8 @@ export function formatEggBootTimingResultsCount(
 ): string {
   const formatter = getNumberFormatter(locale);
   const countStr = formatter.format(count);
-  return locale === 'ja' ? `${countStr}件` : `${countStr} results`;
+  const suffix = eggBootTimingResultsCountLabel[locale];
+  return `${countStr} ${suffix}`;
 }
 
 /**

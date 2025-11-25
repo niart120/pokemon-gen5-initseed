@@ -325,11 +325,11 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
         onResult: (result) => {
           set((state) => {
             const newResults = [...state.results, result];
-            // 上限を超えた場合は古い結果を削除
-            if (newResults.length > MAX_RESULTS) {
-              return { results: newResults.slice(-MAX_RESULTS) };
-            }
-            return { results: newResults };
+            // 上限を超えた場合は古い結果を削除、そうでなければそのまま
+            const finalResults = newResults.length > MAX_RESULTS
+              ? newResults.slice(-MAX_RESULTS)
+              : newResults;
+            return { results: finalResults };
           });
         },
         onComplete: (message) => {
@@ -419,8 +419,10 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
     getFilteredResults: () => {
       const { results, resultFilters } = get();
       // フィルター適用ロジック (簡略化)
+      // shiny: 0=通常(非色違い), 1=正方形色違い, 2=星型色違い
       return results.filter((result) => {
         if (resultFilters.shinyOnly && result.egg.egg.shiny === 0) {
+          // shinyOnly が true の場合、色違いのみ (shiny !== 0) を通す
           return false;
         }
         // その他のフィルター条件...
