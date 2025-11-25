@@ -32,6 +32,7 @@ import {
   eggParamsFemaleAbilityOptions,
   eggParamsMasudaMethodLabel,
   eggParamsNpcConsumptionLabel,
+  eggParamsIvUnknownLabel,
 } from '@/lib/i18n/strings/egg-params';
 
 const STAT_NAMES = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
@@ -75,10 +76,27 @@ export const EggParamsCard: React.FC = () => {
     index: number,
     value: string
   ) => {
-    const numValue = Math.min(32, Math.max(0, parseInt(value) || 0));
+    const numValue = Math.min(31, Math.max(0, parseInt(value) || 0));
     const currentIvs = parent === 'male' ? draftParams.parents.male : draftParams.parents.female;
     const newIvs = [...currentIvs] as IvSet;
     newIvs[index] = numValue;
+
+    if (parent === 'male') {
+      updateDraftParentsMale(newIvs);
+    } else {
+      updateDraftParentsFemale(newIvs);
+    }
+  };
+
+  const handleIvUnknownChange = (
+    parent: 'male' | 'female',
+    index: number,
+    isUnknown: boolean
+  ) => {
+    const currentIvs = parent === 'male' ? draftParams.parents.male : draftParams.parents.female;
+    const newIvs = [...currentIvs] as IvSet;
+    // unknown時は32を設定、チェック解除時は0に戻す
+    newIvs[index] = isUnknown ? 32 : 0;
 
     if (parent === 'male') {
       updateDraftParentsMale(newIvs);
@@ -174,21 +192,37 @@ export const EggParamsCard: React.FC = () => {
         <div className="space-y-1">
           <Label className="text-xs">{eggParentsMaleLabel[locale]}</Label>
           <div className="grid grid-cols-6 gap-1">
-            {STAT_NAMES.map((stat, i) => (
-              <div key={i} className="flex flex-col items-center">
-                <span className="text-[10px] text-muted-foreground">{stat}</span>
-                <Input
-                  type="number"
-                  min={0}
-                  max={32}
-                  data-testid={`egg-male-iv-${i}`}
-                  value={draftParams.parents.male[i]}
-                  onChange={(e) => handleIvChange('male', i, e.target.value)}
-                  disabled={disabled}
-                  className="text-xs text-center h-7 px-1"
-                />
-              </div>
-            ))}
+            {STAT_NAMES.map((stat, i) => {
+              const isUnknown = draftParams.parents.male[i] === 32;
+              return (
+                <div key={i} className="flex flex-col items-center">
+                  <span className="text-[10px] text-muted-foreground">{stat}</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={31}
+                    data-testid={`egg-male-iv-${i}`}
+                    value={isUnknown ? '' : draftParams.parents.male[i]}
+                    onChange={(e) => handleIvChange('male', i, e.target.value)}
+                    disabled={disabled || isUnknown}
+                    className="text-xs text-center h-7 px-1"
+                    placeholder={isUnknown ? '?' : undefined}
+                  />
+                  <div className="flex items-center gap-1 mt-1">
+                    <Checkbox
+                      id={`egg-male-iv-unknown-${i}`}
+                      checked={isUnknown}
+                      onCheckedChange={(checked) => handleIvUnknownChange('male', i, !!checked)}
+                      disabled={disabled}
+                      className="h-3 w-3"
+                    />
+                    <Label htmlFor={`egg-male-iv-unknown-${i}`} className="text-[9px] text-muted-foreground cursor-pointer">
+                      {eggParamsIvUnknownLabel[locale]}
+                    </Label>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -196,21 +230,37 @@ export const EggParamsCard: React.FC = () => {
         <div className="space-y-1">
           <Label className="text-xs">{eggParentsFemaleLabel[locale]}</Label>
           <div className="grid grid-cols-6 gap-1">
-            {STAT_NAMES.map((stat, i) => (
-              <div key={i} className="flex flex-col items-center">
-                <span className="text-[10px] text-muted-foreground">{stat}</span>
-                <Input
-                  type="number"
-                  min={0}
-                  max={32}
-                  data-testid={`egg-female-iv-${i}`}
-                  value={draftParams.parents.female[i]}
-                  onChange={(e) => handleIvChange('female', i, e.target.value)}
-                  disabled={disabled}
-                  className="text-xs text-center h-7 px-1"
-                />
-              </div>
-            ))}
+            {STAT_NAMES.map((stat, i) => {
+              const isUnknown = draftParams.parents.female[i] === 32;
+              return (
+                <div key={i} className="flex flex-col items-center">
+                  <span className="text-[10px] text-muted-foreground">{stat}</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={31}
+                    data-testid={`egg-female-iv-${i}`}
+                    value={isUnknown ? '' : draftParams.parents.female[i]}
+                    onChange={(e) => handleIvChange('female', i, e.target.value)}
+                    disabled={disabled || isUnknown}
+                    className="text-xs text-center h-7 px-1"
+                    placeholder={isUnknown ? '?' : undefined}
+                  />
+                  <div className="flex items-center gap-1 mt-1">
+                    <Checkbox
+                      id={`egg-female-iv-unknown-${i}`}
+                      checked={isUnknown}
+                      onCheckedChange={(checked) => handleIvUnknownChange('female', i, !!checked)}
+                      disabled={disabled}
+                      className="h-3 w-3"
+                    />
+                    <Label htmlFor={`egg-female-iv-unknown-${i}`} className="text-[9px] text-muted-foreground cursor-pointer">
+                      {eggParamsIvUnknownLabel[locale]}
+                    </Label>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

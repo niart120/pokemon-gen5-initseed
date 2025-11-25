@@ -26,6 +26,7 @@ import {
   eggFilterGenderOptions,
   eggFilterAbilityOptions,
   eggFilterShinyOptions,
+  eggFilterIvUnknownLabel,
 } from '@/lib/i18n/strings/egg-filter';
 import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
 
@@ -63,9 +64,30 @@ export const EggFilterCard: React.FC = () => {
     const newRanges = [...filter.ivRanges] as [StatRange, StatRange, StatRange, StatRange, StatRange, StatRange];
     newRanges[statIndex] = {
       ...newRanges[statIndex],
-      [minMax]: Math.max(0, Math.min(32, value)),
+      [minMax]: Math.max(0, Math.min(31, value)),
     };
     updateFilter({ ivRanges: newRanges });
+  };
+
+  const handleIvRangeUnknownChange = (
+    statIndex: number,
+    isUnknown: boolean
+  ) => {
+    const newRanges = [...filter.ivRanges] as [StatRange, StatRange, StatRange, StatRange, StatRange, StatRange];
+    if (isUnknown) {
+      // unknown時は min=0, max=32 を設定
+      newRanges[statIndex] = { min: 0, max: 32 };
+    } else {
+      // チェック解除時は min=0, max=31 を設定
+      newRanges[statIndex] = { min: 0, max: 31 };
+    }
+    updateFilter({ ivRanges: newRanges });
+  };
+
+  // IV範囲がunknown(0-32)かどうかを判定
+  const isIvRangeUnknown = (statIndex: number): boolean => {
+    const range = filter.ivRanges[statIndex];
+    return range.min === 0 && range.max === 32;
   };
 
   const clearFilter = () => {
@@ -240,32 +262,47 @@ export const EggFilterCard: React.FC = () => {
           <section className="space-y-2 mt-3" role="group">
             <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggFilterIvRangeTitle[locale]}</h4>
             <div className="space-y-2">
-              {STAT_NAMES.map((stat, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="text-xs w-8">{stat}</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={32}
-                    value={filter.ivRanges[i].min}
-                    onChange={(e) => handleIvRangeChange(i, 'min', parseInt(e.target.value) || 0)}
-                    disabled={disabled}
-                    className="text-xs h-7 w-14 text-center"
-                    placeholder="min"
-                  />
-                  <span className="text-xs">~</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={32}
-                    value={filter.ivRanges[i].max}
-                    onChange={(e) => handleIvRangeChange(i, 'max', parseInt(e.target.value) || 32)}
-                    disabled={disabled}
-                    className="text-xs h-7 w-14 text-center"
-                    placeholder="max"
-                  />
-                </div>
-              ))}
+              {STAT_NAMES.map((stat, i) => {
+                const isUnknown = isIvRangeUnknown(i);
+                return (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-xs w-8">{stat}</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={31}
+                      value={isUnknown ? '' : filter.ivRanges[i].min}
+                      onChange={(e) => handleIvRangeChange(i, 'min', parseInt(e.target.value) || 0)}
+                      disabled={disabled || isUnknown}
+                      className="text-xs h-7 w-14 text-center"
+                      placeholder={isUnknown ? '?' : 'min'}
+                    />
+                    <span className="text-xs">~</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={31}
+                      value={isUnknown ? '' : filter.ivRanges[i].max}
+                      onChange={(e) => handleIvRangeChange(i, 'max', parseInt(e.target.value) || 31)}
+                      disabled={disabled || isUnknown}
+                      className="text-xs h-7 w-14 text-center"
+                      placeholder={isUnknown ? '?' : 'max'}
+                    />
+                    <div className="flex items-center gap-1">
+                      <Checkbox
+                        id={`egg-filter-iv-unknown-${i}`}
+                        checked={isUnknown}
+                        onCheckedChange={(checked) => handleIvRangeUnknownChange(i, !!checked)}
+                        disabled={disabled}
+                        className="h-3 w-3"
+                      />
+                      <Label htmlFor={`egg-filter-iv-unknown-${i}`} className="text-[10px] text-muted-foreground cursor-pointer">
+                        {eggFilterIvUnknownLabel[locale]}
+                      </Label>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </section>
         </>

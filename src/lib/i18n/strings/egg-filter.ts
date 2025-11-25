@@ -94,3 +94,8 @@ export const eggFilterShinyOptions: LocaleMap<Record<'none' | '0' | '1' | '2', s
     '2': 'Star Shiny',
   },
 };
+
+export const eggFilterIvUnknownLabel: LocaleText = {
+  ja: '任意',
+  en: 'Any',
+};

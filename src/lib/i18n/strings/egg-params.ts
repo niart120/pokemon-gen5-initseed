@@ -155,3 +155,8 @@ export const eggParamsNpcConsumptionLabel: LocaleText = {
   ja: 'NPC消費を考慮',
   en: 'Consider NPC Consumption',
 };
+
+export const eggParamsIvUnknownLabel: LocaleText = {
+  ja: '不明',
+  en: 'Unknown',
+};

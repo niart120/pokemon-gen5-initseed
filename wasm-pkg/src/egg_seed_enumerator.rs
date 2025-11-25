@@ -242,11 +242,11 @@ impl EggSeedEnumeratorJs {
         count: u32,
         conditions: &GenerationConditionsJs,
         parents: &ParentsIVsJs,
-        filter: Option<IndividualFilterJs>,
+        filter: &IndividualFilterJs,
         consider_npc_consumption: bool,
         game_mode: GameMode,
     ) -> EggSeedEnumeratorJs {
-        let internal_filter = filter.as_ref().map(|f| f.to_internal());
+        let internal_filter = Some(filter.to_internal());
         let internal_conditions = conditions.to_internal();
         let internal_parents = parents.to_internal();
 

@@ -123,9 +123,10 @@ function buildEverstone(wasm: any, plan: EggGenerationParams['conditions']['ever
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildFilter(wasm: any, filter: EggGenerationParams['filter']) {
-  if (!filter) return null;
-
   const wasmFilter = new wasm.IndividualFilterJs();
+
+  // フィルタがnullの場合はデフォルト（全pass-through）のフィルタを返す
+  if (!filter) return wasmFilter;
 
   // IV範囲設定
   for (let i = 0; i < 6; i++) {
