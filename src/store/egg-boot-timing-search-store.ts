@@ -18,6 +18,7 @@ import {
 import type { EggGenerationConditions, ParentsIVs, IvSet, EggIndividualFilter } from '@/types/egg';
 import type { DeviceProfile } from '@/types/profile';
 import type { DailyTimeRange } from '@/types/search';
+import { EggBootTimingWorkerManager } from '@/lib/egg';
 
 /**
  * 検索実行状態
@@ -70,6 +71,8 @@ interface EggBootTimingSearchState {
   // --- 実行状態 ---
   /** 検索状態 */
   status: EggBootTimingSearchStatus;
+  /** Worker Manager */
+  workerManager: EggBootTimingWorkerManager | null;
   
   // --- 進捗 ---
   /** 進捗情報 */
@@ -110,7 +113,7 @@ interface EggBootTimingSearchActions {
   validateDraft: () => boolean;
   
   // --- 検索制御 ---
-  startSearch: () => void;
+  startSearch: () => Promise<void>;
   stopSearch: () => void;
   
   // --- 進捗更新（Worker Manager からの呼び出し用） ---
@@ -140,6 +143,7 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
     params: null,
     validationErrors: [],
     status: 'idle',
+    workerManager: null,
     progress: null,
     _pendingResults: [],
     results: [],
@@ -265,8 +269,8 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
     },
 
     // === 検索制御 ===
-    startSearch: () => {
-      const { validateDraft, draftParams } = get();
+    startSearch: async () => {
+      const { validateDraft, draftParams, workerManager: existingManager } = get();
       
       if (!validateDraft()) {
         return;
@@ -283,13 +287,50 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
         params: draftParams,
       });
 
-      // Worker起動は別途行う（UIからの呼び出し）
-      set({ status: 'running' });
+      // Worker Manager初期化またはリユース
+      const manager = existingManager || new EggBootTimingWorkerManager();
+
+      try {
+        await manager.initialize({
+          onProgress: (progress) => {
+            get()._updateProgress({
+              processedCombinations: progress.processedCombinations,
+              totalCombinations: progress.totalCombinations,
+              foundCount: progress.foundCount,
+              progressPercent: progress.progressPercent,
+              elapsedMs: progress.elapsedMs,
+            });
+          },
+          onResults: (results) => {
+            for (const result of results) {
+              if (!get()._addPendingResult(result)) {
+                // 上限到達
+                break;
+              }
+            }
+          },
+          onComplete: (completion) => {
+            get()._onComplete(completion);
+          },
+          onError: (error) => {
+            get()._onError(error.message);
+          },
+        });
+
+        set({ workerManager: manager, status: 'running' });
+        await manager.startSearch(draftParams);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        set({ status: 'error', errorMessage: message });
+      }
     },
 
     stopSearch: () => {
+      const { workerManager } = get();
       set({ status: 'stopping' });
-      // Worker停止は別途行う
+      if (workerManager) {
+        workerManager.stopSearch();
+      }
     },
 
     // === 進捗更新 ===
@@ -376,11 +417,16 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
 
     // === リセット ===
     reset: () => {
+      const { workerManager } = get();
+      if (workerManager) {
+        workerManager.terminate();
+      }
       set({
         draftParams: createDefaultEggBootTimingSearchParams(),
         params: null,
         validationErrors: [],
         status: 'idle',
+        workerManager: null,
         progress: null,
         _pendingResults: [],
         results: [],

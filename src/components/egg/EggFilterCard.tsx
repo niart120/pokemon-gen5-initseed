@@ -101,7 +101,7 @@ export const EggFilterCard: React.FC = () => {
     <PanelCard
       icon={<Funnel size={20} className="opacity-80" />}
       title={<span id="egg-filter-title">{eggFilterPanelTitle[locale]}</span>}
-      className={isStack ? 'max-h-96' : undefined}
+      className={isStack ? 'min-h-[480px]' : undefined}
       fullHeight={!isStack}
       scrollMode={isStack ? 'parent' : 'content'}
       aria-labelledby="egg-filter-title"
