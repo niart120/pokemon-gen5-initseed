@@ -309,8 +309,8 @@ fn process_simd_batch(&self, messages: &[u32; 64], metadata: &[...], results: &j
  */
 export interface EggBootTimingSearchParams {
   // === SHA-1 / 起動時間パラメータ ===
-  /** 開始日時 (ISO8601) */
-  startDatetime: string;
+  /** 開始日時 (ISO8601 UTC) */
+  startDatetimeIso: string;
   /** 検索範囲秒数 */
   rangeSeconds: number;
   

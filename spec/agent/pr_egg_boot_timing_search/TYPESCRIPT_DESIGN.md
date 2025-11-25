@@ -196,6 +196,33 @@ export interface EggBootTimingSearchResult {
 }
 
 /**
+ * WASM結果の型定義
+ */
+export interface WasmEggBootTimingSearchResult {
+  year: number;
+  month: number;
+  date: number;
+  hour: number;
+  minute: number;
+  second: number;
+  timer0: number;
+  vcount: number;
+  keyCode: number;
+  lcgSeedHex: string;
+  advance: bigint;
+  isStable: boolean;
+  ivs: number[];
+  nature: number;
+  gender: number;
+  ability: number;
+  shiny: number;
+  pid: number;
+  hpType: number;
+  hpPower: number;
+  hpKnown: boolean;
+}
+
+/**
  * WASM結果からの変換
  */
 export function convertWasmResult(wasmResult: WasmEggBootTimingSearchResult): EggBootTimingSearchResult {
@@ -676,47 +703,36 @@ function buildFilterJs(filter: EggIndividualFilter): IndividualFilterJs {
 }
 
 function convertWasmResultToTs(
-  wasmResult: unknown,
+  wasmResult: WasmEggBootTimingSearchResult,
   macAddress: readonly [number, number, number, number, number, number]
 ): EggBootTimingSearchResult {
-  const r = wasmResult as {
-    year: number; month: number; date: number;
-    hour: number; minute: number; second: number;
-    timer0: number; vcount: number; keyCode: number;
-    lcgSeedHex: string;
-    advance: bigint; isStable: boolean;
-    ivs: number[]; nature: number; gender: number;
-    ability: number; shiny: number; pid: number;
-    hpType: number; hpPower: number; hpKnown: boolean;
-  };
-  
   return {
     boot: {
-      datetime: new Date(Date.UTC(r.year, r.month - 1, r.date, r.hour, r.minute, r.second)),
-      timer0: r.timer0,
-      vcount: r.vcount,
-      keyCode: r.keyCode,
-      keyInputNames: keyCodeToNames(r.keyCode),
+      datetime: new Date(Date.UTC(wasmResult.year, wasmResult.month - 1, wasmResult.date, wasmResult.hour, wasmResult.minute, wasmResult.second)),
+      timer0: wasmResult.timer0,
+      vcount: wasmResult.vcount,
+      keyCode: wasmResult.keyCode,
+      keyInputNames: keyCodeToNames(wasmResult.keyCode),
       macAddress,
     },
-    lcgSeedHex: r.lcgSeedHex,
+    lcgSeedHex: wasmResult.lcgSeedHex,
     egg: {
-      advance: Number(r.advance),
-      isStable: r.isStable,
+      advance: Number(wasmResult.advance),
+      isStable: wasmResult.isStable,
       egg: {
-        lcgSeedHex: r.lcgSeedHex,
-        ivs: r.ivs as [number, number, number, number, number, number],
-        nature: r.nature,
-        gender: r.gender === 0 ? 'male' : r.gender === 1 ? 'female' : 'genderless',
-        ability: r.ability as 0 | 1 | 2,
-        shiny: r.shiny as 0 | 1 | 2,
-        pid: r.pid,
-        hiddenPower: r.hpKnown
-          ? { type: 'known', hpType: r.hpType, power: r.hpPower }
+        lcgSeedHex: wasmResult.lcgSeedHex,
+        ivs: wasmResult.ivs as [number, number, number, number, number, number],
+        nature: wasmResult.nature,
+        gender: wasmResult.gender === 0 ? 'male' : wasmResult.gender === 1 ? 'female' : 'genderless',
+        ability: wasmResult.ability as 0 | 1 | 2,
+        shiny: wasmResult.shiny as 0 | 1 | 2,
+        pid: wasmResult.pid,
+        hiddenPower: wasmResult.hpKnown
+          ? { type: 'known', hpType: wasmResult.hpType, power: wasmResult.hpPower }
           : { type: 'unknown' },
       },
     },
-    isStable: r.isStable,
+    isStable: wasmResult.isStable,
   };
 }
 

@@ -25,6 +25,7 @@ use crate::integrated_search::generate_key_codes;
 use crate::offset_calculator::GameMode;
 use crate::sha1::{calculate_pokemon_sha1, swap_bytes_32};
 use crate::sha1_simd::calculate_pokemon_sha1_simd;
+use chrono::{Datelike, NaiveDate, Timelike};
 use wasm_bindgen::prelude::*;
 
 /// 孵化乱数起動時間検索器
@@ -133,12 +134,15 @@ impl EggBootTimingSearchResult {
     #[wasm_bindgen(getter)]
     pub fn nature(&self) -> u8 { self.nature }
     
+    /// Gender: 0=Male, 1=Female, 2=Genderless
     #[wasm_bindgen(getter)]
     pub fn gender(&self) -> u8 { self.gender }
     
+    /// Ability slot: 0=Ability1, 1=Ability2, 2=Hidden
     #[wasm_bindgen(getter)]
     pub fn ability(&self) -> u8 { self.ability }
     
+    /// Shiny type: 0=Normal (not shiny), 1=Square shiny, 2=Star shiny
     #[wasm_bindgen(getter)]
     pub fn shiny(&self) -> u8 { self.shiny }
     
