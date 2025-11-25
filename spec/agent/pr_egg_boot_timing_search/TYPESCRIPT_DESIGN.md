@@ -743,7 +743,626 @@ import type { EggIndividualFilter, EggBootTimingSearchResult } from '@/types/egg
 initialize().catch(console.error);
 ```
 
-## 4. WorkerManager実装
+## 4. 並列WorkerManager実装
+
+### 4.1 設計方針
+
+既存の `MultiWorkerSearchManager` と `chunk-calculator.ts` のパターンを流用し、並列検索を実現する。
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│             EggBootTimingMultiWorkerManager                     │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  チャンク分割 (EggBootTimingChunkCalculator)            │   │
+│  │  - 日時範囲を Worker 数で分割                           │   │
+│  │  - Timer0×VCount×KeyCode の組み合わせ数を考慮            │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                              │                                  │
+│         ┌────────────────────┼────────────────────┐            │
+│         ▼                    ▼                    ▼            │
+│    ┌─────────┐          ┌─────────┐          ┌─────────┐       │
+│    │Worker 0 │          │Worker 1 │   ...    │Worker N │       │
+│    │Chunk 0  │          │Chunk 1  │          │Chunk N  │       │
+│    └─────────┘          └─────────┘          └─────────┘       │
+│         │                    │                    │            │
+│         └────────────────────┼────────────────────┘            │
+│                              ▼                                  │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  進捗集約 (AggregatedProgress)                          │   │
+│  │  - 各 Worker の進捗を統合                                │   │
+│  │  - 残り時間推定                                          │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 4.2 チャンク分割設計
+
+```typescript
+// src/lib/egg/boot-timing-chunk-calculator.ts
+
+import type { EggBootTimingSearchParams } from '@/types/egg-boot-timing-search';
+import { countValidKeyCombinations } from '@/lib/utils/key-input';
+
+/**
+ * Worker に割り当てるチャンク情報
+ */
+export interface EggBootTimingWorkerChunk {
+  workerId: number;
+  startDatetime: Date;        // チャンク開始日時
+  endDatetime: Date;          // チャンク終了日時
+  rangeSeconds: number;       // チャンク内の秒数
+  estimatedOperations: number; // 推定処理数
+}
+
+/**
+ * 秒あたりの処理数を計算
+ */
+function getOperationsPerSecond(params: EggBootTimingSearchParams): number {
+  const timer0Count = params.timer0Range.max - params.timer0Range.min + 1;
+  const vcountCount = params.vcountRange.max - params.vcountRange.min + 1;
+  const keyCombinationCount = countValidKeyCombinations(params.keyInputMask);
+  
+  // 各秒に対して advanceCount 分の個体を検索
+  return Math.max(1, timer0Count * vcountCount * keyCombinationCount * params.advanceCount);
+}
+
+/**
+ * 最適なチャンク分割を計算
+ * 
+ * 既存の chunk-calculator.ts のパターンを流用
+ */
+export function calculateEggBootTimingChunks(
+  params: EggBootTimingSearchParams,
+  maxWorkers: number = navigator.hardwareConcurrency || 4
+): EggBootTimingWorkerChunk[] {
+  const operationsPerSecond = getOperationsPerSecond(params);
+  
+  const startDatetime = new Date(params.startDatetimeIso);
+  const totalSeconds = params.rangeSeconds;
+  const secondsPerWorker = Math.ceil(totalSeconds / maxWorkers);
+  
+  const chunks: EggBootTimingWorkerChunk[] = [];
+  
+  for (let i = 0; i < maxWorkers; i++) {
+    const chunkStartOffset = i * secondsPerWorker;
+    if (chunkStartOffset >= totalSeconds) break;
+    
+    const chunkEndOffset = Math.min(chunkStartOffset + secondsPerWorker, totalSeconds);
+    const chunkRangeSeconds = chunkEndOffset - chunkStartOffset;
+    
+    const chunkStartDatetime = new Date(startDatetime.getTime() + chunkStartOffset * 1000);
+    const chunkEndDatetime = new Date(startDatetime.getTime() + chunkEndOffset * 1000);
+    
+    const estimatedOperations = chunkRangeSeconds * operationsPerSecond;
+    
+    chunks.push({
+      workerId: i,
+      startDatetime: chunkStartDatetime,
+      endDatetime: chunkEndDatetime,
+      rangeSeconds: chunkRangeSeconds,
+      estimatedOperations,
+    });
+  }
+  
+  return chunks;
+}
+
+/**
+ * バッチサイズ計算
+ * 
+ * メモリと応答性のバランスを考慮してバッチサイズを決定
+ */
+export function calculateBatchSize(params: EggBootTimingSearchParams): number {
+  // 基本バッチサイズ: 60秒分
+  const BASE_BATCH_SECONDS = 60;
+  
+  // Timer0/VCount/KeyCodeの組み合わせ数
+  const timer0Count = params.timer0Range.max - params.timer0Range.min + 1;
+  const vcountCount = params.vcountRange.max - params.vcountRange.min + 1;
+  const keyCombinations = countValidKeyCombinations(params.keyInputMask);
+  
+  const combinationsPerSecond = timer0Count * vcountCount * keyCombinations;
+  
+  // 組み合わせ数が多い場合はバッチサイズを小さくして応答性を確保
+  if (combinationsPerSecond > 1000) {
+    return Math.max(10, Math.floor(BASE_BATCH_SECONDS / (combinationsPerSecond / 100)));
+  }
+  
+  return BASE_BATCH_SECONDS;
+}
+```
+
+### 4.3 並列WorkerManager実装
+
+```typescript
+// src/lib/egg/boot-timing-egg-multi-worker-manager.ts
+
+import type {
+  EggBootTimingSearchParams,
+  EggBootTimingSearchResult,
+  EggBootTimingWorkerRequest,
+  EggBootTimingWorkerResponse,
+  EggBootTimingCompletion,
+  EggBootTimingProgress,
+} from '@/types/egg-boot-timing-search';
+import {
+  calculateEggBootTimingChunks,
+  calculateBatchSize,
+  type EggBootTimingWorkerChunk,
+} from './boot-timing-chunk-calculator';
+
+/**
+ * Worker ごとの進捗状態
+ */
+interface WorkerProgress {
+  workerId: number;
+  currentStep: number;
+  totalSteps: number;
+  elapsedTime: number;
+  estimatedTimeRemaining: number;
+  matchesFound: number;
+  status: 'initializing' | 'running' | 'paused' | 'completed' | 'error';
+}
+
+/**
+ * 集約された進捗状態
+ */
+export interface AggregatedEggBootTimingProgress {
+  totalCurrentStep: number;
+  totalSteps: number;
+  totalElapsedTime: number;
+  totalEstimatedTimeRemaining: number;
+  totalMatchesFound: number;
+  activeWorkers: number;
+  completedWorkers: number;
+  workerProgresses: Map<number, WorkerProgress>;
+}
+
+/**
+ * コールバック定義
+ */
+export interface EggBootTimingMultiWorkerCallbacks {
+  onProgress: (progress: AggregatedEggBootTimingProgress) => void;
+  onResult: (result: EggBootTimingSearchResult) => void;
+  onComplete: (message: string) => void;
+  onError: (error: string) => void;
+  onPaused?: () => void;
+  onResumed?: () => void;
+  onStopped?: () => void;
+}
+
+/**
+ * タイマー状態（一時停止対応）
+ */
+interface TimerState {
+  cumulativeRunTime: number;
+  segmentStartTime: number;
+  isPaused: boolean;
+}
+
+/**
+ * 並列 Worker 管理システム
+ * 
+ * 既存の MultiWorkerSearchManager のパターンを流用
+ */
+export class EggBootTimingMultiWorkerManager {
+  private workers: Map<number, Worker> = new Map();
+  private workerProgresses: Map<number, WorkerProgress> = new Map();
+  private activeChunks: Map<number, EggBootTimingWorkerChunk> = new Map();
+  private results: EggBootTimingSearchResult[] = [];
+  private completedWorkers = 0;
+  private callbacks: EggBootTimingMultiWorkerCallbacks | null = null;
+  private searchRunning = false;
+  private progressUpdateTimer: ReturnType<typeof setInterval> | null = null;
+  private lastProgressCheck: Map<number, number> = new Map();
+  
+  private timerState: TimerState = {
+    cumulativeRunTime: 0,
+    segmentStartTime: 0,
+    isPaused: false,
+  };
+  
+  constructor(
+    private maxWorkers: number = navigator.hardwareConcurrency || 4
+  ) {}
+  
+  /**
+   * Worker数設定
+   */
+  setMaxWorkers(count: number): void {
+    if (this.searchRunning) {
+      console.warn('Cannot change worker count during active search');
+      return;
+    }
+    this.maxWorkers = Math.max(1, Math.min(count, navigator.hardwareConcurrency || 4));
+  }
+  
+  getMaxWorkers(): number {
+    return this.maxWorkers;
+  }
+  
+  /**
+   * 並列検索開始
+   */
+  async startParallelSearch(
+    params: EggBootTimingSearchParams,
+    callbacks: EggBootTimingMultiWorkerCallbacks
+  ): Promise<void> {
+    if (this.searchRunning) {
+      throw new Error('Search is already running');
+    }
+    
+    this.safeCleanup();
+    this.callbacks = callbacks;
+    this.searchRunning = true;
+    this.startManagerTimer();
+    
+    try {
+      // チャンク分割
+      const chunks = calculateEggBootTimingChunks(params, this.maxWorkers);
+      
+      if (chunks.length === 0) {
+        throw new Error('No valid chunks created for search');
+      }
+      
+      // バッチサイズ計算
+      const batchSize = calculateBatchSize(params);
+      
+      // 各チャンクに対してWorker初期化
+      for (const chunk of chunks) {
+        await this.initializeWorker(chunk, params, batchSize);
+      }
+      
+      // 進捗監視開始
+      this.startProgressMonitoring();
+      
+    } catch (error) {
+      console.error('Failed to start parallel search:', error);
+      this.cleanup();
+      callbacks.onError(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+  
+  /**
+   * Worker初期化
+   */
+  private async initializeWorker(
+    chunk: EggBootTimingWorkerChunk,
+    params: EggBootTimingSearchParams,
+    batchSize: number
+  ): Promise<void> {
+    const worker = new Worker(
+      new URL('@/workers/egg-boot-timing-worker.ts', import.meta.url),
+      { type: 'module' }
+    );
+    
+    worker.onmessage = (event: MessageEvent<EggBootTimingWorkerResponse>) => {
+      this.handleWorkerMessage(chunk.workerId, event.data);
+    };
+    
+    worker.onerror = (error) => {
+      console.error(`Worker ${chunk.workerId} error:`, error);
+      this.handleWorkerError(chunk.workerId, new Error(`Worker error: ${error.message}`));
+    };
+    
+    this.workers.set(chunk.workerId, worker);
+    this.activeChunks.set(chunk.workerId, chunk);
+    
+    // Worker進捗初期化
+    this.workerProgresses.set(chunk.workerId, {
+      workerId: chunk.workerId,
+      currentStep: 0,
+      totalSteps: chunk.estimatedOperations,
+      elapsedTime: 0,
+      estimatedTimeRemaining: 0,
+      matchesFound: 0,
+      status: 'initializing',
+    });
+    
+    // チャンク用パラメータを構築
+    const chunkParams: EggBootTimingSearchParams = {
+      ...params,
+      startDatetimeIso: chunk.startDatetime.toISOString(),
+      rangeSeconds: chunk.rangeSeconds,
+    };
+    
+    // 検索開始リクエスト
+    // NOTE: workerId と batchSize は並列実行用の拡張フィールド
+    // Worker側の型定義に追加が必要:
+    //   type: 'START_SEARCH';
+    //   params: EggBootTimingSearchParams;
+    //   requestId?: string;
+    //   workerId?: number;  // 並列実行時のWorker識別子
+    //   batchSize?: number; // バッチ処理サイズ
+    const request = {
+      type: 'START_SEARCH' as const,
+      params: chunkParams,
+      requestId: `worker-${chunk.workerId}`,
+      workerId: chunk.workerId,
+      batchSize,
+    };
+    
+    worker.postMessage(request);
+  }
+  
+  /**
+   * Workerメッセージ処理
+   */
+  private handleWorkerMessage(workerId: number, response: EggBootTimingWorkerResponse): void {
+    if (!this.callbacks) return;
+    
+    switch (response.type) {
+      case 'READY':
+        break;
+        
+      case 'PROGRESS':
+        if (response.payload) {
+          this.updateWorkerProgress(workerId, response.payload);
+        }
+        break;
+        
+      case 'RESULTS':
+        if (response.payload?.results) {
+          for (const result of response.payload.results) {
+            this.results.push(result);
+            this.callbacks.onResult(result);
+            
+            const progress = this.workerProgresses.get(workerId);
+            if (progress) {
+              progress.matchesFound++;
+            }
+          }
+        }
+        break;
+        
+      case 'COMPLETE':
+        this.handleWorkerCompletion(workerId);
+        break;
+        
+      case 'ERROR':
+        console.error(`Worker ${workerId} error:`, response.message);
+        this.handleWorkerError(workerId, new Error(response.message));
+        break;
+    }
+  }
+  
+  /**
+   * Worker進捗更新
+   */
+  private updateWorkerProgress(workerId: number, progressData: EggBootTimingProgress): void {
+    const current = this.workerProgresses.get(workerId);
+    if (!current) return;
+    
+    current.currentStep = progressData.processedCombinations;
+    current.totalSteps = progressData.totalCombinations;
+    current.elapsedTime = progressData.elapsedMs;
+    current.estimatedTimeRemaining = progressData.estimatedRemainingMs;
+    current.matchesFound = progressData.foundCount;
+    current.status = 'running';
+    
+    this.lastProgressCheck.set(workerId, Date.now());
+  }
+  
+  /**
+   * 進捗集約とレポート
+   */
+  private aggregateAndReportProgress(): void {
+    if (!this.searchRunning || !this.callbacks) return;
+    
+    const progresses = Array.from(this.workerProgresses.values());
+    if (progresses.length === 0) return;
+    
+    const totalCurrentStep = progresses.reduce((sum, p) => sum + p.currentStep, 0);
+    const totalSteps = progresses.reduce((sum, p) => sum + p.totalSteps, 0);
+    const totalElapsedTime = this.getManagerElapsedTime();
+    const totalMatchesFound = progresses.reduce((sum, p) => sum + p.matchesFound, 0);
+    
+    const activeWorkers = progresses.filter(p => 
+      p.status === 'running' || p.status === 'initializing'
+    ).length;
+    
+    const completedWorkers = progresses.filter(p => 
+      p.status === 'completed'
+    ).length;
+    
+    const totalEstimatedTimeRemaining = this.calculateAggregatedTimeRemaining(progresses);
+    
+    const aggregatedProgress: AggregatedEggBootTimingProgress = {
+      totalCurrentStep,
+      totalSteps,
+      totalElapsedTime,
+      totalEstimatedTimeRemaining,
+      totalMatchesFound,
+      activeWorkers,
+      completedWorkers,
+      workerProgresses: new Map(this.workerProgresses),
+    };
+    
+    this.callbacks.onProgress(aggregatedProgress);
+  }
+  
+  /**
+   * 残り時間推定
+   */
+  private calculateAggregatedTimeRemaining(progresses: WorkerProgress[]): number {
+    const activeProgresses = progresses.filter(p => 
+      p.status === 'running' && p.currentStep > 0
+    );
+    
+    if (activeProgresses.length === 0) return 0;
+    
+    const remainingTimes = activeProgresses.map(p => {
+      if (p.currentStep === 0) return 0;
+      const progressRatio = p.currentStep / p.totalSteps;
+      if (progressRatio === 0) return 0;
+      const estimatedTotalTime = p.elapsedTime / progressRatio;
+      return Math.max(0, estimatedTotalTime - p.elapsedTime);
+    });
+    
+    return Math.max(...remainingTimes);
+  }
+  
+  /**
+   * Worker完了処理
+   */
+  private handleWorkerCompletion(workerId: number): void {
+    const progress = this.workerProgresses.get(workerId);
+    if (progress) {
+      progress.status = 'completed';
+      progress.currentStep = progress.totalSteps;
+    }
+    
+    this.completedWorkers++;
+    
+    if (this.completedWorkers >= this.workers.size) {
+      this.handleAllWorkersCompleted();
+    }
+  }
+  
+  /**
+   * 全Worker完了処理
+   */
+  private handleAllWorkersCompleted(): void {
+    const totalElapsed = this.getManagerElapsedTime();
+    const totalResults = this.results.length;
+    
+    // 最終進捗レポート
+    this.aggregateAndReportProgress();
+    
+    this.callbacks?.onComplete(
+      `Parallel search completed. Found ${totalResults} matches in ${Math.round(totalElapsed / 1000)}s`
+    );
+    
+    this.minimalCleanup();
+  }
+  
+  /**
+   * Workerエラー処理
+   */
+  private handleWorkerError(workerId: number, error: Error): void {
+    const progress = this.workerProgresses.get(workerId);
+    if (progress) {
+      progress.status = 'error';
+    }
+    
+    const worker = this.workers.get(workerId);
+    if (worker) {
+      worker.terminate();
+      this.workers.delete(workerId);
+    }
+    
+    if (this.workers.size === 0) {
+      this.cleanup();
+      this.callbacks?.onError('All workers failed');
+    }
+  }
+  
+  /**
+   * 進捗監視開始
+   */
+  private startProgressMonitoring(): void {
+    this.progressUpdateTimer = setInterval(() => {
+      this.aggregateAndReportProgress();
+    }, 500);
+  }
+  
+  /**
+   * 一時停止
+   */
+  pauseAll(): void {
+    this.pauseManagerTimer();
+    for (const worker of this.workers.values()) {
+      worker.postMessage({ type: 'PAUSE' });
+    }
+    this.callbacks?.onPaused?.();
+  }
+  
+  /**
+   * 再開
+   */
+  resumeAll(): void {
+    this.resumeManagerTimer();
+    for (const worker of this.workers.values()) {
+      worker.postMessage({ type: 'RESUME' });
+    }
+    this.callbacks?.onResumed?.();
+  }
+  
+  /**
+   * 停止
+   */
+  terminateAll(): void {
+    const callbacks = this.callbacks;
+    this.cleanup();
+    callbacks?.onStopped?.();
+  }
+  
+  /**
+   * 状態取得
+   */
+  isRunning(): boolean { return this.searchRunning; }
+  getActiveWorkerCount(): number { return this.workers.size; }
+  getResultsCount(): number { return this.results.length; }
+  
+  // --- Timer管理 ---
+  private startManagerTimer(): void {
+    this.timerState.cumulativeRunTime = 0;
+    this.timerState.segmentStartTime = Date.now();
+    this.timerState.isPaused = false;
+  }
+  
+  private pauseManagerTimer(): void {
+    if (!this.timerState.isPaused) {
+      this.timerState.cumulativeRunTime += Date.now() - this.timerState.segmentStartTime;
+      this.timerState.isPaused = true;
+    }
+  }
+  
+  private resumeManagerTimer(): void {
+    if (this.timerState.isPaused) {
+      this.timerState.segmentStartTime = Date.now();
+      this.timerState.isPaused = false;
+    }
+  }
+  
+  private getManagerElapsedTime(): number {
+    return this.timerState.isPaused
+      ? this.timerState.cumulativeRunTime
+      : this.timerState.cumulativeRunTime + (Date.now() - this.timerState.segmentStartTime);
+  }
+  
+  // --- クリーンアップ ---
+  private minimalCleanup(): void {
+    if (this.progressUpdateTimer) {
+      clearInterval(this.progressUpdateTimer);
+      this.progressUpdateTimer = null;
+    }
+    for (const worker of this.workers.values()) {
+      worker.terminate();
+    }
+    this.workers.clear();
+    this.callbacks = null;
+    this.searchRunning = false;
+    this.activeChunks.clear();
+    this.lastProgressCheck.clear();
+    this.results = [];
+  }
+  
+  safeCleanup(): void {
+    this.minimalCleanup();
+    this.completedWorkers = 0;
+  }
+  
+  private cleanup(): void {
+    this.safeCleanup();
+    this.workerProgresses.clear();
+  }
+}
+```
+
+### 4.4 単一Worker版（簡易版）
+
+並列処理が不要な場合や、デバッグ用の単一Worker版も提供する。
 
 ```typescript
 // src/lib/egg/boot-timing-egg-worker-manager.ts
@@ -765,6 +1384,9 @@ export interface EggBootTimingWorkerCallbacks {
   onError?: (error: { message: string; category: string; fatal: boolean }) => void;
 }
 
+/**
+ * 単一Worker版マネージャ（簡易版）
+ */
 export class EggBootTimingWorkerManager {
   private worker: Worker | null = null;
   private callbacks: EggBootTimingWorkerCallbacks = {};
@@ -772,19 +1394,14 @@ export class EggBootTimingWorkerManager {
   
   constructor() {}
   
-  /**
-   * Worker初期化
-   */
   async initialize(callbacks: EggBootTimingWorkerCallbacks): Promise<void> {
     this.callbacks = callbacks;
     
-    // Worker作成
     this.worker = new Worker(
       new URL('@/workers/egg-boot-timing-worker.ts', import.meta.url),
       { type: 'module' }
     );
     
-    // メッセージハンドラ設定
     this.worker.onmessage = (event: MessageEvent<EggBootTimingWorkerResponse>) => {
       this.handleMessage(event.data);
     };
@@ -797,7 +1414,6 @@ export class EggBootTimingWorkerManager {
       });
     };
     
-    // READY待機
     await new Promise<void>((resolve) => {
       const originalOnReady = this.callbacks.onReady;
       this.callbacks.onReady = () => {
@@ -807,16 +1423,9 @@ export class EggBootTimingWorkerManager {
     });
   }
   
-  /**
-   * 検索開始
-   */
   async startSearch(params: EggBootTimingSearchParams): Promise<void> {
-    if (!this.worker) {
-      throw new Error('Worker not initialized');
-    }
-    if (this.isRunning) {
-      throw new Error('Search already running');
-    }
+    if (!this.worker) throw new Error('Worker not initialized');
+    if (this.isRunning) throw new Error('Search already running');
     
     this.isRunning = true;
     
@@ -829,22 +1438,12 @@ export class EggBootTimingWorkerManager {
     this.worker.postMessage(request);
   }
   
-  /**
-   * 検索停止
-   */
   stopSearch(): void {
     if (!this.worker || !this.isRunning) return;
-    
-    const request: EggBootTimingWorkerRequest = {
-      type: 'STOP',
-    };
-    
+    const request: EggBootTimingWorkerRequest = { type: 'STOP' };
     this.worker.postMessage(request);
   }
   
-  /**
-   * Worker終了
-   */
   terminate(): void {
     if (this.worker) {
       this.worker.terminate();
@@ -853,36 +1452,29 @@ export class EggBootTimingWorkerManager {
     this.isRunning = false;
   }
   
-  /**
-   * 実行中フラグ
-   */
-  get running(): boolean {
-    return this.isRunning;
-  }
+  get running(): boolean { return this.isRunning; }
   
   private handleMessage(response: EggBootTimingWorkerResponse): void {
     switch (response.type) {
       case 'READY':
         this.callbacks.onReady?.();
         break;
-        
       case 'PROGRESS':
-        this.callbacks.onProgress?.(response.payload);
+        if (response.payload) {
+          this.callbacks.onProgress?.(response.payload);
+        }
         break;
-        
       case 'RESULTS':
-        this.callbacks.onResults?.(response.payload.results);
+        if (response.payload?.results) {
+          this.callbacks.onResults?.(response.payload.results);
+        }
         break;
-        
       case 'COMPLETE':
         this.isRunning = false;
         this.callbacks.onComplete?.(response.payload);
         break;
-        
       case 'ERROR':
-        if (response.fatal) {
-          this.isRunning = false;
-        }
+        if (response.fatal) this.isRunning = false;
         this.callbacks.onError?.({
           message: response.message,
           category: response.category,
@@ -896,7 +1488,43 @@ export class EggBootTimingWorkerManager {
 
 ## 5. 既存コードとの統合ポイント
 
-### 5.1 nazo-resolver
+### 5.1 並列Worker管理パターン
+
+```typescript
+// src/lib/search/multi-worker-manager.ts から流用
+// - Worker ライフサイクル管理
+// - 進捗集約ロジック
+// - 一時停止/再開機能
+// - タイマー管理（一時停止考慮）
+
+import { MultiWorkerSearchManager } from '@/lib/search/multi-worker-manager';
+```
+
+### 5.2 チャンク分割計算
+
+```typescript
+// src/lib/search/chunk-calculator.ts から流用
+// - 日時範囲の Worker 分割
+// - 処理量推定
+
+import { calculateOptimalChunks } from '@/lib/search/chunk-calculator';
+```
+
+### 5.3 キー入力組み合わせ計算
+
+```typescript
+// src/lib/utils/key-input.ts から流用
+import { countValidKeyCombinations, keyCodeToNames } from '@/lib/utils/key-input';
+
+// 使用例: バッチサイズ計算時のキー組み合わせ数
+const keyCombinations = countValidKeyCombinations(0x0300); // L+R
+
+// 使用例: 結果表示時のキー名変換
+const names = keyCodeToNames(0x2FF7);
+// => ['L', 'Start']
+```
+
+### 5.4 nazo-resolver
 
 ```typescript
 // src/lib/core/nazo-resolver.ts の resolveNazoValue を使用
@@ -907,18 +1535,7 @@ const nazo = resolveNazoValue('B', 'JPN');
 // => [0x02215F10, 0x02761150, 0x00000000, 0x00000000, 0x02761150]
 ```
 
-### 5.2 key-input
-
-```typescript
-// src/lib/utils/key-input.ts の keyCodeToNames を使用
-import { keyCodeToNames } from '@/lib/utils/key-input';
-
-// 使用例
-const names = keyCodeToNames(0x2FF7);
-// => ['L', 'Start']
-```
-
-### 5.3 既存のEgg型
+### 5.5 既存のEgg型
 
 ```typescript
 // src/types/egg.ts から流用
@@ -930,6 +1547,17 @@ import type {
   EnumeratedEggData,
   ResolvedEgg,
 } from '@/types/egg';
+```
+
+### 5.6 並列処理型定義
+
+```typescript
+// src/types/parallel.ts から流用
+import type {
+  WorkerChunk,
+  WorkerProgress,
+  AggregatedProgress,
+} from '@/types/parallel';
 ```
 
 ## 6. エクスポート設定

@@ -79,20 +79,54 @@
 - [ ] 検索実行ロジック
 - [ ] 結果変換関数
 - [ ] 停止処理
+- [ ] バッチサイズ対応
 
-### 2.3 WorkerManager 実装
+### 2.3 並列 WorkerManager 実装
 
-- [ ] 初期化メソッド
-- [ ] 検索開始メソッド
-- [ ] 停止メソッド
-- [ ] コールバック管理
+既存の `MultiWorkerSearchManager` パターンを流用
+
+- [ ] `EggBootTimingMultiWorkerManager` クラス
+  - Worker プール管理 (Map<number, Worker>)
+  - Worker 数設定 (setMaxWorkers / getMaxWorkers)
+  - 並列検索開始 (startParallelSearch)
+  - 一時停止/再開 (pauseAll / resumeAll)
+  - 全Worker停止 (terminateAll)
+
+- [ ] チャンク分割計算 (`boot-timing-chunk-calculator.ts`)
+  - 日時範囲を Worker 数で分割
+  - Timer0×VCount×KeyCode の組み合わせ数考慮
+  - 処理量推定 (estimatedOperations)
+
+- [ ] バッチサイズ制御
+  - 組み合わせ数に応じた動的バッチサイズ計算
+  - メモリと応答性のバランス
+
+- [ ] 進捗集約
+  - 各 Worker の進捗を統合 (AggregatedEggBootTimingProgress)
+  - 残り時間推定 (calculateAggregatedTimeRemaining)
+  - 進捗監視タイマー (500ms間隔)
+
+- [ ] タイマー管理
+  - 一時停止時間を除外した経過時間計算
+  - TimerState による状態管理
+
 - [ ] エラーハンドリング
+  - Worker エラー時の部分継続
+  - 全 Worker 失敗時の終了処理
 
-### 2.4 統合テスト
+### 2.4 単一 WorkerManager 実装（簡易版）
+
+- [ ] `EggBootTimingWorkerManager` クラス
+  - デバッグ用・簡易実行用
+  - 並列処理不要時の軽量版
+
+### 2.5 統合テスト
 
 - [ ] WASM ローダーテスト
 - [ ] Worker 通信テスト
 - [ ] 結果変換テスト
+- [ ] 並列実行テスト
+- [ ] 一時停止/再開テスト
 
 ## Phase 3: UI 実装（将来）
 
@@ -134,7 +168,9 @@ Phase 3 (UI)
 | `wasm-pkg/src/egg_boot_timing_search.rs` | 1 | Rust 検索器 |
 | `src/types/egg-boot-timing-search.ts` | 2 | 型定義 |
 | `src/workers/egg-boot-timing-worker.ts` | 2 | Worker |
-| `src/lib/egg/boot-timing-egg-worker-manager.ts` | 2 | Manager |
+| `src/lib/egg/boot-timing-egg-worker-manager.ts` | 2 | 単一 Worker Manager |
+| `src/lib/egg/boot-timing-egg-multi-worker-manager.ts` | 2 | 並列 Worker Manager |
+| `src/lib/egg/boot-timing-chunk-calculator.ts` | 2 | チャンク分割計算 |
 
 ### 更新
 
@@ -162,7 +198,10 @@ Phase 3 (UI)
 |--------|----------|
 | `types/egg.ts` | 孵化関連型 |
 | `types/search.ts` | 検索条件型 |
-| `lib/utils/key-input.ts` | キー入力変換 |
+| `types/parallel.ts` | 並列処理型 (WorkerChunk, WorkerProgress, AggregatedProgress) |
+| `lib/search/multi-worker-manager.ts` | 並列 Worker 管理パターン |
+| `lib/search/chunk-calculator.ts` | チャンク分割計算パターン |
+| `lib/utils/key-input.ts` | キー入力変換、組み合わせ数計算 |
 | `lib/core/nazo-resolver.ts` | nazo 値解決 |
 
 ## 注意事項
@@ -171,6 +210,7 @@ Phase 3 (UI)
 2. **メモリ**: 大量結果時は上限設定とバッチ送信が必要
 3. **互換性**: 既存の `IntegratedSeedSearcher` との共通処理は将来的に共通モジュール化を検討
 4. **テスト**: 既知の起動条件での検索結果を検証用テストケースとして使用
+5. **並列処理**: `MultiWorkerSearchManager` のパターンを踏襲し、一貫性のある実装を維持
 
 ## 参考ドキュメント
 
