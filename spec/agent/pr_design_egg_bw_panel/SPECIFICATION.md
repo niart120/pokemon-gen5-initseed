@@ -1166,9 +1166,7 @@ function toStatRange(input: FilterIvRangeInputState): StatRange {
 起動時間から初期Seedを導出し、複数のTimer0/VCount候補に対してタマゴ個体生成を実行する機能。
 既存の GenerationPanel の boot-timing モードと同様のアーキテクチャを採用する。
 
-### 10.3 Worker/WASM経路
-
-#### 10.2.1 アーキテクチャ図
+#### 10.2.2 アーキテクチャ図
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    EggBWPanel                                │
@@ -1215,7 +1213,7 @@ function toStatRange(input: FilterIvRangeInputState): StatRange {
                     └─────────────────────────┘
 ```
 
-#### 10.2.2 起動時間検索の処理フロー
+#### 10.2.3 処理フロー
 
 1. **UI入力**: ユーザーが `seedSourceMode = 'boot-timing'` を選択
 2. **BootTimingDraft収集**: タイムスタンプ、Timer0/VCount範囲、MACアドレス等
@@ -1223,7 +1221,7 @@ function toStatRange(input: FilterIvRangeInputState): StatRange {
 4. **順次実行**: EggWorkerManager が DerivedSeedRunState を管理し、各Seedに対して個体生成
 5. **結果集約**: 全Seed候補の結果を統合して表示
 
-#### 10.2.3 型定義拡張
+#### 10.2.4 型定義拡張
 
 ```typescript
 /**
@@ -1272,19 +1270,19 @@ export interface DerivedEggSeedRunState {
 }
 ```
 
-### 10.4 実装方針
+### 10.3 起動時間列挙の実装方針
 - 既存の `src/lib/generation/boot-timing-derivation.ts` のパターンを踏襲
 - `src/lib/egg/boot-timing-egg-derivation.ts` として同様の機能を実装
 - EggWorkerManager に `startBootTimingGeneration()` メソッドを追加
 - 結果テーブルに Timer0/VCount 情報を表示可能にする
 
-### 10.5 起動時間検索モード（Boot Timing Search）- SearchPanel類似機能
+### 10.4 起動時間検索モード（Boot Timing Search）- SearchPanel類似機能
 
-#### 10.5.1 概要
+#### 10.4.1 概要
 SearchPanel と類似の機能で、一定期間・一定消費数範囲内で条件を満たす起動時刻が存在するかを検索する。
 これは「起動時間列挙」とは逆方向の検索であり、目標個体条件から起動時間を逆算する。
 
-#### 10.5.2 入力と出力
+#### 10.4.2 入力と出力
 - **入力**:
   - 目標個体条件（IV、性格、性別、特性、色違い等）
   - 日時範囲（開始日時 ～ 終了日時）
@@ -1294,7 +1292,7 @@ SearchPanel と類似の機能で、一定期間・一定消費数範囲内で�
 - **出力**: 
   - 条件を満たす起動時間・Timer0・VCount・消費数のリスト
 
-#### 10.5.3 アーキテクチャ図
+#### 10.4.3 アーキテクチャ図
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                  EggSearchPanel (将来実装)                   │
@@ -1338,7 +1336,7 @@ SearchPanel と類似の機能で、一定期間・一定消費数範囲内で�
         └────────────────────────────────────────────────┘
 ```
 
-#### 10.5.4 検索フロー
+#### 10.4.4 検索フロー
 
 1. **条件入力**: 目標個体条件、日時範囲、消費範囲を入力
 2. **検索空間構築**: 日時×Timer0×VCount の組み合わせを列挙
@@ -1346,7 +1344,7 @@ SearchPanel と類似の機能で、一定期間・一定消費数範囲内で�
 4. **結果収集**: 条件を満たす起動時間・消費数のリストを生成
 5. **結果表示**: 発見した起動時間候補を表示
 
-#### 10.5.5 型定義
+#### 10.4.5 型定義
 
 ```typescript
 /**
@@ -1387,7 +1385,7 @@ export interface EggSearchResult {
 }
 ```
 
-#### 10.5.6 実装方針（将来実装）
+#### 10.4.6 実装方針（将来実装）
 - 既存の SearchPanel のアーキテクチャを参考に設計
 - 別途 `EggSearchPanel` として独立実装（EggBWPanel とは別Panel）
 - 専用の `egg-search-worker.ts` と `EggSearchWorkerManager` を用意
