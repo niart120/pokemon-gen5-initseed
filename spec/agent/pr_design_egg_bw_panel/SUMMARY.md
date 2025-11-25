@@ -108,17 +108,27 @@ UI (EggResultsCard)
 - バッチ処理による結果送信
 - 表示上限設定によるメモリ管理
 
-### 5. 起動時間検索モード（拡張設計）
-- 既存の GenerationPanel の boot-timing モードと同様のアーキテクチャを採用
-- **Worker経路**: 同一 `egg-worker.ts` を使用し、DerivedSeedRunState で複数Seed候補を順次処理
-- **WASM経路**: EggSeedEnumerator は変更なし（baseSeedパラメータで制御）
-- 結果テーブルに Timer0/VCount 情報を表示可能
+### 5. 起動時間関連機能（拡張設計）
+起動時間に関連する機能として2つのモードが必要:
+
+- **起動時間列挙モード**: 指定した起動時間候補（Timer0/VCount範囲）から個体を列挙
+  - 既存の GenerationPanel の boot-timing モードと同様のアーキテクチャ
+  - 同一 `egg-worker.ts` を使用し、DerivedSeedRunState で複数Seed候補を順次処理
+  - 結果テーブルに Timer0/VCount 情報を表示
+
+- **起動時間検索モード**: 条件を満たす個体が得られる起動時間を検索（SearchPanel類似）
+  - 日時範囲・消費範囲内で目標条件を満たす起動時刻を逆算
+  - 別途 `EggSearchPanel` として独立実装予定
+  - 専用の `egg-search-worker.ts` と `EggSearchWorkerManager` を使用
 
 ### 6. BW2版 EggPanel（将来拡張設計）
-- **共通化**: Worker、WorkerManager、WASM、フィルターUI、結果表示は共通利用
-- **分離**: Panel レイアウト、パラメータカード（Memory Link対応等）
-- **GameMode**: EggSeedEnumerator の gameMode 引数で BW/BW2 の offset 計算を切替
-- **コンポーネント構成**: `src/components/egg/common/`, `bw/`, `bw2/` で整理
+⚠️ **重要**: BW2 のタマゴ生成ロジックは BW とは**根本的に異なる**ため、WASM レイヤーから完全に独立した実装が必要
+
+- **LCG Seed 決定**: BW2 は完全に異なるロジック（未実装）
+- **個体値決定/PID決定**: BW2 では独立したインタフェースを持つ（未実装）
+- **WASM実装**: `EggBW2IVGenerator` + `EggBW2PIDGenerator` (仮称、未実装)
+- **共通化不可**: BW と BW2 で `EggSeedEnumerator` を共有する設計は採用しない
+- **UI共通化**: 結果表示形式が同じ場合、一部UIスタイルのみ共通化可能
 
 ## 参照ドキュメント
 

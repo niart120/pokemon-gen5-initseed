@@ -1150,13 +1150,23 @@ function toStatRange(input: FilterIvRangeInputState): StatRange {
 - すべてのUI文字列は i18n 対応
 - `src/lib/i18n/strings/egg-*.ts` にラベル定義
 
-## 10. 拡張設計: 起動時間検索モード
+## 10. 拡張設計: 起動時間関連機能
 
 ### 10.1 概要
+起動時間に関連する機能として、以下の2つの異なるモードが必要となる:
+
+| モード | 目的 | 入力 | 出力 |
+|--------|------|------|------|
+| **起動時間列挙モード** | 指定した起動時間候補（Timer0/VCount範囲）から個体を列挙 | 起動時間パラメータ + フィルター | 各候補の個体一覧 |
+| **起動時間検索モード** | 条件を満たす個体が得られる起動時間を検索 | 目標条件 + 日時範囲 + 消費範囲 | 条件を満たす起動時間リスト |
+
+### 10.2 起動時間列挙モード（Boot Timing Enumeration）
+
+#### 10.2.1 概要
 起動時間から初期Seedを導出し、複数のTimer0/VCount候補に対してタマゴ個体生成を実行する機能。
 既存の GenerationPanel の boot-timing モードと同様のアーキテクチャを採用する。
 
-### 10.2 Worker/WASM経路
+### 10.3 Worker/WASM経路
 
 #### 10.2.1 アーキテクチャ図
 ```
@@ -1262,96 +1272,252 @@ export interface DerivedEggSeedRunState {
 }
 ```
 
-### 10.3 実装方針
+### 10.4 実装方針
 - 既存の `src/lib/generation/boot-timing-derivation.ts` のパターンを踏襲
 - `src/lib/egg/boot-timing-egg-derivation.ts` として同様の機能を実装
 - EggWorkerManager に `startBootTimingGeneration()` メソッドを追加
 - 結果テーブルに Timer0/VCount 情報を表示可能にする
 
-## 11. 拡張設計: BW2版 EggPanel
+### 10.5 起動時間検索モード（Boot Timing Search）- SearchPanel類似機能
 
-### 11.1 概要
-BW2 ではタマゴ生成ロジックに差異がある可能性があるため、将来的に `EggBW2Panel` として独立実装する場合の経路を定義する。
+#### 10.5.1 概要
+SearchPanel と類似の機能で、一定期間・一定消費数範囲内で条件を満たす起動時刻が存在するかを検索する。
+これは「起動時間列挙」とは逆方向の検索であり、目標個体条件から起動時間を逆算する。
 
-### 11.2 共通化と差分の方針
+#### 10.5.2 入力と出力
+- **入力**:
+  - 目標個体条件（IV、性格、性別、特性、色違い等）
+  - 日時範囲（開始日時 ～ 終了日時）
+  - 消費範囲（最小消費数 ～ 最大消費数）
+  - Timer0/VCount 範囲
+  - 親個体条件
+- **出力**: 
+  - 条件を満たす起動時間・Timer0・VCount・消費数のリスト
 
-#### 11.2.1 共通化するコンポーネント
-| レイヤー | コンポーネント | 共通化 |
-|---------|---------------|--------|
-| WASM | EggSeedEnumerator | ✅ GameMode パラメータで BW/BW2 を切り替え |
-| Worker | egg-worker.ts | ✅ 同一Worker、GameMode で制御 |
-| Manager | EggWorkerManager | ✅ 共通利用可能 |
-| Store | egg-store.ts (コア機能) | ✅ 共通化可能 |
-| UI | EggFilterCard | ✅ フィルター機能は共通 |
-| UI | EggResultsCard | ✅ 結果表示は共通 |
-| UI | EggRunCard | ✅ 実行制御は共通 |
-
-#### 11.2.2 分離するコンポーネント
-| レイヤー | コンポーネント | 分離理由 |
-|---------|---------------|---------|
-| UI | EggBWPanel / EggBW2Panel | ゲーム固有のレイアウト・ラベル |
-| UI | EggParamsCard | ゲーム固有のパラメータ（Memory Link等） |
-| Store | ゲーム固有の Draft 初期値 | GameMode デフォルト値が異なる |
-
-### 11.3 実装経路
-
+#### 10.5.3 アーキテクチャ図
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    App.tsx                                   │
-│  ┌────────────────┐  ┌────────────────┐                     │
-│  │   EggBWPanel   │  │  EggBW2Panel   │                     │
-│  │  (BW専用UI)    │  │  (BW2専用UI)   │                     │
-│  └───────┬────────┘  └───────┬────────┘                     │
-│          │                   │                               │
-│          └─────────┬─────────┘                               │
-│                    ▼                                         │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │           共通コンポーネント (src/components/egg/)     │   │
-│  │  - EggFilterCard (共通)                               │   │
-│  │  - EggResultsCard (共通)                              │   │
-│  │  - EggRunCard (共通)                                  │   │
-│  │  - EggParamsCardBase (共通ベース) ← 各Panel固有拡張   │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                共通レイヤー                                   │
-│  - egg-store.ts (Zustand)                                   │
-│    - gameMode: 0 (BwNew) | 1 (BwContinue) | 2 (Bw2New) |   │
-│              3 (Bw2Continue)                                 │
-│  - EggWorkerManager                                          │
-│  - egg-worker.ts → EggSeedEnumerator (WASM)                 │
-└─────────────────────────────────────────────────────────────┘
+│                  EggSearchPanel (将来実装)                   │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ 検索条件入力                                           │  │
+│  │ - 目標個体条件 (IV, 性格, 性別, 特性, 色違い等)        │  │
+│  │ - 日時範囲 (開始日時 ～ 終了日時)                      │  │
+│  │ - 消費範囲 (最小消費 ～ 最大消費)                      │  │
+│  │ - Timer0/VCount 範囲                                   │  │
+│  │ - 親個体条件                                           │  │
+│  └───────────────────────────────────────────────────────┘  │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+                             ▼
+        ┌────────────────────────────────────────────────┐
+        │           egg-search-store.ts                   │
+        │  - searchConditions: EggSearchConditions        │
+        │  - dateTimeRange: DateTimeRange                │
+        │  - consumptionRange: { min, max }              │
+        └────────────────────────┬───────────────────────┘
+                                 │
+                                 ▼
+        ┌────────────────────────────────────────────────┐
+        │         EggSearchWorkerManager                  │
+        │  - 日時範囲を分割して並列検索                   │
+        │  - 条件を満たすSeedを収集                       │
+        └────────────────────────┬───────────────────────┘
+                                 │
+                                 ▼
+        ┌────────────────────────────────────────────────┐
+        │          egg-search-worker.ts                   │
+        │  - 各日時候補に対してSeedを計算                 │
+        │  - 指定消費範囲で個体生成                       │
+        │  - 条件マッチングを実行                         │
+        └────────────────────────┬───────────────────────┘
+                                 │
+                                 ▼
+        ┌────────────────────────────────────────────────┐
+        │  EggSeedEnumerator (WASM) + フィルタリング      │
+        │  - 消費範囲内で条件を満たす個体を検索           │
+        └────────────────────────────────────────────────┘
 ```
 
-### 11.4 GameMode による制御
+#### 10.5.4 検索フロー
+
+1. **条件入力**: 目標個体条件、日時範囲、消費範囲を入力
+2. **検索空間構築**: 日時×Timer0×VCount の組み合わせを列挙
+3. **並列検索**: 各候補に対してSeed計算→個体生成→条件マッチング
+4. **結果収集**: 条件を満たす起動時間・消費数のリストを生成
+5. **結果表示**: 発見した起動時間候補を表示
+
+#### 10.5.5 型定義
 
 ```typescript
 /**
- * GameMode 定義 (既存 WASM と同一)
+ * タマゴ検索条件
  */
-export enum EggGameMode {
-  BwNew = 0,
-  BwContinue = 1,
-  Bw2New = 2,
-  Bw2Continue = 3,
+export interface EggSearchConditions {
+  targetFilter: EggIndividualFilter;  // 目標個体のフィルター条件
+  parentConditions: EggGenerationConditions;
+  parents: ParentsIVs;
 }
 
 /**
- * Panel ごとのデフォルト GameMode
+ * 検索範囲設定
  */
-const EGG_BW_PANEL_DEFAULT_GAME_MODE = EggGameMode.BwContinue;
-const EGG_BW2_PANEL_DEFAULT_GAME_MODE = EggGameMode.Bw2Continue;
+export interface EggSearchRange {
+  dateTimeRange: {
+    start: string;  // ISO形式
+    end: string;
+  };
+  consumptionRange: {
+    min: number;
+    max: number;
+  };
+  timer0Range: { min: number; max: number };
+  vcountRange: { min: number; max: number };
+}
+
+/**
+ * 検索結果
+ */
+export interface EggSearchResult {
+  bootTimestamp: string;
+  timer0: number;
+  vcount: number;
+  seed: bigint;
+  consumption: number;  // 何消費目で条件を満たすか
+  matchedEgg: ResolvedEgg;
+}
 ```
 
-### 11.5 BW2固有の考慮事項
-- Memory Link 状態の有無（BW2のみ）
-- ゲーム固有のオフセット計算（既にWASM側で GameMode として対応済み）
-- UI ラベル・説明文の差異（i18n で対応）
+#### 10.5.6 実装方針（将来実装）
+- 既存の SearchPanel のアーキテクチャを参考に設計
+- 別途 `EggSearchPanel` として独立実装（EggBWPanel とは別Panel）
+- 専用の `egg-search-worker.ts` と `EggSearchWorkerManager` を用意
+- 並列処理による検索高速化
 
-### 11.6 実装順序（将来）
-1. **Phase A**: 共通コンポーネントのベース化（EggParamsCardBase 抽出）
-2. **Phase B**: EggBW2Panel 作成（BW2固有パラメータUI）
-3. **Phase C**: Memory Link 対応（BW2のみ）
-4. **Phase D**: テスト・ドキュメント更新
+## 11. 拡張設計: BW2版 EggPanel
+
+### 11.1 概要
+BW2 のタマゴ生成ロジックは BW とは**根本的に異なる**ため、WASM レイヤーから完全に独立した実装が必要となる。
+BW2 用の `EggBW2SeedEnumerator` (仮称) は未実装であり、将来的に独立して開発される予定。
+
+### 11.2 BW と BW2 のロジック差異
+
+| 項目 | BW | BW2 |
+|------|-----|------|
+| **LCG Seed 決定** | 既存ロジック | **完全に異なる** (未実装) |
+| **個体値決定** | `EggSeedEnumerator` 内で一体的に処理 | **独立したインタフェース** (未実装) |
+| **PID 決定** | `EggSeedEnumerator` 内で一体的に処理 | **独立したインタフェース** (未実装) |
+| **WASM 実装** | `EggSeedEnumerator` | **`EggBW2IVGenerator` + `EggBW2PIDGenerator`** (仮称、未実装) |
+
+### 11.3 アーキテクチャ図（将来構想）
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      App.tsx                                 │
+│  ┌────────────────┐        ┌────────────────┐               │
+│  │   EggBWPanel   │        │  EggBW2Panel   │               │
+│  │  (BW専用UI)    │        │  (BW2専用UI)   │               │
+│  └───────┬────────┘        └───────┬────────┘               │
+│          │                         │                         │
+│          ▼                         ▼                         │
+│  ┌───────────────┐         ┌───────────────┐                │
+│  │ EggBWStore    │         │ EggBW2Store   │                │
+│  │ (BW専用状態)  │         │ (BW2専用状態) │                │
+│  └───────┬───────┘         └───────┬───────┘                │
+│          │                         │                         │
+│          ▼                         ▼                         │
+│  ┌────────────────┐        ┌─────────────────┐              │
+│  │ EggBWWorker    │        │  EggBW2Worker   │              │
+│  │ Manager       │        │  Manager        │              │
+│  └───────┬────────┘        └───────┬─────────┘              │
+│          │                         │                         │
+│          ▼                         ▼                         │
+│  ┌────────────────┐        ┌─────────────────┐              │
+│  │ egg-bw-worker  │        │ egg-bw2-worker  │              │
+│  └───────┬────────┘        └───────┬─────────┘              │
+└──────────┼─────────────────────────┼────────────────────────┘
+           │                         │
+           ▼                         ▼
+┌─────────────────────┐    ┌─────────────────────────────────┐
+│ EggSeedEnumerator   │    │ EggBW2IVGenerator +             │
+│ (BW用、既存)        │    │ EggBW2PIDGenerator              │
+│                     │    │ (BW2用、未実装)                  │
+└─────────────────────┘    └─────────────────────────────────┘
+```
+
+### 11.4 共通化と差分の方針
+
+#### 11.4.1 共通化可能なコンポーネント（UI層のみ）
+| レイヤー | コンポーネント | 共通化可否 |
+|---------|---------------|-----------|
+| UI | EggResultsCard | ⚠️ 一部共通化可能（結果表示形式が同じ場合） |
+| UI | EggRunCard | ⚠️ 一部共通化可能（開始/停止UIは共通） |
+| UI | 基本レイアウト | ⚠️ スタイルは共通化可能 |
+| 型定義 | ResolvedEgg (結果型) | ⚠️ 出力形式が揃えば共通化可能 |
+
+#### 11.4.2 分離が必要なコンポーネント
+| レイヤー | コンポーネント | 分離理由 |
+|---------|---------------|---------|
+| **WASM** | Enumerator/Generator | **ロジックが根本的に異なる** |
+| **Worker** | egg-worker.ts | **異なるWASMを呼び出す** |
+| **Manager** | WorkerManager | **異なるWorkerを管理** |
+| **Store** | Zustand ストア | **パラメータ構造が異なる可能性** |
+| **UI** | EggParamsCard | **入力パラメータが異なる** |
+| **UI** | EggFilterCard | **フィルター条件が異なる可能性** |
+
+### 11.5 パラメータの流用可能性
+
+一部のUIパラメータは流用可能だが、バックエンドへの渡し方は完全に異なる:
+
+```typescript
+// BW と BW2 で流用可能なパラメータ（UI入力層）
+interface CommonEggUIParams {
+  tid: number;
+  sid: number;
+  // 親個体条件の一部
+}
+
+// BW 専用パラメータ
+interface EggBWParams extends CommonEggUIParams {
+  // BW固有のパラメータ
+}
+
+// BW2 専用パラメータ（将来定義）
+interface EggBW2Params extends CommonEggUIParams {
+  memoryLink: boolean;
+  // BW2固有のパラメータ（未定）
+}
+```
+
+### 11.6 BW2 WASM インタフェース（将来構想）
+
+BW2 では個体値生成と性格値生成が独立したインタフェースを持つ予定:
+
+```typescript
+// BW2 個体値生成器（将来実装予定）
+interface EggBW2IVGenerator {
+  // BW2固有の個体値生成ロジック
+  generateIVs(seed: bigint, params: EggBW2IVParams): IvSet;
+}
+
+// BW2 性格値生成器（将来実装予定）
+interface EggBW2PIDGenerator {
+  // BW2固有のPID生成ロジック
+  generatePID(seed: bigint, params: EggBW2PIDParams): PIDResult;
+}
+
+// これらは EggSeedEnumerator (BW用) とは完全に異なる実装となる
+```
+
+### 11.7 実装順序（将来）
+
+1. **Phase A**: BW2 WASM ロジックの設計・仕様策定
+2. **Phase B**: `EggBW2IVGenerator`, `EggBW2PIDGenerator` の Rust 実装
+3. **Phase C**: `egg-bw2-worker.ts`, `EggBW2WorkerManager` の TypeScript 実装
+4. **Phase D**: `EggBW2Store`, `EggBW2Panel` の UI 実装
+5. **Phase E**: テスト・ドキュメント更新
+
+### 11.8 注意事項
+
+- BW2 の WASM 実装は**未実装**であり、本仕様書は将来的なアーキテクチャ構想を示すもの
+- BW と BW2 で `EggSeedEnumerator` を共有する設計は**採用しない**
+- BW2 実装時には、WASM インタフェースの詳細仕様を別途策定する必要がある
