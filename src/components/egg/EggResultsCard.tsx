@@ -97,29 +97,29 @@ export const EggResultsCard: React.FC = () => {
         <table className="w-full text-xs border-collapse">
           <thead className="sticky top-0 bg-background z-10">
             <tr className="border-b">
-              <th className="text-left py-1 px-2 font-bold">{getEggResultHeader('advance', locale)}</th>
-              <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('dir', locale)}</th>
-              <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('dirValue', locale)}</th>
-              <th className="text-left py-1 px-2 font-bold">{getEggResultHeader('ability', locale)}</th>
-              <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('gender', locale)}</th>
-              <th className="text-left py-1 px-2 font-bold">{getEggResultHeader('nature', locale)}</th>
-              <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('shiny', locale)}</th>
-              <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('hp', locale)}</th>
-              <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('atk', locale)}</th>
-              <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('def', locale)}</th>
-              <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('spa', locale)}</th>
-              <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('spd', locale)}</th>
-              <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('spe', locale)}</th>
-              <th className="text-left py-1 px-2 font-bold font-mono">{getEggResultHeader('pid', locale)}</th>
-              <th className="text-left py-1 px-2 font-bold">{getEggResultHeader('hiddenPower', locale)}</th>
+              <th className="text-left py-1 px-2">{getEggResultHeader('advance', locale)}</th>
+              <th className="text-center py-1 px-1">{getEggResultHeader('dir', locale)}</th>
+              <th className="text-center py-1 px-1">{getEggResultHeader('dirValue', locale)}</th>
+              <th className="text-left py-1 px-2">{getEggResultHeader('ability', locale)}</th>
+              <th className="text-center py-1 px-1">{getEggResultHeader('gender', locale)}</th>
+              <th className="text-left py-1 px-2">{getEggResultHeader('nature', locale)}</th>
+              <th className="text-center py-1 px-1">{getEggResultHeader('shiny', locale)}</th>
+              <th className="text-center py-1 px-1">{getEggResultHeader('hp', locale)}</th>
+              <th className="text-center py-1 px-1">{getEggResultHeader('atk', locale)}</th>
+              <th className="text-center py-1 px-1">{getEggResultHeader('def', locale)}</th>
+              <th className="text-center py-1 px-1">{getEggResultHeader('spa', locale)}</th>
+              <th className="text-center py-1 px-1">{getEggResultHeader('spd', locale)}</th>
+              <th className="text-center py-1 px-1">{getEggResultHeader('spe', locale)}</th>
+              <th className="text-left py-1 px-2 font-mono">{getEggResultHeader('pid', locale)}</th>
+              <th className="text-left py-1 px-2">{getEggResultHeader('hiddenPower', locale)}</th>
               {isBootTimingMode && (
                 <>
-                  <th className="text-left py-1 px-2 font-bold font-mono">Timer0</th>
-                  <th className="text-left py-1 px-2 font-bold font-mono">VCount</th>
+                  <th className="text-left py-1 px-2 font-mono">Timer0</th>
+                  <th className="text-left py-1 px-2 font-mono">VCount</th>
                 </>
               )}
               {draftParams.considerNpcConsumption && (
-                <th className="text-center py-1 px-1 font-bold">{getEggResultHeader('stable', locale)}</th>
+                <th className="text-center py-1 px-1">{getEggResultHeader('stable', locale)}</th>
               )}
             </tr>
           </thead>
@@ -154,14 +154,14 @@ export const EggResultsCard: React.FC = () => {
                   <td className="text-center py-1 px-1 font-mono">{formatIv(row.egg.ivs[3])}</td>
                   <td className="text-center py-1 px-1 font-mono">{formatIv(row.egg.ivs[4])}</td>
                   <td className="text-center py-1 px-1 font-mono">{formatIv(row.egg.ivs[5])}</td>
-                  <td className="py-1 px-2 font-mono text-[10px]">
+                  <td className="py-1 px-2 font-mono">
                     {row.egg.pid.toString(16).toUpperCase().padStart(8, '0')}
                   </td>
                   <td className="py-1 px-2">{formatHiddenPower(row.egg.hiddenPower)}</td>
                   {isBootTimingMode && (
                     <>
-                      <td className="py-1 px-2 font-mono text-[10px]">{formatTimer0(row)}</td>
-                      <td className="py-1 px-2 font-mono text-[10px]">{formatVcount(row)}</td>
+                      <td className="py-1 px-2 font-mono">{formatTimer0(row)}</td>
+                      <td className="py-1 px-2 font-mono">{formatVcount(row)}</td>
                     </>
                   )}
                   {draftParams.considerNpcConsumption && (
