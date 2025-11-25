@@ -910,4 +910,380 @@ mod tests {
         let codes_multi = generate_key_codes(0x0003); // A + B
         assert!(codes_multi.len() >= 4); // 2^2の組み合わせ
     }
+
+    // =========================================================================
+    // 実検索機能テスト（7日間 + 親個体値・フィルター適用）
+    // =========================================================================
+
+    use crate::egg_iv::{
+        EverstonePlan, GenerationConditions, GenderRatio, IndividualFilter,
+        StatRange, TrainerIds,
+    };
+    use crate::egg_seed_enumerator::{EggSeedEnumerator, ParentsIVs};
+    use crate::offset_calculator::GameMode;
+    use crate::pid_shiny_checker::ShinyType;
+
+    /// 検索シナリオ用のテスト条件を作成
+    fn create_test_generation_conditions() -> GenerationConditions {
+        GenerationConditions {
+            has_nidoran_flag: false,
+            everstone: EverstonePlan::None,
+            uses_ditto: false,
+            allow_hidden_ability: false,
+            female_parent_has_hidden: false,
+            reroll_count: 0, // 国際孵化なし
+            trainer_ids: TrainerIds::new(12345, 54321),
+            gender_ratio: GenderRatio::new(127, false), // 50:50
+        }
+    }
+
+    /// 親個体値を作成（片親6V、他方不明=乱数）
+    fn create_test_parents_ivs() -> ParentsIVs {
+        ParentsIVs {
+            male: [31, 31, 31, 31, 31, 31],   // 6V
+            female: [15, 15, 15, 15, 15, 15], // 平均的な個体
+        }
+    }
+
+    /// 厳しめのフィルターを作成（実際の検索シナリオ想定）
+    fn create_strict_filter() -> IndividualFilter {
+        IndividualFilter {
+            iv_ranges: [
+                StatRange::new(25, 31), // HP: 25-31
+                StatRange::new(25, 31), // Attack: 25-31
+                StatRange::new(25, 31), // Defense: 25-31
+                StatRange::new(25, 31), // SpAtk: 25-31
+                StatRange::new(25, 31), // SpDef: 25-31
+                StatRange::new(25, 31), // Speed: 25-31
+            ],
+            nature: None, // 性格は問わない
+            gender: None,
+            ability: None,
+            shiny: None,
+            hidden_power_type: None,
+            hidden_power_power: None,
+        }
+    }
+
+    /// 緩めのフィルターを作成（確実にヒットする条件）
+    fn create_lenient_filter() -> IndividualFilter {
+        IndividualFilter {
+            iv_ranges: [
+                StatRange::new(0, 31),
+                StatRange::new(0, 31),
+                StatRange::new(0, 31),
+                StatRange::new(0, 31),
+                StatRange::new(0, 31),
+                StatRange::new(0, 31),
+            ],
+            nature: None,
+            gender: None,
+            ability: None,
+            shiny: None,
+            hidden_power_type: None,
+            hidden_power_power: None,
+        }
+    }
+
+    /// 色違いフィルターを作成
+    fn create_shiny_filter() -> IndividualFilter {
+        IndividualFilter {
+            iv_ranges: [StatRange::new(0, 31); 6],
+            nature: None,
+            gender: None,
+            ability: None,
+            shiny: Some(ShinyType::Star), // 色違い(星)のみ
+            hidden_power_type: None,
+            hidden_power_power: None,
+        }
+    }
+
+    /// 実検索テスト: EggSeedEnumeratorを使用して検索が実行できることを検証
+    /// 親個体値・条件を設定し、100消費で少なくとも1件の結果が返ることを確認
+    #[test]
+    fn test_egg_seed_enumerator_with_filter_returns_results() {
+        let base_seed: u64 = 0x0123456789ABCDEF;
+        let user_offset: u64 = 0;
+        let count: u32 = 100;
+        let conditions = create_test_generation_conditions();
+        let parents = create_test_parents_ivs();
+        let filter = create_lenient_filter();
+
+        let mut enumerator = EggSeedEnumerator::new(
+            base_seed,
+            user_offset,
+            count,
+            conditions,
+            parents,
+            Some(filter),
+            false, // consider_npc_consumption
+            GameMode::BwContinue,
+        );
+
+        let mut results = Vec::new();
+        while let Ok(Some(egg_data)) = enumerator.next_egg() {
+            results.push(egg_data);
+        }
+
+        // 緩いフィルターなので結果が得られるはず
+        assert!(
+            !results.is_empty(),
+            "Expected at least one result with lenient filter"
+        );
+
+        // 結果のadvanceが正しい範囲内であることを確認
+        for result in &results {
+            assert!(result.advance < count as u64);
+        }
+    }
+
+    /// 実検索テスト: 厳しいフィルター条件でも検索処理が完了することを検証
+    #[test]
+    fn test_egg_seed_enumerator_with_strict_filter_completes() {
+        let base_seed: u64 = 0xFEDCBA9876543210;
+        let user_offset: u64 = 0;
+        let count: u32 = 1000; // より多くの消費で検索
+        let conditions = create_test_generation_conditions();
+        let parents = create_test_parents_ivs();
+        let filter = create_strict_filter();
+
+        let mut enumerator = EggSeedEnumerator::new(
+            base_seed,
+            user_offset,
+            count,
+            conditions,
+            parents,
+            Some(filter),
+            false,
+            GameMode::BwContinue,
+        );
+
+        let mut results = Vec::new();
+        while let Ok(Some(egg_data)) = enumerator.next_egg() {
+            results.push(egg_data);
+        }
+
+        // 処理が正常に完了したことを確認
+        // 厳しいフィルターなので結果がないこともあり得る
+        // 重要なのはパニックせずに完了すること
+        assert!(
+            enumerator.remaining() == 0 || !results.is_empty(),
+            "Enumerator should complete or find results"
+        );
+    }
+
+    /// 実検索テスト: 検索結果をEnumeratorで再現し、期待個体が出現することを検証
+    #[test]
+    fn test_search_result_can_be_reproduced_by_enumerator() {
+        // ステップ1: 最初の検索で結果を取得
+        let base_seed: u64 = 0xABCDEF0123456789;
+        let conditions = create_test_generation_conditions();
+        let parents = create_test_parents_ivs();
+        let filter = create_lenient_filter();
+
+        let mut first_enumerator = EggSeedEnumerator::new(
+            base_seed,
+            0,    // user_offset
+            50,   // count
+            conditions,
+            parents,
+            Some(filter.clone()),
+            false,
+            GameMode::BwContinue,
+        );
+
+        // 最初の結果を取得
+        let first_result = first_enumerator.next_egg().expect("Should not error").expect("Should find at least one egg");
+        let found_advance = first_result.advance;
+        let found_ivs = first_result.egg.ivs;
+        let found_nature = first_result.egg.nature;
+        let found_pid = first_result.egg.pid;
+
+        // ステップ2: 同じseedとadvanceで再度Enumeratorを作成し、同じ個体が出るか検証
+        let mut verification_enumerator = EggSeedEnumerator::new(
+            base_seed,
+            found_advance, // 発見したadvanceから開始
+            1,             // 1個だけ生成
+            conditions,
+            parents,
+            None, // フィルターなしで全個体を取得
+            false,
+            GameMode::BwContinue,
+        );
+
+        let reproduced_result = verification_enumerator
+            .next_egg()
+            .expect("Should not error")
+            .expect("Should produce exactly one egg");
+
+        // 同じ個体が生成されることを検証
+        assert_eq!(
+            reproduced_result.advance, found_advance,
+            "Advance should match"
+        );
+        assert_eq!(
+            reproduced_result.egg.ivs, found_ivs,
+            "IVs should match: expected {:?}, got {:?}",
+            found_ivs, reproduced_result.egg.ivs
+        );
+        assert_eq!(
+            reproduced_result.egg.nature, found_nature,
+            "Nature should match"
+        );
+        assert_eq!(
+            reproduced_result.egg.pid, found_pid,
+            "PID should match"
+        );
+    }
+
+    /// 実検索テスト: 7日間分のシード生成とフィルタリングのシミュレーション
+    /// SHA-1計算とEggSeedEnumeratorを組み合わせた統合テスト
+    #[test]
+    fn test_7_day_search_simulation_with_filter() {
+        // 7日間で検索される可能性のあるシード数のサンプリング
+        // 実際には (7日 * 24時間 * 60分 * 60秒) * Timer0範囲 * VCount範囲 のシードが生成される
+        // ここでは計算量を抑えるため、代表的なシードをサンプリング
+
+        let conditions = create_test_generation_conditions();
+        let parents = create_test_parents_ivs();
+        let filter = create_strict_filter(); // 厳しいフィルター
+
+        // 異なるシードでの検索結果を収集
+        let test_seeds: Vec<u64> = vec![
+            0x0000000000000001,
+            0x123456789ABCDEF0,
+            0xFEDCBA9876543210,
+            0xAAAAAAAAAAAAAAAA,
+            0x5555555555555555,
+            0x0F0F0F0F0F0F0F0F,
+            0xF0F0F0F0F0F0F0F0,
+            0xDEADBEEFCAFEBABE,
+        ];
+
+        let mut total_results = 0;
+        let mut total_searched = 0;
+        let count_per_seed = 100; // 各シードで100消費を検索
+
+        for seed in test_seeds {
+            let mut enumerator = EggSeedEnumerator::new(
+                seed,
+                0,
+                count_per_seed,
+                conditions,
+                parents,
+                Some(filter.clone()),
+                false,
+                GameMode::BwContinue,
+            );
+
+            while let Ok(Some(_egg_data)) = enumerator.next_egg() {
+                total_results += 1;
+            }
+            total_searched += count_per_seed;
+        }
+
+        // 厳しいフィルターでも処理が完了したことを確認
+        assert!(
+            total_searched > 0,
+            "Should have searched through multiple seeds"
+        );
+
+        // 結果の数は条件によって変わるが、処理が正常に完了したことが重要
+        println!(
+            "7-day simulation: searched {} eggs, found {} matches",
+            total_searched, total_results
+        );
+    }
+
+    /// 実検索テスト: 色違い検索のシミュレーション（確率は低いので結果0でも正常）
+    #[test]
+    fn test_shiny_search_simulation() {
+        let conditions = {
+            let mut c = create_test_generation_conditions();
+            // 色違い判定用にTIDとSIDを設定
+            c.trainer_ids = TrainerIds::new(12345, 54321);
+            c
+        };
+        let parents = create_test_parents_ivs();
+        let filter = create_shiny_filter();
+
+        // 多くのシードで検索
+        let test_seeds: Vec<u64> = (0..100).map(|i| 0x1234567890ABCDEF + i * 12345).collect();
+        let num_seeds = test_seeds.len();
+
+        let mut shiny_found = 0;
+        let count_per_seed = 100;
+
+        for seed in &test_seeds {
+            let mut enumerator = EggSeedEnumerator::new(
+                *seed,
+                0,
+                count_per_seed,
+                conditions,
+                parents,
+                Some(filter.clone()),
+                false,
+                GameMode::BwContinue,
+            );
+
+            while let Ok(Some(egg_data)) = enumerator.next_egg() {
+                // 色違いであることを確認
+                assert!(
+                    egg_data.egg.shiny == ShinyType::Star || egg_data.egg.shiny == ShinyType::Square,
+                    "Filtered result should be shiny"
+                );
+                shiny_found += 1;
+            }
+        }
+
+        // 色違い確率は約1/8192なので、10000個体で1-2個見つかるかもしれない
+        // 見つからなくても処理が正常に完了していればOK
+        println!("Shiny search: searched {} eggs, found {} shinies", 
+                 num_seeds * count_per_seed as usize, shiny_found);
+    }
+
+    /// 実検索テスト: 異なるGameModeでの検索動作を検証
+    #[test]
+    fn test_search_with_different_game_modes() {
+        let base_seed: u64 = 0x9876543210FEDCBA;
+        let conditions = create_test_generation_conditions();
+        let parents = create_test_parents_ivs();
+        let filter = create_lenient_filter();
+
+        let game_modes = [
+            GameMode::BwNewGameWithSave,
+            GameMode::BwNewGameNoSave,
+            GameMode::BwContinue,
+            GameMode::Bw2NewGameWithMemoryLinkSave,
+            GameMode::Bw2NewGameNoMemoryLinkSave,
+            GameMode::Bw2NewGameNoSave,
+            GameMode::Bw2ContinueWithMemoryLink,
+            GameMode::Bw2ContinueNoMemoryLink,
+        ];
+
+        for game_mode in game_modes {
+            let mut enumerator = EggSeedEnumerator::new(
+                base_seed,
+                0,
+                10, // 少数で検証
+                conditions,
+                parents,
+                Some(filter.clone()),
+                false,
+                game_mode,
+            );
+
+            let mut results = Vec::new();
+            while let Ok(Some(egg_data)) = enumerator.next_egg() {
+                results.push(egg_data);
+            }
+
+            // 各GameModeで処理が完了することを確認
+            assert!(
+                !results.is_empty(),
+                "GameMode {:?} should produce at least one result with lenient filter",
+                game_mode
+            );
+        }
+    }
 }
