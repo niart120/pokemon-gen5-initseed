@@ -179,7 +179,7 @@ const callbacks: EggBootTimingMultiWorkerCallbacks = {
 
 ## 4. 結果テーブル設計
 
-### 3.1 テーブルカラム
+### 4.1 テーブルカラム
 
 既存の `ResultsCard` および `EggResultsCard` との平仄を揃える。
 
@@ -201,7 +201,7 @@ const callbacks: EggBootTimingMultiWorkerCallbacks = {
 | hiddenPower | めざパ | HP | string | - | タイプ/威力 |
 | stable | 安定 | Stable | string | - | ○/× (NPC消費時) |
 
-### 3.2 カラム優先度
+### 4.2 カラム優先度
 
 デスクトップ/モバイルでの表示優先度：
 
@@ -224,7 +224,7 @@ const callbacks: EggBootTimingMultiWorkerCallbacks = {
 - hiddenPower
 - stable
 
-### 3.3 テーブル実装
+### 4.3 テーブル実装
 
 ```typescript
 // 仮想化対応テーブル
@@ -244,9 +244,9 @@ export const EggBootTimingResultsTable: React.FC = () => {
 };
 ```
 
-## 4. 詳細表示ダイアログ
+## 5. 詳細表示ダイアログ
 
-### 4.1 ダイアログ構成
+### 5.1 ダイアログ構成
 
 既存の `ResultDetailsDialog` パターンを踏襲：
 
@@ -299,7 +299,7 @@ export const EggBootTimingResultsTable: React.FC = () => {
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.2 ダイアログコンポーネント
+### 5.2 ダイアログコンポーネント
 
 ```typescript
 interface EggBootTimingResultDetailsDialogProps {
@@ -348,9 +348,9 @@ export function EggBootTimingResultDetailsDialog({
 }
 ```
 
-## 5. Export 機能設計
+## 6. Export 機能設計
 
-### 5.1 Export オプション
+### 6.1 Export オプション
 
 既存の `SearchExportButton` パターンを踏襲：
 
@@ -366,7 +366,7 @@ interface EggBootTimingExportOptions {
 }
 ```
 
-### 5.2 Export フォーマット
+### 6.2 Export フォーマット
 
 #### CSV形式
 
@@ -414,7 +414,7 @@ BootDatetime,Timer0,VCount,KeyInput,LcgSeed,MtSeed,Advance,Nature,Ability,Gender
 }
 ```
 
-### 5.3 Export コンポーネント
+### 6.3 Export コンポーネント
 
 ```typescript
 interface EggBootTimingExportButtonProps {
@@ -464,7 +464,7 @@ export function EggBootTimingExportButton({
 }
 ```
 
-## 6. i18n文字列（UIデザイン用追加）
+## 7. i18n文字列（UIデザイン用追加）
 
 ```typescript
 // 結果詳細ダイアログ
@@ -504,9 +504,9 @@ export const eggBootTimingExportLabels = {
 };
 ```
 
-## 7. アクセシビリティ
+## 8. アクセシビリティ
 
-### 7.1 ARIA属性
+### 8.1 ARIA属性
 
 ```tsx
 <PanelCard
@@ -522,14 +522,14 @@ export const eggBootTimingExportLabels = {
 </PanelCard>
 ```
 
-### 7.2 キーボードナビゲーション
+### 8.2 キーボードナビゲーション
 
 - Tab: テーブル行間の移動
 - Enter: 詳細ダイアログを開く
 - Escape: ダイアログを閉じる
 - Arrow Keys: ソート順変更（ヘッダー列）
 
-## 8. 参考ドキュメント
+## 9. 参考ドキュメント
 
 - `src/components/search/results/ResultsCard.tsx` - 既存検索結果テーブル
 - `src/components/search/results/ResultDetailsDialog.tsx` - 既存詳細ダイアログ
