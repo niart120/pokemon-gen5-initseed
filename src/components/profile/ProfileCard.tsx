@@ -74,11 +74,13 @@ export function ProfileCard() {
       timer0Max={timer.timer0Max}
       vcountMin={timer.vcountMin}
       vcountMax={timer.vcountMax}
+      frame={timer.frame}
       onAutoToggle={timer.onAutoToggle}
       onTimerHexChange={timer.onTimerHexChange}
       onTimerHexBlur={timer.onTimerHexBlur}
       onVCountHexChange={timer.onVCountHexChange}
         onVCountHexBlur={timer.onVCountHexBlur}
+        onFrameChange={timer.onFrameChange}
         disabled={timer.disabled}
     />
   );

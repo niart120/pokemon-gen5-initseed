@@ -88,11 +88,13 @@ interface TimerSectionControls {
   timer0Max: string;
   vcountMin: string;
   vcountMax: string;
+  frame: number;
   onAutoToggle: (checked: boolean) => void;
   onTimerHexChange: (field: 'timer0Min' | 'timer0Max', value: string) => void;
   onTimerHexBlur: (field: 'timer0Min' | 'timer0Max') => void;
   onVCountHexChange: (field: 'vcountMin' | 'vcountMax', value: string) => void;
   onVCountHexBlur: (field: 'vcountMin' | 'vcountMax') => void;
+  onFrameChange: (value: number) => void;
   disabled: boolean;
 }
 
@@ -416,6 +418,12 @@ export function useProfileCardForm(): UseProfileCardFormResult {
     });
   }, [canModify]);
 
+  const handleFrameChange = React.useCallback((value: number) => {
+    if (!canModify) return;
+    const clampedValue = Math.max(1, Math.min(100, value));
+    setForm((prev) => ({ ...prev, frame: clampedValue }));
+  }, [canModify]);
+
   const handleNameChange = React.useCallback((value: string) => {
     if (!canModify) return;
     setForm((prev) => ({ ...prev, name: value }));
@@ -557,11 +565,13 @@ export function useProfileCardForm(): UseProfileCardFormResult {
     timer0Max: form.timer0Max,
     vcountMin: form.vcountMin,
     vcountMax: form.vcountMax,
+    frame: form.frame,
     onAutoToggle: handleTimerAutoToggle,
     onTimerHexChange: handleTimerHexChange,
     onTimerHexBlur: handleTimerHexBlur,
     onVCountHexChange: handleVCountHexChange,
     onVCountHexBlur: handleVCountHexBlur,
+    onFrameChange: handleFrameChange,
     disabled: !canModify,
   };
 

@@ -37,8 +37,8 @@ export function EggSearchRunCard() {
   const isStopping = status === 'stopping';
   const canStart = status === 'idle' || status === 'completed' || status === 'error';
 
-  const handleStart = () => {
-    startSearch();
+  const handleStart = async () => {
+    await startSearch();
   };
 
   const handleStop = () => {

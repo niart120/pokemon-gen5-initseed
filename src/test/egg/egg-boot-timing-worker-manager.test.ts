@@ -36,6 +36,7 @@ const createTestParams = (overrides: Partial<EggBootTimingSearchParams> = {}): E
     minute: { start: 0, end: 59 },
     second: { start: 0, end: 59 },
   },
+  frame: 8,
   conditions: {
     hasNidoranFlag: false,
     everstone: { type: 'none' },

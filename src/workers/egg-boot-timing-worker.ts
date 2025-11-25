@@ -315,14 +315,13 @@ function executeSearch(params: EggBootTimingSearchParams): EggBootTimingSearchRe
   // IndividualFilterJs 構築（filterDisabledがtrueの場合はnullを渡す）
   const filter = params.filterDisabled ? null : buildFilter(wasmAny, params.filter);
 
-  // Searcher構築 - frameはデフォルト値8を使用
-  const DEFAULT_FRAME = 8;
+  // Searcher構築 - frameはパラメータから取得
   const searcher = new wasmAny.EggBootTimingSearcher(
     new Uint8Array(params.macAddress),
     new Uint32Array(nazo),
     params.hardware,
     params.keyInputMask,
-    DEFAULT_FRAME,
+    params.frame,
     params.timeRange.hour.start,
     params.timeRange.hour.end,
     params.timeRange.minute.start,

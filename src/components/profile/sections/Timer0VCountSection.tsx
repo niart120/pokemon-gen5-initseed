@@ -18,11 +18,13 @@ interface Timer0VCountSectionProps {
   timer0Max: string;
   vcountMin: string;
   vcountMax: string;
+  frame: number;
   onAutoToggle: (checked: boolean) => void;
   onTimerHexChange: (field: TimerRangeField, value: string) => void;
   onTimerHexBlur: (field: TimerRangeField) => void;
   onVCountHexChange: (field: VCountRangeField, value: string) => void;
   onVCountHexBlur: (field: VCountRangeField) => void;
+  onFrameChange: (value: number) => void;
   disabled?: boolean;
 }
 
@@ -32,17 +34,19 @@ export function Timer0VCountSection({
   timer0Max,
   vcountMin,
   vcountMax,
+  frame,
   onAutoToggle,
   onTimerHexChange,
   onTimerHexBlur,
   onVCountHexChange,
   onVCountHexBlur,
+  onFrameChange,
   disabled = false,
 }: Timer0VCountSectionProps) {
   const locale = useLocale();
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-6">
       <div className="flex min-w-0 flex-col gap-1">
         <Label htmlFor="timer0-min" className="text-xs">
           {resolveProfileTimerFieldLabel('timer0Min', locale)}
@@ -97,6 +101,22 @@ export function Timer0VCountSection({
           disabled={timer0Auto || disabled}
           className="h-9 w-full min-w-0 px-2 font-mono"
           placeholder="0x0"
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <Label htmlFor="profile-frame" className="text-xs">
+          {resolveProfileTimerFieldLabel('frame', locale)}
+        </Label>
+        <Input
+          id="profile-frame"
+          type="number"
+          min={1}
+          max={100}
+          value={frame}
+          onChange={(event) => onFrameChange(parseInt(event.target.value) || 8)}
+          disabled={disabled}
+          className="h-9 w-full min-w-0 px-2"
+          placeholder="8"
         />
       </div>
       <div className="flex min-w-0 flex-col gap-1">

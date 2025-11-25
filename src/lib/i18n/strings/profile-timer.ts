@@ -1,7 +1,7 @@
 import { resolveLocaleValue, type LocaleText } from './types';
 import type { SupportedLocale } from '@/types/i18n';
 
-type ProfileTimerFieldKey = 'timer0Min' | 'timer0Max' | 'vcountMin' | 'vcountMax';
+type ProfileTimerFieldKey = 'timer0Min' | 'timer0Max' | 'vcountMin' | 'vcountMax' | 'frame';
 
 export const profileTimerFieldLabels: Record<ProfileTimerFieldKey, LocaleText> = {
   timer0Min: {
@@ -19,6 +19,10 @@ export const profileTimerFieldLabels: Record<ProfileTimerFieldKey, LocaleText> =
   vcountMax: {
     ja: 'VCount(Max)',
     en: 'VCount(Max)',
+  },
+  frame: {
+    ja: 'Frame',
+    en: 'Frame',
   },
 };
 
