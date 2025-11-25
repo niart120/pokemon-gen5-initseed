@@ -23,6 +23,7 @@ const createMockEgg = (): ResolvedEgg => ({
 
 const createMockResult = (overrides?: Partial<EnumeratedEggDataWithBootTiming>): EnumeratedEggDataWithBootTiming => ({
   advance: 100,
+  lcgSeedHex: '0x0123456789ABCDEF',
   egg: createMockEgg(),
   isStable: true,
   seedSourceMode: 'boot-timing',

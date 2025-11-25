@@ -20,14 +20,16 @@ pub struct ParentsIVs {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EnumeratedEggData {
     pub advance: u64,
+    pub lcg_seed: u64,
     pub egg: ResolvedEgg,
     pub is_stable: bool,
 }
 
 impl EnumeratedEggData {
-    fn new(advance: u64, egg: ResolvedEgg, is_stable: bool) -> Self {
+    fn new(advance: u64, lcg_seed: u64, egg: ResolvedEgg, is_stable: bool) -> Self {
         EnumeratedEggData {
             advance,
+            lcg_seed,
             egg,
             is_stable,
         }
@@ -120,6 +122,7 @@ impl EggSeedEnumerator {
             if passes {
                 return Ok(Some(EnumeratedEggData::new(
                     current_advance,
+                    rng,
                     resolved,
                     is_stable,
                 )));
@@ -274,6 +277,9 @@ impl EggSeedEnumeratorJs {
                 // Convert EnumeratedEggData to JS-compatible object
                 let obj = js_sys::Object::new();
                 js_sys::Reflect::set(&obj, &"advance".into(), &JsValue::from_f64(data.advance as f64)).ok();
+                // lcg_seed as hex string (BigInt互換)
+                let lcg_seed_hex = format!("0x{:016X}", data.lcg_seed);
+                js_sys::Reflect::set(&obj, &"lcg_seed_hex".into(), &JsValue::from_str(&lcg_seed_hex)).ok();
                 js_sys::Reflect::set(&obj, &"is_stable".into(), &JsValue::from_bool(data.is_stable)).ok();
 
                 // Create egg object

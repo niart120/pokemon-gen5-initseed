@@ -115,6 +115,7 @@ export interface ResolvedEgg {
  */
 export interface EnumeratedEggData {
   advance: number;        // bigint → number に変換
+  lcgSeedHex: string;     // その個体生成時のLCG Seed (hex string)
   egg: ResolvedEgg;
   isStable: boolean;      // NPC消費考慮時の安定性
 }
