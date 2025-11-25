@@ -1,10 +1,30 @@
-# EggBWPanel アーキテクチャ図
+# EggGenerationPanel アーキテクチャ図
+
+## 0. Panel切替タブ構造
+
+アプリケーション全体のPanel切替タブは以下の4つで構成:
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│   [ Search ] [ Generation ] [ Search(Egg) ] [ Generation(Egg) ]         │
+│       ↓           ↓              ↓                  ↓                    │
+│  SearchPanel  GenerationPanel  EggSearchPanel  EggGenerationPanel       │
+│  (既存)       (既存)           (将来)          (本仕様書)               │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+| タブ名 | Panel | 対象 |
+|--------|-------|------|
+| Search | SearchPanel | 野生/固定シンボル初期Seed検索 |
+| Generation | GenerationPanel | 野生/固定シンボル個体生成一覧 |
+| Search(Egg) | EggSearchPanel | タマゴ初期Seed検索（将来実装） |
+| Generation(Egg) | EggGenerationPanel | タマゴ個体生成一覧 |
 
 ## 1. システム全体図
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        EggBWPanel                            │
+│                        EggGenerationPanel                            │
 │                      (React Component)                       │
 └──────────┬──────────────────────────────────────────────────┘
            │
@@ -144,11 +164,11 @@
 
 ## 3. コンポーネント詳細図
 
-### 3.1 EggBWPanel レイアウト
+### 3.1 EggGenerationPanel レイアウト
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      EggBWPanel                              │
+│                      EggGenerationPanel                              │
 │  ┌─────────────────────┐  ┌──────────────────────────────┐ │
 │  │   Left Column       │  │      Right Column             │ │
 │  │                     │  │                               │ │
@@ -512,7 +532,7 @@ EggResultsCard
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     EggBWPanel                               │
+│                     EggGenerationPanel                               │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │  Seed入力モード切替                                   │    │
 │  │  ◉ LCG Seed 直接入力                                 │    │
@@ -623,7 +643,7 @@ WASM レイヤーから完全に独立した実装が必要となる。
 ┌─────────────────────────────────────────────────────────────┐
 │                      App.tsx                                 │
 │  ┌────────────────┐        ┌────────────────┐               │
-│  │   EggBWPanel   │        │  EggBW2Panel   │               │
+│  │   EggGenerationPanel   │        │  EggBW2GenerationPanel   │               │
 │  │  (BW専用UI)    │        │  (BW2専用UI)   │               │
 │  └───────┬────────┘        └───────┬────────┘               │
 │          │                         │                         │
@@ -657,11 +677,11 @@ src/components/egg/
 │   ├── EggResultsCard.tsx       (結果表示形式が同じ場合)
 │   └── EggRunCard.tsx           (開始/停止UIは共通)
 ├── bw/                          ← BW専用（既存設計を維持）
-│   ├── EggBWPanel.tsx
+│   ├── EggGenerationPanel.tsx
 │   ├── EggBWParamsCard.tsx
 │   └── EggBWFilterCard.tsx
 └── bw2/                         ← BW2専用（完全に独立）
-    ├── EggBW2Panel.tsx
+    ├── EggBW2GenerationPanel.tsx
     ├── EggBW2ParamsCard.tsx
     └── EggBW2FilterCard.tsx     (フィルター条件も異なる可能性)
 ```

@@ -1,11 +1,11 @@
-# 実装完了報告: EggBWPanel設計仕様書
+# 実装完了報告: EggGenerationPanel設計仕様書
 
 ## 完了日時
 2025-11-24
 
 ## プロジェクト概要
 EggSeedEnumerator (wasm-pkg/src/egg_seed_enumerator.rs) のインタフェース仕様に基づく、
-新規TypeScript実装としてEggBWPanelとその関連コンポーネント及びWorker関連の仕様設計を完了しました。
+新規TypeScript実装としてEggGenerationPanelとその関連コンポーネント及びWorker関連の仕様設計を完了しました。
 
 ## 成果物
 
@@ -86,7 +86,7 @@ EggSeedEnumerator (WASM/Rust)
 - **Manager**: `src/lib/egg/egg-worker-manager.ts` - ライフサイクル管理
 - **Store**: `src/store/egg-store.ts` - Zustand状態管理
 - **UI**: `src/components/egg/` - React コンポーネント群
-  - EggBWPanel.tsx (レイアウト)
+  - EggGenerationPanel.tsx (レイアウト)
   - EggParamsCard.tsx (パラメータ入力)
   - EggFilterCard.tsx (フィルター設定)
   - EggRunCard.tsx (実行制御)
@@ -133,7 +133,7 @@ EggSeedEnumerator (WASM/Rust)
 - [ ] ストアテスト作成・実行
 
 ### Phase 3: UIコンポーネント
-- [ ] `src/components/egg/EggBWPanel.tsx` 作成
+- [ ] `src/components/egg/EggGenerationPanel.tsx` 作成
 - [ ] `src/components/egg/EggParamsCard.tsx` 作成
 - [ ] `src/components/egg/EggFilterCard.tsx` 作成
 - [ ] `src/components/egg/EggRunCard.tsx` 作成
@@ -252,7 +252,7 @@ EggSeedEnumerator (WASM/Rust)
 
 ## 結論
 
-EggBWPanel機能の包括的な設計仕様書を作成しました。
+EggGenerationPanel機能の包括的な設計仕様書を作成しました。
 
 - **総ドキュメント**: 5ファイル、2,660行、81KB
 - **カバー範囲**: 型定義、Worker、Manager、UI、テスト、全フェーズ

@@ -1,4 +1,4 @@
-# EggBWPanel 実装ガイド
+# EggGenerationPanel 実装ガイド
 
 ## 1. 実装準備
 
@@ -297,7 +297,7 @@ describe('egg-store', () => {
 
 ### 4.1 パネルレイアウト
 
-#### `src/components/egg/EggBWPanel.tsx`
+#### `src/components/egg/EggGenerationPanel.tsx`
 仕様書の「5.3 パネル実装サンプル」に従って実装:
 - レスポンシブレイアウト (isStack判定)
 - 2カラムレイアウト (デスクトップ)
@@ -629,7 +629,7 @@ import { test, expect } from '@playwright/test';
 test('egg panel - basic workflow', async ({ page }) => {
   await page.goto('http://localhost:5173');
 
-  // EggBWPanel タブに移動 (実装に応じて)
+  // EggGenerationPanel タブに移動 (実装に応じて)
   await page.click('text=タマゴ生成');
 
   // パラメータ入力
@@ -782,7 +782,7 @@ const label = resolveLocaleValue(eggParamsBaseSeedLabel, locale);
 - [ ] WorkerManager実装 (`src/lib/egg/egg-worker-manager.ts`)
 - [ ] Zustandストア作成 (`src/store/egg-store.ts`)
 - [ ] UIコンポーネント作成
-  - [ ] EggBWPanel
+  - [ ] EggGenerationPanel
   - [ ] EggParamsCard
   - [ ] EggFilterCard
   - [ ] EggRunCard

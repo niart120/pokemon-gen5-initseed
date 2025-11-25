@@ -1,4 +1,4 @@
-# EggBWPanel 設計仕様書
+# EggGenerationPanel 設計仕様書
 
 ## 1. 概要
 
@@ -21,6 +21,35 @@ EggSeedEnumerator (wasm-pkg/src/egg_seed_enumerator.rs) のインタフェース
 - WorkerManager によるライフサイクル管理とコールバック配信
 - Zustand による状態管理
 - 責任分離: Worker=計算、Manager=制御、UI=表示
+
+### 1.4 Panel切替タブ構造
+
+アプリケーション全体のPanel切替タブは以下の4つで構成:
+
+| タブ名 | 対象Panel | 説明 |
+|--------|-----------|------|
+| **Search** | SearchPanel | 野生/固定シンボル初期Seed検索 |
+| **Generation** | GenerationPanel | 野生/固定シンボル個体生成一覧 |
+| **Search(Egg)** | EggSearchPanel | タマゴ初期Seed検索（条件→起動時間逆算） |
+| **Generation(Egg)** | EggGenerationPanel | タマゴ個体生成一覧（本仕様書の対象） |
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│   [ Search ] [ Generation ] [ Search(Egg) ] [ Generation(Egg) ] │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   ← 選択されたタブに応じたPanelを表示 →                          │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 1.5 命名規則
+
+| 旧名 | 新名 | 用途 |
+|------|------|------|
+| `EggBWPanel` | `EggGenerationPanel` | BW タマゴ個体生成Panel |
+| `EggBW2Panel` | `EggBW2GenerationPanel` | BW2 タマゴ個体生成Panel（将来） |
+| `EggSearchPanel` | `EggSearchPanel` | タマゴ検索Panel（将来） |
 
 ## 2. データ型定義
 
@@ -722,7 +751,7 @@ export class EggWorkerManager {
 ### 5.1 コンポーネント構造
 
 ```
-EggBWPanel (レイアウト親コンポーネント)
+EggGenerationPanel (レイアウト親コンポーネント)
 ├── EggParamsCard (パラメータ入力)
 │   ├── 基本設定セクション
 │   │   ├── 初期Seed入力
@@ -944,7 +973,7 @@ export const useEggStore = create<EggStore>((set, get) => ({
 
 ### 5.3 パネル実装サンプル
 
-#### 5.3.1 `src/components/egg/EggBWPanel.tsx`
+#### 5.3.1 `src/components/egg/EggGenerationPanel.tsx`
 
 ```typescript
 import React from 'react';
@@ -956,7 +985,7 @@ import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { LEFT_COLUMN_WIDTH_CLAMP } from '@/components/layout/constants';
 import { getResponsiveSizes } from '@/lib/utils/responsive-sizes';
 
-export function EggBWPanel() {
+export function EggGenerationPanel() {
   const { isStack, uiScale } = useResponsiveLayout();
   const sizes = getResponsiveSizes(uiScale);
 
@@ -1056,7 +1085,7 @@ export function EggBWPanel() {
 2. ストアテスト作成・実行
 
 ### Phase 3: UIコンポーネント
-1. `src/components/egg/EggBWPanel.tsx` 作成
+1. `src/components/egg/EggGenerationPanel.tsx` 作成
 2. `src/components/egg/EggParamsCard.tsx` 作成
 3. `src/components/egg/EggFilterCard.tsx` 作成
 4. `src/components/egg/EggRunCard.tsx` 作成
@@ -1169,7 +1198,7 @@ function toStatRange(input: FilterIvRangeInputState): StatRange {
 #### 10.2.2 アーキテクチャ図
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    EggBWPanel                                │
+│                    EggGenerationPanel                                │
 │  ┌────────────────┐  ┌───────────────────────────────────┐  │
 │  │ Mode Switch    │  │  起動時間パラメータ / Seed入力    │  │
 │  │ [LCG] [Boot]   │  │  (BootTimingDraft or SeedHex)     │  │
@@ -1387,7 +1416,7 @@ export interface EggSearchResult {
 
 #### 10.4.6 実装方針（将来実装）
 - 既存の SearchPanel のアーキテクチャを参考に設計
-- 別途 `EggSearchPanel` として独立実装（EggBWPanel とは別Panel）
+- 別途 `EggSearchPanel` として独立実装（EggGenerationPanel とは別Panel）
 - 専用の `egg-search-worker.ts` と `EggSearchWorkerManager` を用意
 - 並列処理による検索高速化
 
@@ -1412,7 +1441,7 @@ BW2 用の `EggBW2SeedEnumerator` (仮称) は未実装であり、将来的に�
 ┌─────────────────────────────────────────────────────────────┐
 │                      App.tsx                                 │
 │  ┌────────────────┐        ┌────────────────┐               │
-│  │   EggBWPanel   │        │  EggBW2Panel   │               │
+│  │   EggGenerationPanel   │        │  EggBW2GenerationPanel   │               │
 │  │  (BW専用UI)    │        │  (BW2専用UI)   │               │
 │  └───────┬────────┘        └───────┬────────┘               │
 │          │                         │                         │
@@ -1511,7 +1540,7 @@ interface EggBW2PIDGenerator {
 1. **Phase A**: BW2 WASM ロジックの設計・仕様策定
 2. **Phase B**: `EggBW2IVGenerator`, `EggBW2PIDGenerator` の Rust 実装
 3. **Phase C**: `egg-bw2-worker.ts`, `EggBW2WorkerManager` の TypeScript 実装
-4. **Phase D**: `EggBW2Store`, `EggBW2Panel` の UI 実装
+4. **Phase D**: `EggBW2Store`, `EggBW2GenerationPanel` の UI 実装
 5. **Phase E**: テスト・ドキュメント更新
 
 ### 11.8 注意事項

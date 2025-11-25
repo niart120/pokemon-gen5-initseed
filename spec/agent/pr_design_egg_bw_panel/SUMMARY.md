@@ -1,7 +1,16 @@
-# EggBWPanel 設計サマリー
+# EggGenerationPanel 設計サマリー
 
 ## プロジェクト概要
-タマゴ個体生成一覧表示機能（EggBWPanel）の設計仕様書
+タマゴ個体生成一覧表示機能（EggGenerationPanel）の設計仕様書
+
+## Panel切替タブ構造
+
+| タブ名 | Panel | 対象 |
+|--------|-------|------|
+| Search | SearchPanel | 野生/固定シンボル初期Seed検索 |
+| Generation | GenerationPanel | 野生/固定シンボル個体生成一覧 |
+| **Search(Egg)** | EggSearchPanel | タマゴ初期Seed検索（将来実装） |
+| **Generation(Egg)** | EggGenerationPanel | タマゴ個体生成一覧（本仕様書） |
 
 ## 目的
 EggSeedEnumerator (Rust/WASM) のインタフェースに基づき、タマゴ個体の生成・フィルタリング・表示機能を実装する
@@ -34,7 +43,7 @@ EggSeedEnumerator (Rust/WASM) のインタフェースに基づき、タマゴ�
 
 ### コンポーネント構造
 ```
-EggBWPanel
+EggGenerationPanel
 ├── EggParamsCard       (パラメータ入力)
 ├── EggFilterCard       (フィルター設定)
 ├── EggRunCard          (実行制御)
@@ -75,7 +84,7 @@ UI (EggResultsCard)
 - ストアテスト
 
 ### Phase 3: UIコンポーネント
-- `EggBWPanel.tsx` - レイアウト
+- `EggGenerationPanel.tsx` - レイアウト
 - `EggParamsCard.tsx` - パラメータ入力
 - `EggFilterCard.tsx` - フィルター設定
 - `EggRunCard.tsx` - 実行制御
