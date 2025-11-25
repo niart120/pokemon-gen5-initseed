@@ -99,7 +99,9 @@ interface EggBootTimingSearchState {
   progress: AggregatedEggBootTimingProgress | null;
   
   // --- 結果 ---
-  /** 検索結果配列 */
+  /** 検索中の内部バッファ（UIには反映しない） */
+  _pendingResults: EggBootTimingSearchResult[];
+  /** 検索結果配列（完了/停止時に一括反映） */
   results: EggBootTimingSearchResult[];
   /** フィルター済み結果のキャッシュ (遅延計算) */
   filteredResults: EggBootTimingSearchResult[];
@@ -203,7 +205,7 @@ import {
 } from '@/lib/egg/boot-timing-egg-multi-worker-manager';
 import type { DeviceProfile } from '@/types/profile';
 
-const MAX_RESULTS = 10000;
+const MAX_RESULTS = 1000;
 
 interface EggBootTimingSearchStore
   extends EggBootTimingSearchState,
@@ -219,6 +221,7 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
     workerManager: null,
     maxWorkers: navigator.hardwareConcurrency || 4,
     progress: null,
+    _pendingResults: [],
     results: [],
     filteredResults: [],
     resultFilters: {},
@@ -311,6 +314,7 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
       set({
         workerManager: manager,
         status: 'starting',
+        _pendingResults: [],
         results: [],
         filteredResults: [],
         progress: null,
@@ -323,21 +327,38 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
           set({ progress });
         },
         onResult: (result) => {
+          // 内部バッファに追加（UIには反映しない）
+          const pendingCount = get()._pendingResults.length;
+          if (pendingCount >= MAX_RESULTS) {
+            // 上限到達時は検索を停止
+            manager.terminateAll();
+            return;
+          }
           set((state) => ({
-            results: [...state.results, result].slice(-MAX_RESULTS),
+            _pendingResults: [...state._pendingResults, result],
           }));
         },
         onComplete: (message) => {
+          // 完了時に一括でUIに反映
           console.log('Search completed:', message);
-          const { progress } = get();
+          const { _pendingResults, progress } = get();
           set({
+            results: _pendingResults,
+            _pendingResults: [],
             status: 'completed',
             lastElapsedMs: progress?.totalElapsedTime ?? null,
           });
         },
         onError: (error) => {
           console.error('Search error:', error);
-          set({ status: 'error', errorMessage: error });
+          // エラー時も蓄積した結果は反映
+          const { _pendingResults } = get();
+          set({
+            results: _pendingResults,
+            _pendingResults: [],
+            status: 'error',
+            errorMessage: error,
+          });
         },
         onPaused: () => {
           set({ status: 'paused' });
@@ -346,7 +367,13 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
           set({ status: 'running' });
         },
         onStopped: () => {
-          set({ status: 'idle' });
+          // 停止時に一括でUIに反映
+          const { _pendingResults } = get();
+          set({
+            results: _pendingResults,
+            _pendingResults: [],
+            status: 'idle',
+          });
         },
       };
 

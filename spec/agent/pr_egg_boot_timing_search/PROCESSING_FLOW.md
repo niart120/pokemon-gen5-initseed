@@ -208,30 +208,57 @@ export interface EggBootTimingMultiWorkerCallbacks {
 ```typescript
 // store/egg-boot-timing-search-store.ts
 
+const MAX_RESULTS = 1000;
+
 startSearch: async () => {
   const { draftParams, workerManager } = get();
   
-  set({ status: 'starting', results: [], progress: null });
+  set({ status: 'starting', _pendingResults: [], results: [], progress: null });
   
   const callbacks: EggBootTimingMultiWorkerCallbacks = {
     onProgress: (progress) => {
       set({ progress });
     },
     onResult: (result) => {
+      // 内部バッファに追加（UIには反映しない）
+      const pendingCount = get()._pendingResults.length;
+      if (pendingCount >= MAX_RESULTS) {
+        // 上限到達時は検索を停止
+        workerManager.terminateAll();
+        return;
+      }
       set((state) => ({
-        results: [...state.results, result].slice(-MAX_RESULTS)
+        _pendingResults: [...state._pendingResults, result],
       }));
     },
     onComplete: (message) => {
+      // 完了時に一括でUIに反映
       console.log('Search completed:', message);
-      set({ status: 'completed' });
+      const { _pendingResults } = get();
+      set({
+        results: _pendingResults,
+        _pendingResults: [],
+        status: 'completed',
+      });
     },
     onError: (error) => {
       console.error('Search error:', error);
-      set({ status: 'error', errorMessage: error });
+      const { _pendingResults } = get();
+      set({
+        results: _pendingResults,
+        _pendingResults: [],
+        status: 'error',
+        errorMessage: error,
+      });
     },
     onStopped: () => {
-      set({ status: 'idle' });
+      // 停止時に一括でUIに反映
+      const { _pendingResults } = get();
+      set({
+        results: _pendingResults,
+        _pendingResults: [],
+        status: 'idle',
+      });
     },
   };
   

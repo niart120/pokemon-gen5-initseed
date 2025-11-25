@@ -6,24 +6,33 @@ Search(Egg) パネルのUIデザイン仕様を定義する。既存のSearchパ
 
 ## 2. レスポンシブレイアウト
 
-### 2.1 デスクトップ版（3カラム）
+### 2.1 デスクトップ版（トップ + 3カラム）
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                        EggBootTimingSearchPanel                               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                              ProfileCard (トップ)                             │
+│                           (プロファイル選択・編集)                             │
 ├──────────────────────┬─────────────────────┬─────────────────────────────────┤
-│      Column 1        │      Column 2       │           Column 3              │
+│      左カラム         │      中央カラム      │           右カラム              │
 │ ┌──────────────────┐ │ ┌─────────────────┐ │ ┌───────────────────────────┐   │
-│ │   ProfileCard    │ │ │  EggParamsCard  │ │ │    EggBootTimingRunCard   │   │
-│ │  (プロファイル)   │ │ │  (生成条件)     │ │ │  (検索制御・進捗表示)      │   │
-│ └──────────────────┘ │ └─────────────────┘ │ └───────────────────────────┘   │
-│ ┌──────────────────┐ │ ┌─────────────────┐ │ ┌───────────────────────────┐   │
-│ │ BootTimingParams │ │ │ EggFilterCard   │ │ │  EggBootTimingResultsCard │   │
-│ │ (起動時間設定)    │ │ │ (フィルター)    │ │ │  (結果テーブル)            │   │
-│ │ - 日時範囲        │ │ └─────────────────┘ │ │  - 仮想化スクロール        │   │
-│ │ - Timer0/VCount  │ │                     │ │  - ソート機能              │   │
-│ │ - キー入力        │ │                     │ │  - 詳細ダイアログ          │   │
+│ │ RunCard          │ │ │ FilterCard      │ │ │     ResultsCard           │   │
+│ │ (検索制御)        │ │ │ (フィルター)    │ │ │  (結果テーブル)            │   │
+│ │ - 開始/停止ボタン │ │ │ - 個体値        │ │ │  - 最大1000件              │   │
+│ │ - 進捗表示        │ │ │ - 性格          │ │ │  - 仮想化スクロール        │   │
+│ │ - Worker数設定   │ │ │ - 色違い        │ │ │  - ソート機能              │   │
+│ └──────────────────┘ │ │ - 特性          │ │ │  - 詳細ダイアログ          │   │
+│ ┌──────────────────┐ │ │ - NPC消費安定性 │ │ │  - Export機能              │   │
+│ │ SearchParamsCard │ │ └─────────────────┘ │ │                            │   │
+│ │ (検索条件)        │ │                     │ │                            │   │
+│ │ - 日時範囲        │ │                     │ │                            │   │
+│ │ - Timer0/VCount  │ │                     │ │                            │   │
+│ │ - キー入力        │ │                     │ │                            │   │
 │ │ - 時刻フィルター  │ │                     │ │                            │   │
+│ │ - 消費範囲        │ │                     │ │                            │   │
+│ │ - 親個体値        │ │                     │ │                            │   │
+│ │ - 生成条件        │ │                     │ │                            │   │
 │ └──────────────────┘ │                     │ └───────────────────────────┘   │
 └──────────────────────┴─────────────────────┴─────────────────────────────────┘
 ```
@@ -36,25 +45,28 @@ Search(Egg) パネルのUIデザイン仕様を定義する。既存のSearchパ
 ├─────────────────────────────────────────┤
 │ ┌─────────────────────────────────────┐ │
 │ │           ProfileCard               │ │
+│ │        (プロファイル選択)           │ │
 │ └─────────────────────────────────────┘ │
 │ ┌─────────────────────────────────────┐ │
-│ │        BootTimingParamsCard         │ │
-│ └─────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────┐ │
-│ │          EggParamsCard              │ │
-│ └─────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────┐ │
-│ │          EggFilterCard              │ │
-│ └─────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────┐ │
-│ │       EggBootTimingRunCard          │ │
+│ │             RunCard                 │ │
 │ │  - 検索開始/停止ボタン              │ │
 │ │  - 進捗バー                         │ │
 │ └─────────────────────────────────────┘ │
 │ ┌─────────────────────────────────────┐ │
-│ │     EggBootTimingResultsCard        │ │
+│ │        SearchParamsCard             │ │
+│ │  - 日時範囲, Timer0/VCount          │ │
+│ │  - キー入力, 消費範囲               │ │
+│ │  - 親個体値, 生成条件               │ │
+│ └─────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────┐ │
+│ │          FilterCard                 │ │
+│ │  - 個体値, 性格, 色違い等           │ │
+│ └─────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────┐ │
+│ │          ResultsCard                │ │
 │ │  - max-height: 96 (24rem)           │ │
 │ │  - スクロール表示                   │ │
+│ │  - 最大1000件                       │ │
 │ └─────────────────────────────────────┘ │
 └─────────────────────────────────────────┘
 ```
@@ -68,14 +80,104 @@ export const EggBootTimingSearchPanel: React.FC = () => {
   const { isStack, isMobile } = useResponsiveLayout();
   
   return (
-    <div className={isStack ? 'flex flex-col gap-4' : 'grid grid-cols-3 gap-4'}>
-      {/* レイアウト分岐 */}
+    <div className="space-y-4">
+      {/* トップ: ProfileCard */}
+      <ProfileCard />
+      
+      {/* 3カラム or スタック */}
+      <div className={isStack ? 'flex flex-col gap-4' : 'grid grid-cols-3 gap-4'}>
+        {/* 左カラム: RunCard + SearchParamsCard */}
+        <div className="space-y-4">
+          <RunCard />
+          <SearchParamsCard />
+        </div>
+        
+        {/* 中央カラム: FilterCard */}
+        <div className="space-y-4">
+          <FilterCard />
+        </div>
+        
+        {/* 右カラム: ResultsCard */}
+        <div className="space-y-4">
+          <ResultsCard />
+        </div>
+      </div>
     </div>
   );
 };
 ```
 
-## 3. 結果テーブル設計
+## 3. 結果制限と挿入タイミング
+
+### 3.1 結果上限
+
+- **最大件数**: 1000件
+- **上限到達時**: 検索を自動停止（完了理由: `max-results`）
+- **UI表示**: 上限到達時にユーザーへ通知
+
+```typescript
+const MAX_RESULTS = 1000;
+
+// 上限チェックは WorkerManager 側で実施
+if (currentResultsCount >= MAX_RESULTS) {
+  terminateAllWorkers();
+  onComplete('max-results');
+}
+```
+
+### 3.2 結果挿入タイミング
+
+**方針**: 検索完了・停止時に一括でResultsCardに挿入する
+
+```typescript
+// Store 内部でバッファリング
+interface EggBootTimingSearchState {
+  // 検索中は内部バッファに蓄積（UIには反映しない）
+  _pendingResults: EggBootTimingSearchResult[];
+  // 完了/停止時にUIに反映
+  results: EggBootTimingSearchResult[];
+}
+
+const callbacks: EggBootTimingMultiWorkerCallbacks = {
+  onResult: (result) => {
+    // 内部バッファに追加（UIには反映しない）
+    set((state) => ({
+      _pendingResults: [...state._pendingResults, result],
+    }));
+    
+    // 上限チェック
+    if (get()._pendingResults.length >= MAX_RESULTS) {
+      workerManager.terminateAll();
+    }
+  },
+  onComplete: (reason) => {
+    // 完了時に一括でUIに反映
+    const { _pendingResults, progress } = get();
+    set({
+      results: _pendingResults,
+      _pendingResults: [],
+      status: 'completed',
+      lastElapsedMs: progress?.totalElapsedTime ?? null,
+    });
+  },
+  onStopped: () => {
+    // 停止時に一括でUIに反映
+    const { _pendingResults } = get();
+    set({
+      results: _pendingResults,
+      _pendingResults: [],
+      status: 'idle',
+    });
+  },
+};
+```
+
+**メリット**:
+- UIの描画負荷軽減（検索中のリアルタイム更新なし）
+- 仮想化テーブルの初期化タイミングが明確
+- ソート・フィルター適用が完了後1回で済む
+
+## 4. 結果テーブル設計
 
 ### 3.1 テーブルカラム
 
