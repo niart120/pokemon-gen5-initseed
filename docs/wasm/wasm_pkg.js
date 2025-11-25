@@ -17,6 +17,14 @@ function addHeapObject(obj) {
 
 function getObject(idx) { return heap[idx]; }
 
+function handleError(f, args) {
+    try {
+        return f.apply(this, args);
+    } catch (e) {
+        wasm.__wbindgen_export_0(addHeapObject(e));
+    }
+}
+
 function dropObject(idx) {
     if (idx < 132) return;
     heap[idx] = heap_next;
@@ -47,7 +55,20 @@ function getStringFromWasm0(ptr, len) {
     return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
 }
 
+function _assertClass(instance, klass) {
+    if (!(instance instanceof klass)) {
+        throw new Error(`expected instance of ${klass.name}`);
+    }
+}
+
 let WASM_VECTOR_LEN = 0;
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
 
 const cachedTextEncoder = (typeof TextEncoder !== 'undefined' ? new TextEncoder('utf-8') : { encode: () => { throw Error('TextEncoder not available') } } );
 
@@ -112,13 +133,6 @@ function getDataViewMemory0() {
     return cachedDataViewMemory0;
 }
 
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
-
 let cachedUint32ArrayMemory0 = null;
 
 function getUint32ArrayMemory0() {
@@ -156,12 +170,6 @@ export function calculate_tid_sid_from_seed(initial_seed, mode) {
     return TidSidResult.__wrap(ret);
 }
 
-function _assertClass(instance, klass) {
-    if (!(instance instanceof klass)) {
-        throw new Error(`expected instance of ${klass.name}`);
-    }
-}
-
 function getArrayJsValueFromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     const mem = getDataViewMemory0();
@@ -185,13 +193,13 @@ function getArrayU32FromWasm0(ptr, len) {
 export function sha1_hash_batch(messages) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passArray32ToWasm0(messages, wasm.__wbindgen_export_0);
+        const ptr0 = passArray32ToWasm0(messages, wasm.__wbindgen_export_1);
         const len0 = WASM_VECTOR_LEN;
         wasm.sha1_hash_batch(retptr, ptr0, len0);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         var v2 = getArrayU32FromWasm0(r0, r1).slice();
-        wasm.__wbindgen_export_2(r0, r1 * 4, 4);
+        wasm.__wbindgen_export_3(r0, r1 * 4, 4);
         return v2;
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
@@ -372,7 +380,7 @@ export class ArrayUtils {
      * @returns {bigint}
      */
     static sum_u32_array(array) {
-        const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export_0);
+        const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export_1);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.arrayutils_sum_u32_array(ptr0, len0);
         return BigInt.asUintN(64, ret);
@@ -389,7 +397,7 @@ export class ArrayUtils {
      * @returns {number}
      */
     static average_u32_array(array) {
-        const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export_0);
+        const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export_1);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.arrayutils_average_u32_array(ptr0, len0);
         return ret;
@@ -406,7 +414,7 @@ export class ArrayUtils {
      * @returns {number}
      */
     static max_u32_array(array) {
-        const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export_0);
+        const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export_1);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.arrayutils_max_u32_array(ptr0, len0);
         return ret >>> 0;
@@ -423,7 +431,7 @@ export class ArrayUtils {
      * @returns {number}
      */
     static min_u32_array(array) {
-        const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export_0);
+        const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export_1);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.arrayutils_min_u32_array(ptr0, len0);
         return ret >>> 0;
@@ -442,13 +450,13 @@ export class ArrayUtils {
     static deduplicate_u32_array(array) {
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export_0);
+            const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export_1);
             const len0 = WASM_VECTOR_LEN;
             wasm.arrayutils_deduplicate_u32_array(retptr, ptr0, len0);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var v2 = getArrayU32FromWasm0(r0, r1).slice();
-            wasm.__wbindgen_export_2(r0, r1 * 4, 4);
+            wasm.__wbindgen_export_3(r0, r1 * 4, 4);
             return v2;
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
@@ -672,6 +680,61 @@ export class BitUtils {
      */
     static extract_bits(value, start_bit, bit_count) {
         const ret = wasm.bitutils_extract_bits(value, start_bit, bit_count);
+        return ret >>> 0;
+    }
+}
+
+const EggSeedEnumeratorJsFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_eggseedenumeratorjs_free(ptr >>> 0, 1));
+/**
+ * WASM wrapper for EggSeedEnumerator
+ */
+export class EggSeedEnumeratorJs {
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        EggSeedEnumeratorJsFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_eggseedenumeratorjs_free(ptr, 0);
+    }
+    /**
+     * @param {bigint} base_seed
+     * @param {bigint} user_offset
+     * @param {number} count
+     * @param {GenerationConditionsJs} conditions
+     * @param {ParentsIVsJs} parents
+     * @param {IndividualFilterJs} filter
+     * @param {boolean} consider_npc_consumption
+     * @param {GameMode} game_mode
+     */
+    constructor(base_seed, user_offset, count, conditions, parents, filter, consider_npc_consumption, game_mode) {
+        _assertClass(conditions, GenerationConditionsJs);
+        _assertClass(parents, ParentsIVsJs);
+        _assertClass(filter, IndividualFilterJs);
+        const ret = wasm.eggseedenumeratorjs_new(base_seed, user_offset, count, conditions.__wbg_ptr, parents.__wbg_ptr, filter.__wbg_ptr, consider_npc_consumption, game_mode);
+        this.__wbg_ptr = ret >>> 0;
+        EggSeedEnumeratorJsFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * Returns the next egg as a JsValue or undefined if exhausted
+     * @returns {any}
+     */
+    next_egg() {
+        const ret = wasm.eggseedenumeratorjs_next_egg(this.__wbg_ptr);
+        return takeObject(ret);
+    }
+    /**
+     * @returns {number}
+     */
+    get remaining() {
+        const ret = wasm.eggseedenumeratorjs_remaining(this.__wbg_ptr);
         return ret >>> 0;
     }
 }
@@ -953,6 +1016,50 @@ export class EnumeratedPokemonData {
     }
 }
 
+const EverstonePlanJsFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_everstoneplanjs_free(ptr >>> 0, 1));
+/**
+ * WASM wrapper for EverstonePlan
+ */
+export class EverstonePlanJs {
+
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(EverstonePlanJs.prototype);
+        obj.__wbg_ptr = ptr;
+        EverstonePlanJsFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        EverstonePlanJsFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_everstoneplanjs_free(ptr, 0);
+    }
+    /**
+     * @returns {EverstonePlanJs}
+     */
+    static get None() {
+        const ret = wasm.everstoneplanjs_none();
+        return EverstonePlanJs.__wrap(ret);
+    }
+    /**
+     * @param {number} nature_index
+     * @returns {EverstonePlanJs}
+     */
+    static fixed(nature_index) {
+        const ret = wasm.everstoneplanjs_fixed(nature_index);
+        return EverstonePlanJs.__wrap(ret);
+    }
+}
+
 const ExtraResultFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_extraresult_free(ptr >>> 0, 1));
@@ -1088,6 +1195,253 @@ export class ExtraResult {
     }
 }
 
+const GenderRatioFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_genderratio_free(ptr >>> 0, 1));
+
+export class GenderRatio {
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        GenderRatioFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_genderratio_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get threshold() {
+        const ret = wasm.__wbg_get_genderratio_threshold(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @param {number} arg0
+     */
+    set threshold(arg0) {
+        wasm.__wbg_set_genderratio_threshold(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @returns {boolean}
+     */
+    get genderless() {
+        const ret = wasm.__wbg_get_genderratio_genderless(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @param {boolean} arg0
+     */
+    set genderless(arg0) {
+        wasm.__wbg_set_genderratio_genderless(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @param {number} threshold
+     * @param {boolean} genderless
+     */
+    constructor(threshold, genderless) {
+        const ret = wasm.genderratio_new(threshold, genderless);
+        this.__wbg_ptr = ret >>> 0;
+        GenderRatioFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @param {number} gender_value
+     * @returns {number}
+     */
+    resolve(gender_value) {
+        const ret = wasm.genderratio_resolve(this.__wbg_ptr, gender_value);
+        return ret;
+    }
+}
+
+const GenerationConditionsJsFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_generationconditionsjs_free(ptr >>> 0, 1));
+/**
+ * WASM wrapper for GenerationConditions
+ */
+export class GenerationConditionsJs {
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        GenerationConditionsJsFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_generationconditionsjs_free(ptr, 0);
+    }
+    /**
+     * @returns {boolean}
+     */
+    get has_nidoran_flag() {
+        const ret = wasm.__wbg_get_generationconditionsjs_has_nidoran_flag(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @param {boolean} arg0
+     */
+    set has_nidoran_flag(arg0) {
+        wasm.__wbg_set_generationconditionsjs_has_nidoran_flag(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @returns {boolean}
+     */
+    get uses_ditto() {
+        const ret = wasm.__wbg_get_generationconditionsjs_uses_ditto(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @param {boolean} arg0
+     */
+    set uses_ditto(arg0) {
+        wasm.__wbg_set_generationconditionsjs_uses_ditto(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @returns {boolean}
+     */
+    get allow_hidden_ability() {
+        const ret = wasm.__wbg_get_generationconditionsjs_allow_hidden_ability(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @param {boolean} arg0
+     */
+    set allow_hidden_ability(arg0) {
+        wasm.__wbg_set_generationconditionsjs_allow_hidden_ability(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @returns {boolean}
+     */
+    get female_parent_has_hidden() {
+        const ret = wasm.__wbg_get_generationconditionsjs_female_parent_has_hidden(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @param {boolean} arg0
+     */
+    set female_parent_has_hidden(arg0) {
+        wasm.__wbg_set_generationconditionsjs_female_parent_has_hidden(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @returns {number}
+     */
+    get reroll_count() {
+        const ret = wasm.__wbg_get_generationconditionsjs_reroll_count(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @param {number} arg0
+     */
+    set reroll_count(arg0) {
+        wasm.__wbg_set_generationconditionsjs_reroll_count(this.__wbg_ptr, arg0);
+    }
+    constructor() {
+        const ret = wasm.generationconditionsjs_new();
+        this.__wbg_ptr = ret >>> 0;
+        GenerationConditionsJsFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @param {EverstonePlanJs} plan
+     */
+    set_everstone(plan) {
+        _assertClass(plan, EverstonePlanJs);
+        wasm.generationconditionsjs_set_everstone(this.__wbg_ptr, plan.__wbg_ptr);
+    }
+    /**
+     * @param {TrainerIds} ids
+     */
+    set_trainer_ids(ids) {
+        _assertClass(ids, TrainerIds);
+        wasm.generationconditionsjs_set_trainer_ids(this.__wbg_ptr, ids.__wbg_ptr);
+    }
+    /**
+     * @param {GenderRatio} ratio
+     */
+    set_gender_ratio(ratio) {
+        _assertClass(ratio, GenderRatio);
+        wasm.generationconditionsjs_set_gender_ratio(this.__wbg_ptr, ratio.__wbg_ptr);
+    }
+}
+
+const IndividualFilterJsFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_individualfilterjs_free(ptr >>> 0, 1));
+/**
+ * WASM wrapper for IndividualFilter
+ */
+export class IndividualFilterJs {
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        IndividualFilterJsFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_individualfilterjs_free(ptr, 0);
+    }
+    constructor() {
+        const ret = wasm.individualfilterjs_new();
+        this.__wbg_ptr = ret >>> 0;
+        IndividualFilterJsFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @param {number} stat_index
+     * @param {number} min
+     * @param {number} max
+     */
+    set_iv_range(stat_index, min, max) {
+        wasm.individualfilterjs_set_iv_range(this.__wbg_ptr, stat_index, min, max);
+    }
+    /**
+     * @param {number} nature_index
+     */
+    set_nature(nature_index) {
+        wasm.individualfilterjs_set_nature(this.__wbg_ptr, nature_index);
+    }
+    /**
+     * @param {number} gender
+     */
+    set_gender(gender) {
+        wasm.individualfilterjs_set_gender(this.__wbg_ptr, gender);
+    }
+    /**
+     * @param {number} ability
+     */
+    set_ability(ability) {
+        wasm.individualfilterjs_set_ability(this.__wbg_ptr, ability);
+    }
+    /**
+     * @param {number} shiny
+     */
+    set_shiny(shiny) {
+        wasm.individualfilterjs_set_shiny(this.__wbg_ptr, shiny);
+    }
+    /**
+     * @param {number} hp_type
+     */
+    set_hidden_power_type(hp_type) {
+        wasm.individualfilterjs_set_hidden_power_type(this.__wbg_ptr, hp_type);
+    }
+    /**
+     * @param {number} power
+     */
+    set_hidden_power_power(power) {
+        wasm.individualfilterjs_set_hidden_power_power(this.__wbg_ptr, power);
+    }
+}
+
 const IntegratedSeedSearcherFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_integratedseedsearcher_free(ptr >>> 0, 1));
@@ -1125,11 +1479,11 @@ export class IntegratedSeedSearcher {
     constructor(mac, nazo, hardware, key_input_mask, frame, hour_start, hour_end, minute_start, minute_end, second_start, second_end) {
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            const ptr0 = passArray8ToWasm0(mac, wasm.__wbindgen_export_0);
+            const ptr0 = passArray8ToWasm0(mac, wasm.__wbindgen_export_1);
             const len0 = WASM_VECTOR_LEN;
-            const ptr1 = passArray32ToWasm0(nazo, wasm.__wbindgen_export_0);
+            const ptr1 = passArray32ToWasm0(nazo, wasm.__wbindgen_export_1);
             const len1 = WASM_VECTOR_LEN;
-            const ptr2 = passStringToWasm0(hardware, wasm.__wbindgen_export_0, wasm.__wbindgen_export_1);
+            const ptr2 = passStringToWasm0(hardware, wasm.__wbindgen_export_1, wasm.__wbindgen_export_2);
             const len2 = WASM_VECTOR_LEN;
             wasm.integratedseedsearcher_new(retptr, ptr0, len0, ptr1, len1, ptr2, len2, key_input_mask, frame, hour_start, hour_end, minute_start, minute_end, second_start, second_end);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
@@ -1163,7 +1517,7 @@ export class IntegratedSeedSearcher {
      * @returns {Array<any>}
      */
     search_seeds_integrated(year_start, month_start, date_start, hour_start, minute_start, second_start, range_seconds, timer0_min, timer0_max, vcount_min, vcount_max, target_seeds) {
-        const ptr0 = passArray32ToWasm0(target_seeds, wasm.__wbindgen_export_0);
+        const ptr0 = passArray32ToWasm0(target_seeds, wasm.__wbindgen_export_1);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.integratedseedsearcher_search_seeds_integrated(this.__wbg_ptr, year_start, month_start, date_start, hour_start, minute_start, second_start, range_seconds, timer0_min, timer0_max, vcount_min, vcount_max, ptr0, len0);
         return takeObject(ret);
@@ -1186,7 +1540,7 @@ export class IntegratedSeedSearcher {
      * @returns {Array<any>}
      */
     search_seeds_integrated_simd(year_start, month_start, date_start, hour_start, minute_start, second_start, range_seconds, timer0_min, timer0_max, vcount_min, vcount_max, target_seeds) {
-        const ptr0 = passArray32ToWasm0(target_seeds, wasm.__wbindgen_export_0);
+        const ptr0 = passArray32ToWasm0(target_seeds, wasm.__wbindgen_export_1);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.integratedseedsearcher_search_seeds_integrated_simd(this.__wbg_ptr, year_start, month_start, date_start, hour_start, minute_start, second_start, range_seconds, timer0_min, timer0_max, vcount_min, vcount_max, ptr0, len0);
         return takeObject(ret);
@@ -1224,7 +1578,7 @@ export class NumberUtils {
      * @returns {number}
      */
     static hex_string_to_u32(hex_str) {
-        const ptr0 = passStringToWasm0(hex_str, wasm.__wbindgen_export_0, wasm.__wbindgen_export_1);
+        const ptr0 = passStringToWasm0(hex_str, wasm.__wbindgen_export_1, wasm.__wbindgen_export_2);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.numberutils_hex_string_to_u32(ptr0, len0);
         return ret >>> 0;
@@ -1255,7 +1609,7 @@ export class NumberUtils {
             return getStringFromWasm0(r0, r1);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export_2(deferred1_0, deferred1_1, 1);
+            wasm.__wbindgen_export_3(deferred1_0, deferred1_1, 1);
         }
     }
     /**
@@ -1651,6 +2005,49 @@ export class PIDCalculator {
     }
 }
 
+const ParentsIVsJsFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_parentsivsjs_free(ptr >>> 0, 1));
+/**
+ * WASM wrapper for ParentsIVs
+ */
+export class ParentsIVsJs {
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        ParentsIVsJsFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_parentsivsjs_free(ptr, 0);
+    }
+    constructor() {
+        const ret = wasm.parentsivsjs_new();
+        this.__wbg_ptr = ret >>> 0;
+        ParentsIVsJsFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @param {Uint8Array} ivs
+     */
+    set male(ivs) {
+        const ptr0 = passArray8ToWasm0(ivs, wasm.__wbindgen_export_1);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.parentsivsjs_set_male(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
+     * @param {Uint8Array} ivs
+     */
+    set female(ivs) {
+        const ptr0 = passArray8ToWasm0(ivs, wasm.__wbindgen_export_1);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.parentsivsjs_set_female(this.__wbg_ptr, ptr0, len0);
+    }
+}
+
 const PersonalityRNGFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_personalityrng_free(ptr >>> 0, 1));
@@ -1877,7 +2274,7 @@ export class PokemonGenerator {
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var v1 = getArrayJsValueFromWasm0(r0, r1).slice();
-            wasm.__wbindgen_export_2(r0, r1 * 4, 4);
+            wasm.__wbindgen_export_3(r0, r1 * 4, 4);
             return v1;
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
@@ -2026,7 +2423,7 @@ export class SearchResult {
      * @param {number} vcount
      */
     constructor(seed, hash, year, month, date, hour, minute, second, key_code, timer0, vcount) {
-        const ptr0 = passStringToWasm0(hash, wasm.__wbindgen_export_0, wasm.__wbindgen_export_1);
+        const ptr0 = passStringToWasm0(hash, wasm.__wbindgen_export_1, wasm.__wbindgen_export_2);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.searchresult_new(seed, ptr0, len0, year, month, date, hour, minute, second, key_code, timer0, vcount);
         this.__wbg_ptr = ret >>> 0;
@@ -2056,7 +2453,7 @@ export class SearchResult {
             return getStringFromWasm0(r0, r1);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export_2(deferred1_0, deferred1_1, 1);
+            wasm.__wbindgen_export_3(deferred1_0, deferred1_1, 1);
         }
     }
     /**
@@ -2306,6 +2703,69 @@ export class ShinyChecker {
     }
 }
 
+const StatRangeFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_statrange_free(ptr >>> 0, 1));
+
+export class StatRange {
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        StatRangeFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_statrange_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get min() {
+        const ret = wasm.__wbg_get_statrange_min(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @param {number} arg0
+     */
+    set min(arg0) {
+        wasm.__wbg_set_statrange_min(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @returns {number}
+     */
+    get max() {
+        const ret = wasm.__wbg_get_genderratio_threshold(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @param {number} arg0
+     */
+    set max(arg0) {
+        wasm.__wbg_set_genderratio_threshold(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @param {number} min
+     * @param {number} max
+     */
+    constructor(min, max) {
+        const ret = wasm.statrange_new(min, max);
+        this.__wbg_ptr = ret >>> 0;
+        StatRangeFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @param {number} value
+     * @returns {boolean}
+     */
+    contains(value) {
+        const ret = wasm.statrange_contains(this.__wbg_ptr, value);
+        return ret !== 0;
+    }
+}
+
 const TidSidResultFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_tidsidresult_free(ptr >>> 0, 1));
@@ -2401,6 +2861,74 @@ export class TidSidResult {
     }
 }
 
+const TrainerIdsFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_trainerids_free(ptr >>> 0, 1));
+
+export class TrainerIds {
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        TrainerIdsFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_trainerids_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get tid() {
+        const ret = wasm.__wbg_get_trainerids_tid(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @param {number} arg0
+     */
+    set tid(arg0) {
+        wasm.__wbg_set_trainerids_tid(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @returns {number}
+     */
+    get sid() {
+        const ret = wasm.__wbg_get_trainerids_sid(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @param {number} arg0
+     */
+    set sid(arg0) {
+        wasm.__wbg_set_trainerids_sid(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @returns {number}
+     */
+    get tsv() {
+        const ret = wasm.__wbg_get_trainerids_tsv(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @param {number} arg0
+     */
+    set tsv(arg0) {
+        wasm.__wbg_set_trainerids_tsv(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @param {number} tid
+     * @param {number} sid
+     */
+    constructor(tid, sid) {
+        const ret = wasm.trainerids_new(tid, sid);
+        this.__wbg_ptr = ret >>> 0;
+        TrainerIdsFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+}
+
 const ValidationUtilsFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_validationutils_free(ptr >>> 0, 1));
@@ -2492,7 +3020,7 @@ export class ValidationUtils {
      * @returns {boolean}
      */
     static is_valid_hex_string(hex_str) {
-        const ptr0 = passStringToWasm0(hex_str, wasm.__wbindgen_export_0, wasm.__wbindgen_export_1);
+        const ptr0 = passStringToWasm0(hex_str, wasm.__wbindgen_export_1, wasm.__wbindgen_export_2);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.validationutils_is_valid_hex_string(ptr0, len0);
         return ret !== 0;
@@ -2548,6 +3076,10 @@ async function __wbg_load(module, imports) {
 function __wbg_get_imports() {
     const imports = {};
     imports.wbg = {};
+    imports.wbg.__wbg_new_405e22f390576ce2 = function() {
+        const ret = new Object();
+        return addHeapObject(ret);
+    };
     imports.wbg.__wbg_new_78feb108b6472713 = function() {
         const ret = new Array();
         return addHeapObject(ret);
@@ -2562,6 +3094,14 @@ function __wbg_get_imports() {
     };
     imports.wbg.__wbg_searchresult_new = function(arg0) {
         const ret = SearchResult.__wrap(arg0);
+        return addHeapObject(ret);
+    };
+    imports.wbg.__wbg_set_bb8cecf6a62b9f46 = function() { return handleError(function (arg0, arg1, arg2) {
+        const ret = Reflect.set(getObject(arg0), getObject(arg1), getObject(arg2));
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbindgen_number_new = function(arg0) {
+        const ret = arg0;
         return addHeapObject(ret);
     };
     imports.wbg.__wbindgen_object_drop_ref = function(arg0) {

@@ -303,6 +303,18 @@ export class BitUtils {
   static extract_bits(value: number, start_bit: number, bit_count: number): number;
 }
 /**
+ * WASM wrapper for EggSeedEnumerator
+ */
+export class EggSeedEnumeratorJs {
+  free(): void;
+  constructor(base_seed: bigint, user_offset: bigint, count: number, conditions: GenerationConditionsJs, parents: ParentsIVsJs, filter: IndividualFilterJs, consider_npc_consumption: boolean, game_mode: GameMode);
+  /**
+   * Returns the next egg as a JsValue or undefined if exhausted
+   */
+  next_egg(): any;
+  readonly remaining: number;
+}
+/**
  * エンカウント計算エンジン
  */
 export class EncounterCalculator {
@@ -410,6 +422,15 @@ export class EnumeratedPokemonData {
   readonly get_shiny_type: number;
 }
 /**
+ * WASM wrapper for EverstonePlan
+ */
+export class EverstonePlanJs {
+  private constructor();
+  free(): void;
+  static fixed(nature_index: number): EverstonePlanJs;
+  static readonly None: EverstonePlanJs;
+}
+/**
  * Extra処理結果（BW2専用）
  */
 export class ExtraResult {
@@ -434,6 +455,42 @@ export class ExtraResult {
   readonly get_value1: number;
   readonly get_value2: number;
   readonly get_value3: number;
+}
+export class GenderRatio {
+  free(): void;
+  constructor(threshold: number, genderless: boolean);
+  resolve(gender_value: number): number;
+  threshold: number;
+  genderless: boolean;
+}
+/**
+ * WASM wrapper for GenerationConditions
+ */
+export class GenerationConditionsJs {
+  free(): void;
+  constructor();
+  set_everstone(plan: EverstonePlanJs): void;
+  set_trainer_ids(ids: TrainerIds): void;
+  set_gender_ratio(ratio: GenderRatio): void;
+  has_nidoran_flag: boolean;
+  uses_ditto: boolean;
+  allow_hidden_ability: boolean;
+  female_parent_has_hidden: boolean;
+  reroll_count: number;
+}
+/**
+ * WASM wrapper for IndividualFilter
+ */
+export class IndividualFilterJs {
+  free(): void;
+  constructor();
+  set_iv_range(stat_index: number, min: number, max: number): void;
+  set_nature(nature_index: number): void;
+  set_gender(gender: number): void;
+  set_ability(ability: number): void;
+  set_shiny(shiny: number): void;
+  set_hidden_power_type(hp_type: number): void;
+  set_hidden_power_power(power: number): void;
 }
 /**
  * 統合Seed探索器
@@ -723,6 +780,15 @@ export class PIDCalculator {
   static generate_egg_pid(r1: number, r2: number): number;
 }
 /**
+ * WASM wrapper for ParentsIVs
+ */
+export class ParentsIVsJs {
+  free(): void;
+  constructor();
+  set male(value: Uint8Array);
+  set female(value: Uint8Array);
+}
+/**
  * PersonalityRNG構造体
  * BW仕様64bit線形合同法: S[n+1] = S[n] * 0x5D588B656C078965 + 0x269EC3
  */
@@ -978,6 +1044,13 @@ export class ShinyChecker {
    */
   static shiny_probability_with_charm(has_shiny_charm: boolean): number;
 }
+export class StatRange {
+  free(): void;
+  constructor(min: number, max: number);
+  contains(value: number): boolean;
+  min: number;
+  max: number;
+}
 /**
  * TID/SID決定結果
  */
@@ -999,6 +1072,13 @@ export class TidSidResult {
   readonly get_tid: number;
   readonly get_sid: number;
   readonly get_advances_used: number;
+}
+export class TrainerIds {
+  free(): void;
+  constructor(tid: number, sid: number);
+  tid: number;
+  sid: number;
+  tsv: number;
 }
 /**
  * バリデーションユーティリティ
@@ -1072,6 +1152,56 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly __wbg_get_statrange_min: (a: number) => number;
+  readonly __wbg_set_statrange_min: (a: number, b: number) => void;
+  readonly statrange_new: (a: number, b: number) => number;
+  readonly statrange_contains: (a: number, b: number) => number;
+  readonly __wbg_get_genderratio_threshold: (a: number) => number;
+  readonly __wbg_set_genderratio_threshold: (a: number, b: number) => void;
+  readonly __wbg_get_genderratio_genderless: (a: number) => number;
+  readonly __wbg_set_genderratio_genderless: (a: number, b: number) => void;
+  readonly genderratio_new: (a: number, b: number) => number;
+  readonly genderratio_resolve: (a: number, b: number) => number;
+  readonly __wbg_everstoneplanjs_free: (a: number, b: number) => void;
+  readonly everstoneplanjs_none: () => number;
+  readonly everstoneplanjs_fixed: (a: number) => number;
+  readonly __wbg_get_trainerids_tid: (a: number) => number;
+  readonly __wbg_set_trainerids_tid: (a: number, b: number) => void;
+  readonly __wbg_get_trainerids_sid: (a: number) => number;
+  readonly __wbg_set_trainerids_sid: (a: number, b: number) => void;
+  readonly __wbg_get_trainerids_tsv: (a: number) => number;
+  readonly __wbg_set_trainerids_tsv: (a: number, b: number) => void;
+  readonly trainerids_new: (a: number, b: number) => number;
+  readonly __wbg_generationconditionsjs_free: (a: number, b: number) => void;
+  readonly __wbg_get_generationconditionsjs_has_nidoran_flag: (a: number) => number;
+  readonly __wbg_set_generationconditionsjs_has_nidoran_flag: (a: number, b: number) => void;
+  readonly __wbg_get_generationconditionsjs_uses_ditto: (a: number) => number;
+  readonly __wbg_set_generationconditionsjs_uses_ditto: (a: number, b: number) => void;
+  readonly __wbg_get_generationconditionsjs_allow_hidden_ability: (a: number) => number;
+  readonly __wbg_set_generationconditionsjs_allow_hidden_ability: (a: number, b: number) => void;
+  readonly __wbg_get_generationconditionsjs_female_parent_has_hidden: (a: number) => number;
+  readonly __wbg_set_generationconditionsjs_female_parent_has_hidden: (a: number, b: number) => void;
+  readonly __wbg_get_generationconditionsjs_reroll_count: (a: number) => number;
+  readonly __wbg_set_generationconditionsjs_reroll_count: (a: number, b: number) => void;
+  readonly generationconditionsjs_new: () => number;
+  readonly generationconditionsjs_set_everstone: (a: number, b: number) => void;
+  readonly generationconditionsjs_set_trainer_ids: (a: number, b: number) => void;
+  readonly generationconditionsjs_set_gender_ratio: (a: number, b: number) => void;
+  readonly individualfilterjs_new: () => number;
+  readonly individualfilterjs_set_iv_range: (a: number, b: number, c: number, d: number) => void;
+  readonly individualfilterjs_set_nature: (a: number, b: number) => void;
+  readonly individualfilterjs_set_gender: (a: number, b: number) => void;
+  readonly individualfilterjs_set_ability: (a: number, b: number) => void;
+  readonly individualfilterjs_set_shiny: (a: number, b: number) => void;
+  readonly individualfilterjs_set_hidden_power_type: (a: number, b: number) => void;
+  readonly individualfilterjs_set_hidden_power_power: (a: number, b: number) => void;
+  readonly parentsivsjs_new: () => number;
+  readonly parentsivsjs_set_male: (a: number, b: number, c: number) => void;
+  readonly parentsivsjs_set_female: (a: number, b: number, c: number) => void;
+  readonly __wbg_eggseedenumeratorjs_free: (a: number, b: number) => void;
+  readonly eggseedenumeratorjs_new: (a: bigint, b: bigint, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+  readonly eggseedenumeratorjs_next_egg: (a: number) => number;
+  readonly eggseedenumeratorjs_remaining: (a: number) => number;
   readonly encountercalculator_new: () => number;
   readonly encountercalculator_calculate_encounter_slot: (a: number, b: number, c: number) => number;
   readonly encountercalculator_slot_to_table_index: (a: number, b: number) => number;
@@ -1233,9 +1363,16 @@ export interface InitOutput {
   readonly rawpokemondata_get_seed: (a: number) => bigint;
   readonly rawpokemondata_get_pid: (a: number) => number;
   readonly seedenumerator_remaining: (a: number) => number;
+  readonly __wbg_set_statrange_max: (a: number, b: number) => void;
+  readonly __wbg_get_statrange_max: (a: number) => number;
   readonly endianutils_swap_bytes_32: (a: number) => number;
+  readonly __wbg_statrange_free: (a: number, b: number) => void;
+  readonly __wbg_genderratio_free: (a: number, b: number) => void;
+  readonly __wbg_trainerids_free: (a: number, b: number) => void;
+  readonly __wbg_individualfilterjs_free: (a: number, b: number) => void;
   readonly __wbg_pidcalculator_free: (a: number, b: number) => void;
   readonly __wbg_shinychecker_free: (a: number, b: number) => void;
+  readonly __wbg_parentsivsjs_free: (a: number, b: number) => void;
   readonly __wbg_pokemongenerator_free: (a: number, b: number) => void;
   readonly __wbg_seedenumerator_free: (a: number, b: number) => void;
   readonly __wbg_endianutils_free: (a: number, b: number) => void;
@@ -1243,10 +1380,11 @@ export interface InitOutput {
   readonly __wbg_numberutils_free: (a: number, b: number) => void;
   readonly __wbg_bitutils_free: (a: number, b: number) => void;
   readonly __wbg_validationutils_free: (a: number, b: number) => void;
-  readonly __wbindgen_export_0: (a: number, b: number) => number;
-  readonly __wbindgen_export_1: (a: number, b: number, c: number, d: number) => number;
+  readonly __wbindgen_export_0: (a: number) => void;
+  readonly __wbindgen_export_1: (a: number, b: number) => number;
+  readonly __wbindgen_export_2: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
-  readonly __wbindgen_export_2: (a: number, b: number, c: number) => void;
+  readonly __wbindgen_export_3: (a: number, b: number, c: number) => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
