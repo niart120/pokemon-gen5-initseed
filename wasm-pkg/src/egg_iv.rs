@@ -7,7 +7,7 @@ use wasm_bindgen::prelude::*;
 pub const IV_VALUE_UNKNOWN: IvValue = 32;
 const STAT_COUNT: usize = 6;
 const MAX_INHERIT_SLOTS: usize = 3;
-const FOUR_FRACTION_FRAMES: [u32; 4] = [32, 48, 96, 128];
+const FOUR_FRACTION_FRAMES: [u32; 4] = [32, 64, 96, 128];
 const LEFT_DIRECTION_FRAMES: u32 = 20;
 const RIGHT_DIRECTION_FRAMES: u32 = 16;
 const DIRECTION_MISMATCH_FRAMES: u32 = 20;
@@ -553,7 +553,7 @@ pub fn derive_pending_egg_with_state(
     seed: u64,
     conditions: &GenerationConditions,
 ) -> (PendingEgg, u64) {
-    debug_assert!(conditions.reroll_count <= 5);
+    debug_assert!(conditions.reroll_count <= 3);
 
     let mut rng = PersonalityRNG::new(seed);
     let TrainerIds { tid, sid, .. } = conditions.trainer_ids;
