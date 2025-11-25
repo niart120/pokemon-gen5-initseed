@@ -28,16 +28,13 @@ describe('egg-boot-timing-search-store', () => {
   });
 
   describe('updateDraftParams', () => {
-    it('should update rangeSeconds', () => {
-      const { updateDraftParams } = useEggBootTimingSearchStore.getState();
-      updateDraftParams({ rangeSeconds: 120 });
-      expect(useEggBootTimingSearchStore.getState().draftParams.rangeSeconds).toBe(120);
-    });
-
-    it('should update frame', () => {
-      const { updateDraftParams } = useEggBootTimingSearchStore.getState();
-      updateDraftParams({ frame: 10 });
-      expect(useEggBootTimingSearchStore.getState().draftParams.frame).toBe(10);
+    it('should update dateRange', () => {
+      const { updateDateRange } = useEggBootTimingSearchStore.getState();
+      updateDateRange({ startYear: 2025, startMonth: 6, startDay: 15 });
+      const { dateRange } = useEggBootTimingSearchStore.getState().draftParams;
+      expect(dateRange.startYear).toBe(2025);
+      expect(dateRange.startMonth).toBe(6);
+      expect(dateRange.startDay).toBe(15);
     });
 
     it('should update keyInputMask', () => {
@@ -50,6 +47,12 @@ describe('egg-boot-timing-search-store', () => {
       const { updateDraftParams } = useEggBootTimingSearchStore.getState();
       updateDraftParams({ advanceCount: 500 });
       expect(useEggBootTimingSearchStore.getState().draftParams.advanceCount).toBe(500);
+    });
+
+    it('should update filterDisabled', () => {
+      const { updateDraftParams } = useEggBootTimingSearchStore.getState();
+      updateDraftParams({ filterDisabled: true });
+      expect(useEggBootTimingSearchStore.getState().draftParams.filterDisabled).toBe(true);
     });
   });
 
@@ -94,12 +97,18 @@ describe('egg-boot-timing-search-store', () => {
         name: 'Test Profile',
         romVersion: 'W',
         romRegion: 'USA',
-        hardware: 'DSLite',
+        hardware: 'DS_LITE',
+        timer0Auto: false,
         macAddress: [0x00, 0x11, 0x22, 0x33, 0x44, 0x55],
         timer0Range: { min: 0x0C80, max: 0x0C82 },
         vcountRange: { min: 0x61, max: 0x61 },
         tid: 11111,
         sid: 22222,
+        shinyCharm: false,
+        newGame: false,
+        withSave: true,
+        memoryLink: false,
+        createdAt: new Date().toISOString(),
       };
 
       const { applyProfile } = useEggBootTimingSearchStore.getState();
@@ -108,7 +117,7 @@ describe('egg-boot-timing-search-store', () => {
       const state = useEggBootTimingSearchStore.getState();
       expect(state.draftParams.romVersion).toBe('W');
       expect(state.draftParams.romRegion).toBe('USA');
-      expect(state.draftParams.hardware).toBe('DSLite');
+      expect(state.draftParams.hardware).toBe('DS_LITE');
       expect(state.draftParams.macAddress).toEqual([0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
       expect(state.draftParams.timer0Range).toEqual({ min: 0x0C80, max: 0x0C82 });
       expect(state.draftParams.vcountRange).toEqual({ min: 0x61, max: 0x61 });
@@ -142,7 +151,7 @@ describe('egg-boot-timing-search-store', () => {
   });
 
   describe('getFilteredResults', () => {
-    const mockResult = (shiny: number, nature: number) => ({
+    const mockResult = (shiny: 0 | 1 | 2, nature: number) => ({
       boot: {
         datetime: new Date(),
         timer0: 0x0C79,
@@ -155,14 +164,16 @@ describe('egg-boot-timing-search-store', () => {
       egg: {
         advance: 100,
         egg: {
+          lcgSeedHex: '1234567890ABCDEF',
           nature,
           shiny,
-          ivs: [31, 31, 31, 31, 31, 31] as const,
-          ability: 0,
-          gender: 0,
-          hiddenPower: { type: 0, power: 70 },
+          ivs: [31, 31, 31, 31, 31, 31] as [number, number, number, number, number, number],
+          ability: 0 as 0 | 1 | 2,
+          gender: 'male' as 'male' | 'female' | 'genderless',
+          hiddenPower: { type: 'known' as const, hpType: 0, power: 70 },
           pid: 0x12345678,
         },
+        isStable: true,
       },
       isStable: true,
     });
@@ -235,7 +246,7 @@ describe('egg-boot-timing-search-store', () => {
   describe('reset', () => {
     it('should reset all state to defaults', () => {
       useEggBootTimingSearchStore.setState({
-        draftParams: { ...createDefaultEggBootTimingSearchParams(), rangeSeconds: 999 },
+        draftParams: { ...createDefaultEggBootTimingSearchParams(), userOffset: 999 },
         validationErrors: ['error'],
         status: 'running',
         results: [{ boot: {}, lcgSeedHex: 'test', egg: {}, isStable: true } as any],
@@ -249,7 +260,7 @@ describe('egg-boot-timing-search-store', () => {
       reset();
 
       const state = useEggBootTimingSearchStore.getState();
-      expect(state.draftParams.rangeSeconds).toBe(60);
+      expect(state.draftParams.userOffset).toBe(0);  // default value
       expect(state.validationErrors).toHaveLength(0);
       expect(state.status).toBe('idle');
       expect(state.results).toHaveLength(0);
@@ -298,7 +309,7 @@ describe('egg-boot-timing-search-store', () => {
       const mockResult = {
         boot: { datetime: new Date(), timer0: 0x0C79, vcount: 0x60, keyCode: 0, keyInputNames: [], macAddress: [0, 0, 0, 0, 0, 0] as const },
         lcgSeedHex: '1234567890ABCDEF',
-        egg: { advance: 100, egg: { nature: 0, shiny: 0, ivs: [31, 31, 31, 31, 31, 31] as const, ability: 0, gender: 0, hiddenPower: { type: 0, power: 70 }, pid: 0x12345678 } },
+        egg: { advance: 100, egg: { nature: 0, shiny: 0, ivs: [31, 31, 31, 31, 31, 31] as const, ability: 0, gender: 0, hiddenPower: { type: 0, power: 70 }, pid: 0x12345678 }, isStable: true },
         isStable: true,
       };
 
@@ -308,7 +319,7 @@ describe('egg-boot-timing-search-store', () => {
       });
 
       const { _onComplete } = useEggBootTimingSearchStore.getState();
-      _onComplete({ reason: 'completed', processedCount: 100, foundCount: 1, elapsedMs: 1000 });
+      _onComplete({ reason: 'completed', processedCombinations: 100, totalCombinations: 100, resultsCount: 1, elapsedMs: 1000 });
 
       const state = useEggBootTimingSearchStore.getState();
       expect(state.results).toHaveLength(1);
@@ -320,7 +331,7 @@ describe('egg-boot-timing-search-store', () => {
       const mockResult = {
         boot: { datetime: new Date(), timer0: 0x0C79, vcount: 0x60, keyCode: 0, keyInputNames: [], macAddress: [0, 0, 0, 0, 0, 0] as const },
         lcgSeedHex: '1234567890ABCDEF',
-        egg: { advance: 100, egg: { nature: 0, shiny: 0, ivs: [31, 31, 31, 31, 31, 31] as const, ability: 0, gender: 0, hiddenPower: { type: 0, power: 70 }, pid: 0x12345678 } },
+        egg: { advance: 100, egg: { nature: 0, shiny: 0, ivs: [31, 31, 31, 31, 31, 31] as const, ability: 0, gender: 0, hiddenPower: { type: 0, power: 70 }, pid: 0x12345678 }, isStable: true },
         isStable: true,
       };
 

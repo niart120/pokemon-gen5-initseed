@@ -17,16 +17,25 @@ import type { KeyName } from '@/lib/utils/key-input';
 // === 検索パラメータ ===
 
 /**
+ * 日付範囲
+ */
+export interface DateRange {
+  startYear: number;
+  startMonth: number;
+  startDay: number;
+  endYear: number;
+  endMonth: number;
+  endDay: number;
+}
+
+/**
  * 孵化乱数起動時間検索パラメータ
  */
 export interface EggBootTimingSearchParams {
   // === 起動時間パラメータ ===
 
-  /** 開始日時 (ISO8601 UTC) */
-  startDatetimeIso: string;
-
-  /** 検索範囲秒数 */
-  rangeSeconds: number;
+  /** 日付範囲 */
+  dateRange: DateRange;
 
   /** Timer0範囲 */
   timer0Range: {
@@ -58,9 +67,6 @@ export interface EggBootTimingSearchParams {
   /** 時刻範囲フィルター（1日の中で検索する時間帯） */
   timeRange: DailyTimeRange;
 
-  /** フレーム (通常8) */
-  frame: number;
-
   // === 孵化条件パラメータ ===
 
   /** 生成条件 */
@@ -71,6 +77,9 @@ export interface EggBootTimingSearchParams {
 
   /** 個体フィルター (null = フィルタなし) */
   filter: EggIndividualFilter | null;
+
+  /** フィルター無効フラグ */
+  filterDisabled: boolean;
 
   /** NPC消費考慮 */
   considerNpcConsumption: boolean;
@@ -291,15 +300,15 @@ export function validateEggBootTimingSearchParams(
 ): string[] {
   const errors: string[] = [];
 
-  // 日時検証
-  const startDate = new Date(params.startDatetimeIso);
-  if (isNaN(startDate.getTime())) {
-    errors.push('開始日時が無効です');
+  // 日付範囲検証
+  const { dateRange } = params;
+  const startDate = new Date(dateRange.startYear, dateRange.startMonth - 1, dateRange.startDay);
+  const endDate = new Date(dateRange.endYear, dateRange.endMonth - 1, dateRange.endDay);
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    errors.push('日付が無効です');
   }
-
-  // 範囲検証
-  if (params.rangeSeconds < 1 || params.rangeSeconds > 86400 * 365) {
-    errors.push('検索範囲は1秒から1年以内である必要があります');
+  if (startDate > endDate) {
+    errors.push('開始日は終了日以前である必要があります');
   }
 
   // Timer0検証
@@ -373,12 +382,13 @@ export function estimateSearchCombinations(
   const secondCount = second.end - second.start + 1;
   const allowedSecondsPerDay = hourCount * minuteCount * secondCount;
 
-  // 日数
-  const days = Math.ceil(params.rangeSeconds / 86400);
-  const effectiveSeconds = Math.min(
-    params.rangeSeconds,
-    allowedSecondsPerDay * days
-  );
+  // 日数（日付範囲から計算）
+  const { dateRange } = params;
+  const startDate = new Date(dateRange.startYear, dateRange.startMonth - 1, dateRange.startDay);
+  const endDate = new Date(dateRange.endYear, dateRange.endMonth - 1, dateRange.endDay);
+  const days = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+
+  const effectiveSeconds = allowedSecondsPerDay * days;
 
   return effectiveSeconds * timer0Count * vcountCount * keyCodeCount;
 }
@@ -419,9 +429,17 @@ export function createDefaultEggBootTimingSearchParams(): EggBootTimingSearchPar
     female: [31, 31, 31, 31, 31, 31],
   };
 
+  const now = new Date();
+
   return {
-    startDatetimeIso: new Date().toISOString(),
-    rangeSeconds: 60,
+    dateRange: {
+      startYear: now.getFullYear(),
+      startMonth: now.getMonth() + 1,
+      startDay: now.getDate(),
+      endYear: now.getFullYear(),
+      endMonth: now.getMonth() + 1,
+      endDay: now.getDate(),
+    },
     timer0Range: { min: 0x0c79, max: 0x0c7b },
     vcountRange: { min: 0x60, max: 0x60 },
     keyInputMask: 0,
@@ -434,14 +452,14 @@ export function createDefaultEggBootTimingSearchParams(): EggBootTimingSearchPar
       minute: { start: 0, end: 59 },
       second: { start: 0, end: 59 },
     },
-    frame: 8,
     conditions: defaultConditions,
     parents: defaultParents,
     filter: null,
+    filterDisabled: false,
     considerNpcConsumption: false,
     gameMode: EggGameMode.BwContinue,
     userOffset: 0,
     advanceCount: 1000,
-    maxResults: 10000,
+    maxResults: 1000,
   };
 }

@@ -9,13 +9,15 @@ import type {
   EggBootTimingSearchParams,
   EggBootTimingSearchResult,
   EggBootTimingCompletion,
+  DateRange,
 } from '@/types/egg-boot-timing-search';
 import {
   createDefaultEggBootTimingSearchParams,
   validateEggBootTimingSearchParams,
 } from '@/types/egg-boot-timing-search';
-import type { EggGenerationConditions, ParentsIVs } from '@/types/egg';
+import type { EggGenerationConditions, ParentsIVs, IvSet, EggIndividualFilter } from '@/types/egg';
 import type { DeviceProfile } from '@/types/profile';
+import type { DailyTimeRange } from '@/types/search';
 
 /**
  * 検索実行状態
@@ -97,6 +99,11 @@ interface EggBootTimingSearchActions {
   updateDraftParams: (updates: Partial<EggBootTimingSearchParams>) => void;
   updateDraftConditions: (updates: Partial<EggGenerationConditions>) => void;
   updateDraftParents: (updates: Partial<ParentsIVs>) => void;
+  updateDraftParentsMale: (ivs: IvSet) => void;
+  updateDraftParentsFemale: (ivs: IvSet) => void;
+  updateDateRange: (updates: Partial<DateRange>) => void;
+  updateTimeRange: (updates: Partial<DailyTimeRange>) => void;
+  updateFilter: (updates: Partial<EggIndividualFilter>) => void;
   applyProfile: (profile: DeviceProfile) => void;
   
   // --- バリデーション ---
@@ -164,6 +171,63 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
           parents: { ...state.draftParams.parents, ...updates },
         },
       }));
+    },
+
+    updateDraftParentsMale: (ivs) => {
+      set((state) => ({
+        draftParams: {
+          ...state.draftParams,
+          parents: { ...state.draftParams.parents, male: ivs },
+        },
+      }));
+    },
+
+    updateDraftParentsFemale: (ivs) => {
+      set((state) => ({
+        draftParams: {
+          ...state.draftParams,
+          parents: { ...state.draftParams.parents, female: ivs },
+        },
+      }));
+    },
+
+    updateDateRange: (updates) => {
+      set((state) => ({
+        draftParams: {
+          ...state.draftParams,
+          dateRange: { ...state.draftParams.dateRange, ...updates },
+        },
+      }));
+    },
+
+    updateTimeRange: (updates) => {
+      set((state) => ({
+        draftParams: {
+          ...state.draftParams,
+          timeRange: { ...state.draftParams.timeRange, ...updates },
+        },
+      }));
+    },
+
+    updateFilter: (updates) => {
+      set((state) => {
+        const currentFilter = state.draftParams.filter || {
+          ivRanges: [
+            { min: 0, max: 32 },
+            { min: 0, max: 32 },
+            { min: 0, max: 32 },
+            { min: 0, max: 32 },
+            { min: 0, max: 32 },
+            { min: 0, max: 32 },
+          ],
+        };
+        return {
+          draftParams: {
+            ...state.draftParams,
+            filter: { ...currentFilter, ...updates },
+          },
+        };
+      });
     },
 
     applyProfile: (profile) => {

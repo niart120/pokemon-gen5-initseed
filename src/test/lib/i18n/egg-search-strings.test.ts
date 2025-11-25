@@ -98,18 +98,22 @@ describe('egg-search i18n strings', () => {
     });
 
     it('should have all params labels', () => {
-      expect(eggSearchParamsLabels.startDatetime.ja).toBeDefined();
-      expect(eggSearchParamsLabels.startDatetime.en).toBeDefined();
-      expect(eggSearchParamsLabels.rangeSeconds.ja).toBeDefined();
-      expect(eggSearchParamsLabels.rangeSeconds.en).toBeDefined();
-      expect(eggSearchParamsLabels.frame.ja).toBeDefined();
-      expect(eggSearchParamsLabels.frame.en).toBeDefined();
+      expect(eggSearchParamsLabels.startDate.ja).toBeDefined();
+      expect(eggSearchParamsLabels.startDate.en).toBeDefined();
+      expect(eggSearchParamsLabels.endDate.ja).toBeDefined();
+      expect(eggSearchParamsLabels.endDate.en).toBeDefined();
+      expect(eggSearchParamsLabels.timeRange.ja).toBeDefined();
+      expect(eggSearchParamsLabels.timeRange.en).toBeDefined();
       expect(eggSearchParamsLabels.userOffset.ja).toBeDefined();
       expect(eggSearchParamsLabels.userOffset.en).toBeDefined();
       expect(eggSearchParamsLabels.advanceCount.ja).toBeDefined();
       expect(eggSearchParamsLabels.advanceCount.en).toBeDefined();
       expect(eggSearchParamsLabels.keyInput.ja).toBeDefined();
       expect(eggSearchParamsLabels.keyInput.en).toBeDefined();
+      expect(eggSearchParamsLabels.maleParentIv.ja).toBeDefined();
+      expect(eggSearchParamsLabels.maleParentIv.en).toBeDefined();
+      expect(eggSearchParamsLabels.femaleParentIv.ja).toBeDefined();
+      expect(eggSearchParamsLabels.femaleParentIv.en).toBeDefined();
     });
   });
 

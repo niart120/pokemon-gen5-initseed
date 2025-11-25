@@ -2,158 +2,734 @@
  * EggSearchParamsCard
  * 検索条件パラメータ入力カード
  * 
- * NOTE: Timer0/VCountはProfileから自動取得されるため、このカードには含めない
+ * 仕様: spec/agent/pr_egg_boot_timing_search/UI_DESIGN.md
+ * - 日付範囲をSearchPanelと同様に開始日・終了日 + 時分秒レンジ指定
+ * - 親個体値・生成条件はEggParamsCardと同等
+ * - Timer0/VCountはProfileから自動取得
  */
 
-import React from 'react';
-import { Sliders } from '@phosphor-icons/react';
+import React, { useMemo } from 'react';
+import { Sliders, GameController } from '@phosphor-icons/react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Toggle } from '@/components/ui/toggle';
 import { useEggBootTimingSearchStore } from '@/store/egg-boot-timing-search-store';
 import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import { natureName } from '@/lib/utils/format-display';
+import { DOMAIN_NATURE_COUNT } from '@/types/domain';
+import { KEY_INPUT_DEFAULT, keyMaskToNames, keyNamesToMask, type KeyName } from '@/lib/utils/key-input';
+import type { IvSet } from '@/types/egg';
 import {
   eggSearchParamsCardTitle,
+  eggSearchParamsSectionTitles,
   eggSearchParamsLabels,
+  eggSearchStatNames,
+  eggSearchFemaleAbilityOptions,
+  eggSearchGenderRatioPresets,
 } from '@/lib/i18n/strings/egg-search';
-
-// デフォルト値定数
-const DEFAULT_FRAME = 8;
-const DEFAULT_ADVANCE_COUNT = 1000;
 
 export function EggSearchParamsCard() {
   const locale = useLocale();
-  const { draftParams, updateDraftParams, status } = useEggBootTimingSearchStore();
+  const {
+    draftParams,
+    updateDraftParams,
+    updateDraftConditions,
+    updateDraftParentsMale,
+    updateDraftParentsFemale,
+    updateDateRange,
+    updateTimeRange,
+    status,
+  } = useEggBootTimingSearchStore();
   
   const isRunning = status === 'running' || status === 'starting' || status === 'stopping';
 
-  // 日時をローカルタイムで表示するためのフォーマット
-  const formatDatetimeLocal = (isoString: string): string => {
-    try {
-      const date = new Date(isoString);
-      if (isNaN(date.getTime())) return '';
-      // datetime-local形式: YYYY-MM-DDTHH:mm:ss
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-    } catch {
-      return '';
+  const [isKeyDialogOpen, setIsKeyDialogOpen] = React.useState(false);
+  const [tempKeyInput, setTempKeyInput] = React.useState(KEY_INPUT_DEFAULT);
+
+  const statNames = resolveLocaleValue(eggSearchStatNames, locale);
+  const femaleAbilityOptions = resolveLocaleValue(eggSearchFemaleAbilityOptions, locale);
+
+  // 性別比プリセットの選択値を計算
+  const genderRatioValue = useMemo(() => {
+    const { threshold, genderless } = draftParams.conditions.genderRatio;
+    const preset = eggSearchGenderRatioPresets.find(
+      p => p.threshold === threshold && p.genderless === genderless
+    );
+    return preset ? `${preset.threshold}-${preset.genderless}` : 'custom';
+  }, [draftParams.conditions.genderRatio]);
+
+  // 日付フォーマット
+  const formatDate = (year: number, month: number, day: number): string => {
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  const parseDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate(),
+    };
+  };
+
+  const startDate = formatDate(
+    draftParams.dateRange.startYear,
+    draftParams.dateRange.startMonth,
+    draftParams.dateRange.startDay,
+  );
+
+  const endDate = formatDate(
+    draftParams.dateRange.endYear,
+    draftParams.dateRange.endMonth,
+    draftParams.dateRange.endDay,
+  );
+
+  const handleStartDateChange = (dateString: string) => {
+    if (!dateString) return;
+    const { year, month, day } = parseDate(dateString);
+    updateDateRange({
+      startYear: year,
+      startMonth: month,
+      startDay: day,
+    });
+  };
+
+  const handleEndDateChange = (dateString: string) => {
+    if (!dateString) return;
+    const { year, month, day } = parseDate(dateString);
+    updateDateRange({
+      endYear: year,
+      endMonth: month,
+      endDay: day,
+    });
+  };
+
+  // 時刻範囲フィールド設定
+  const timeFieldConfigs = [
+    { key: 'hour' as const, label: eggSearchParamsLabels.hour[locale], min: 0, max: 23 },
+    { key: 'minute' as const, label: eggSearchParamsLabels.minute[locale], min: 0, max: 59 },
+    { key: 'second' as const, label: eggSearchParamsLabels.second[locale], min: 0, max: 59 },
+  ];
+
+  const handleTimeRangeChange = (
+    field: 'hour' | 'minute' | 'second',
+    edge: 'start' | 'end',
+    rawValue: string,
+  ) => {
+    if (!rawValue) return;
+    const numeric = Number.parseInt(rawValue, 10);
+    if (Number.isNaN(numeric)) return;
+
+    const config = timeFieldConfigs.find(c => c.key === field)!;
+    const clamped = Math.min(Math.max(numeric, config.min), config.max);
+
+    const currentRange = draftParams.timeRange[field];
+    const nextRange = { ...currentRange, [edge]: clamped };
+    
+    updateTimeRange({ [field]: nextRange });
+  };
+
+  // キー入力
+  const availableKeys = useMemo(() => keyMaskToNames(draftParams.keyInputMask), [draftParams.keyInputMask]);
+  const tempAvailableKeys = useMemo(() => keyMaskToNames(tempKeyInput), [tempKeyInput]);
+
+  const handleToggleKey = (key: KeyName) => {
+    const current = keyMaskToNames(tempKeyInput);
+    const next = current.includes(key)
+      ? current.filter((item) => item !== key)
+      : [...current, key];
+    setTempKeyInput(keyNamesToMask(next));
+  };
+
+  const handleResetKeys = () => {
+    setTempKeyInput(KEY_INPUT_DEFAULT);
+  };
+
+  const handleApplyKeys = () => {
+    updateDraftParams({ keyInputMask: tempKeyInput });
+    setIsKeyDialogOpen(false);
+  };
+
+  const openKeyDialog = () => {
+    setTempKeyInput(draftParams.keyInputMask);
+    setIsKeyDialogOpen(true);
+  };
+
+  const keyJoiner = locale === 'ja' ? '、' : ', ';
+
+  // 親IV変更ハンドラ
+  const handleIvChange = (
+    parent: 'male' | 'female',
+    index: number,
+    value: string
+  ) => {
+    const numValue = Math.min(31, Math.max(0, parseInt(value) || 0));
+    const currentIvs = parent === 'male' ? draftParams.parents.male : draftParams.parents.female;
+    const newIvs = [...currentIvs] as IvSet;
+    newIvs[index] = numValue;
+
+    if (parent === 'male') {
+      updateDraftParentsMale(newIvs);
+    } else {
+      updateDraftParentsFemale(newIvs);
     }
   };
 
-  const handleDatetimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const localValue = e.target.value;
-    if (!localValue) return;
-    try {
-      const date = new Date(localValue);
-      updateDraftParams({ startDatetimeIso: date.toISOString() });
-    } catch {
-      // Invalid date, ignore
+  const handleIvUnknownChange = (
+    parent: 'male' | 'female',
+    index: number,
+    isUnknown: boolean
+  ) => {
+    const currentIvs = parent === 'male' ? draftParams.parents.male : draftParams.parents.female;
+    const newIvs = [...currentIvs] as IvSet;
+    newIvs[index] = isUnknown ? 32 : 0;
+
+    if (parent === 'male') {
+      updateDraftParentsMale(newIvs);
+    } else {
+      updateDraftParentsFemale(newIvs);
     }
+  };
+
+  // 性別比変更ハンドラ
+  const handleGenderRatioChange = (value: string) => {
+    const preset = eggSearchGenderRatioPresets.find(
+      p => `${p.threshold}-${p.genderless}` === value
+    );
+    if (preset) {
+      updateDraftConditions({
+        genderRatio: {
+          threshold: preset.threshold,
+          genderless: preset.genderless,
+        },
+      });
+    }
+  };
+
+  const timeInputClassName = 'h-8 w-11 px-0 text-center text-sm';
+
+  const handleTimeInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    event.currentTarget.select();
   };
 
   return (
-    <PanelCard
-      icon={<Sliders size={20} className="opacity-80" />}
-      title={eggSearchParamsCardTitle[locale]}
-      scrollMode="content"
-    >
-      <div className="space-y-4">
-        {/* 開始日時 */}
-        <div className="space-y-2">
-          <Label htmlFor="start-datetime">{eggSearchParamsLabels.startDatetime[locale]}</Label>
-          <Input
-            id="start-datetime"
-            type="datetime-local"
-            value={formatDatetimeLocal(draftParams.startDatetimeIso)}
-            onChange={handleDatetimeChange}
-            disabled={isRunning}
-            step="1"
-          />
-        </div>
+    <>
+      <PanelCard
+        icon={<Sliders size={20} className="opacity-80" />}
+        title={eggSearchParamsCardTitle[locale]}
+        scrollMode="content"
+        fullHeight
+      >
+        <div className="space-y-4">
+          {/* 日時範囲セクション */}
+          <section className="space-y-3" role="group">
+            <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
+              {eggSearchParamsSectionTitles.dateTime[locale]}
+            </h4>
+            
+            {/* 日付範囲 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label htmlFor="start-date" className="text-xs">{eggSearchParamsLabels.startDate[locale]}</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  min="2000-01-01"
+                  max="2099-12-31"
+                  className="h-8 text-xs"
+                  value={startDate}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  disabled={isRunning}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="end-date" className="text-xs">{eggSearchParamsLabels.endDate[locale]}</Label>
+                <Input
+                  id="end-date"
+                  type="date"
+                  min="2000-01-01"
+                  max="2099-12-31"
+                  className="h-8 text-xs"
+                  value={endDate}
+                  onChange={(e) => handleEndDateChange(e.target.value)}
+                  disabled={isRunning}
+                />
+              </div>
+            </div>
 
-        {/* 検索範囲（秒） */}
-        <div className="space-y-2">
-          <Label htmlFor="range-seconds">{eggSearchParamsLabels.rangeSeconds[locale]}</Label>
-          <Input
-            id="range-seconds"
-            type="number"
-            min={1}
-            max={86400}
-            value={draftParams.rangeSeconds}
-            onChange={(e) =>
-              updateDraftParams({ rangeSeconds: parseInt(e.target.value, 10) || 1 })
-            }
-            disabled={isRunning}
-          />
-        </div>
+            {/* 時刻範囲 */}
+            <div className="space-y-1">
+              <Label className="text-xs">{eggSearchParamsLabels.timeRange[locale]}</Label>
+              <div className="flex items-center gap-0 overflow-x-auto">
+                {timeFieldConfigs.map((config) => {
+                  const range = draftParams.timeRange[config.key];
+                  return (
+                    <div key={config.key} className="flex items-center gap-0 whitespace-nowrap">
+                      <span className="text-xs text-muted-foreground w-8 text-right">
+                        {config.label}
+                      </span>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={config.min}
+                        max={config.max}
+                        value={range.start}
+                        aria-label={`${config.label} min`}
+                        className={timeInputClassName}
+                        onFocus={handleTimeInputFocus}
+                        onChange={(e) => handleTimeRangeChange(config.key, 'start', e.target.value)}
+                        disabled={isRunning}
+                      />
+                      <span className="text-xs text-muted-foreground">~</span>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={config.min}
+                        max={config.max}
+                        value={range.end}
+                        aria-label={`${config.label} max`}
+                        className={timeInputClassName}
+                        onFocus={handleTimeInputFocus}
+                        onChange={(e) => handleTimeRangeChange(config.key, 'end', e.target.value)}
+                        disabled={isRunning}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-        {/* フレーム */}
-        <div className="space-y-2">
-          <Label htmlFor="frame">{eggSearchParamsLabels.frame[locale]}</Label>
-          <Input
-            id="frame"
-            type="number"
-            min={0}
-            max={255}
-            value={draftParams.frame}
-            onChange={(e) =>
-              updateDraftParams({ frame: parseInt(e.target.value, 10) || DEFAULT_FRAME })
-            }
-            disabled={isRunning}
-          />
-        </div>
+            {/* キー入力 */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">{eggSearchParamsLabels.keyInput[locale]}</Label>
+                <Button variant="outline" size="sm" onClick={openKeyDialog} className="gap-1 h-7 text-xs" disabled={isRunning}>
+                  <GameController size={14} />
+                  {eggSearchParamsLabels.keyInputConfigure[locale]}
+                </Button>
+              </div>
+              {availableKeys.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  {availableKeys.join(keyJoiner)}
+                </div>
+              )}
+            </div>
+          </section>
 
-        {/* 開始Advance */}
-        <div className="space-y-2">
-          <Label htmlFor="user-offset">{eggSearchParamsLabels.userOffset[locale]}</Label>
-          <Input
-            id="user-offset"
-            type="number"
-            min={0}
-            value={draftParams.userOffset}
-            onChange={(e) =>
-              updateDraftParams({ userOffset: parseInt(e.target.value, 10) || 0 })
-            }
-            disabled={isRunning}
-          />
-        </div>
+          <Separator />
 
-        {/* 検索Advance数 */}
-        <div className="space-y-2">
-          <Label htmlFor="advance-count">{eggSearchParamsLabels.advanceCount[locale]}</Label>
-          <Input
-            id="advance-count"
-            type="number"
-            min={1}
-            max={100000}
-            value={draftParams.advanceCount}
-            onChange={(e) =>
-              updateDraftParams({ advanceCount: parseInt(e.target.value, 10) || DEFAULT_ADVANCE_COUNT })
-            }
-            disabled={isRunning}
-          />
-        </div>
+          {/* 親個体情報セクション */}
+          <section className="space-y-3" role="group">
+            <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
+              {eggSearchParamsSectionTitles.parents[locale]}
+            </h4>
 
-        {/* キー入力マスク */}
-        <div className="space-y-2">
-          <Label htmlFor="key-input-mask">{eggSearchParamsLabels.keyInput[locale]}</Label>
-          <Input
-            id="key-input-mask"
-            type="text"
-            placeholder="0x0000"
-            value={`0x${draftParams.keyInputMask.toString(16).toUpperCase().padStart(4, '0')}`}
-            onChange={(e) => {
-              const value = e.target.value.replace(/^0x/i, '');
-              const parsed = parseInt(value, 16);
-              if (!isNaN(parsed)) {
-                updateDraftParams({ keyInputMask: parsed & 0xffff });
-              }
-            }}
-            disabled={isRunning}
-            className="font-mono"
-          />
+            {/* ♂親IV */}
+            <div className="space-y-1">
+              <Label className="text-xs">{eggSearchParamsLabels.maleParentIv[locale]}</Label>
+              <div className="grid grid-cols-6 gap-1">
+                {statNames.map((stat, i) => {
+                  const isUnknown = draftParams.parents.male[i] === 32;
+                  return (
+                    <div key={i} className="flex flex-col items-center">
+                      <span className="text-[10px] text-muted-foreground">{stat}</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={31}
+                        value={isUnknown ? '' : draftParams.parents.male[i]}
+                        onChange={(e) => handleIvChange('male', i, e.target.value)}
+                        disabled={isRunning || isUnknown}
+                        className="text-xs text-center h-7 px-1"
+                        placeholder={isUnknown ? '?' : undefined}
+                      />
+                      <div className="flex items-center gap-1 mt-1">
+                        <Checkbox
+                          id={`egg-search-male-iv-unknown-${i}`}
+                          checked={isUnknown}
+                          onCheckedChange={(checked) => handleIvUnknownChange('male', i, !!checked)}
+                          disabled={isRunning}
+                          className="h-3 w-3"
+                        />
+                        <Label htmlFor={`egg-search-male-iv-unknown-${i}`} className="text-[9px] text-muted-foreground cursor-pointer">
+                          {eggSearchParamsLabels.ivUnknown[locale]}
+                        </Label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ♀親IV */}
+            <div className="space-y-1">
+              <Label className="text-xs">{eggSearchParamsLabels.femaleParentIv[locale]}</Label>
+              <div className="grid grid-cols-6 gap-1">
+                {statNames.map((stat, i) => {
+                  const isUnknown = draftParams.parents.female[i] === 32;
+                  return (
+                    <div key={i} className="flex flex-col items-center">
+                      <span className="text-[10px] text-muted-foreground">{stat}</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={31}
+                        value={isUnknown ? '' : draftParams.parents.female[i]}
+                        onChange={(e) => handleIvChange('female', i, e.target.value)}
+                        disabled={isRunning || isUnknown}
+                        className="text-xs text-center h-7 px-1"
+                        placeholder={isUnknown ? '?' : undefined}
+                      />
+                      <div className="flex items-center gap-1 mt-1">
+                        <Checkbox
+                          id={`egg-search-female-iv-unknown-${i}`}
+                          checked={isUnknown}
+                          onCheckedChange={(checked) => handleIvUnknownChange('female', i, !!checked)}
+                          disabled={isRunning}
+                          className="h-3 w-3"
+                        />
+                        <Label htmlFor={`egg-search-female-iv-unknown-${i}`} className="text-[9px] text-muted-foreground cursor-pointer">
+                          {eggSearchParamsLabels.ivUnknown[locale]}
+                        </Label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          <Separator />
+
+          {/* 生成条件セクション */}
+          <section className="space-y-3" role="group">
+            <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
+              {eggSearchParamsSectionTitles.conditions[locale]}
+            </h4>
+
+            {/* セレクト系 */}
+            <div className="grid grid-cols-3 gap-2">
+              {/* 性別比 */}
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs">{eggSearchParamsLabels.genderRatio[locale]}</Label>
+                <Select
+                  value={genderRatioValue}
+                  onValueChange={handleGenderRatioChange}
+                  disabled={isRunning}
+                >
+                  <SelectTrigger className="text-xs h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eggSearchGenderRatioPresets.map((preset) => (
+                      <SelectItem
+                        key={`${preset.threshold}-${preset.genderless}`}
+                        value={`${preset.threshold}-${preset.genderless}`}
+                        className="text-xs"
+                      >
+                        {preset.label[locale]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* ♀親の特性 */}
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs">{eggSearchParamsLabels.femaleAbility[locale]}</Label>
+                <Select
+                  value={String(draftParams.conditions.femaleParentAbility)}
+                  onValueChange={(v) => updateDraftConditions({ femaleParentAbility: Number(v) as 0 | 1 | 2 })}
+                  disabled={isRunning}
+                >
+                  <SelectTrigger className="text-xs h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {([0, 1, 2] as const).map((ability) => (
+                      <SelectItem key={ability} value={String(ability)} className="text-xs">
+                        {femaleAbilityOptions[ability]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* かわらずのいし */}
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs">{eggSearchParamsLabels.everstone[locale]}</Label>
+                <Select
+                  value={draftParams.conditions.everstone.type === 'none' ? 'none' : `fixed-${(draftParams.conditions.everstone as { type: 'fixed'; nature: number }).nature}`}
+                  onValueChange={(v) => {
+                    if (v === 'none') {
+                      updateDraftConditions({ everstone: { type: 'none' } });
+                    } else {
+                      const nature = parseInt(v.replace('fixed-', ''));
+                      updateDraftConditions({ everstone: { type: 'fixed', nature } });
+                    }
+                  }}
+                  disabled={isRunning}
+                >
+                  <SelectTrigger className="text-xs h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" className="text-xs">{eggSearchParamsLabels.everstoneNone[locale]}</SelectItem>
+                    {Array.from({ length: DOMAIN_NATURE_COUNT }, (_, i) => (
+                      <SelectItem key={i} value={`fixed-${i}`} className="text-xs">
+                        {natureName(i, locale)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* チェックボックス群 */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              {/* メタモン利用 */}
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="egg-search-uses-ditto"
+                  checked={draftParams.conditions.usesDitto}
+                  onCheckedChange={(checked) => updateDraftConditions({ usesDitto: !!checked })}
+                  disabled={isRunning}
+                />
+                <Label htmlFor="egg-search-uses-ditto" className="text-xs">{eggSearchParamsLabels.usesDitto[locale]}</Label>
+              </div>
+
+              {/* 国際孵化 */}
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="egg-search-masuda"
+                  checked={draftParams.conditions.masudaMethod}
+                  onCheckedChange={(checked) => updateDraftConditions({ masudaMethod: !!checked })}
+                  disabled={isRunning}
+                />
+                <Label htmlFor="egg-search-masuda" className="text-xs">{eggSearchParamsLabels.masudaMethod[locale]}</Label>
+              </div>
+
+              {/* ニドラン系 */}
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="egg-search-nidoran"
+                  checked={draftParams.conditions.hasNidoranFlag}
+                  onCheckedChange={(checked) => updateDraftConditions({ hasNidoranFlag: !!checked })}
+                  disabled={isRunning}
+                />
+                <Label htmlFor="egg-search-nidoran" className="text-xs">{eggSearchParamsLabels.nidoranFlag[locale]}</Label>
+              </div>
+
+              {/* NPC消費考慮 */}
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="egg-search-npc-consumption"
+                  checked={draftParams.considerNpcConsumption}
+                  onCheckedChange={(checked) => updateDraftParams({ considerNpcConsumption: !!checked })}
+                  disabled={isRunning}
+                />
+                <Label htmlFor="egg-search-npc-consumption" className="text-xs">{eggSearchParamsLabels.npcConsumption[locale]}</Label>
+              </div>
+            </div>
+          </section>
+
+          <Separator />
+
+          {/* 消費範囲セクション */}
+          <section className="space-y-3" role="group">
+            <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
+              {eggSearchParamsSectionTitles.advance[locale]}
+            </h4>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label htmlFor="user-offset" className="text-xs">{eggSearchParamsLabels.userOffset[locale]}</Label>
+                <Input
+                  id="user-offset"
+                  type="number"
+                  min={0}
+                  value={draftParams.userOffset}
+                  onChange={(e) => updateDraftParams({ userOffset: parseInt(e.target.value, 10) || 0 })}
+                  disabled={isRunning}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="advance-count" className="text-xs">{eggSearchParamsLabels.advanceCount[locale]}</Label>
+                <Input
+                  id="advance-count"
+                  type="number"
+                  min={1}
+                  max={100000}
+                  value={draftParams.advanceCount}
+                  onChange={(e) => updateDraftParams({ advanceCount: Math.max(1, Math.min(100000, parseInt(e.target.value, 10) || 1000)) })}
+                  disabled={isRunning}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+          </section>
         </div>
-      </div>
-    </PanelCard>
+      </PanelCard>
+
+      {/* キー入力ダイアログ */}
+      <Dialog open={isKeyDialogOpen} onOpenChange={setIsKeyDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{eggSearchParamsLabels.keyInput[locale]}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="flex justify-between px-8">
+              <Toggle
+                value="L"
+                aria-label="L"
+                pressed={tempAvailableKeys.includes('L')}
+                onPressedChange={() => handleToggleKey('L')}
+                className="px-6 py-2"
+              >
+                L
+              </Toggle>
+              <Toggle
+                value="R"
+                aria-label="R"
+                pressed={tempAvailableKeys.includes('R')}
+                onPressedChange={() => handleToggleKey('R')}
+                className="px-6 py-2"
+              >
+                R
+              </Toggle>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="grid grid-cols-3 gap-1 font-arrows">
+                  <div />
+                  <Toggle
+                    value="[↑]"
+                    aria-label="Up"
+                    pressed={tempAvailableKeys.includes('[↑]')}
+                    onPressedChange={() => handleToggleKey('[↑]')}
+                    className="w-12 h-12"
+                  >
+                    [↑]
+                  </Toggle>
+                  <div />
+                  <Toggle
+                    value="[←]"
+                    aria-label="Left"
+                    pressed={tempAvailableKeys.includes('[←]')}
+                    onPressedChange={() => handleToggleKey('[←]')}
+                    className="w-12 h-12"
+                  >
+                    [←]
+                  </Toggle>
+                  <div className="w-12 h-12" />
+                  <Toggle
+                    value="[→]"
+                    aria-label="Right"
+                    pressed={tempAvailableKeys.includes('[→]')}
+                    onPressedChange={() => handleToggleKey('[→]')}
+                    className="w-12 h-12"
+                  >
+                    [→]
+                  </Toggle>
+                  <div />
+                  <Toggle
+                    value="[↓]"
+                    aria-label="Down"
+                    pressed={tempAvailableKeys.includes('[↓]')}
+                    onPressedChange={() => handleToggleKey('[↓]')}
+                    className="w-12 h-12"
+                  >
+                    [↓]
+                  </Toggle>
+                  <div />
+                </div>
+              </div>
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="flex gap-2">
+                  <Toggle
+                    value="Select"
+                    aria-label="Select"
+                    pressed={tempAvailableKeys.includes('Select')}
+                    onPressedChange={() => handleToggleKey('Select')}
+                    className="px-3 py-2"
+                  >
+                    Select
+                  </Toggle>
+                  <Toggle
+                    value="Start"
+                    aria-label="Start"
+                    pressed={tempAvailableKeys.includes('Start')}
+                    onPressedChange={() => handleToggleKey('Start')}
+                    className="px-3 py-2"
+                  >
+                    Start
+                  </Toggle>
+                </div>
+              </div>
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="grid grid-cols-3 gap-1">
+                  <div />
+                  <Toggle
+                    value="X"
+                    aria-label="X"
+                    pressed={tempAvailableKeys.includes('X')}
+                    onPressedChange={() => handleToggleKey('X')}
+                    className="w-12 h-12"
+                  >
+                    X
+                  </Toggle>
+                  <div />
+                  <Toggle
+                    value="Y"
+                    aria-label="Y"
+                    pressed={tempAvailableKeys.includes('Y')}
+                    onPressedChange={() => handleToggleKey('Y')}
+                    className="w-12 h-12"
+                  >
+                    Y
+                  </Toggle>
+                  <div className="w-12 h-12" />
+                  <Toggle
+                    value="A"
+                    aria-label="A"
+                    pressed={tempAvailableKeys.includes('A')}
+                    onPressedChange={() => handleToggleKey('A')}
+                    className="w-12 h-12"
+                  >
+                    A
+                  </Toggle>
+                  <div />
+                  <Toggle
+                    value="B"
+                    aria-label="B"
+                    pressed={tempAvailableKeys.includes('B')}
+                    onPressedChange={() => handleToggleKey('B')}
+                    className="w-12 h-12"
+                  >
+                    B
+                  </Toggle>
+                  <div />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-between items-center pt-4 border-t">
+              <Button variant="outline" size="sm" onClick={handleResetKeys}>
+                Reset
+              </Button>
+              <Button size="sm" onClick={handleApplyKeys}>
+                Apply
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

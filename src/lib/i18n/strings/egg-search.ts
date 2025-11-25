@@ -88,32 +88,149 @@ export const eggSearchParamsCardTitle: LocaleText = {
   en: 'Search Parameters',
 };
 
+export const eggSearchParamsSectionTitles = {
+  dateTime: {
+    ja: '日時範囲',
+    en: 'Date/Time Range',
+  } satisfies LocaleText,
+  parents: {
+    ja: '親個体情報',
+    en: 'Parent Information',
+  } satisfies LocaleText,
+  conditions: {
+    ja: '生成条件',
+    en: 'Generation Conditions',
+  } satisfies LocaleText,
+  advance: {
+    ja: '消費範囲',
+    en: 'Advance Range',
+  } satisfies LocaleText,
+};
+
 export const eggSearchParamsLabels = {
-  startDatetime: {
-    ja: '開始日時',
-    en: 'Start Date/Time',
+  startDate: {
+    ja: '開始日',
+    en: 'Start Date',
   } satisfies LocaleText,
-  rangeSeconds: {
-    ja: '検索範囲（秒）',
-    en: 'Search Range (seconds)',
+  endDate: {
+    ja: '終了日',
+    en: 'End Date',
   } satisfies LocaleText,
-  frame: {
-    ja: 'フレーム',
-    en: 'Frame',
+  timeRange: {
+    ja: '時間範囲',
+    en: 'Time Range',
+  } satisfies LocaleText,
+  hour: {
+    ja: '時',
+    en: 'Hour',
+  } satisfies LocaleText,
+  minute: {
+    ja: '分',
+    en: 'Minute',
+  } satisfies LocaleText,
+  second: {
+    ja: '秒',
+    en: 'Second',
+  } satisfies LocaleText,
+  keyInput: {
+    ja: 'キー入力',
+    en: 'Key Input',
+  } satisfies LocaleText,
+  keyInputConfigure: {
+    ja: '設定',
+    en: 'Configure',
+  } satisfies LocaleText,
+  maleParentIv: {
+    ja: '♂親 個体値',
+    en: '♂ Parent IV',
+  } satisfies LocaleText,
+  femaleParentIv: {
+    ja: '♀親 個体値',
+    en: '♀ Parent IV',
+  } satisfies LocaleText,
+  ivUnknown: {
+    ja: '不明',
+    en: 'Unknown',
+  } satisfies LocaleText,
+  genderRatio: {
+    ja: '性別比',
+    en: 'Gender Ratio',
+  } satisfies LocaleText,
+  femaleAbility: {
+    ja: '♀親の特性',
+    en: 'Female Parent Ability',
+  } satisfies LocaleText,
+  everstone: {
+    ja: 'かわらずのいし',
+    en: 'Everstone',
+  } satisfies LocaleText,
+  everstoneNone: {
+    ja: 'なし',
+    en: 'None',
+  } satisfies LocaleText,
+  usesDitto: {
+    ja: 'メタモン利用',
+    en: 'Using Ditto',
+  } satisfies LocaleText,
+  masudaMethod: {
+    ja: '国際孵化',
+    en: 'Masuda Method',
+  } satisfies LocaleText,
+  nidoranFlag: {
+    ja: 'ニドラン♂♀ / イルミーゼ・バルビート',
+    en: 'Nidoran♂♀ / Illumise・Volbeat',
+  } satisfies LocaleText,
+  npcConsumption: {
+    ja: 'NPC消費を考慮',
+    en: 'Consider NPC Consumption',
   } satisfies LocaleText,
   userOffset: {
-    ja: '開始Advance',
+    ja: '開始消費',
     en: 'Start Advance',
   } satisfies LocaleText,
   advanceCount: {
-    ja: '検索Advance数',
+    ja: '検索消費数',
     en: 'Advance Count',
   } satisfies LocaleText,
-  keyInput: {
-    ja: 'キー入力マスク',
-    en: 'Key Input Mask',
-  } satisfies LocaleText,
 };
+
+export const eggSearchFemaleAbilityOptions: LocaleMap<Record<0 | 1 | 2, string>> = {
+  ja: {
+    0: '特性1',
+    1: '特性2',
+    2: '隠れ特性',
+  },
+  en: {
+    0: 'Ability 1',
+    1: 'Ability 2',
+    2: 'Hidden Ability',
+  },
+};
+
+/**
+ * ステータス名（親IV入力用）
+ */
+export const eggSearchStatNames: LocaleMap<[string, string, string, string, string, string]> = {
+  ja: ['H', 'A', 'B', 'C', 'D', 'S'],
+  en: ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'],
+};
+
+/**
+ * 性別比選択肢
+ */
+export type GenderRatioPreset = {
+  threshold: number;
+  genderless: boolean;
+  label: LocaleText;
+};
+
+export const eggSearchGenderRatioPresets: GenderRatioPreset[] = [
+  { threshold: 127, genderless: false, label: { ja: '♂1:♀1', en: '♂1:♀1' } },
+  { threshold: 64, genderless: false, label: { ja: '♂3:♀1', en: '♂3:♀1' } },
+  { threshold: 31, genderless: false, label: { ja: '♂7:♀1', en: '♂7:♀1' } },
+  { threshold: 191, genderless: false, label: { ja: '♂1:♀3', en: '♂1:♀3' } },
+  { threshold: 0, genderless: true, label: { ja: '性別不明', en: 'Genderless' } },
+];
 
 // === Filter Card ===
 
@@ -123,6 +240,34 @@ export const eggSearchFilterCardTitle: LocaleText = {
 };
 
 export const eggSearchFilterLabels = {
+  disabled: {
+    ja: 'フィルターを無効にする',
+    en: 'Disable Filter',
+  } satisfies LocaleText,
+  ivRange: {
+    ja: '個体値範囲',
+    en: 'IV Range',
+  } satisfies LocaleText,
+  ivUnknown: {
+    ja: '任意',
+    en: 'Any',
+  } satisfies LocaleText,
+  nature: {
+    ja: '性格',
+    en: 'Nature',
+  } satisfies LocaleText,
+  gender: {
+    ja: '性別',
+    en: 'Gender',
+  } satisfies LocaleText,
+  ability: {
+    ja: '特性',
+    en: 'Ability',
+  } satisfies LocaleText,
+  shiny: {
+    ja: '色違い',
+    en: 'Shiny',
+  } satisfies LocaleText,
   shinyOnly: {
     ja: '色違いのみ',
     en: 'Shiny Only',
@@ -131,6 +276,63 @@ export const eggSearchFilterLabels = {
     ja: '色違いの結果のみ表示',
     en: 'Show only shiny results',
   } satisfies LocaleText,
+  hpType: {
+    ja: 'めざパ(タイプ)',
+    en: 'Hidden Power (Type)',
+  } satisfies LocaleText,
+  hpPower: {
+    ja: 'めざパ(威力)',
+    en: 'Hidden Power (Power)',
+  } satisfies LocaleText,
+  noSelection: {
+    ja: '指定なし',
+    en: 'Any',
+  } satisfies LocaleText,
+};
+
+export const eggSearchGenderOptions: LocaleMap<Record<'none' | 'male' | 'female' | 'genderless', string>> = {
+  ja: {
+    'none': '指定なし',
+    male: '♂',
+    female: '♀',
+    genderless: '無性別',
+  },
+  en: {
+    'none': 'Any',
+    male: '♂',
+    female: '♀',
+    genderless: 'Genderless',
+  },
+};
+
+export const eggSearchAbilityOptions: LocaleMap<Record<'none' | '0' | '1' | '2', string>> = {
+  ja: {
+    'none': '指定なし',
+    '0': '特性1',
+    '1': '特性2',
+    '2': '夢特性',
+  },
+  en: {
+    'none': 'Any',
+    '0': 'Ability 1',
+    '1': 'Ability 2',
+    '2': 'Hidden',
+  },
+};
+
+export const eggSearchShinyOptions: LocaleMap<Record<'none' | '0' | '1' | '2', string>> = {
+  ja: {
+    'none': '指定なし',
+    '0': '-',
+    '1': '◇',
+    '2': '☆',
+  },
+  en: {
+    'none': 'Any',
+    '0': '-',
+    '1': '◇',
+    '2': '☆',
+  },
 };
 
 // === Results Card ===
