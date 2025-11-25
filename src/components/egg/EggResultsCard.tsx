@@ -97,21 +97,21 @@ export const EggResultsCard: React.FC = () => {
         <table className="w-full text-xs border-collapse">
           <thead className="sticky top-0 bg-background z-10">
             <tr className="border-b">
-              <th className="text-left py-1 px-2">{getEggResultHeader('advance', locale)}</th>
-              <th className="text-center py-1 px-1">{getEggResultHeader('dir', locale)}</th>
-              <th className="text-center py-1 px-1">{getEggResultHeader('dirValue', locale)}</th>
-              <th className="text-left py-1 px-2">{getEggResultHeader('ability', locale)}</th>
-              <th className="text-center py-1 px-1">{getEggResultHeader('gender', locale)}</th>
-              <th className="text-left py-1 px-2">{getEggResultHeader('nature', locale)}</th>
-              <th className="text-center py-1 px-1">{getEggResultHeader('shiny', locale)}</th>
-              <th className="text-center py-1 px-1">{getEggResultHeader('hp', locale)}</th>
-              <th className="text-center py-1 px-1">{getEggResultHeader('atk', locale)}</th>
-              <th className="text-center py-1 px-1">{getEggResultHeader('def', locale)}</th>
-              <th className="text-center py-1 px-1">{getEggResultHeader('spa', locale)}</th>
-              <th className="text-center py-1 px-1">{getEggResultHeader('spd', locale)}</th>
-              <th className="text-center py-1 px-1">{getEggResultHeader('spe', locale)}</th>
+              <th className="text-left py-1 px-2 font-mono">{getEggResultHeader('advance', locale)}</th>
+              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('dir', locale)}</th>
+              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('dirValue', locale)}</th>
+              <th className="text-left py-1 px-2 font-mono">{getEggResultHeader('ability', locale)}</th>
+              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('gender', locale)}</th>
+              <th className="text-left py-1 px-2 font-mono">{getEggResultHeader('nature', locale)}</th>
+              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('shiny', locale)}</th>
+              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('hp', locale)}</th>
+              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('atk', locale)}</th>
+              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('def', locale)}</th>
+              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('spa', locale)}</th>
+              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('spd', locale)}</th>
+              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('spe', locale)}</th>
               <th className="text-left py-1 px-2 font-mono">{getEggResultHeader('pid', locale)}</th>
-              <th className="text-left py-1 px-2">{getEggResultHeader('hiddenPower', locale)}</th>
+              <th className="text-left py-1 px-2 font-mono">{getEggResultHeader('hiddenPower', locale)}</th>
               {isBootTimingMode && (
                 <>
                   <th className="text-left py-1 px-2 font-mono">Timer0</th>
@@ -119,7 +119,7 @@ export const EggResultsCard: React.FC = () => {
                 </>
               )}
               {draftParams.considerNpcConsumption && (
-                <th className="text-center py-1 px-1">{getEggResultHeader('stable', locale)}</th>
+                <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('stable', locale)}</th>
               )}
             </tr>
           </thead>
@@ -136,10 +136,10 @@ export const EggResultsCard: React.FC = () => {
                   <td className="py-1 px-2 font-mono">{row.advance}</td>
                   <td className="text-center py-1 px-1">{getDirection(row)?.arrow ?? '-'}</td>
                   <td className="text-center py-1 px-1 font-mono">{getDirection(row)?.value ?? '-'}</td>
-                  <td className="py-1 px-2">{abilityLabels[row.egg.ability as 0 | 1 | 2] || row.egg.ability}</td>
-                  <td className="text-center py-1 px-1">{genderLabels[row.egg.gender] || row.egg.gender}</td>
-                  <td className="py-1 px-2">{natureName(row.egg.nature, locale)}</td>
-                  <td className="text-center py-1 px-1">
+                  <td className="py-1 px-2 font-mono">{abilityLabels[row.egg.ability as 0 | 1 | 2] || row.egg.ability}</td>
+                  <td className="text-center py-1 px-1 font-mono">{genderLabels[row.egg.gender] || row.egg.gender}</td>
+                  <td className="py-1 px-2 font-mono">{natureName(row.egg.nature, locale)}</td>
+                  <td className="text-center py-1 px-1 font-mono">
                     {row.egg.shiny > 0 ? (
                       <span className={row.egg.shiny === 2 ? 'text-yellow-500' : 'text-blue-500'}>
                         {shinyLabels[row.egg.shiny as 1 | 2]}
