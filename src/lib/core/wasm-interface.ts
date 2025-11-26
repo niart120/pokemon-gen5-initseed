@@ -21,8 +21,8 @@ import type {
   GenderRatio as WasmGenderRatio,
   StatRange as WasmStatRange,
   // Egg boot timing search types
-  EggBootTimingSearcher as WasmEggBootTimingSearcher,
   EggBootTimingSearchResult as WasmEggBootTimingSearchResult,
+  EggBootTimingSearchIterator as WasmEggBootTimingSearchIterator,
 } from '../../wasm/wasm_pkg';
 // Local type alias for internal interface references
 type WasmSearchResult = import('../../wasm/wasm_pkg').SearchResult;
@@ -84,8 +84,9 @@ export interface WasmModule {
   StatRange: typeof WasmStatRange;
 
   // 追加: 孵化乱数起動時間検索API
-  EggBootTimingSearcher: typeof WasmEggBootTimingSearcher;
   EggBootTimingSearchResult: typeof WasmEggBootTimingSearchResult;
+  EggBootTimingSearchIterator: typeof WasmEggBootTimingSearchIterator;
+  generate_egg_key_codes(key_input_mask: number): Uint32Array;
 
   calculate_game_offset(initial_seed: bigint, mode: number): number;
   sha1_hash_batch(messages: Uint32Array): Uint32Array;
@@ -146,8 +147,9 @@ export async function initWasm(): Promise<WasmModule> {
         GenderRatio: module.GenderRatio,
         StatRange: module.StatRange,
         // 孵化乱数起動時間検索API
-        EggBootTimingSearcher: module.EggBootTimingSearcher,
         EggBootTimingSearchResult: module.EggBootTimingSearchResult,
+        EggBootTimingSearchIterator: module.EggBootTimingSearchIterator,
+        generate_egg_key_codes: module.generate_egg_key_codes,
         calculate_game_offset: module.calculate_game_offset,
         sha1_hash_batch: module.sha1_hash_batch,
       } as unknown as WasmModule;

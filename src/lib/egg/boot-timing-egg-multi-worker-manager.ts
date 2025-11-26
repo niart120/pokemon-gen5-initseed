@@ -12,7 +12,6 @@ import type {
 import { isEggBootTimingWorkerResponse } from '@/types/egg-boot-timing-search';
 import {
   calculateEggBootTimingChunks,
-  calculateBatchSize,
   getDefaultWorkerCount,
   type EggBootTimingWorkerChunk,
 } from './boot-timing-chunk-calculator';
@@ -130,12 +129,9 @@ export class EggBootTimingMultiWorkerManager {
         throw new Error('No valid chunks created for search');
       }
 
-      // バッチサイズ計算
-      const batchSize = calculateBatchSize(params);
-
       // 各チャンクに対してWorker初期化
       for (const chunk of chunks) {
-        await this.initializeWorker(chunk, params, batchSize);
+        await this.initializeWorker(chunk, params);
       }
 
       // 進捗監視開始
@@ -154,8 +150,7 @@ export class EggBootTimingMultiWorkerManager {
    */
   private async initializeWorker(
     chunk: EggBootTimingWorkerChunk,
-    params: EggBootTimingSearchParams,
-    _batchSize: number
+    params: EggBootTimingSearchParams
   ): Promise<void> {
     const worker = new Worker(
       new URL('../../workers/egg-boot-timing-worker.ts', import.meta.url),

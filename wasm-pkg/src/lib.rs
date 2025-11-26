@@ -25,7 +25,9 @@ mod tests;
 
 // Re-export main functionality - 統合検索のみ（内部でsha1/sha1_simdは使用）
 pub use datetime_codes::{DateCodeGenerator, TimeCodeGenerator};
-pub use egg_boot_timing_search::{EggBootTimingSearchResult, EggBootTimingSearcher};
+pub use egg_boot_timing_search::{
+    generate_egg_key_codes, EggBootTimingSearchIterator, EggBootTimingSearchResult,
+};
 pub use egg_iv::{
     derive_pending_egg, derive_pending_egg_with_state, hidden_power_from_iv, matches_filter,
     resolve_egg_iv, resolve_npc_advance, AbilitySlot, EggIvError, EverstonePlan, EverstonePlanJs,

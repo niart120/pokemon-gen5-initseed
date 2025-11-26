@@ -15,14 +15,6 @@ import { EggGameMode } from '@/types/egg';
 import { initWasm, getWasm, isWasmReady } from '@/lib/core/wasm-interface';
 import { keyCodeToNames } from '@/lib/utils/key-input';
 import romParameters from '@/data/rom-parameters';
-import type { Hardware } from '@/types/rom';
-
-// Hardware別のframe値
-const HARDWARE_FRAME_VALUES: Record<Hardware, number> = {
-  DS: 8,
-  DS_LITE: 6,
-  '3DS': 9
-};
 
 interface InternalState {
   params: EggBootTimingSearchParams | null;
@@ -94,81 +86,15 @@ async function handleStart(params: EggBootTimingSearchParams) {
   try {
     await ensureWasm();
 
-    // 日単位でチャンク分割して検索
-    const { dateRange } = params;
-    const startDate = new Date(
-      dateRange.startYear,
-      dateRange.startMonth - 1,
-      dateRange.startDay
-    );
-    const endDate = new Date(
-      dateRange.endYear,
-      dateRange.endMonth - 1,
-      dateRange.endDay
-    );
-
-    // 日数計算
-    const totalDays = Math.max(
-      1,
-      Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
-    );
-
-    // 1バッチあたりの日数（進捗報告間隔を調整）
-    const DAYS_PER_BATCH = 1;
-
-    let totalResultsCount = 0; // 結果はストリーミングのみ、配列保持しない（OOM対策）
-    let batchIndex = 0;
-
-    for (let dayOffset = 0; dayOffset < totalDays; dayOffset += DAYS_PER_BATCH) {
-      if (state.stopRequested) break;
-
-      // バッチの開始・終了日を計算
-      const batchStartDate = new Date(startDate.getTime() + dayOffset * 24 * 60 * 60 * 1000);
-      const batchDays = Math.min(DAYS_PER_BATCH, totalDays - dayOffset);
-
-      // このバッチを検索
-      const batchResults = executeSearchBatch(params, batchStartDate, batchDays);
-
-      if (batchResults.length > 0) {
-        totalResultsCount += batchResults.length;
-
-        // 結果送信（ストリーミング）
-        post({
-          type: 'RESULTS',
-          payload: { results: batchResults, batchIndex },
-        });
-      }
-
-      // 進捗報告
-      const processedDays = Math.min(dayOffset + DAYS_PER_BATCH, totalDays);
-      const elapsedMs = performance.now() - startTime;
-      const progressPercent = (processedDays / totalDays) * 100;
-      const estimatedRemainingMs = processedDays > 0
-        ? (elapsedMs / processedDays) * (totalDays - processedDays)
-        : 0;
-
-      const progress: EggBootTimingProgress = {
-        processedCombinations: processedDays,
-        totalCombinations: totalDays,
-        foundCount: totalResultsCount,
-        progressPercent,
-        elapsedMs,
-        estimatedRemainingMs,
-      };
-      post({ type: 'PROGRESS', payload: progress });
-
-      batchIndex++;
-
-      // maxResultsに達したら終了
-      if (totalResultsCount >= params.maxResults) break;
-    }
+    // 検索実行（dateRange全体を一括処理）
+    const result = await executeSearch(params, startTime);
 
     // 完了通知
     const completion: EggBootTimingCompletion = {
       reason: state.stopRequested ? 'stopped' : 'completed',
-      processedCombinations: totalDays,
-      totalCombinations: totalDays,
-      resultsCount: totalResultsCount,
+      processedCombinations: result.processedSegments,
+      totalCombinations: result.totalSegments,
+      resultsCount: result.resultsCount,
       elapsedMs: performance.now() - startTime,
     };
     post({ type: 'COMPLETE', payload: completion });
@@ -358,125 +284,246 @@ function convertWasmResult(
 }
 
 /**
- * 指定された開始日から指定日数分の検索を実行
+ * 検索結果の統計情報
  */
-function executeSearchBatch(
-  params: EggBootTimingSearchParams,
-  batchStartDate: Date,
-  batchDays: number
-): EggBootTimingSearchResult[] {
-  console.log(`[EggBootTimingWorker] executeSearchBatch: date=${batchStartDate.toISOString()}, days=${batchDays}`);
+interface SearchResult {
+  resultsCount: number;
+  processedSegments: number;
+  totalSegments: number;
+}
 
+/**
+ * イベントループに制御を戻すためのユーティリティ
+ * これにより onmessage で STOP メッセージを受け取れる
+ */
+function yieldToEventLoop(): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+/**
+ * dateRange全体を一括検索（セグメントベースパターン）
+ *
+ * WebGPU検索と同様のセグメント分割パターンを採用:
+ * TypeScript側で timer0 × vcount × keyCode のセグメントループを実装し、
+ * 各セグメントに対して EggBootTimingSearchIterator を作成する。
+ * 結果はストリーミングで送信し、メモリ効率を確保する。
+ *
+ * async 関数として実装し、定期的にイベントループに制御を戻すことで
+ * STOP メッセージを受け取れるようにする。
+ */
+async function executeSearch(
+  params: EggBootTimingSearchParams,
+  startTime: number
+): Promise<SearchResult> {
   const wasm = getWasm();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const wasmAny = wasm as any;
 
-  if (!wasmAny.EggBootTimingSearcher) {
-    throw new Error('EggBootTimingSearcher not exposed in WASM');
+  if (!wasmAny.EggBootTimingSearchIterator) {
+    throw new Error('EggBootTimingSearchIterator not exposed in WASM');
+  }
+  if (!wasmAny.generate_egg_key_codes) {
+    throw new Error('generate_egg_key_codes not exposed in WASM');
   }
 
   // nazo値を解決
   const nazo = resolveNazoValue(params.romVersion, params.romRegion);
-  console.log(`[EggBootTimingWorker] nazo resolved: [${nazo.join(', ')}]`);
 
-  // ParentsIVsJs 構築
-  const parentsIVs = new wasmAny.ParentsIVsJs();
-  parentsIVs.male = params.parents.male;
-  parentsIVs.female = params.parents.female;
-
-  // GenerationConditionsJs 構築
-  const conditions = new wasmAny.GenerationConditionsJs();
-  conditions.has_nidoran_flag = params.conditions.hasNidoranFlag;
-  conditions.set_everstone(buildEverstone(wasmAny, params.conditions.everstone));
-  conditions.uses_ditto = params.conditions.usesDitto;
-  // femaleParentAbility: 0=Ability1, 1=Ability2, 2=HiddenAbility
-  const HIDDEN_ABILITY_SLOT = 2;
-  const isHiddenAbilityParent = params.conditions.femaleParentAbility === HIDDEN_ABILITY_SLOT;
-  conditions.allow_hidden_ability = isHiddenAbilityParent;
-  conditions.female_parent_has_hidden = isHiddenAbilityParent;
-  conditions.reroll_count = params.conditions.masudaMethod ? 3 : 0;
-  conditions.set_trainer_ids(
-    new wasmAny.TrainerIds(params.conditions.tid, params.conditions.sid)
-  );
-  conditions.set_gender_ratio(
-    new wasmAny.GenderRatio(
-      params.conditions.genderRatio.threshold,
-      params.conditions.genderRatio.genderless
-    )
+  // キーコード一覧を生成
+  const keyCodes: number[] = Array.from(
+    wasmAny.generate_egg_key_codes(params.keyInputMask)
   );
 
-  // IndividualFilterJs 構築
-  // filterDisabled の場合は全pass-throughフィルタ、それ以外は指定フィルタ
-  const filter = buildFilter(wasmAny, params.filterDisabled ? null : params.filter);
-
-  // Searcher構築 - frameはhardwareから導出
-  const frameValue = HARDWARE_FRAME_VALUES[params.hardware];
-  const searcher = new wasmAny.EggBootTimingSearcher(
-    new Uint8Array(params.macAddress),
-    new Uint32Array(nazo),
-    params.hardware,
-    params.keyInputMask,
-    frameValue,
-    params.timeRange.hour.start,
-    params.timeRange.hour.end,
-    params.timeRange.minute.start,
-    params.timeRange.minute.end,
-    params.timeRange.second.start,
-    params.timeRange.second.end,
-    conditions,
-    parentsIVs,
-    filter,
-    params.considerNpcConsumption,
-    eggGameModeToWasm(params.gameMode),
-    BigInt(params.userOffset),
-    params.advanceCount
+  // dateRangeから検索期間を計算
+  const { dateRange } = params;
+  const searchStartDate = new Date(
+    dateRange.startYear,
+    dateRange.startMonth - 1,
+    dateRange.startDay
   );
+  const endDate = new Date(
+    dateRange.endYear,
+    dateRange.endMonth - 1,
+    dateRange.endDay
+  );
+  const totalDays = Math.max(
+    1,
+    Math.floor((endDate.getTime() - searchStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  );
+  const rangeSeconds = totalDays * 24 * 60 * 60;
 
-  const results: EggBootTimingSearchResult[] = [];
+  // セグメント数を計算（進捗報告用）
+  const timer0Count = params.timer0Range.max - params.timer0Range.min + 1;
+  const vcountCount = params.vcountRange.max - params.vcountRange.min + 1;
+  const totalSegments = timer0Count * vcountCount * keyCodes.length;
 
-  try {
-    // 検索実行 - バッチの開始日から指定日数分
-    const rangeSeconds = batchDays * 24 * 60 * 60;
+  // イテレータパラメータ
+  const RESULT_LIMIT = 32;
+  const CHUNK_SECONDS = 3600;
+  const PROGRESS_INTERVAL_MS = 500;
 
-    console.log(`[EggBootTimingWorker] Calling search_eggs_with_limit: year=${batchStartDate.getFullYear()}, month=${batchStartDate.getMonth() + 1}, day=${batchStartDate.getDate()}, rangeSeconds=${rangeSeconds}, maxResults=${params.maxResults}`);
+  let resultsCount = 0;
+  let processedSegments = 0;
+  let lastProgressTime = startTime;
 
-    // search_eggs_with_limit を使用して max_results を WASM に渡す
-    const wasmResults = searcher.search_eggs_with_limit(
-      batchStartDate.getFullYear(),
-      batchStartDate.getMonth() + 1,
-      batchStartDate.getDate(),
-      0,  // 開始時刻は0時から
-      0,
-      0,
-      rangeSeconds,
-      params.timer0Range.min,
-      params.timer0Range.max,
-      params.vcountRange.min,
-      params.vcountRange.max,
-      params.maxResults  // WASM側で早期終了可能
-    );
+  // セグメントループ: timer0 × vcount × keyCode
+  for (
+    let timer0 = params.timer0Range.min;
+    timer0 <= params.timer0Range.max && resultsCount < params.maxResults;
+    timer0++
+  ) {
+    for (
+      let vcount = params.vcountRange.min;
+      vcount <= params.vcountRange.max && resultsCount < params.maxResults;
+      vcount++
+    ) {
+      for (const keyCode of keyCodes) {
+        if (state.stopRequested || resultsCount >= params.maxResults) {
+          return { resultsCount, processedSegments, totalSegments };
+        }
 
-    console.log(`[EggBootTimingWorker] search_eggs_with_limit returned ${wasmResults.length} results`);
+        // ParentsIVsJs 構築
+        const parentsIVs = new wasmAny.ParentsIVsJs();
+        parentsIVs.male = params.parents.male;
+        parentsIVs.female = params.parents.female;
 
-    // 結果変換
-    for (let i = 0; i < wasmResults.length && i < params.maxResults; i++) {
-      if (state.stopRequested) break;
-      const wasmResult = wasmResults[i] as WasmEggBootTimingSearchResult;
-      results.push(convertWasmResult(wasmResult, params.macAddress));
+        // GenerationConditionsJs 構築
+        const conditions = new wasmAny.GenerationConditionsJs();
+        conditions.has_nidoran_flag = params.conditions.hasNidoranFlag;
+        conditions.set_everstone(
+          buildEverstone(wasmAny, params.conditions.everstone)
+        );
+        conditions.uses_ditto = params.conditions.usesDitto;
+        const HIDDEN_ABILITY_SLOT = 2;
+        const isHiddenAbilityParent =
+          params.conditions.femaleParentAbility === HIDDEN_ABILITY_SLOT;
+        conditions.allow_hidden_ability = isHiddenAbilityParent;
+        conditions.female_parent_has_hidden = isHiddenAbilityParent;
+        conditions.reroll_count = params.conditions.masudaMethod ? 3 : 0;
+        conditions.set_trainer_ids(
+          new wasmAny.TrainerIds(params.conditions.tid, params.conditions.sid)
+        );
+        conditions.set_gender_ratio(
+          new wasmAny.GenderRatio(
+            params.conditions.genderRatio.threshold,
+            params.conditions.genderRatio.genderless
+          )
+        );
+
+        // IndividualFilterJs 構築
+        const filter = buildFilter(
+          wasmAny,
+          params.filterDisabled ? null : params.filter
+        );
+
+        // イテレータを作成（単一セグメント: 固定 timer0/vcount/keyCode）
+        const iterator: {
+          isFinished: boolean;
+          next_batch: (limit: number, chunk: number) => unknown[];
+          free?: () => void;
+        } = new wasmAny.EggBootTimingSearchIterator(
+          new Uint8Array(params.macAddress),
+          new Uint32Array(nazo),
+          params.hardware,
+          timer0,
+          vcount,
+          keyCode,
+          params.timeRange.hour.start,
+          params.timeRange.hour.end,
+          params.timeRange.minute.start,
+          params.timeRange.minute.end,
+          params.timeRange.second.start,
+          params.timeRange.second.end,
+          searchStartDate.getFullYear(),
+          searchStartDate.getMonth() + 1,
+          searchStartDate.getDate(),
+          rangeSeconds,
+          conditions,
+          parentsIVs,
+          filter,
+          params.considerNpcConsumption,
+          eggGameModeToWasm(params.gameMode),
+          BigInt(params.userOffset),
+          params.advanceCount
+        );
+
+        try {
+          // イテレータループ（時刻方向）
+          while (
+            !iterator.isFinished &&
+            resultsCount < params.maxResults
+          ) {
+            if (state.stopRequested) break;
+
+            const batchResults = iterator.next_batch(RESULT_LIMIT, CHUNK_SECONDS);
+
+            // 結果をストリーミング送信
+            if (batchResults.length > 0) {
+              const convertedResults: EggBootTimingSearchResult[] = [];
+              for (
+                let i = 0;
+                i < batchResults.length && resultsCount < params.maxResults;
+                i++
+              ) {
+                const wasmResult = batchResults[i] as WasmEggBootTimingSearchResult;
+                convertedResults.push(convertWasmResult(wasmResult, params.macAddress));
+                resultsCount++;
+              }
+
+              post({
+                type: 'RESULTS',
+                payload: { results: convertedResults, batchIndex: processedSegments },
+              });
+            }
+
+            // 定期的にイベントループに制御を戻す（STOP受信のため）
+            const now = performance.now();
+            if (now - lastProgressTime >= PROGRESS_INTERVAL_MS) {
+              const elapsedMs = now - startTime;
+              const progressPercent = (processedSegments / totalSegments) * 100;
+              const estimatedRemainingMs = processedSegments > 0
+                ? (elapsedMs / processedSegments) * (totalSegments - processedSegments)
+                : 0;
+
+              const progress: EggBootTimingProgress = {
+                processedCombinations: processedSegments,
+                totalCombinations: totalSegments,
+                foundCount: resultsCount,
+                progressPercent,
+                elapsedMs,
+                estimatedRemainingMs,
+              };
+              post({ type: 'PROGRESS', payload: progress });
+              lastProgressTime = now;
+
+              // イベントループに制御を戻してSTOPメッセージを受け取れるようにする
+              await yieldToEventLoop();
+            }
+          }
+        } finally {
+          iterator.free?.();
+          conditions.free?.();
+          parentsIVs.free?.();
+        }
+
+        processedSegments++;
+      }
     }
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.error(`[EggBootTimingWorker] executeSearchBatch error: ${message}`);
-    throw e;
-  } finally {
-    // Note: filter は EggBootTimingSearcher コンストラクタで所有権が移動するため、
-    // ここで free() を呼ぶ必要がない（呼ぶと nullpo になる）
-    searcher.free?.();
-    conditions.free?.();
-    parentsIVs.free?.();
   }
 
-  return results;
+  // 最終進捗報告
+  const elapsedMs = performance.now() - startTime;
+  const progress: EggBootTimingProgress = {
+    processedCombinations: processedSegments,
+    totalCombinations: totalSegments,
+    foundCount: resultsCount,
+    progressPercent: 100,
+    elapsedMs,
+    estimatedRemainingMs: 0,
+  };
+  post({ type: 'PROGRESS', payload: progress });
+
+  return { resultsCount, processedSegments, totalSegments };
 }
 
 function cleanupState() {
