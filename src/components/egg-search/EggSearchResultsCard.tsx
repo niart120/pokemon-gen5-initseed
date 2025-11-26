@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { useEggBootTimingSearchStore } from '@/store/egg-boot-timing-search-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
+import { useTableVirtualization } from '@/hooks/use-table-virtualization';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { natureName } from '@/lib/utils/format-display';
 import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
@@ -40,6 +41,9 @@ import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import type { EggBootTimingSearchResult } from '@/types/egg-boot-timing-search';
 import { IV_UNKNOWN } from '@/types/egg';
 
+const EGG_SEARCH_TABLE_ROW_HEIGHT = 34;
+const EGG_SEARCH_COLUMN_COUNT = 20;
+
 export function EggSearchResultsCard() {
   const locale = useLocale();
   const { isStack } = useResponsiveLayout();
@@ -47,6 +51,13 @@ export function EggSearchResultsCard() {
   const [selectedResult, setSelectedResult] = React.useState<EggBootTimingSearchResult | null>(null);
 
   const filteredResults = getFilteredResults();
+
+  const virtualization = useTableVirtualization({
+    rowCount: filteredResults.length,
+    defaultRowHeight: EGG_SEARCH_TABLE_ROW_HEIGHT,
+    overscan: 12,
+  });
+  const virtualRows = virtualization.virtualRows;
 
   const abilityOptions = resolveLocaleValue(eggSearchAbilityOptions, locale);
   const genderOptions = resolveLocaleValue(eggSearchGenderOptions, locale);
@@ -125,44 +136,65 @@ export function EggSearchResultsCard() {
         padding="none"
         spacing="none"
       >
-        <div className="flex-1 min-h-0 overflow-auto">
+        <div
+          ref={virtualization.containerRef}
+          className="flex-1 min-h-0 overflow-y-auto"
+        >
           {filteredResults.length === 0 ? (
             <div className="flex h-full items-center justify-center px-6 text-center text-muted-foreground py-8">
               {eggSearchResultsEmpty[locale]}
             </div>
           ) : (
-            <Table className="table-auto min-w-max text-xs leading-tight">
-              <TableHeader>
-                <TableRow className="h-9">
-                  <TableHead className="px-1 w-8"></TableHead>
-                  <TableHead className="px-2">{eggSearchResultsTableHeaders.lcgSeed[locale]}</TableHead>
-                  <TableHead className="px-2">{eggSearchResultsTableHeaders.bootTime[locale]}</TableHead>
-                  <TableHead className="px-2">{eggSearchResultsTableHeaders.timer0[locale]}</TableHead>
-                  <TableHead className="px-2">{eggSearchResultsTableHeaders.vcount[locale]}</TableHead>
-                  <TableHead className="px-2">MT Seed</TableHead>
-                  <TableHead className="px-2">{eggSearchResultsTableHeaders.advance[locale]}</TableHead>
-                  <TableHead className="px-1 text-center">{eggSearchResultsTableHeaders.stable[locale]}</TableHead>
-                  <TableHead className="px-2">{eggSearchResultsTableHeaders.ability[locale]}</TableHead>
-                  <TableHead className="px-1">{eggSearchResultsTableHeaders.gender[locale]}</TableHead>
-                  <TableHead className="px-2">{eggSearchResultsTableHeaders.nature[locale]}</TableHead>
-                  <TableHead className="px-1 text-center">{eggSearchResultsTableHeaders.shiny[locale]}</TableHead>
-                  <TableHead className="px-1 text-center">H</TableHead>
-                  <TableHead className="px-1 text-center">A</TableHead>
-                  <TableHead className="px-1 text-center">B</TableHead>
-                  <TableHead className="px-1 text-center">C</TableHead>
-                  <TableHead className="px-1 text-center">D</TableHead>
-                  <TableHead className="px-1 text-center">S</TableHead>
-                  <TableHead className="px-2">{eggSearchResultsTableHeaders.hiddenPower[locale]}</TableHead>
-                  <TableHead className="px-2">{eggSearchResultsTableHeaders.keys[locale]}</TableHead>
+            <Table className="min-w-full text-xs">
+              <TableHeader className="sticky top-0 bg-muted text-xs">
+                <TableRow className="text-left border-0">
+                  <TableHead scope="col" className="px-2 py-1 font-medium w-8"></TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium">{eggSearchResultsTableHeaders.lcgSeed[locale]}</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium">{eggSearchResultsTableHeaders.bootTime[locale]}</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium">{eggSearchResultsTableHeaders.timer0[locale]}</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium">{eggSearchResultsTableHeaders.vcount[locale]}</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium">MT Seed</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium">{eggSearchResultsTableHeaders.advance[locale]}</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium text-center">{eggSearchResultsTableHeaders.stable[locale]}</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium">{eggSearchResultsTableHeaders.ability[locale]}</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium">{eggSearchResultsTableHeaders.gender[locale]}</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium">{eggSearchResultsTableHeaders.nature[locale]}</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium text-center">{eggSearchResultsTableHeaders.shiny[locale]}</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium text-center">H</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium text-center">A</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium text-center">B</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium text-center">C</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium text-center">D</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium text-center">S</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium">{eggSearchResultsTableHeaders.hiddenPower[locale]}</TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium">{eggSearchResultsTableHeaders.keys[locale]}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredResults.map((result, index) => {
+                {virtualization.paddingTop > 0 ? (
+                  <TableRow aria-hidden="true" className="border-0 pointer-events-none">
+                    <TableCell
+                      colSpan={EGG_SEARCH_COLUMN_COUNT}
+                      className="p-0 border-0"
+                      style={{ height: virtualization.paddingTop }}
+                    />
+                  </TableRow>
+                ) : null}
+                {virtualRows.map(virtualRow => {
+                  const result = filteredResults[virtualRow.index];
+                  if (!result) {
+                    return null;
+                  }
                   const shinyDisplay = getShinyDisplay(result.egg.egg.shiny);
                   const ivs = result.egg.egg.ivs;
                   return (
-                    <TableRow key={`${result.lcgSeedHex}-${index}`} className="h-8">
-                      <TableCell className="px-1 py-1 text-center">
+                    <TableRow
+                      key={`${result.lcgSeedHex}-${virtualRow.index}`}
+                      ref={virtualization.measureRow}
+                      data-index={virtualRow.index}
+                      className="odd:bg-background even:bg-muted/30 border-0"
+                    >
+                      <TableCell className="px-2 py-1 text-center">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -172,54 +204,63 @@ export function EggSearchResultsCard() {
                           <MagnifyingGlass size={14} />
                         </Button>
                       </TableCell>
-                      <TableCell className="px-2 py-1 font-mono text-[11px]">
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                         {result.lcgSeedHex}
                       </TableCell>
-                      <TableCell className="px-2 py-1 font-mono text-[11px] whitespace-nowrap">
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                         {formatDatetime(result.boot.datetime)}
                       </TableCell>
-                      <TableCell className="px-2 py-1 font-mono text-[11px]">
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                         {formatTimer0(result.boot.timer0)}
                       </TableCell>
-                      <TableCell className="px-2 py-1 font-mono text-[11px]">
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                         {formatVCount(result.boot.vcount)}
                       </TableCell>
-                      <TableCell className="px-2 py-1 font-mono text-[11px]">
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                         {result.egg.egg.mtSeedHex ?? '-'}
                       </TableCell>
-                      <TableCell className="px-2 py-1 font-mono text-[11px]">
+                      <TableCell className="px-2 py-1 font-mono tabular-nums">
                         {result.egg.advance}
                       </TableCell>
-                      <TableCell className="px-1 py-1 text-center">
+                      <TableCell className="px-2 py-1 text-center">
                         {result.isStable ? '○' : '×'}
                       </TableCell>
-                      <TableCell className="px-2 py-1 text-[11px]">
+                      <TableCell className="px-2 py-1">
                         {getAbilityDisplay(result.egg.egg.ability)}
                       </TableCell>
-                      <TableCell className="px-1 py-1 text-[11px]">
+                      <TableCell className="px-2 py-1">
                         {getGenderDisplay(result.egg.egg.gender)}
                       </TableCell>
-                      <TableCell className="px-2 py-1 text-[11px]">
+                      <TableCell className="px-2 py-1 whitespace-nowrap">
                         {natureName(result.egg.egg.nature, locale)}
                       </TableCell>
-                      <TableCell className={`px-1 py-1 text-center ${shinyDisplay.className}`}>
+                      <TableCell className={`px-2 py-1 text-center ${shinyDisplay.className}`}>
                         {shinyDisplay.text}
                       </TableCell>
-                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{formatIv(ivs[0])}</TableCell>
-                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{formatIv(ivs[1])}</TableCell>
-                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{formatIv(ivs[2])}</TableCell>
-                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{formatIv(ivs[3])}</TableCell>
-                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{formatIv(ivs[4])}</TableCell>
-                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{formatIv(ivs[5])}</TableCell>
-                      <TableCell className="px-2 py-1 text-[11px] whitespace-nowrap">
+                      <TableCell className="px-2 py-1 font-mono tabular-nums text-center">{formatIv(ivs[0])}</TableCell>
+                      <TableCell className="px-2 py-1 font-mono tabular-nums text-center">{formatIv(ivs[1])}</TableCell>
+                      <TableCell className="px-2 py-1 font-mono tabular-nums text-center">{formatIv(ivs[2])}</TableCell>
+                      <TableCell className="px-2 py-1 font-mono tabular-nums text-center">{formatIv(ivs[3])}</TableCell>
+                      <TableCell className="px-2 py-1 font-mono tabular-nums text-center">{formatIv(ivs[4])}</TableCell>
+                      <TableCell className="px-2 py-1 font-mono tabular-nums text-center">{formatIv(ivs[5])}</TableCell>
+                      <TableCell className="px-2 py-1 whitespace-nowrap">
                         {getHiddenPowerDisplay(result)}
                       </TableCell>
-                      <TableCell className="px-2 py-1 text-[11px] whitespace-nowrap">
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                         {getKeysDisplay(result.boot.keyInputNames)}
                       </TableCell>
                     </TableRow>
                   );
                 })}
+                {virtualization.paddingBottom > 0 ? (
+                  <TableRow aria-hidden="true" className="border-0 pointer-events-none">
+                    <TableCell
+                      colSpan={EGG_SEARCH_COLUMN_COUNT}
+                      className="p-0 border-0"
+                      style={{ height: virtualization.paddingBottom }}
+                    />
+                  </TableRow>
+                ) : null}
               </TableBody>
             </Table>
           )}

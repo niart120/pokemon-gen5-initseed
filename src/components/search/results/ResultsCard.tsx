@@ -39,7 +39,7 @@ interface ResultsCardProps {
 }
 
 const SEARCH_RESULTS_COLUMN_COUNT = 6;
-const SEARCH_RESULTS_ROW_HEIGHT = 36;
+const SEARCH_RESULTS_ROW_HEIGHT = 34;
 
 export function ResultsCard({
   filteredAndSortedResults,
@@ -103,31 +103,31 @@ export function ResultsCard({
               )}
             </div>
           ) : (
-            <Table className="table-auto min-w-full text-xs leading-tight">
-              <TableHeader>
-                <TableRow className="h-9">
-                  <TableHead className="w-12 px-1 text-center">
+            <Table className="min-w-full text-xs">
+              <TableHeader className="sticky top-0 bg-muted text-xs">
+                <TableRow className="text-left border-0">
+                  <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-center">
                     {resolveLocaleValue(searchResultsHeaders.action, locale)}
                   </TableHead>
-                  <TableHead className="px-2 select-none">
+                  <TableHead scope="col" className="px-2 py-1 font-medium select-none">
                     {resolveLocaleValue(searchResultsHeaders.lcgSeed, locale)}
                   </TableHead>
-                  <TableHead className="px-2 cursor-pointer select-none" onClick={() => handleSort('datetime')}>
+                  <TableHead scope="col" className="px-2 py-1 font-medium cursor-pointer select-none" onClick={() => handleSort('datetime')}>
                     <div className="flex items-center gap-1">
                       {resolveLocaleValue(searchResultsHeaders.dateTime, locale)} {getSortIcon('datetime')}
                     </div>
                   </TableHead>
-                  <TableHead className="px-2 cursor-pointer select-none" onClick={() => handleSort('seed')}>
+                  <TableHead scope="col" className="px-2 py-1 font-medium cursor-pointer select-none" onClick={() => handleSort('seed')}>
                     <div className="flex items-center gap-1">
                       {resolveLocaleValue(searchResultsHeaders.mtSeed, locale)} {getSortIcon('seed')}
                     </div>
                   </TableHead>
-                  <TableHead className="px-2 cursor-pointer select-none" onClick={() => handleSort('timer0')}>
+                  <TableHead scope="col" className="px-2 py-1 font-medium cursor-pointer select-none" onClick={() => handleSort('timer0')}>
                     <div className="flex items-center gap-1">
                       {resolveLocaleValue(searchResultsHeaders.timer0, locale)} {getSortIcon('timer0')}
                     </div>
                   </TableHead>
-                  <TableHead className="px-2 cursor-pointer select-none" onClick={() => handleSort('vcount')}>
+                  <TableHead scope="col" className="px-2 py-1 font-medium cursor-pointer select-none" onClick={() => handleSort('vcount')}>
                     <div className="flex items-center gap-1">
                       {resolveLocaleValue(searchResultsHeaders.vcount, locale)} {getSortIcon('vcount')}
                     </div>
@@ -155,9 +155,9 @@ export function ResultsCard({
                       key={entryKey}
                       ref={virtualization.measureRow}
                       data-index={virtualRow.index}
-                      className="h-9"
+                      className="odd:bg-background even:bg-muted/30 border-0"
                     >
-                      <TableCell className="px-1 py-1 text-center">
+                      <TableCell className="px-2 py-1 text-center">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -169,7 +169,7 @@ export function ResultsCard({
                           <Eye size={14} />
                         </Button>
                       </TableCell>
-                      <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-nowrap min-w-[120px]">
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap min-w-[120px]">
                         <LazyTooltip
                           trigger={<span>{lcgSeedToHex(result.lcgSeed)}</span>}
                           renderContent={() => (
@@ -187,10 +187,10 @@ export function ResultsCard({
                           className="space-y-1 text-left"
                         />
                       </TableCell>
-                      <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-nowrap">
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                         {formatBootTimestampDisplay(result.datetime, locale)}
                       </TableCell>
-                      <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-nowrap">
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                         <LazyTooltip
                           trigger={<span>0x{result.seed.toString(16).toUpperCase().padStart(8, '0')}</span>}
                           renderContent={() => (
@@ -208,10 +208,10 @@ export function ResultsCard({
                           className="space-y-1 text-left"
                         />
                       </TableCell>
-                      <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-nowrap">
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                         {formatTimer0Hex(result.timer0)}
                       </TableCell>
-                      <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-nowrap">
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                         {formatVCountHex(result.vcount)}
                       </TableCell>
                     </TableRow>
