@@ -110,7 +110,7 @@ export const EggResultsCard: React.FC = () => {
     <PanelCard
       icon={<TableIcon size={20} className="opacity-80" />}
       title={<span id="egg-results-title">{eggResultsPanelTitle[locale]}</span>}
-      className={isStack ? 'max-h-96' : 'min-h-96'}
+      className={isStack ? 'max-h-96' : undefined}
       fullHeight={!isStack}
       scrollMode={isStack ? 'parent' : 'content'}
       padding="none"
