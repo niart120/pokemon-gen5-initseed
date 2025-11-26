@@ -23,7 +23,7 @@ export const eggSearchPanelTitle: LocaleText = {
 // === Run Card ===
 
 export const eggSearchRunCardTitle: LocaleText = {
-  ja: '検索制御',
+  ja: 'Search Control',
   en: 'Search Control',
 };
 
@@ -94,7 +94,7 @@ export const eggSearchStatusLabels: LocaleMap<Record<EggBootTimingSearchStatus, 
 // === Params Card ===
 
 export const eggSearchParamsCardTitle: LocaleText = {
-  ja: '検索条件',
+  ja: 'Search Parameters',
   en: 'Search Parameters',
 };
 
@@ -241,7 +241,7 @@ export const eggSearchGenderRatioPresets: GenderRatioPreset[] = [
 // === Filter Card ===
 
 export const eggSearchFilterCardTitle: LocaleText = {
-  ja: 'フィルター',
+  ja: 'Filter',
   en: 'Filter',
 };
 
@@ -348,8 +348,8 @@ export const eggSearchShinyOptions: LocaleMap<Record<'none' | '0' | '1' | '2', s
 // === Results Card ===
 
 export const eggSearchResultsCardTitle: LocaleText = {
-  ja: '検索結果',
-  en: 'Search Results',
+  ja: 'Results',
+  en: 'Results',
 };
 
 export const eggSearchResultsEmpty: LocaleText = {
