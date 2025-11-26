@@ -1,8 +1,17 @@
 import React from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
-import { Table } from '@phosphor-icons/react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Table as TableIcon } from '@phosphor-icons/react';
 import { useEggStore } from '@/store/egg-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
+import { useTableVirtualization } from '@/hooks/use-table-virtualization';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import { natureName, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
@@ -18,6 +27,8 @@ import {
   eggResultUnknownHp,
 } from '@/lib/i18n/strings/egg-results';
 import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
+
+const EGG_RESULTS_TABLE_ROW_HEIGHT = 34;
 
 /**
  * EggResultsCard
@@ -35,6 +46,19 @@ export const EggResultsCard: React.FC = () => {
   const sortedResults = React.useMemo(() => {
     return [...filteredResults].sort((a, b) => a.advance - b.advance);
   }, [filteredResults]);
+
+  // Boot-Timing モード時の列数計算
+  const baseColSpan = 15; // advance + dir + v + ability + gender + nature + shiny + 6 IVs + pid + hp
+  const npcColSpan = draftParams.considerNpcConsumption ? 1 : 0;
+  const bootTimingColSpan = isBootTimingMode ? 3 : 0; // Timer0 + VCount + MT Seed
+  const totalColSpan = baseColSpan + npcColSpan + bootTimingColSpan;
+
+  const virtualization = useTableVirtualization({
+    rowCount: sortedResults.length,
+    defaultRowHeight: EGG_RESULTS_TABLE_ROW_HEIGHT,
+    overscan: 12,
+  });
+  const virtualRows = virtualization.virtualRows;
 
   const hpTypeNames = hiddenPowerTypeNames[locale] ?? hiddenPowerTypeNames.en;
   const shinyLabels = resolveLocaleValue(eggResultShinyLabels, locale);
@@ -82,104 +106,135 @@ export const EggResultsCard: React.FC = () => {
     }
   };
 
-  // Boot-Timing モード時の列数計算
-  const baseColSpan = 15; // advance + dir + v + ability + gender + nature + shiny + 6 IVs + pid + hp
-  const npcColSpan = draftParams.considerNpcConsumption ? 1 : 0;
-  const bootTimingColSpan = isBootTimingMode ? 3 : 0; // Timer0 + VCount + MT Seed
-  const totalColSpan = baseColSpan + npcColSpan + bootTimingColSpan;
-
   return (
     <PanelCard
-      icon={<Table size={20} className="opacity-80" />}
+      icon={<TableIcon size={20} className="opacity-80" />}
       title={<span id="egg-results-title">{eggResultsPanelTitle[locale]}</span>}
-      className={isStack ? 'min-h-64' : undefined}
+      className={isStack ? 'max-h-96' : undefined}
       fullHeight={!isStack}
-      scrollMode="content"
+      scrollMode={isStack ? 'parent' : 'content'}
+      padding="none"
+      spacing="none"
+      contentClassName="p-0"
       aria-labelledby="egg-results-title"
+      role="region"
     >
-      <div className="overflow-x-auto" data-testid="egg-results-table">
-        <table className="w-full text-xs border-collapse">
-          <thead className="sticky top-0 bg-background z-10">
-            <tr className="border-b">
-              <th className="text-left py-1 px-2 font-mono">{getEggResultHeader('advance', locale)}</th>
-              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('dir', locale)}</th>
-              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('dirValue', locale)}</th>
-              <th className="text-left py-1 px-2 font-mono">{getEggResultHeader('ability', locale)}</th>
-              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('gender', locale)}</th>
-              <th className="text-left py-1 px-2 font-mono">{getEggResultHeader('nature', locale)}</th>
-              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('shiny', locale)}</th>
-              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('hp', locale)}</th>
-              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('atk', locale)}</th>
-              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('def', locale)}</th>
-              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('spa', locale)}</th>
-              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('spd', locale)}</th>
-              <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('spe', locale)}</th>
-              <th className="text-left py-1 px-2 font-mono">{getEggResultHeader('pid', locale)}</th>
-              <th className="text-left py-1 px-2 font-mono">{getEggResultHeader('hiddenPower', locale)}</th>
-              {isBootTimingMode && (
-                <>
-                  <th className="text-left py-1 px-2 font-mono">Timer0</th>
-                  <th className="text-left py-1 px-2 font-mono">VCount</th>
-                  <th className="text-left py-1 px-2 font-mono">MT Seed</th>
-                </>
-              )}
-              {draftParams.considerNpcConsumption && (
-                <th className="text-center py-1 px-1 font-mono">{getEggResultHeader('stable', locale)}</th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {sortedResults.length === 0 ? (
-              <tr>
-                <td colSpan={totalColSpan} className="text-center py-8 text-muted-foreground">
-                  {eggResultsEmptyMessage[locale]}
-                </td>
-              </tr>
-            ) : (
-              sortedResults.map((row, i) => (
-                <tr key={i} className="border-b hover:bg-muted/50" data-testid="egg-result-row">
-                  <td className="py-1 px-2 font-mono">{row.advance}</td>
-                  <td className="text-center py-1 px-1">{getDirection(row)?.arrow ?? '-'}</td>
-                  <td className="text-center py-1 px-1 font-mono">{getDirection(row)?.value ?? '-'}</td>
-                  <td className="py-1 px-2 font-mono">{abilityLabels[row.egg.ability as 0 | 1 | 2] || row.egg.ability}</td>
-                  <td className="text-center py-1 px-1 font-mono">{genderLabels[row.egg.gender] || row.egg.gender}</td>
-                  <td className="py-1 px-2 font-mono">{natureName(row.egg.nature, locale)}</td>
-                  <td className="text-center py-1 px-1 font-mono">
-                    {row.egg.shiny > 0 ? (
-                      <span className={row.egg.shiny === 2 ? 'text-yellow-500' : 'text-blue-500'}>
-                        {shinyLabels[row.egg.shiny as 1 | 2]}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">{shinyLabels[0]}</span>
+      <div
+        ref={virtualization.containerRef}
+        className="flex-1 min-h-0 overflow-y-auto"
+        data-testid="egg-results-table"
+      >
+        {sortedResults.length === 0 ? (
+          <div className="flex h-full items-center justify-center px-6 text-center text-muted-foreground py-8">
+            {eggResultsEmptyMessage[locale]}
+          </div>
+        ) : (
+          <Table className="min-w-full text-xs">
+            <TableHeader className="sticky top-0 bg-muted text-xs">
+              <TableRow className="text-left border-0">
+                <TableHead scope="col" className="px-2 py-1 font-medium">{getEggResultHeader('advance', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium text-center">{getEggResultHeader('dir', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium text-center">{getEggResultHeader('dirValue', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium">{getEggResultHeader('ability', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium text-center">{getEggResultHeader('gender', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium">{getEggResultHeader('nature', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium text-center">{getEggResultHeader('shiny', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium text-center">{getEggResultHeader('hp', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium text-center">{getEggResultHeader('atk', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium text-center">{getEggResultHeader('def', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium text-center">{getEggResultHeader('spa', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium text-center">{getEggResultHeader('spd', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium text-center">{getEggResultHeader('spe', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium">{getEggResultHeader('pid', locale)}</TableHead>
+                <TableHead scope="col" className="px-2 py-1 font-medium">{getEggResultHeader('hiddenPower', locale)}</TableHead>
+                {isBootTimingMode && (
+                  <>
+                    <TableHead scope="col" className="px-2 py-1 font-medium">Timer0</TableHead>
+                    <TableHead scope="col" className="px-2 py-1 font-medium">VCount</TableHead>
+                    <TableHead scope="col" className="px-2 py-1 font-medium">MT Seed</TableHead>
+                  </>
+                )}
+                {draftParams.considerNpcConsumption && (
+                  <TableHead scope="col" className="px-2 py-1 font-medium text-center">{getEggResultHeader('stable', locale)}</TableHead>
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {virtualization.paddingTop > 0 ? (
+                <TableRow aria-hidden="true" className="border-0 pointer-events-none">
+                  <TableCell
+                    colSpan={totalColSpan}
+                    className="p-0 border-0"
+                    style={{ height: virtualization.paddingTop }}
+                  />
+                </TableRow>
+              ) : null}
+              {virtualRows.map(virtualRow => {
+                const row = sortedResults[virtualRow.index];
+                if (!row) {
+                  return null;
+                }
+                const direction = getDirection(row);
+                return (
+                  <TableRow
+                    key={virtualRow.index}
+                    ref={virtualization.measureRow}
+                    data-index={virtualRow.index}
+                    className="odd:bg-background even:bg-muted/30 border-0"
+                    data-testid="egg-result-row"
+                  >
+                    <TableCell className="px-2 py-1 font-mono tabular-nums">{row.advance}</TableCell>
+                    <TableCell className="px-2 py-1 text-center font-arrows">{direction?.arrow ?? '-'}</TableCell>
+                    <TableCell className="px-2 py-1 font-mono tabular-nums text-center">{direction?.value ?? '-'}</TableCell>
+                    <TableCell className="px-2 py-1">{abilityLabels[row.egg.ability as 0 | 1 | 2] || row.egg.ability}</TableCell>
+                    <TableCell className="px-2 py-1 text-center">{genderLabels[row.egg.gender] || row.egg.gender}</TableCell>
+                    <TableCell className="px-2 py-1 whitespace-nowrap">{natureName(row.egg.nature, locale)}</TableCell>
+                    <TableCell className="px-2 py-1 text-center">
+                      {row.egg.shiny > 0 ? (
+                        <span className={row.egg.shiny === 2 ? 'text-yellow-500' : 'text-blue-500'}>
+                          {shinyLabels[row.egg.shiny as 1 | 2]}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">{shinyLabels[0]}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-2 py-1 font-mono tabular-nums text-center">{formatIv(row.egg.ivs[0])}</TableCell>
+                    <TableCell className="px-2 py-1 font-mono tabular-nums text-center">{formatIv(row.egg.ivs[1])}</TableCell>
+                    <TableCell className="px-2 py-1 font-mono tabular-nums text-center">{formatIv(row.egg.ivs[2])}</TableCell>
+                    <TableCell className="px-2 py-1 font-mono tabular-nums text-center">{formatIv(row.egg.ivs[3])}</TableCell>
+                    <TableCell className="px-2 py-1 font-mono tabular-nums text-center">{formatIv(row.egg.ivs[4])}</TableCell>
+                    <TableCell className="px-2 py-1 font-mono tabular-nums text-center">{formatIv(row.egg.ivs[5])}</TableCell>
+                    <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
+                      {row.egg.pid.toString(16).toUpperCase().padStart(8, '0')}
+                    </TableCell>
+                    <TableCell className="px-2 py-1 whitespace-nowrap">{formatHiddenPower(row.egg.hiddenPower)}</TableCell>
+                    {isBootTimingMode && (
+                      <>
+                        <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{formatTimer0(row)}</TableCell>
+                        <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{formatVcount(row)}</TableCell>
+                        <TableCell className="px-2 py-1 font-mono whitespace-nowrap">{formatMtSeed(row)}</TableCell>
+                      </>
                     )}
-                  </td>
-                  <td className="text-center py-1 px-1 font-mono">{formatIv(row.egg.ivs[0])}</td>
-                  <td className="text-center py-1 px-1 font-mono">{formatIv(row.egg.ivs[1])}</td>
-                  <td className="text-center py-1 px-1 font-mono">{formatIv(row.egg.ivs[2])}</td>
-                  <td className="text-center py-1 px-1 font-mono">{formatIv(row.egg.ivs[3])}</td>
-                  <td className="text-center py-1 px-1 font-mono">{formatIv(row.egg.ivs[4])}</td>
-                  <td className="text-center py-1 px-1 font-mono">{formatIv(row.egg.ivs[5])}</td>
-                  <td className="py-1 px-2 font-mono">
-                    {row.egg.pid.toString(16).toUpperCase().padStart(8, '0')}
-                  </td>
-                  <td className="py-1 px-2">{formatHiddenPower(row.egg.hiddenPower)}</td>
-                  {isBootTimingMode && (
-                    <>
-                      <td className="py-1 px-2 font-mono">{formatTimer0(row)}</td>
-                      <td className="py-1 px-2 font-mono">{formatVcount(row)}</td>
-                      <td className="py-1 px-2 font-mono">{formatMtSeed(row)}</td>
-                    </>
-                  )}
-                  {draftParams.considerNpcConsumption && (
-                    <td className="text-center py-1 px-1">
-                      {row.isStable ? stableLabels.yes : stableLabels.no}
-                    </td>
-                  )}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                    {draftParams.considerNpcConsumption && (
+                      <TableCell className="px-2 py-1 text-center">
+                        {row.isStable ? stableLabels.yes : stableLabels.no}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
+              {virtualization.paddingBottom > 0 ? (
+                <TableRow aria-hidden="true" className="border-0 pointer-events-none">
+                  <TableCell
+                    colSpan={totalColSpan}
+                    className="p-0 border-0"
+                    style={{ height: virtualization.paddingBottom }}
+                  />
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+        )}
       </div>
     </PanelCard>
   );
