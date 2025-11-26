@@ -29,7 +29,7 @@ describe('egg-search i18n strings', () => {
     });
 
     it('should have both ja and en for run card title', () => {
-      expect(eggSearchRunCardTitle.ja).toBe('検索制御');
+      expect(eggSearchRunCardTitle.ja).toBe('Search Control');
       expect(eggSearchRunCardTitle.en).toBe('Search Control');
     });
 
@@ -56,17 +56,17 @@ describe('egg-search i18n strings', () => {
 
   describe('button labels', () => {
     it('should have start button labels', () => {
-      expect(eggSearchButtonLabels.start.ja).toBe('検索開始');
-      expect(eggSearchButtonLabels.start.en).toBe('Start Search');
+      expect(eggSearchButtonLabels.start.ja).toBe('Search');
+      expect(eggSearchButtonLabels.start.en).toBe('Search');
     });
 
     it('should have stop button labels', () => {
-      expect(eggSearchButtonLabels.stop.ja).toBe('停止');
+      expect(eggSearchButtonLabels.stop.ja).toBe('Stop');
       expect(eggSearchButtonLabels.stop.en).toBe('Stop');
     });
 
     it('should have stopping button labels', () => {
-      expect(eggSearchButtonLabels.stopping.ja).toBe('停止中...');
+      expect(eggSearchButtonLabels.stopping.ja).toBe('Stopping...');
       expect(eggSearchButtonLabels.stopping.en).toBe('Stopping...');
     });
   });
@@ -93,7 +93,7 @@ describe('egg-search i18n strings', () => {
 
   describe('params card labels', () => {
     it('should have params card title', () => {
-      expect(eggSearchParamsCardTitle.ja).toBe('検索条件');
+      expect(eggSearchParamsCardTitle.ja).toBe('Search Parameters');
       expect(eggSearchParamsCardTitle.en).toBe('Search Parameters');
     });
 
@@ -119,7 +119,7 @@ describe('egg-search i18n strings', () => {
 
   describe('filter card labels', () => {
     it('should have filter card title', () => {
-      expect(eggSearchFilterCardTitle.ja).toBe('フィルター');
+      expect(eggSearchFilterCardTitle.ja).toBe('Filter');
       expect(eggSearchFilterCardTitle.en).toBe('Filter');
     });
 
@@ -133,8 +133,8 @@ describe('egg-search i18n strings', () => {
 
   describe('results card labels', () => {
     it('should have results card title', () => {
-      expect(eggSearchResultsCardTitle.ja).toBe('検索結果');
-      expect(eggSearchResultsCardTitle.en).toBe('Search Results');
+      expect(eggSearchResultsCardTitle.ja).toBe('Results');
+      expect(eggSearchResultsCardTitle.en).toBe('Results');
     });
 
     it('should have empty results message', () => {
