@@ -489,12 +489,12 @@ export function createDefaultParentsIVs(): ParentsIVs {
 export function createDefaultEggFilter(): EggIndividualFilter {
   return {
     ivRanges: [
-      { min: 0, max: IV_UNKNOWN },
-      { min: 0, max: IV_UNKNOWN },
-      { min: 0, max: IV_UNKNOWN },
-      { min: 0, max: IV_UNKNOWN },
-      { min: 0, max: IV_UNKNOWN },
-      { min: 0, max: IV_UNKNOWN },
+      { min: 31, max: 31 },
+      { min: 31, max: 31 },
+      { min: 31, max: 31 },
+      { min: 31, max: 31 },
+      { min: 31, max: 31 },
+      { min: 31, max: 31 },
     ],
   };
 }

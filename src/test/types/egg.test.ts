@@ -270,12 +270,12 @@ describe('egg types', () => {
       expect(parents.female).toEqual([31, 31, 31, 31, 31, 31]);
     });
 
-    it('createDefaultEggFilter returns unrestricted ranges', () => {
+    it('createDefaultEggFilter returns 31-31 ranges', () => {
       const filter = createDefaultEggFilter();
       expect(filter.ivRanges.length).toBe(6);
       filter.ivRanges.forEach(range => {
-        expect(range.min).toBe(0);
-        expect(range.max).toBe(IV_UNKNOWN);
+        expect(range.min).toBe(31);
+        expect(range.max).toBe(31);
       });
     });
   });

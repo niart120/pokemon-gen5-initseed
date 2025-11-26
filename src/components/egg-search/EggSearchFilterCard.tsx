@@ -33,12 +33,11 @@ import {
 export function EggSearchFilterCard() {
   const locale = useLocale();
   const { isStack } = useResponsiveLayout();
-  const { draftParams, updateDraftParams, updateFilter, status } = useEggBootTimingSearchStore();
+  const { draftParams, updateFilter, status } = useEggBootTimingSearchStore();
   
   const isRunning = status === 'running' || status === 'starting' || status === 'stopping';
   
   const filter = draftParams.filter || createDefaultEggFilter();
-  const filterDisabled = draftParams.filterDisabled ?? false;
 
   const genderOptions = resolveLocaleValue(eggSearchGenderOptions, locale);
   const abilityOptions = resolveLocaleValue(eggSearchAbilityOptions, locale);
@@ -92,21 +91,6 @@ export function EggSearchFilterCard() {
       fullHeight={!isStack}
       scrollMode={isStack ? 'parent' : 'content'}
     >
-      {/* フィルター無効化チェック */}
-      <div className="flex items-center gap-2 mb-3">
-        <Checkbox
-          id="egg-search-filter-disabled"
-          checked={filterDisabled}
-          onCheckedChange={(checked) => {
-            updateDraftParams({ filterDisabled: !!checked });
-          }}
-          disabled={isRunning}
-        />
-        <Label htmlFor="egg-search-filter-disabled" className="text-xs">
-          {eggSearchFilterLabels.disabled[locale]}
-        </Label>
-      </div>
-
       {/* 性格・性別・特性・色違い: 4列グリッド */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {/* 性格フィルター */}
@@ -115,7 +99,7 @@ export function EggSearchFilterCard() {
           <Select
             value={filter.nature !== undefined ? String(filter.nature) : 'none'}
             onValueChange={(v) => handleFilterUpdate({ nature: v !== 'none' ? Number(v) : undefined })}
-            disabled={isRunning || filterDisabled}
+            disabled={isRunning }
           >
             <SelectTrigger className="text-xs h-8">
               <SelectValue placeholder={eggSearchFilterLabels.noSelection[locale]} />
@@ -137,7 +121,7 @@ export function EggSearchFilterCard() {
           <Select
             value={filter.gender || 'none'}
             onValueChange={(v) => handleFilterUpdate({ gender: v !== 'none' ? v as 'male' | 'female' | 'genderless' : undefined })}
-            disabled={isRunning || filterDisabled}
+            disabled={isRunning }
           >
             <SelectTrigger className="text-xs h-8">
               <SelectValue placeholder={eggSearchFilterLabels.noSelection[locale]} />
@@ -158,7 +142,7 @@ export function EggSearchFilterCard() {
           <Select
             value={filter.ability !== undefined ? String(filter.ability) : 'none'}
             onValueChange={(v) => handleFilterUpdate({ ability: v !== 'none' ? Number(v) as 0 | 1 | 2 : undefined })}
-            disabled={isRunning || filterDisabled}
+            disabled={isRunning }
           >
             <SelectTrigger className="text-xs h-8">
               <SelectValue placeholder={eggSearchFilterLabels.noSelection[locale]} />
@@ -179,7 +163,7 @@ export function EggSearchFilterCard() {
           <Select
             value={filter.shiny !== undefined ? String(filter.shiny) : 'none'}
             onValueChange={(v) => handleFilterUpdate({ shiny: v !== 'none' ? Number(v) as 0 | 1 | 2 : undefined })}
-            disabled={isRunning || filterDisabled}
+            disabled={isRunning }
           >
             <SelectTrigger className="text-xs h-8">
               <SelectValue placeholder={eggSearchFilterLabels.noSelection[locale]} />
@@ -203,7 +187,7 @@ export function EggSearchFilterCard() {
           <Select
             value={filter.hiddenPowerType !== undefined ? String(filter.hiddenPowerType) : 'none'}
             onValueChange={(v) => handleFilterUpdate({ hiddenPowerType: v !== 'none' ? Number(v) : undefined })}
-            disabled={isRunning || filterDisabled}
+            disabled={isRunning }
           >
             <SelectTrigger className="text-xs h-8">
               <SelectValue placeholder={eggSearchFilterLabels.noSelection[locale]} />
@@ -231,7 +215,7 @@ export function EggSearchFilterCard() {
               const v = e.target.value;
               handleFilterUpdate({ hiddenPowerPower: v ? Math.max(30, Math.min(70, parseInt(v))) : undefined });
             }}
-            disabled={isRunning || filterDisabled}
+            disabled={isRunning }
             placeholder={eggSearchFilterLabels.noSelection[locale]}
             className="text-xs h-8"
           />
@@ -255,7 +239,8 @@ export function EggSearchFilterCard() {
                   max={31}
                   value={isUnknown ? '' : filter.ivRanges[i].min}
                   onChange={(e) => handleIvRangeChange(i, 'min', parseInt(e.target.value) || 0)}
-                  disabled={isRunning || filterDisabled || isUnknown}
+                  onFocus={(e) => e.target.select()}
+                  disabled={isRunning  || isUnknown}
                   className="text-xs h-7 w-14 text-center"
                   placeholder={isUnknown ? '?' : 'min'}
                 />
@@ -266,7 +251,8 @@ export function EggSearchFilterCard() {
                   max={31}
                   value={isUnknown ? '' : filter.ivRanges[i].max}
                   onChange={(e) => handleIvRangeChange(i, 'max', parseInt(e.target.value) || 31)}
-                  disabled={isRunning || filterDisabled || isUnknown}
+                  onFocus={(e) => e.target.select()}
+                  disabled={isRunning  || isUnknown}
                   className="text-xs h-7 w-14 text-center"
                   placeholder={isUnknown ? '?' : 'max'}
                 />
@@ -275,7 +261,7 @@ export function EggSearchFilterCard() {
                     id={`egg-search-filter-iv-unknown-${i}`}
                     checked={isUnknown}
                     onCheckedChange={(checked) => handleIvRangeUnknownChange(i, !!checked)}
-                    disabled={isRunning || filterDisabled}
+                    disabled={isRunning }
                     className="h-3 w-3"
                   />
                   <Label htmlFor={`egg-search-filter-iv-unknown-${i}`} className="text-[10px] text-muted-foreground cursor-pointer">

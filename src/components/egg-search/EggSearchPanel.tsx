@@ -84,7 +84,7 @@ export function EggSearchPanel() {
         
         {/* 中央カラム: FilterCard */}
         <div
-          className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`}
+          className={`flex flex-col ${sizes.gap} min-w-0 max-w-xs overflow-y-auto`}
           style={{ minHeight: 0 }}
         >
           <div className="flex-1 min-h-0">
@@ -94,10 +94,10 @@ export function EggSearchPanel() {
         
         {/* 右カラム: ResultsCard */}
         <div
-          className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`}
+          className={`flex-[2] flex flex-col ${sizes.gap} min-w-0 overflow-y-auto overflow-x-auto`}
           style={{ minHeight: 0 }}
         >
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 overflow-x-auto">
             <EggSearchResultsCard />
           </div>
         </div>

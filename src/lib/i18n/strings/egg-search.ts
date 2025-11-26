@@ -99,9 +99,9 @@ export const eggSearchParamsCardTitle: LocaleText = {
 };
 
 export const eggSearchParamsSectionTitles = {
-  dateTime: {
-    ja: '日時範囲',
-    en: 'Date/Time Range',
+  range: {
+    ja: '範囲',
+    en: 'Range',
   } satisfies LocaleText,
   parents: {
     ja: '親個体情報',
@@ -110,10 +110,6 @@ export const eggSearchParamsSectionTitles = {
   conditions: {
     ja: '生成条件',
     en: 'Generation Conditions',
-  } satisfies LocaleText,
-  advance: {
-    ja: '消費範囲',
-    en: 'Advance Range',
   } satisfies LocaleText,
 };
 
@@ -250,10 +246,6 @@ export const eggSearchFilterCardTitle: LocaleText = {
 };
 
 export const eggSearchFilterLabels = {
-  disabled: {
-    ja: 'フィルターを無効にする',
-    en: 'Disable Filter',
-  } satisfies LocaleText,
   ivRange: {
     ja: '個体値範囲',
     en: 'IV Range',
@@ -261,6 +253,14 @@ export const eggSearchFilterLabels = {
   ivUnknown: {
     ja: '任意',
     en: 'Any',
+  } satisfies LocaleText,
+  timer0Range: {
+    ja: 'Timer0範囲',
+    en: 'Timer0 Range',
+  } satisfies LocaleText,
+  vcountRange: {
+    ja: 'VCount範囲',
+    en: 'VCount Range',
   } satisfies LocaleText,
   nature: {
     ja: '性格',
@@ -383,21 +383,41 @@ export const eggSearchResultsTableHeaders = {
     ja: 'Advance',
     en: 'Advance',
   } satisfies LocaleText,
+  ability: {
+    ja: '特性',
+    en: 'Ability',
+  } satisfies LocaleText,
+  gender: {
+    ja: '性別',
+    en: 'Gender',
+  } satisfies LocaleText,
   nature: {
     ja: '性格',
     en: 'Nature',
-  } satisfies LocaleText,
-  ivs: {
-    ja: '個体値',
-    en: 'IVs',
   } satisfies LocaleText,
   shiny: {
     ja: '色違い',
     en: 'Shiny',
   } satisfies LocaleText,
+  ivs: {
+    ja: '個体値',
+    en: 'IVs',
+  } satisfies LocaleText,
+  hiddenPower: {
+    ja: 'めざパ',
+    en: 'HP',
+  } satisfies LocaleText,
+  keys: {
+    ja: 'キー',
+    en: 'Keys',
+  } satisfies LocaleText,
   stable: {
     ja: '安定',
     en: 'Stable',
+  } satisfies LocaleText,
+  detail: {
+    ja: '詳細',
+    en: 'Detail',
   } satisfies LocaleText,
 };
 

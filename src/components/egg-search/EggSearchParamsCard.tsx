@@ -228,10 +228,10 @@ export function EggSearchParamsCard() {
         fullHeight
       >
         <div className="space-y-4">
-          {/* 日時範囲セクション */}
+          {/* 範囲セクション（日時範囲 + 消費範囲を統合） */}
           <section className="space-y-3" role="group">
             <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
-              {eggSearchParamsSectionTitles.dateTime[locale]}
+              {eggSearchParamsSectionTitles.range[locale]}
             </h4>
             
             {/* 日付範囲 */}
@@ -303,6 +303,35 @@ export function EggSearchParamsCard() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* 消費範囲 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label htmlFor="user-offset" className="text-xs">{eggSearchParamsLabels.userOffset[locale]}</Label>
+                <Input
+                  id="user-offset"
+                  type="number"
+                  min={0}
+                  value={draftParams.userOffset}
+                  onChange={(e) => updateDraftParams({ userOffset: parseInt(e.target.value, 10) || 0 })}
+                  disabled={isRunning}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="advance-count" className="text-xs">{eggSearchParamsLabels.advanceCount[locale]}</Label>
+                <Input
+                  id="advance-count"
+                  type="number"
+                  min={1}
+                  max={100000}
+                  value={draftParams.advanceCount}
+                  onChange={(e) => updateDraftParams({ advanceCount: Math.max(1, Math.min(100000, parseInt(e.target.value, 10) || 50)) })}
+                  disabled={isRunning}
+                  className="h-8 text-xs"
+                />
               </div>
             </div>
 
@@ -536,42 +565,6 @@ export function EggSearchParamsCard() {
                   disabled={isRunning}
                 />
                 <Label htmlFor="egg-search-npc-consumption" className="text-xs">{eggSearchParamsLabels.npcConsumption[locale]}</Label>
-              </div>
-            </div>
-          </section>
-
-          <Separator />
-
-          {/* 消費範囲セクション */}
-          <section className="space-y-3" role="group">
-            <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
-              {eggSearchParamsSectionTitles.advance[locale]}
-            </h4>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label htmlFor="user-offset" className="text-xs">{eggSearchParamsLabels.userOffset[locale]}</Label>
-                <Input
-                  id="user-offset"
-                  type="number"
-                  min={0}
-                  value={draftParams.userOffset}
-                  onChange={(e) => updateDraftParams({ userOffset: parseInt(e.target.value, 10) || 0 })}
-                  disabled={isRunning}
-                  className="h-8 text-xs"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="advance-count" className="text-xs">{eggSearchParamsLabels.advanceCount[locale]}</Label>
-                <Input
-                  id="advance-count"
-                  type="number"
-                  min={1}
-                  max={100000}
-                  value={draftParams.advanceCount}
-                  onChange={(e) => updateDraftParams({ advanceCount: Math.max(1, Math.min(100000, parseInt(e.target.value, 10) || 1000)) })}
-                  disabled={isRunning}
-                  className="h-8 text-xs"
-                />
               </div>
             </div>
           </section>
