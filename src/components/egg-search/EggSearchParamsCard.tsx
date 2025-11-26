@@ -191,12 +191,11 @@ export function EggSearchParamsCard() {
     index: number,
     value: string
   ) => {
-    // 入力中はそのまま保存
+    // 入力中はそのまま保存（空入力は0として扱う）
     const currentIvs = parent === 'male' ? draftParams.parents.male : draftParams.parents.female;
     const newIvs = [...currentIvs] as IvSet;
-    // 文字列をそのまま数値に変換（空の場合は現在値を維持）
-    const numValue = value === '' ? currentIvs[index] : parseInt(value, 10);
-    newIvs[index] = Number.isNaN(numValue) ? currentIvs[index] : numValue;
+    const numValue = parseInt(value, 10);
+    newIvs[index] = Number.isNaN(numValue) ? 0 : numValue;
 
     if (parent === 'male') {
       updateDraftParentsMale(newIvs);
@@ -355,9 +354,12 @@ export function EggSearchParamsCard() {
                   type="number"
                   min={0}
                   value={draftParams.userOffset}
-                  onChange={(e) => updateDraftParams({ userOffset: parseInt(e.target.value, 10) || draftParams.userOffset })}
-                  onBlur={(e) => {
-                    const num = Math.max(0, parseInt(e.target.value, 10) || 0);
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    updateDraftParams({ userOffset: Number.isNaN(v) ? 0 : v });
+                  }}
+                  onBlur={() => {
+                    const num = Math.max(0, draftParams.userOffset || 0);
                     updateDraftParams({ userOffset: num });
                   }}
                   disabled={isRunning}
@@ -372,9 +374,12 @@ export function EggSearchParamsCard() {
                   min={1}
                   max={100000}
                   value={draftParams.advanceCount}
-                  onChange={(e) => updateDraftParams({ advanceCount: parseInt(e.target.value, 10) || draftParams.advanceCount })}
-                  onBlur={(e) => {
-                    const num = Math.max(1, Math.min(100000, parseInt(e.target.value, 10) || 50));
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    updateDraftParams({ advanceCount: Number.isNaN(v) ? 0 : v });
+                  }}
+                  onBlur={() => {
+                    const num = Math.max(1, Math.min(100000, draftParams.advanceCount || 50));
                     updateDraftParams({ advanceCount: num });
                   }}
                   disabled={isRunning}

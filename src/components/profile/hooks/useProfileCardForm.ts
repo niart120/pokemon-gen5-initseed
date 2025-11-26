@@ -37,8 +37,8 @@ import { useMacAddressInput } from './useMacAddressInput';
 
 export type { SectionKey, SectionState, ProfileFormState } from './profileFormTypes';
 
-const TIMER_HEX_PATTERN = /^0x?[0-9a-fA-F]{0,4}$/;
-const VCOUNT_HEX_PATTERN = /^0x?[0-9a-fA-F]{0,2}$/;
+const TIMER_HEX_PATTERN = /^(0x)?[0-9a-fA-F]{0,4}$/;
+const VCOUNT_HEX_PATTERN = /^(0x)?[0-9a-fA-F]{0,2}$/;
 
 export const SELECT_NEW_PROFILE = '__new_profile__';
 export const SELECT_IMPORT_CURRENT = '__import_current__';

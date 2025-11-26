@@ -94,11 +94,11 @@ export const EggParamsCard: React.FC = () => {
     index: number,
     value: string
   ) => {
-    // 入力中はそのまま保存
+    // 入力中はそのまま保存（空入力は0として扱う）
     const currentIvs = parent === 'male' ? draftParams.parents.male : draftParams.parents.female;
     const newIvs = [...currentIvs] as IvSet;
-    const numValue = value === '' ? currentIvs[index] : parseInt(value, 10);
-    newIvs[index] = Number.isNaN(numValue) ? currentIvs[index] : numValue;
+    const numValue = parseInt(value, 10);
+    newIvs[index] = Number.isNaN(numValue) ? 0 : numValue;
 
     if (parent === 'male') {
       updateDraftParentsMale(newIvs);
@@ -238,9 +238,12 @@ export const EggParamsCard: React.FC = () => {
                   min={1}
                   max={100000}
                   value={draftParams.count}
-                  onChange={(e) => updateDraftParams({ count: parseInt(e.target.value) || draftParams.count })}
-                  onBlur={(e) => {
-                    const num = Math.max(1, Math.min(100000, parseInt(e.target.value) || 1));
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    updateDraftParams({ count: Number.isNaN(v) ? 0 : v });
+                  }}
+                  onBlur={() => {
+                    const num = Math.max(1, Math.min(100000, draftParams.count || 1));
                     updateDraftParams({ count: num });
                   }}
                   disabled={disabled}
@@ -288,9 +291,12 @@ export const EggParamsCard: React.FC = () => {
                     min={1}
                     max={100000}
                     value={draftParams.count}
-                    onChange={(e) => updateDraftParams({ count: parseInt(e.target.value) || draftParams.count })}
-                    onBlur={(e) => {
-                      const num = Math.max(1, Math.min(100000, parseInt(e.target.value) || 1));
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      updateDraftParams({ count: Number.isNaN(v) ? 0 : v });
+                    }}
+                    onBlur={() => {
+                      const num = Math.max(1, Math.min(100000, draftParams.count || 1));
                       updateDraftParams({ count: num });
                     }}
                     disabled={disabled}
