@@ -134,6 +134,7 @@ export function EggSearchResultsCard() {
                   <TableHead className="px-2">{eggSearchResultsTableHeaders.bootTime[locale]}</TableHead>
                   <TableHead className="px-2">{eggSearchResultsTableHeaders.timer0[locale]}</TableHead>
                   <TableHead className="px-2">{eggSearchResultsTableHeaders.vcount[locale]}</TableHead>
+                  <TableHead className="px-2">MT Seed</TableHead>
                   <TableHead className="px-2">{eggSearchResultsTableHeaders.advance[locale]}</TableHead>
                   <TableHead className="px-1 text-center">{eggSearchResultsTableHeaders.stable[locale]}</TableHead>
                   <TableHead className="px-2">{eggSearchResultsTableHeaders.ability[locale]}</TableHead>
@@ -177,6 +178,9 @@ export function EggSearchResultsCard() {
                       </TableCell>
                       <TableCell className="px-2 py-1 font-mono text-[11px]">
                         {formatVCount(result.boot.vcount)}
+                      </TableCell>
+                      <TableCell className="px-2 py-1 font-mono text-[11px]">
+                        {result.egg.egg.mtSeedHex ?? '-'}
                       </TableCell>
                       <TableCell className="px-2 py-1 font-mono text-[11px]">
                         {result.egg.advance}
@@ -237,6 +241,10 @@ export function EggSearchResultsCard() {
                 <div>
                   <span className="text-muted-foreground">{eggSearchResultsTableHeaders.vcount[locale]}:</span>
                   <span className="ml-2 font-mono">{formatVCount(selectedResult.boot.vcount)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">MT Seed:</span>
+                  <span className="ml-2 font-mono">{selectedResult.egg.egg.mtSeedHex ?? '-'}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">{eggSearchResultsTableHeaders.lcgSeed[locale]}:</span>
