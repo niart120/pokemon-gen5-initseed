@@ -7,6 +7,7 @@ import type {
   EggBootTimingSearchParams,
   EggBootTimingSearchResult,
   EggBootTimingCompletion,
+  EggBootTimingProgress,
   WasmEggBootTimingSearchResult,
 } from '@/types/egg-boot-timing-search';
 import type { IvSet, HiddenPowerInfo } from '@/types/egg';
@@ -92,25 +93,93 @@ async function handleStart(params: EggBootTimingSearchParams) {
 
   try {
     await ensureWasm();
-    const results = executeSearch(params);
 
-    // 結果送信
-    post({
-      type: 'RESULTS',
-      payload: { results, batchIndex: 0 },
-    });
+    // 日単位でチャンク分割して検索
+    const { dateRange } = params;
+    const startDate = new Date(
+      dateRange.startYear,
+      dateRange.startMonth - 1,
+      dateRange.startDay
+    );
+    const endDate = new Date(
+      dateRange.endYear,
+      dateRange.endMonth - 1,
+      dateRange.endDay
+    );
+
+    // 日数計算
+    const totalDays = Math.max(
+      1,
+      Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    );
+
+    // 1バッチあたりの日数（進捗報告間隔を調整）
+    const DAYS_PER_BATCH = 1;
+
+    let allResults: EggBootTimingSearchResult[] = [];
+    let batchIndex = 0;
+
+    for (let dayOffset = 0; dayOffset < totalDays; dayOffset += DAYS_PER_BATCH) {
+      if (state.stopRequested) break;
+
+      // バッチの開始・終了日を計算
+      const batchStartDate = new Date(startDate.getTime() + dayOffset * 24 * 60 * 60 * 1000);
+      const batchDays = Math.min(DAYS_PER_BATCH, totalDays - dayOffset);
+
+      // このバッチを検索
+      const batchResults = executeSearchBatch(params, batchStartDate, batchDays);
+
+      if (batchResults.length > 0) {
+        allResults = allResults.concat(batchResults);
+
+        // 結果送信
+        post({
+          type: 'RESULTS',
+          payload: { results: batchResults, batchIndex },
+        });
+      }
+
+      // 進捗報告
+      const processedDays = Math.min(dayOffset + DAYS_PER_BATCH, totalDays);
+      const elapsedMs = performance.now() - startTime;
+      const progressPercent = (processedDays / totalDays) * 100;
+      const estimatedRemainingMs = processedDays > 0
+        ? (elapsedMs / processedDays) * (totalDays - processedDays)
+        : 0;
+
+      const progress: EggBootTimingProgress = {
+        processedCombinations: processedDays,
+        totalCombinations: totalDays,
+        foundCount: allResults.length,
+        progressPercent,
+        elapsedMs,
+        estimatedRemainingMs,
+      };
+      post({ type: 'PROGRESS', payload: progress });
+
+      batchIndex++;
+
+      // maxResultsに達したら終了
+      if (allResults.length >= params.maxResults) break;
+    }
 
     // 完了通知
     const completion: EggBootTimingCompletion = {
       reason: state.stopRequested ? 'stopped' : 'completed',
-      processedCombinations: 0,
-      totalCombinations: 0,
-      resultsCount: results.length,
+      processedCombinations: totalDays,
+      totalCombinations: totalDays,
+      resultsCount: allResults.length,
       elapsedMs: performance.now() - startTime,
     };
     post({ type: 'COMPLETE', payload: completion });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
+    const stack = e instanceof Error ? e.stack : undefined;
+    console.error('[EggBootTimingWorker] Search error:', message);
+    if (stack) {
+      console.error('[EggBootTimingWorker] Stack trace:', stack);
+    }
+    console.error('[EggBootTimingWorker] Params:', JSON.stringify(params, (k, v) => typeof v === 'bigint' ? v.toString() : v));
     post({ type: 'ERROR', message, category: 'WASM_INIT', fatal: true });
   } finally {
     cleanupState();
@@ -156,8 +225,11 @@ function buildEverstone(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildFilter(wasm: any, filter: NonNullable<EggBootTimingSearchParams['filter']>) {
+function buildFilter(wasm: any, filter: EggBootTimingSearchParams['filter']) {
   const wasmFilter = new wasm.IndividualFilterJs();
+
+  // フィルタがnullの場合はデフォルト（全pass-through）のフィルタを返す
+  if (!filter) return wasmFilter;
 
   // ivRanges の設定（各ステータスのIV範囲を設定）
   if (filter.ivRanges && Array.isArray(filter.ivRanges)) {
@@ -285,7 +357,16 @@ function convertWasmResult(
   };
 }
 
-function executeSearch(params: EggBootTimingSearchParams): EggBootTimingSearchResult[] {
+/**
+ * 指定された開始日から指定日数分の検索を実行
+ */
+function executeSearchBatch(
+  params: EggBootTimingSearchParams,
+  batchStartDate: Date,
+  batchDays: number
+): EggBootTimingSearchResult[] {
+  console.log(`[EggBootTimingWorker] executeSearchBatch: date=${batchStartDate.toISOString()}, days=${batchDays}`);
+
   const wasm = getWasm();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const wasmAny = wasm as any;
@@ -296,6 +377,7 @@ function executeSearch(params: EggBootTimingSearchParams): EggBootTimingSearchRe
 
   // nazo値を解決
   const nazo = resolveNazoValue(params.romVersion, params.romRegion);
+  console.log(`[EggBootTimingWorker] nazo resolved: [${nazo.join(', ')}]`);
 
   // ParentsIVsJs 構築
   const parentsIVs = new wasmAny.ParentsIVsJs();
@@ -324,11 +406,8 @@ function executeSearch(params: EggBootTimingSearchParams): EggBootTimingSearchRe
   );
 
   // IndividualFilterJs 構築
-  // - filterDisabled が true の場合は null を渡す
-  // - params.filter が null の場合も null を渡す（フィルター未設定）
-  const filter = params.filterDisabled || !params.filter
-    ? null
-    : buildFilter(wasmAny, params.filter);
+  // filterDisabled の場合は全pass-throughフィルタ、それ以外は指定フィルタ
+  const filter = buildFilter(wasmAny, params.filterDisabled ? null : params.filter);
 
   // Searcher構築 - frameはhardwareから導出
   const frameValue = HARDWARE_FRAME_VALUES[params.hardware];
@@ -356,27 +435,15 @@ function executeSearch(params: EggBootTimingSearchParams): EggBootTimingSearchRe
   const results: EggBootTimingSearchResult[] = [];
 
   try {
-    // 検索実行 - dateRangeから開始日を使用し、日付範囲を計算
-    const { dateRange } = params;
-    const startDate = new Date(
-      dateRange.startYear,
-      dateRange.startMonth - 1,
-      dateRange.startDay
-    );
-    const endDate = new Date(
-      dateRange.endYear,
-      dateRange.endMonth - 1,
-      dateRange.endDay
-    );
-    // rangeSecondsは日付範囲から計算（終了日 - 開始日 + 1日分の秒数）
-    // Math.floorを使用して日数を正確に計算（両端含む）
-    const daysDiff = Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-    const rangeSeconds = daysDiff * 24 * 60 * 60;
+    // 検索実行 - バッチの開始日から指定日数分
+    const rangeSeconds = batchDays * 24 * 60 * 60;
+
+    console.log(`[EggBootTimingWorker] Calling search_eggs_integrated_simd: year=${batchStartDate.getFullYear()}, month=${batchStartDate.getMonth() + 1}, day=${batchStartDate.getDate()}, rangeSeconds=${rangeSeconds}`);
 
     const wasmResults = searcher.search_eggs_integrated_simd(
-      startDate.getFullYear(),
-      startDate.getMonth() + 1,
-      startDate.getDate(),
+      batchStartDate.getFullYear(),
+      batchStartDate.getMonth() + 1,
+      batchStartDate.getDate(),
       0,  // 開始時刻は0時から
       0,
       0,
@@ -387,17 +454,24 @@ function executeSearch(params: EggBootTimingSearchParams): EggBootTimingSearchRe
       params.vcountRange.max
     );
 
+    console.log(`[EggBootTimingWorker] search_eggs_integrated_simd returned ${wasmResults.length} results`);
+
     // 結果変換
     for (let i = 0; i < wasmResults.length && i < params.maxResults; i++) {
       if (state.stopRequested) break;
       const wasmResult = wasmResults[i] as WasmEggBootTimingSearchResult;
       results.push(convertWasmResult(wasmResult, params.macAddress));
     }
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[EggBootTimingWorker] executeSearchBatch error: ${message}`);
+    throw e;
   } finally {
+    // Note: filter は EggBootTimingSearcher コンストラクタで所有権が移動するため、
+    // ここで free() を呼ぶ必要がない（呼ぶと nullpo になる）
     searcher.free?.();
     conditions.free?.();
     parentsIVs.free?.();
-    filter?.free?.();
   }
 
   return results;

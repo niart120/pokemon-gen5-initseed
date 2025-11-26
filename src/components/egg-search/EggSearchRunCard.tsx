@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Play, Stop, Clock } from '@phosphor-icons/react';
+import { Play, Stop, Clock, Warning } from '@phosphor-icons/react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +31,7 @@ export function EggSearchRunCard() {
     stopSearch,
     results,
     lastElapsedMs,
+    errorMessage,
   } = useEggBootTimingSearchStore();
 
   const isRunning = status === 'running' || status === 'starting';
@@ -58,6 +59,14 @@ export function EggSearchRunCard() {
             {getEggSearchStatusLabel(status, locale)}
           </Badge>
         </div>
+
+        {/* エラーメッセージ表示 */}
+        {status === 'error' && errorMessage && (
+          <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/20">
+            <Warning size={16} className="text-destructive mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-destructive break-all">{errorMessage}</p>
+          </div>
+        )}
 
         {/* 進捗バー */}
         {progress && isRunning && (
