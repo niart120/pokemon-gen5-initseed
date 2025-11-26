@@ -47,6 +47,16 @@ export const eggSearchProgressLabel: LocaleText = {
   en: 'Progress',
 };
 
+export const eggSearchControlsLabel: LocaleText = {
+  ja: '検索実行の操作',
+  en: 'Search execution controls',
+};
+
+export const eggSearchResultsLabel: LocaleText = {
+  ja: '検索結果',
+  en: 'Search results',
+};
+
 export const eggSearchButtonLabels = {
   start: {
     ja: '検索開始',
@@ -427,4 +437,13 @@ export function formatEggSearchResultsCount(
   // Japanese doesn't use space before counters (e.g., '100件' not '100 件')
   const separator = locale === 'ja' ? '' : ' ';
   return `${countStr}${separator}${suffix}`;
+}
+
+export function formatEggSearchPercentDisplay(pct: number, locale: SupportedLocale): string {
+  const value = Number.isFinite(pct) ? pct : 0;
+  const formatter = new Intl.NumberFormat(BCP47_BY_LOCALE[locale], {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  return `${formatter.format(value)}%`;
 }

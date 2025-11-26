@@ -1,25 +1,24 @@
 /**
  * EggSearchRunCard
- * 検索実行制御カード
+ * 検索実行制御カード - GenerationRunCard と同様のレイアウト
  */
 
 import React from 'react';
-import { Play, Stop, Clock, Warning } from '@phosphor-icons/react';
+import { Play, Square, ChartBar, Warning } from '@phosphor-icons/react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { useEggBootTimingSearchStore } from '@/store/egg-boot-timing-search-store';
 import { useLocale } from '@/lib/i18n/locale-context';
 import {
   eggSearchRunCardTitle,
   eggSearchStatusPrefix,
-  eggSearchFoundLabel,
-  eggSearchElapsedLabel,
-  eggSearchProgressLabel,
   eggSearchButtonLabels,
   getEggSearchStatusLabel,
   formatEggSearchElapsed,
+  formatEggSearchResultsCount,
+  formatEggSearchPercentDisplay,
+  eggSearchControlsLabel,
+  eggSearchResultsLabel,
 } from '@/lib/i18n/strings/egg-search';
 
 export function EggSearchRunCard() {
@@ -32,9 +31,12 @@ export function EggSearchRunCard() {
     results,
     lastElapsedMs,
     errorMessage,
+    params,
+    draftParams,
   } = useEggBootTimingSearchStore();
 
-  const isRunning = status === 'running' || status === 'starting';
+  const isStarting = status === 'starting';
+  const isRunning = status === 'running';
   const isStopping = status === 'stopping';
   const canStart = status === 'idle' || status === 'completed' || status === 'error';
 
@@ -46,79 +48,62 @@ export function EggSearchRunCard() {
     stopSearch();
   };
 
+  // 進捗計算
+  const foundCount = progress?.foundCount ?? results.length;
+  const maxResults = params?.maxResults ?? draftParams.maxResults ?? 1000;
+  const pct = progress?.progressPercent ?? (maxResults > 0 ? (foundCount / maxResults) * 100 : 0);
+
+  const statusDisplay = getEggSearchStatusLabel(status, locale);
+  const resultsDisplay = formatEggSearchResultsCount(foundCount, locale);
+  const percentDisplay = formatEggSearchPercentDisplay(pct, locale);
+  const elapsedDisplay = progress?.elapsedMs
+    ? formatEggSearchElapsed(progress.elapsedMs, locale)
+    : lastElapsedMs
+      ? formatEggSearchElapsed(lastElapsedMs, locale)
+      : '--';
+
   return (
     <PanelCard
-      icon={<Clock size={20} className="opacity-80" />}
-      title={eggSearchRunCardTitle[locale]}
+      icon={<ChartBar size={20} className="opacity-80" />}
+      title={<span id="egg-search-run-title">{eggSearchRunCardTitle[locale]}</span>}
+      role="region"
+      aria-labelledby="egg-search-run-title"
     >
-      <div className="space-y-4">
-        {/* ステータス表示 */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">{eggSearchStatusPrefix[locale]}:</span>
-          <Badge variant={status === 'error' ? 'destructive' : 'secondary'}>
-            {getEggSearchStatusLabel(status, locale)}
-          </Badge>
+      {/* エラーメッセージ表示 */}
+      {status === 'error' && errorMessage && (
+        <div className="flex items-start gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20 text-xs">
+          <Warning size={14} className="text-destructive mt-0.5 flex-shrink-0" />
+          <p className="text-destructive break-all">{errorMessage}</p>
         </div>
+      )}
 
-        {/* エラーメッセージ表示 */}
-        {status === 'error' && errorMessage && (
-          <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/20">
-            <Warning size={16} className="text-destructive mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-destructive break-all">{errorMessage}</p>
-          </div>
+      {/* Controls */}
+      <div className="flex items-center gap-2 flex-wrap" role="group" aria-label={eggSearchControlsLabel[locale]}>
+        {canStart && (
+          <Button size="sm" onClick={handleStart} disabled={isStarting} className="flex-1" data-testid="egg-search-start-btn">
+            <Play size={16} className="mr-2" />
+            {isStarting ? eggSearchButtonLabels.stopping[locale] : eggSearchButtonLabels.start[locale]}
+          </Button>
         )}
-
-        {/* 進捗バー */}
-        {progress && isRunning && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span>{eggSearchProgressLabel[locale]}</span>
-              <span>{progress.progressPercent.toFixed(1)}%</span>
-            </div>
-            <Progress value={progress.progressPercent} className="h-2" />
-          </div>
+        {(isRunning || isStopping) && (
+          <Button size="sm" variant="destructive" onClick={handleStop} disabled={isStopping} data-testid="egg-search-stop-btn">
+            <Square size={16} className="mr-2" />
+            {eggSearchButtonLabels.stop[locale]}
+          </Button>
         )}
-
-        {/* 結果数・経過時間 */}
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">{eggSearchFoundLabel[locale]}:</span>
-            <span className="font-mono">{progress?.foundCount ?? results.length}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">{eggSearchElapsedLabel[locale]}:</span>
-            <span className="font-mono">
-              {progress?.elapsedMs
-                ? formatEggSearchElapsed(progress.elapsedMs, locale)
-                : lastElapsedMs
-                  ? formatEggSearchElapsed(lastElapsedMs, locale)
-                  : '--'}
-            </span>
-          </div>
+        <div className="text-xs text-muted-foreground ml-auto">
+          {eggSearchStatusPrefix[locale]}: {statusDisplay}
         </div>
+      </div>
 
-        {/* 開始/停止ボタン */}
-        <div className="flex gap-2">
-          {canStart ? (
-            <Button
-              onClick={handleStart}
-              className="flex-1 gap-2"
-              disabled={isStopping}
-            >
-              <Play size={16} weight="fill" />
-              {eggSearchButtonLabels.start[locale]}
-            </Button>
-          ) : (
-            <Button
-              onClick={handleStop}
-              variant="destructive"
-              className="flex-1 gap-2"
-              disabled={isStopping}
-            >
-              <Stop size={16} weight="fill" />
-              {isStopping ? eggSearchButtonLabels.stopping[locale] : eggSearchButtonLabels.stop[locale]}
-            </Button>
-          )}
+      {/* Result summary */}
+      <div className="space-y-1" aria-label={eggSearchResultsLabel[locale]}>
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+          <span>{percentDisplay}</span>
+          <span>{resultsDisplay}</span>
+        </div>
+        <div className="flex items-center justify-end text-[11px] font-mono text-primary">
+          {elapsedDisplay}
         </div>
       </div>
     </PanelCard>
