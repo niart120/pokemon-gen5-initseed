@@ -13,7 +13,9 @@ interface GameStateSectionProps {
   shinyCharm: boolean;
   memoryLink: boolean;
   onTidChange: (value: string) => void;
+  onTidBlur: () => void;
   onSidChange: (value: string) => void;
+  onSidBlur: () => void;
   onNewGameToggle: (checked: boolean) => void;
   onWithSaveToggle: (checked: boolean) => void;
   onShinyCharmToggle: (checked: boolean) => void;
@@ -32,7 +34,9 @@ export function GameStateSection({
   shinyCharm,
   memoryLink,
   onTidChange,
+  onTidBlur,
   onSidChange,
+  onSidBlur,
   onNewGameToggle,
   onWithSaveToggle,
   onShinyCharmToggle,
@@ -54,6 +58,7 @@ export function GameStateSection({
           id="profile-tid"
           value={tid}
           onChange={(event) => onTidChange(event.target.value)}
+          onBlur={onTidBlur}
           placeholder="00000"
           inputMode="numeric"
           className="h-9"
@@ -68,6 +73,7 @@ export function GameStateSection({
           id="profile-sid"
           value={sid}
           onChange={(event) => onSidChange(event.target.value)}
+          onBlur={onSidBlur}
           placeholder="00000"
           inputMode="numeric"
           className="h-9"

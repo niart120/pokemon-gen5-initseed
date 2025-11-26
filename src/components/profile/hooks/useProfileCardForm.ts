@@ -107,7 +107,9 @@ interface GameSectionControls {
   shinyCharmDisabled: boolean;
   memoryLinkDisabled: boolean;
   onTidChange: (value: string) => void;
+  onTidBlur: () => void;
   onSidChange: (value: string) => void;
+  onSidBlur: () => void;
   onNewGameToggle: (checked: boolean) => void;
   onWithSaveToggle: (checked: boolean) => void;
   onShinyCharmToggle: (checked: boolean) => void;
@@ -423,16 +425,42 @@ export function useProfileCardForm(): UseProfileCardFormResult {
 
   const handleTidChange = React.useCallback((value: string) => {
     if (!canModify) return;
+    // 入力中は空や数字のみ許可（バリデーションはblurで実施）
     if (/^\d{0,5}$/.test(value)) {
       setForm((prev) => ({ ...prev, tid: value }));
     }
   }, [canModify]);
 
+  const handleTidBlur = React.useCallback(() => {
+    if (!canModify) return;
+    setForm((prev) => {
+      const numValue = parseInt(prev.tid, 10);
+      if (Number.isNaN(numValue) || prev.tid === '') {
+        return { ...prev, tid: '0' };
+      }
+      const clamped = Math.max(0, Math.min(65535, numValue));
+      return { ...prev, tid: String(clamped) };
+    });
+  }, [canModify]);
+
   const handleSidChange = React.useCallback((value: string) => {
     if (!canModify) return;
+    // 入力中は空や数字のみ許可（バリデーションはblurで実施）
     if (/^\d{0,5}$/.test(value)) {
       setForm((prev) => ({ ...prev, sid: value }));
     }
+  }, [canModify]);
+
+  const handleSidBlur = React.useCallback(() => {
+    if (!canModify) return;
+    setForm((prev) => {
+      const numValue = parseInt(prev.sid, 10);
+      if (Number.isNaN(numValue) || prev.sid === '') {
+        return { ...prev, sid: '0' };
+      }
+      const clamped = Math.max(0, Math.min(65535, numValue));
+      return { ...prev, sid: String(clamped) };
+    });
   }, [canModify]);
 
   const handleShinyCharmToggle = React.useCallback((checked: boolean) => {
@@ -576,7 +604,9 @@ export function useProfileCardForm(): UseProfileCardFormResult {
     shinyCharmDisabled,
     memoryLinkDisabled,
     onTidChange: handleTidChange,
+    onTidBlur: handleTidBlur,
     onSidChange: handleSidChange,
+    onSidBlur: handleSidBlur,
     onNewGameToggle: handleNewGameToggle,
     onWithSaveToggle: handleWithSaveToggle,
     onShinyCharmToggle: handleShinyCharmToggle,

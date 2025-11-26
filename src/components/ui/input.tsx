@@ -1,8 +1,24 @@
-import { ComponentProps } from "react"
+import { type ComponentProps, type FocusEvent, useCallback } from "react"
 
 import { cn } from "@/lib/utils"
 
-function Input({ className, type, ...props }: ComponentProps<"input">) {
+/**
+ * フォーカス時に内容を全選択するかどうかを判定
+ * date/datetime系タイプは除外
+ */
+function shouldSelectAllOnFocus(type: string | undefined): boolean {
+  if (!type) return true;
+  return !['date', 'datetime-local', 'time', 'month', 'week'].includes(type);
+}
+
+function Input({ className, type, onFocus, ...props }: ComponentProps<"input">) {
+  const handleFocus = useCallback((e: FocusEvent<HTMLInputElement>) => {
+    if (shouldSelectAllOnFocus(type)) {
+      e.target.select();
+    }
+    onFocus?.(e);
+  }, [type, onFocus]);
+
   return (
     <input
       type={type}
@@ -13,6 +29,7 @@ function Input({ className, type, ...props }: ComponentProps<"input">) {
         "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
         className
       )}
+      onFocus={handleFocus}
       {...props}
     />
   )

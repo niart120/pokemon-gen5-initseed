@@ -63,16 +63,49 @@ export const EggFilterCard: React.FC = () => {
     });
   };
 
+  // IV範囲変更ハンドラ（入力中はバリデーションなし）
   const handleIvRangeChange = (
     statIndex: number,
     minMax: 'min' | 'max',
-    value: number
+    value: string
   ) => {
     const newRanges = [...filter.ivRanges] as [StatRange, StatRange, StatRange, StatRange, StatRange, StatRange];
-    newRanges[statIndex] = {
-      ...newRanges[statIndex],
-      [minMax]: Math.max(0, Math.min(31, value)),
-    };
+    // 空入力は 0 として扱い、入力は許容する
+    const numValue = value === '' ? 0 : parseInt(value, 10);
+    if (!Number.isNaN(numValue)) {
+      newRanges[statIndex] = {
+        ...newRanges[statIndex],
+        [minMax]: numValue,
+      };
+      updateFilter({ ivRanges: newRanges });
+    }
+  };
+
+  // IV範囲フォーカスアウト時のバリデーション
+  const handleIvRangeBlur = (
+    statIndex: number,
+    minMax: 'min' | 'max'
+  ) => {
+    const newRanges = [...filter.ivRanges] as [StatRange, StatRange, StatRange, StatRange, StatRange, StatRange];
+    const range = newRanges[statIndex];
+    // 32は「不明」を表す特殊値
+    if (range.max === 32) return;
+
+    const clampedMin = Math.max(0, Math.min(31, range.min));
+    const clampedMax = Math.max(0, Math.min(31, range.max));
+    
+    // min > max の場合は補正
+    let finalMin = clampedMin;
+    let finalMax = clampedMax;
+    if (finalMin > finalMax) {
+      if (minMax === 'min') {
+        finalMax = finalMin;
+      } else {
+        finalMin = finalMax;
+      }
+    }
+    
+    newRanges[statIndex] = { min: finalMin, max: finalMax };
     updateFilter({ ivRanges: newRanges });
   };
 
@@ -276,7 +309,8 @@ export const EggFilterCard: React.FC = () => {
                       min={0}
                       max={31}
                       value={isUnknown ? '' : filter.ivRanges[i].min}
-                      onChange={(e) => handleIvRangeChange(i, 'min', parseInt(e.target.value) || 0)}
+                      onChange={(e) => handleIvRangeChange(i, 'min', e.target.value)}
+                      onBlur={() => handleIvRangeBlur(i, 'min')}
                       disabled={disabled || filterDisabled || isUnknown}
                       className="text-xs h-7 w-14 text-center"
                       placeholder={isUnknown ? '?' : 'min'}
@@ -287,7 +321,8 @@ export const EggFilterCard: React.FC = () => {
                       min={0}
                       max={31}
                       value={isUnknown ? '' : filter.ivRanges[i].max}
-                      onChange={(e) => handleIvRangeChange(i, 'max', parseInt(e.target.value) || 31)}
+                      onChange={(e) => handleIvRangeChange(i, 'max', e.target.value)}
+                      onBlur={() => handleIvRangeBlur(i, 'max')}
                       disabled={disabled || filterDisabled || isUnknown}
                       className="text-xs h-7 w-14 text-center"
                       placeholder={isUnknown ? '?' : 'max'}

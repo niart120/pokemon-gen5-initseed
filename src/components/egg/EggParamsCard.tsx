@@ -88,20 +88,43 @@ export const EggParamsCard: React.FC = () => {
     return preset ? `${preset.threshold}-${preset.genderless}` : 'custom';
   }, [draftParams.conditions.genderRatio]);
 
+  // 親IV変更ハンドラ（入力中はバリデーションなし）
   const handleIvChange = (
     parent: 'male' | 'female',
     index: number,
     value: string
   ) => {
-    const numValue = Math.min(31, Math.max(0, parseInt(value) || 0));
+    // 入力中はそのまま保存
     const currentIvs = parent === 'male' ? draftParams.parents.male : draftParams.parents.female;
     const newIvs = [...currentIvs] as IvSet;
-    newIvs[index] = numValue;
+    const numValue = value === '' ? currentIvs[index] : parseInt(value, 10);
+    newIvs[index] = Number.isNaN(numValue) ? currentIvs[index] : numValue;
 
     if (parent === 'male') {
       updateDraftParentsMale(newIvs);
     } else {
       updateDraftParentsFemale(newIvs);
+    }
+  };
+
+  // 親IVフォーカスアウト時のバリデーション
+  const handleIvBlur = (
+    parent: 'male' | 'female',
+    index: number
+  ) => {
+    const currentIvs = parent === 'male' ? draftParams.parents.male : draftParams.parents.female;
+    const currentValue = currentIvs[index];
+    
+    // 0-31にクランプ
+    const clampedValue = Math.min(31, Math.max(0, currentValue));
+    if (clampedValue !== currentValue) {
+      const newIvs = [...currentIvs] as IvSet;
+      newIvs[index] = clampedValue;
+      if (parent === 'male') {
+        updateDraftParentsMale(newIvs);
+      } else {
+        updateDraftParentsFemale(newIvs);
+      }
     }
   };
 
@@ -196,6 +219,9 @@ export const EggParamsCard: React.FC = () => {
                   min={0}
                   value={parseInt(draftParams.userOffsetHex, 16) || 0}
                   onChange={(e) => {
+                    updateDraftParams({ userOffsetHex: e.target.value });
+                  }}
+                  onBlur={(e) => {
                     const num = Math.max(0, parseInt(e.target.value) || 0);
                     updateDraftParams({ userOffsetHex: num.toString(16).toUpperCase() });
                   }}
@@ -212,7 +238,11 @@ export const EggParamsCard: React.FC = () => {
                   min={1}
                   max={100000}
                   value={draftParams.count}
-                  onChange={(e) => updateDraftParams({ count: Math.max(1, Math.min(100000, parseInt(e.target.value) || 1)) })}
+                  onChange={(e) => updateDraftParams({ count: parseInt(e.target.value) || draftParams.count })}
+                  onBlur={(e) => {
+                    const num = Math.max(1, Math.min(100000, parseInt(e.target.value) || 1));
+                    updateDraftParams({ count: num });
+                  }}
                   disabled={disabled}
                   className="text-xs"
                 />
@@ -239,6 +269,9 @@ export const EggParamsCard: React.FC = () => {
                     min={0}
                     value={parseInt(draftParams.userOffsetHex, 16) || 0}
                     onChange={(e) => {
+                      updateDraftParams({ userOffsetHex: e.target.value });
+                    }}
+                    onBlur={(e) => {
                       const num = Math.max(0, parseInt(e.target.value) || 0);
                       updateDraftParams({ userOffsetHex: num.toString(16).toUpperCase() });
                     }}
@@ -255,7 +288,11 @@ export const EggParamsCard: React.FC = () => {
                     min={1}
                     max={100000}
                     value={draftParams.count}
-                    onChange={(e) => updateDraftParams({ count: Math.max(1, Math.min(100000, parseInt(e.target.value) || 1)) })}
+                    onChange={(e) => updateDraftParams({ count: parseInt(e.target.value) || draftParams.count })}
+                    onBlur={(e) => {
+                      const num = Math.max(1, Math.min(100000, parseInt(e.target.value) || 1));
+                      updateDraftParams({ count: num });
+                    }}
                     disabled={disabled}
                     className="text-xs"
                   />
@@ -288,6 +325,7 @@ export const EggParamsCard: React.FC = () => {
                     data-testid={`egg-male-iv-${i}`}
                     value={isUnknown ? '' : draftParams.parents.male[i]}
                     onChange={(e) => handleIvChange('male', i, e.target.value)}
+                    onBlur={() => handleIvBlur('male', i)}
                     disabled={disabled || isUnknown}
                     className="text-xs text-center h-7 px-1"
                     placeholder={isUnknown ? '?' : undefined}
@@ -326,6 +364,7 @@ export const EggParamsCard: React.FC = () => {
                     data-testid={`egg-female-iv-${i}`}
                     value={isUnknown ? '' : draftParams.parents.female[i]}
                     onChange={(e) => handleIvChange('female', i, e.target.value)}
+                    onBlur={() => handleIvBlur('female', i)}
                     disabled={disabled || isUnknown}
                     className="text-xs text-center h-7 px-1"
                     placeholder={isUnknown ? '?' : undefined}

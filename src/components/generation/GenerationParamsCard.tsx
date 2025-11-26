@@ -278,7 +278,15 @@ export const GenerationParamsCard: React.FC = () => {
                 className="h-9"
                 disabled={disabled}
                 value={parseInt(hexDraft.offsetHex ?? '0', 16)}
-                onChange={e => updateDraft({ offsetHex: Number(e.target.value).toString(16) })}
+                onChange={e => {
+                  const v = Number(e.target.value);
+                  updateDraft({ offsetHex: (Number.isNaN(v) ? 0 : v).toString(16) });
+                }}
+                onBlur={() => {
+                  const current = parseInt(hexDraft.offsetHex ?? '0', 16);
+                  const clamped = Math.max(0, current);
+                  updateDraft({ offsetHex: clamped.toString(16) });
+                }}
                 placeholder="0"
               />
             </div>
@@ -292,7 +300,15 @@ export const GenerationParamsCard: React.FC = () => {
                 className="h-9"
                 disabled={disabled}
                 value={draftParams.maxAdvances ?? 0}
-                onChange={e => updateDraft({ maxAdvances: Number(e.target.value) })}
+                onChange={e => {
+                  const v = Number(e.target.value);
+                  updateDraft({ maxAdvances: Number.isNaN(v) ? 0 : v });
+                }}
+                onBlur={() => {
+                  const current = draftParams.maxAdvances ?? 0;
+                  const clamped = Math.max(0, current);
+                  updateDraft({ maxAdvances: clamped });
+                }}
               />
             </div>
           </div>

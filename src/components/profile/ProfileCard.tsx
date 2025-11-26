@@ -92,7 +92,9 @@ export function ProfileCard() {
       shinyCharm={game.shinyCharm}
       memoryLink={game.memoryLink}
       onTidChange={game.onTidChange}
+      onTidBlur={game.onTidBlur}
       onSidChange={game.onSidChange}
+      onSidBlur={game.onSidBlur}
       onNewGameToggle={game.onNewGameToggle}
       onWithSaveToggle={game.onWithSaveToggle}
       onShinyCharmToggle={game.onShinyCharmToggle}

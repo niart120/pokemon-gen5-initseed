@@ -123,17 +123,38 @@ export function EggSearchParamsCard() {
     edge: 'start' | 'end',
     rawValue: string,
   ) => {
-    if (!rawValue) return;
-    const numeric = Number.parseInt(rawValue, 10);
-    if (Number.isNaN(numeric)) return;
-
-    const config = timeFieldConfigs.find(c => c.key === field)!;
-    const clamped = Math.min(Math.max(numeric, config.min), config.max);
-
+    // 入力中はバリデーションせず、そのまま保存
     const currentRange = draftParams.timeRange[field];
-    const nextRange = { ...currentRange, [edge]: clamped };
-    
+    const nextRange = { ...currentRange, [edge]: rawValue };
     updateTimeRange({ [field]: nextRange });
+  };
+
+  const handleTimeRangeBlur = (
+    field: 'hour' | 'minute' | 'second',
+    edge: 'start' | 'end',
+  ) => {
+    const range = draftParams.timeRange[field];
+    const config = timeFieldConfigs.find(c => c.key === field)!;
+
+    // 空の場合やNaNの場合はminに補正
+    const startValue = typeof range.start === 'string' ? parseInt(range.start as string, 10) : range.start;
+    const endValue = typeof range.end === 'string' ? parseInt(range.end as string, 10) : range.end;
+    
+    const clampedStart = Number.isNaN(startValue) ? config.min : Math.min(Math.max(startValue, config.min), config.max);
+    const clampedEnd = Number.isNaN(endValue) ? config.min : Math.min(Math.max(endValue, config.min), config.max);
+
+    // start > end の場合は補正
+    let finalStart = clampedStart;
+    let finalEnd = clampedEnd;
+    if (finalStart > finalEnd) {
+      if (edge === 'start') {
+        finalEnd = finalStart;
+      } else {
+        finalStart = finalEnd;
+      }
+    }
+
+    updateTimeRange({ [field]: { start: finalStart, end: finalEnd } });
   };
 
   // キー入力
@@ -164,21 +185,44 @@ export function EggSearchParamsCard() {
 
   const keyJoiner = locale === 'ja' ? '、' : ', ';
 
-  // 親IV変更ハンドラ
+  // 親IV変更ハンドラ（入力中はバリデーションなし）
   const handleIvChange = (
     parent: 'male' | 'female',
     index: number,
     value: string
   ) => {
-    const numValue = Math.min(31, Math.max(0, parseInt(value) || 0));
+    // 入力中はそのまま保存
     const currentIvs = parent === 'male' ? draftParams.parents.male : draftParams.parents.female;
     const newIvs = [...currentIvs] as IvSet;
-    newIvs[index] = numValue;
+    // 文字列をそのまま数値に変換（空の場合は現在値を維持）
+    const numValue = value === '' ? currentIvs[index] : parseInt(value, 10);
+    newIvs[index] = Number.isNaN(numValue) ? currentIvs[index] : numValue;
 
     if (parent === 'male') {
       updateDraftParentsMale(newIvs);
     } else {
       updateDraftParentsFemale(newIvs);
+    }
+  };
+
+  // 親IVフォーカスアウト時のバリデーション
+  const handleIvBlur = (
+    parent: 'male' | 'female',
+    index: number
+  ) => {
+    const currentIvs = parent === 'male' ? draftParams.parents.male : draftParams.parents.female;
+    const currentValue = currentIvs[index];
+    
+    // 0-31にクランプ
+    const clampedValue = Math.min(31, Math.max(0, currentValue));
+    if (clampedValue !== currentValue) {
+      const newIvs = [...currentIvs] as IvSet;
+      newIvs[index] = clampedValue;
+      if (parent === 'male') {
+        updateDraftParentsMale(newIvs);
+      } else {
+        updateDraftParentsFemale(newIvs);
+      }
     }
   };
 
@@ -214,10 +258,6 @@ export function EggSearchParamsCard() {
   };
 
   const timeInputClassName = 'h-8 w-11 px-0 text-center text-sm';
-
-  const handleTimeInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
-    event.currentTarget.select();
-  };
 
   return (
     <>
@@ -283,8 +323,8 @@ export function EggSearchParamsCard() {
                         value={range.start}
                         aria-label={`${config.label} min`}
                         className={timeInputClassName}
-                        onFocus={handleTimeInputFocus}
                         onChange={(e) => handleTimeRangeChange(config.key, 'start', e.target.value)}
+                        onBlur={() => handleTimeRangeBlur(config.key, 'start')}
                         disabled={isRunning}
                       />
                       <span className="text-xs text-muted-foreground">~</span>
@@ -296,8 +336,8 @@ export function EggSearchParamsCard() {
                         value={range.end}
                         aria-label={`${config.label} max`}
                         className={timeInputClassName}
-                        onFocus={handleTimeInputFocus}
                         onChange={(e) => handleTimeRangeChange(config.key, 'end', e.target.value)}
+                        onBlur={() => handleTimeRangeBlur(config.key, 'end')}
                         disabled={isRunning}
                       />
                     </div>
@@ -315,7 +355,11 @@ export function EggSearchParamsCard() {
                   type="number"
                   min={0}
                   value={draftParams.userOffset}
-                  onChange={(e) => updateDraftParams({ userOffset: parseInt(e.target.value, 10) || 0 })}
+                  onChange={(e) => updateDraftParams({ userOffset: parseInt(e.target.value, 10) || draftParams.userOffset })}
+                  onBlur={(e) => {
+                    const num = Math.max(0, parseInt(e.target.value, 10) || 0);
+                    updateDraftParams({ userOffset: num });
+                  }}
                   disabled={isRunning}
                   className="h-8 text-xs"
                 />
@@ -328,7 +372,11 @@ export function EggSearchParamsCard() {
                   min={1}
                   max={100000}
                   value={draftParams.advanceCount}
-                  onChange={(e) => updateDraftParams({ advanceCount: Math.max(1, Math.min(100000, parseInt(e.target.value, 10) || 50)) })}
+                  onChange={(e) => updateDraftParams({ advanceCount: parseInt(e.target.value, 10) || draftParams.advanceCount })}
+                  onBlur={(e) => {
+                    const num = Math.max(1, Math.min(100000, parseInt(e.target.value, 10) || 50));
+                    updateDraftParams({ advanceCount: num });
+                  }}
                   disabled={isRunning}
                   className="h-8 text-xs"
                 />
@@ -375,6 +423,7 @@ export function EggSearchParamsCard() {
                         max={31}
                         value={isUnknown ? '' : draftParams.parents.male[i]}
                         onChange={(e) => handleIvChange('male', i, e.target.value)}
+                        onBlur={() => handleIvBlur('male', i)}
                         disabled={isRunning || isUnknown}
                         className="text-xs text-center h-7 px-1"
                         placeholder={isUnknown ? '?' : undefined}
@@ -412,6 +461,7 @@ export function EggSearchParamsCard() {
                         max={31}
                         value={isUnknown ? '' : draftParams.parents.female[i]}
                         onChange={(e) => handleIvChange('female', i, e.target.value)}
+                        onBlur={() => handleIvBlur('female', i)}
                         disabled={isRunning || isUnknown}
                         className="text-xs text-center h-7 px-1"
                         placeholder={isUnknown ? '?' : undefined}

@@ -144,17 +144,12 @@ export function SearchParamsCard() {
     edge: 'start' | 'end',
     rawValue: string,
   ) => {
-    if (!rawValue) return;
-    const numeric = Number.parseInt(rawValue, 10);
-    if (Number.isNaN(numeric)) return;
-
-    const { min, max } = timeFieldConfigs.find((config) => config.key === field)!;
-    const clamped = Math.min(Math.max(numeric, min), max);
-
+    // 入力中はバリデーションせず、そのまま保存
+    // フォーカスアウト時にバリデーションを行う
     const currentRange = searchConditions.timeRange[field];
     const nextRange = {
       ...currentRange,
-      [edge]: clamped,
+      [edge]: rawValue,
     };
 
     setSearchConditions({
@@ -170,32 +165,35 @@ export function SearchParamsCard() {
     edge: 'start' | 'end',
   ) => {
     const range = searchConditions.timeRange[field];
-    if (range.start <= range.end) return;
+    const { min, max } = timeFieldConfigs.find((config) => config.key === field)!;
 
-    const correctedRange =
-      edge === 'start'
-        ? {
-            ...range,
-            end: range.start,
-          }
-        : {
-            ...range,
-            start: range.end,
-          };
+    // 空の場合やNaNの場合はminに補正
+    const startValue = typeof range.start === 'string' ? parseInt(range.start, 10) : range.start;
+    const endValue = typeof range.end === 'string' ? parseInt(range.end, 10) : range.end;
+    
+    const clampedStart = Number.isNaN(startValue) ? min : Math.min(Math.max(startValue, min), max);
+    const clampedEnd = Number.isNaN(endValue) ? min : Math.min(Math.max(endValue, min), max);
+
+    // start > end の場合は補正
+    let finalStart = clampedStart;
+    let finalEnd = clampedEnd;
+    if (finalStart > finalEnd) {
+      if (edge === 'start') {
+        finalEnd = finalStart;
+      } else {
+        finalStart = finalEnd;
+      }
+    }
 
     setSearchConditions({
       timeRange: {
         ...searchConditions.timeRange,
-        [field]: correctedRange,
+        [field]: { start: finalStart, end: finalEnd },
       },
     });
   };
 
   const timeInputClassName = 'h-8 w-11 px-0 text-center text-sm';
-
-  const handleTimeInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
-    event.currentTarget.select();
-  };
 
   return (
     <>
@@ -257,7 +255,6 @@ export function SearchParamsCard() {
                       value={range.start}
                       aria-label={`${config.label} ${locale === 'ja' ? '最小' : 'min'}`}
                       className={timeInputClassName}
-                      onFocus={handleTimeInputFocus}
                       onChange={(event) => handleTimeRangeChange(config.key, 'start', event.target.value)}
                       onBlur={() => handleTimeRangeBlur(config.key, 'start')}
                     />
@@ -270,7 +267,6 @@ export function SearchParamsCard() {
                       value={range.end}
                       aria-label={`${config.label} ${locale === 'ja' ? '最大' : 'max'}`}
                       className={timeInputClassName}
-                      onFocus={handleTimeInputFocus}
                       onChange={(event) => handleTimeRangeChange(config.key, 'end', event.target.value)}
                       onBlur={() => handleTimeRangeBlur(config.key, 'end')}
                     />
