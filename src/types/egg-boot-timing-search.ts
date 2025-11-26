@@ -37,6 +37,13 @@ export interface EggBootTimingSearchParams {
   /** 日付範囲 */
   dateRange: DateRange;
 
+  /**
+   * 検索範囲（秒）
+   * チャンク分割時にManagerが設定。
+   * 指定されている場合、dateRangeからの再計算をスキップする。
+   */
+  rangeSeconds?: number;
+
   /** Timer0範囲 */
   timer0Range: {
     min: number; // 0x0000-0xFFFF

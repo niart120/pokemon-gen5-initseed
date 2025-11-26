@@ -342,16 +342,24 @@ async function executeSearch(
     dateRange.startMonth - 1,
     dateRange.startDay
   );
-  const endDate = new Date(
-    dateRange.endYear,
-    dateRange.endMonth - 1,
-    dateRange.endDay
-  );
-  const totalDays = Math.max(
-    1,
-    Math.floor((endDate.getTime() - searchStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
-  );
-  const rangeSeconds = totalDays * 24 * 60 * 60;
+
+  // rangeSecondsが明示的に指定されている場合はそれを使用（チャンク分割時）
+  // 指定されていない場合はdateRangeから計算（後方互換性）
+  let rangeSeconds: number;
+  if (params.rangeSeconds !== undefined) {
+    rangeSeconds = params.rangeSeconds;
+  } else {
+    const endDate = new Date(
+      dateRange.endYear,
+      dateRange.endMonth - 1,
+      dateRange.endDay
+    );
+    const totalDays = Math.max(
+      1,
+      Math.floor((endDate.getTime() - searchStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    );
+    rangeSeconds = totalDays * 24 * 60 * 60;
+  }
 
   // セグメント数を計算（進捗報告用）
   const timer0Count = params.timer0Range.max - params.timer0Range.min + 1;

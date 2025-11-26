@@ -198,6 +198,8 @@ export class EggBootTimingMultiWorkerManager {
         endMonth: chunkEndDatetime.getMonth() + 1,
         endDay: chunkEndDatetime.getDate(),
       },
+      // チャンク分割時はrangeSecondsを明示的に指定（Worker側での再計算を防止）
+      rangeSeconds: chunk.rangeSeconds,
     };
 
     // 検索開始リクエスト

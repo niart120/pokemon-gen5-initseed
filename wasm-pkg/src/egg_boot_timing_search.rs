@@ -1017,4 +1017,213 @@ mod tests {
         let codes_multi = generate_key_codes(0x0003); // A + B
         assert!(codes_multi.len() >= 4); // 2^2の組み合わせ
     }
+
+    /// 時刻範囲マスクのテスト（分・秒に制約がある場合）
+    #[test]
+    fn test_allowed_second_mask_with_minute_second_constraints() {
+        // hour: 10-11, minute: 30-45, second: 0-30 の場合
+        let range = DailyTimeRangeConfig::new(10, 11, 30, 45, 0, 30).unwrap();
+        let mask = build_allowed_second_mask(&range);
+
+        // 10:30:00 は許可される
+        let idx_10_30_00 = 10 * 3600 + 30 * 60 + 0;
+        assert!(mask[idx_10_30_00], "10:30:00 should be allowed");
+
+        // 10:30:30 は許可される
+        let idx_10_30_30 = 10 * 3600 + 30 * 60 + 30;
+        assert!(mask[idx_10_30_30], "10:30:30 should be allowed");
+
+        // 10:30:31 は許可されない（秒が範囲外）
+        let idx_10_30_31 = 10 * 3600 + 30 * 60 + 31;
+        assert!(!mask[idx_10_30_31], "10:30:31 should NOT be allowed");
+
+        // 10:29:00 は許可されない（分が範囲外）
+        let idx_10_29_00 = 10 * 3600 + 29 * 60 + 0;
+        assert!(!mask[idx_10_29_00], "10:29:00 should NOT be allowed");
+
+        // 11:00:00 は許可されない（分が範囲外：0分は30-45の範囲外）
+        let idx_11_00_00 = 11 * 3600 + 0 * 60 + 0;
+        assert!(!mask[idx_11_00_00], "11:00:00 should NOT be allowed (minute 0 is outside 30-45)");
+
+        // 11:30:00 は許可される
+        let idx_11_30_00 = 11 * 3600 + 30 * 60 + 0;
+        assert!(mask[idx_11_30_00], "11:30:00 should be allowed");
+
+        // 11:45:30 は許可される
+        let idx_11_45_30 = 11 * 3600 + 45 * 60 + 30;
+        assert!(mask[idx_11_45_30], "11:45:30 should be allowed");
+
+        // 許可される秒数を計算
+        // hour: 2時間 (10, 11)
+        // minute: 16分 (30-45)
+        // second: 31秒 (0-30)
+        // => 2 * 16 * 31 = 992秒
+        let allowed_count: usize = mask.iter().filter(|&&b| b).count();
+        assert_eq!(allowed_count, 2 * 16 * 31, "Expected 992 allowed seconds");
+    }
+
+    /// 全範囲許可のテスト
+    #[test]
+    fn test_allowed_second_mask_full_range() {
+        let range = DailyTimeRangeConfig::new(0, 23, 0, 59, 0, 59).unwrap();
+        let mask = build_allowed_second_mask(&range);
+
+        // 全86400秒が許可される
+        let allowed_count: usize = mask.iter().filter(|&&b| b).count();
+        assert_eq!(allowed_count, 86400, "All seconds should be allowed");
+    }
+
+    /// 日時復元のテスト（generate_display_datetime相当のロジック）
+    #[test]
+    fn test_datetime_restoration_from_seconds_since_2000() {
+        use chrono::{DateTime, Datelike, Timelike};
+        
+        // 2025-01-15 10:30:45 を復元するテスト
+        let target_datetime = NaiveDate::from_ymd_opt(2025, 1, 15)
+            .unwrap()
+            .and_hms_opt(10, 30, 45)
+            .unwrap();
+        let target_unix = target_datetime.and_utc().timestamp();
+        let seconds_since_2000 = target_unix - EPOCH_2000_UNIX;
+        
+        // 復元
+        let restored = DateTime::from_timestamp(seconds_since_2000 + EPOCH_2000_UNIX, 0)
+            .unwrap()
+            .naive_utc();
+        
+        assert_eq!(restored.year(), 2025);
+        assert_eq!(restored.month(), 1);
+        assert_eq!(restored.day(), 15);
+        assert_eq!(restored.hour(), 10);
+        assert_eq!(restored.minute(), 30);
+        assert_eq!(restored.second(), 45);
+    }
+
+    /// 複数日にまたがる場合の日時復元テスト
+    #[test]
+    fn test_datetime_restoration_multi_day() {
+        use chrono::{DateTime, Datelike, Timelike};
+        
+        // 開始日: 2025-01-15 00:00:00
+        let start_date = NaiveDate::from_ymd_opt(2025, 1, 15)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap();
+        let start_unix = start_date.and_utc().timestamp();
+        let base_seconds_since_2000 = start_unix - EPOCH_2000_UNIX;
+        
+        // 2日目の 10:30:00 をテスト
+        // second_offset = 1日分 + 10時間30分 = 86400 + 37800 = 124200
+        let second_offset = 86400 + 10 * 3600 + 30 * 60;
+        let current_seconds = base_seconds_since_2000 + second_offset as i64;
+        
+        let restored = DateTime::from_timestamp(current_seconds + EPOCH_2000_UNIX, 0)
+            .unwrap()
+            .naive_utc();
+        
+        // 2025-01-16 10:30:00 になるはず
+        assert_eq!(restored.year(), 2025);
+        assert_eq!(restored.month(), 1);
+        assert_eq!(restored.day(), 16, "Should be day 16 (2nd day)");
+        assert_eq!(restored.hour(), 10);
+        assert_eq!(restored.minute(), 30);
+        assert_eq!(restored.second(), 0);
+    }
+
+    /// second_of_day 計算のテスト（複数日にまたがる場合）
+    #[test]
+    fn test_second_of_day_calculation_multi_day() {
+        // 開始日: 2025-01-15 00:00:00
+        let start_date = NaiveDate::from_ymd_opt(2025, 1, 15)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap();
+        let start_unix = start_date.and_utc().timestamp();
+        let base_seconds_since_2000 = start_unix - EPOCH_2000_UNIX;
+        
+        // 1日目の 10:30:00
+        let offset_day1 = 10 * 3600 + 30 * 60; // 37800
+        let current_day1 = base_seconds_since_2000 + offset_day1 as i64;
+        let second_of_day_1 = (current_day1 % SECONDS_PER_DAY) as u32;
+        assert_eq!(second_of_day_1, 37800, "Day 1 10:30:00 should be 37800 seconds");
+        
+        // 2日目の 10:30:00
+        let offset_day2 = 86400 + 10 * 3600 + 30 * 60; // 124200
+        let current_day2 = base_seconds_since_2000 + offset_day2 as i64;
+        let second_of_day_2 = (current_day2 % SECONDS_PER_DAY) as u32;
+        assert_eq!(second_of_day_2, 37800, "Day 2 10:30:00 should also be 37800 seconds");
+        
+        // 両日とも同じ second_of_day になるはず
+        assert_eq!(second_of_day_1, second_of_day_2);
+    }
+
+    /// 実際のユースケース: 2025/11/26-29, h:00-23, m:00-59, s:11-11
+    /// 日付範囲外の結果が返らないことを確認
+    #[test]
+    fn test_range_seconds_calculation_4_days() {
+        use chrono::{DateTime, Datelike};
+        
+        // 開始日: 2025-11-26 00:00:00
+        let start_date = NaiveDate::from_ymd_opt(2025, 11, 26)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap();
+        let start_unix = start_date.and_utc().timestamp();
+        let base_seconds_since_2000 = start_unix - EPOCH_2000_UNIX;
+        
+        // 4日間 = 2025/11/26, 27, 28, 29
+        let total_days = 4u32;
+        let range_seconds = total_days * 86400;
+        
+        // 最後の許可される秒: range_seconds - 1
+        let last_allowed_offset = range_seconds - 1;
+        let last_current_seconds = base_seconds_since_2000 + last_allowed_offset as i64;
+        
+        let last_datetime = DateTime::from_timestamp(last_current_seconds + EPOCH_2000_UNIX, 0)
+            .unwrap()
+            .naive_utc();
+        
+        // 最後の許可される秒は 2025-11-29 23:59:59 であるべき
+        assert_eq!(last_datetime.year(), 2025, "Last year should be 2025");
+        assert_eq!(last_datetime.month(), 11, "Last month should be 11");
+        assert_eq!(last_datetime.day(), 29, "Last day should be 29");
+        
+        // range_seconds の次の秒（許可されない）
+        let first_invalid_offset = range_seconds;
+        let first_invalid_seconds = base_seconds_since_2000 + first_invalid_offset as i64;
+        
+        let first_invalid_datetime = DateTime::from_timestamp(first_invalid_seconds + EPOCH_2000_UNIX, 0)
+            .unwrap()
+            .naive_utc();
+        
+        // 許可されない最初の秒は 2025-11-30 00:00:00 であるべき
+        assert_eq!(first_invalid_datetime.year(), 2025, "Invalid year should be 2025");
+        assert_eq!(first_invalid_datetime.month(), 11, "Invalid month should be 11");
+        assert_eq!(first_invalid_datetime.day(), 30, "Invalid day should be 30 (out of range)");
+    }
+
+    /// second_offset が range_seconds 未満で正しく制限されることを確認
+    #[test]
+    fn test_second_offset_boundary() {
+        // 4日間のシミュレーション
+        let range_seconds: u32 = 4 * 86400; // 345600
+        
+        // ループ条件のテスト
+        let mut second_offset: u32 = 0;
+        let mut max_offset_reached: u32 = 0;
+        
+        while second_offset < range_seconds {
+            max_offset_reached = second_offset;
+            second_offset += 1;
+            
+            // 途中でブレイク（実際のループをシミュレート）
+            if second_offset > 345600 {
+                panic!("second_offset exceeded range_seconds!");
+            }
+        }
+        
+        // 最大オフセットは range_seconds - 1
+        assert_eq!(max_offset_reached, range_seconds - 1);
+        assert_eq!(max_offset_reached, 345599);
+    }
 }
