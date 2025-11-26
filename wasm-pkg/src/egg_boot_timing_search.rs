@@ -153,6 +153,9 @@ pub struct EggBootTimingSearchResult {
     lcg_seed_high: u32,
     lcg_seed_low: u32,
 
+    // MT Seed (IV用)
+    mt_seed: u32,
+
     // 個体情報
     advance: u64,
     is_stable: bool,
@@ -276,6 +279,16 @@ impl EggBootTimingSearchResult {
     #[wasm_bindgen(getter = hpKnown)]
     pub fn hp_known(&self) -> bool {
         self.hp_known
+    }
+
+    #[wasm_bindgen(getter = mtSeed)]
+    pub fn mt_seed(&self) -> u32 {
+        self.mt_seed
+    }
+
+    #[wasm_bindgen(getter = mtSeedHex)]
+    pub fn mt_seed_hex(&self) -> String {
+        format!("{:08X}", self.mt_seed)
     }
 }
 
@@ -670,6 +683,7 @@ impl EggBootTimingSearchIterator {
                         key_code: self.key_code,
                         lcg_seed_high: (lcg_seed >> 32) as u32,
                         lcg_seed_low: lcg_seed as u32,
+                        mt_seed: egg_data.egg.mt_seed,
                         advance: egg_data.advance,
                         is_stable: egg_data.is_stable,
                         ivs: egg_data.egg.ivs,

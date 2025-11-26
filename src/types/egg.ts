@@ -102,6 +102,7 @@ export interface EggIndividualFilter {
  */
 export interface ResolvedEgg {
   lcgSeedHex: string;   // LCG Seed (hex string)
+  mtSeedHex: string;    // MT Seed (hex string)
   ivs: IvSet;
   nature: number;         // 0-24
   gender: 'male' | 'female' | 'genderless';
@@ -153,6 +154,7 @@ export interface EggGenerationParams {
   conditions: EggGenerationConditions;   // 生成条件
   parents: ParentsIVs;                   // 親個体値
   filter: EggIndividualFilter | null;    // フィルター (null=全件)
+  filterDisabled: boolean;               // フィルター無効化
   considerNpcConsumption: boolean;       // NPC消費考慮
   gameMode: EggGameMode;                 // GameMode
 }
@@ -305,6 +307,7 @@ export function hexParamsToEggParams(h: EggGenerationParamsHex): EggGenerationPa
     conditions: h.conditions,
     parents: h.parents,
     filter: h.filter,
+    filterDisabled: h.filterDisabled,
     considerNpcConsumption: h.considerNpcConsumption,
     gameMode: h.gameMode,
   };
@@ -321,7 +324,7 @@ export function eggParamsToHex(p: EggGenerationParams): EggGenerationParamsHex {
     conditions: p.conditions,
     parents: p.parents,
     filter: p.filter,
-    filterDisabled: false,
+    filterDisabled: p.filterDisabled,
     considerNpcConsumption: p.considerNpcConsumption,
     gameMode: p.gameMode,
     seedSourceMode: 'lcg',

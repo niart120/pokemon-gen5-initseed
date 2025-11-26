@@ -266,6 +266,7 @@ function convertWasmResult(
       isStable: wasmResult.isStable,
       egg: {
         lcgSeedHex: wasmResult.lcgSeedHex,
+        mtSeedHex: wasmResult.mtSeedHex,
         ivs,
         nature: wasmResult.nature,
         gender: wasmGenderToDomain(wasmResult.gender),

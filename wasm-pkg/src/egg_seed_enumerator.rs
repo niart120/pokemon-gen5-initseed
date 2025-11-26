@@ -143,6 +143,7 @@ pub(crate) fn build_iv_sources(base_seed: u64, parents: ParentsIVs) -> IVResolut
         male: parents.male,
         female: parents.female,
         rng,
+        mt_seed,
     }
 }
 

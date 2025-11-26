@@ -11,7 +11,7 @@ import type {
   EggIndividualFilter,
   EnumeratedEggData,
 } from '@/types/egg';
-import { EggGameMode } from '@/types/egg';
+import { EggGameMode, createDefaultEggFilter } from '@/types/egg';
 import type { KeyName } from '@/lib/utils/key-input';
 
 // === 検索パラメータ ===
@@ -157,6 +157,8 @@ export interface WasmEggBootTimingSearchResult {
   vcount: number;
   keyCode: number;
   lcgSeedHex: string;
+  mtSeed: number;
+  mtSeedHex: string;
   advance: bigint | number;
   isStable: boolean;
   ivs: number[];
@@ -454,7 +456,7 @@ export function createDefaultEggBootTimingSearchParams(): EggBootTimingSearchPar
     },
     conditions: defaultConditions,
     parents: defaultParents,
-    filter: null,
+    filter: createDefaultEggFilter(),
     filterDisabled: false,
     considerNpcConsumption: false,
     gameMode: EggGameMode.BwContinue,

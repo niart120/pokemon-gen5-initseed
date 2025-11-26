@@ -16,6 +16,7 @@ import {
   validateEggBootTimingSearchParams,
 } from '@/types/egg-boot-timing-search';
 import type { EggGenerationConditions, ParentsIVs, IvSet, EggIndividualFilter } from '@/types/egg';
+import { createDefaultEggFilter } from '@/types/egg';
 import type { DeviceProfile } from '@/types/profile';
 import type { DailyTimeRange } from '@/types/search';
 import { EggBootTimingMultiWorkerManager } from '@/lib/egg';
@@ -219,16 +220,7 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
 
     updateFilter: (updates) => {
       set((state) => {
-        const currentFilter = state.draftParams.filter || {
-          ivRanges: [
-            { min: 0, max: 32 },
-            { min: 0, max: 32 },
-            { min: 0, max: 32 },
-            { min: 0, max: 32 },
-            { min: 0, max: 32 },
-            { min: 0, max: 32 },
-          ],
-        };
+        const currentFilter = state.draftParams.filter || createDefaultEggFilter();
         return {
           draftParams: {
             ...state.draftParams,

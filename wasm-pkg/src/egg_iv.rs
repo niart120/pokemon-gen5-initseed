@@ -438,11 +438,13 @@ pub struct IVResolutionConditions {
     pub male: IvSet,
     pub female: IvSet,
     pub rng: IvSet,
+    pub mt_seed: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ResolvedEgg {
     pub lcg_seed: u64,
+    pub mt_seed: u32,
     pub ivs: IvSet,
     pub nature: Nature,
     pub gender: Gender,
@@ -660,6 +662,7 @@ pub fn resolve_egg_iv(
 
     Ok(ResolvedEgg {
         lcg_seed,
+        mt_seed: iv_sources.mt_seed,
         ivs: resolved,
         nature: pending.nature,
         gender: pending.gender,
