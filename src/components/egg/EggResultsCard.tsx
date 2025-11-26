@@ -63,6 +63,10 @@ export const EggResultsCard: React.FC = () => {
     return `0x${row.vcount.toString(16).toUpperCase().padStart(2, '0')}`;
   };
 
+  const formatMtSeed = (row: EnumeratedEggDataWithBootTiming): string => {
+    return row.egg.mtSeedHex ?? '-';
+  };
+
   // Seedから方向を計算
   const getDirection = (row: EnumeratedEggDataWithBootTiming): { arrow: string; value: number } | null => {
     // egg.lcgSeedHexを使用（各個体生成時のLCG Seed）
@@ -81,7 +85,7 @@ export const EggResultsCard: React.FC = () => {
   // Boot-Timing モード時の列数計算
   const baseColSpan = 15; // advance + dir + v + ability + gender + nature + shiny + 6 IVs + pid + hp
   const npcColSpan = draftParams.considerNpcConsumption ? 1 : 0;
-  const bootTimingColSpan = isBootTimingMode ? 2 : 0;
+  const bootTimingColSpan = isBootTimingMode ? 3 : 0; // Timer0 + VCount + MT Seed
   const totalColSpan = baseColSpan + npcColSpan + bootTimingColSpan;
 
   return (
@@ -116,6 +120,7 @@ export const EggResultsCard: React.FC = () => {
                 <>
                   <th className="text-left py-1 px-2 font-mono">Timer0</th>
                   <th className="text-left py-1 px-2 font-mono">VCount</th>
+                  <th className="text-left py-1 px-2 font-mono">MT Seed</th>
                 </>
               )}
               {draftParams.considerNpcConsumption && (
@@ -162,6 +167,7 @@ export const EggResultsCard: React.FC = () => {
                     <>
                       <td className="py-1 px-2 font-mono">{formatTimer0(row)}</td>
                       <td className="py-1 px-2 font-mono">{formatVcount(row)}</td>
+                      <td className="py-1 px-2 font-mono">{formatMtSeed(row)}</td>
                     </>
                   )}
                   {draftParams.considerNpcConsumption && (
