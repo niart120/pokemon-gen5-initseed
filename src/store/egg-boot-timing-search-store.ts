@@ -55,6 +55,10 @@ export interface EggBootTimingResultFilters {
   shinyOnly?: boolean;
   // 性格フィルター
   natures?: number[];
+  // Timer0フィルター (hex文字列)
+  timer0Filter?: string;
+  // VCountフィルター (hex文字列)
+  vcountFilter?: string;
 }
 
 const MAX_RESULTS = 1000;
@@ -397,6 +401,19 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
 
     getFilteredResults: () => {
       const { results, resultFilters } = get();
+      
+      // Timer0フィルター値をパース
+      const timer0FilterValue = resultFilters.timer0Filter
+        ? parseInt(resultFilters.timer0Filter, 16)
+        : null;
+      const hasTimer0Filter = timer0FilterValue !== null && !isNaN(timer0FilterValue);
+      
+      // VCountフィルター値をパース
+      const vcountFilterValue = resultFilters.vcountFilter
+        ? parseInt(resultFilters.vcountFilter, 16)
+        : null;
+      const hasVcountFilter = vcountFilterValue !== null && !isNaN(vcountFilterValue);
+      
       return results.filter((result) => {
         // 色違いフィルター
         if (resultFilters.shinyOnly && result.egg.egg.shiny === 0) {
@@ -407,6 +424,14 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
           if (!resultFilters.natures.includes(result.egg.egg.nature)) {
             return false;
           }
+        }
+        // Timer0フィルター
+        if (hasTimer0Filter && result.boot.timer0 !== timer0FilterValue) {
+          return false;
+        }
+        // VCountフィルター
+        if (hasVcountFilter && result.boot.vcount !== vcountFilterValue) {
+          return false;
         }
         return true;
       });

@@ -77,14 +77,20 @@ export function EggGenerationPanel() {
           </div>
         </div>
         {/* Center Column: EggFilterCard */}
-        <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
+        <div 
+          className={`flex flex-col ${sizes.gap} min-w-0 max-w-xs overflow-y-auto`} 
+          style={{ minHeight: 0 }}
+        >
           <div className="flex-1 min-h-0">
             <EggFilterCard />
           </div>
         </div>
         {/* Right Column: EggResultsCard */}
-        <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
-          <div className="flex-1 min-h-0">
+        <div 
+          className={`flex-[2] flex flex-col ${sizes.gap} min-w-0 overflow-y-auto overflow-x-auto`} 
+          style={{ minHeight: 0 }}
+        >
+          <div className="flex-1 min-h-0 overflow-x-auto">
             <EggResultsCard />
           </div>
         </div>

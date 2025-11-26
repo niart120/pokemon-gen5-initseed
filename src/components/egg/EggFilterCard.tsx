@@ -121,8 +121,8 @@ export const EggFilterCard: React.FC = () => {
       </div>
 
       <>
-        {/* 性格・性別・特性・色違い: 4列グリッド */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {/* 性格・性別・特性・色違い・めざパ・Timer0/VCount: 2列グリッド */}
+          <div className="grid grid-cols-2 gap-2">
             {/* 性格フィルター */}
             <div className="flex flex-col gap-1">
               <Label className="text-xs">{eggFilterNatureLabel[locale]}</Label>
@@ -207,10 +207,7 @@ export const EggFilterCard: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          {/* めざパ・Boot-Timingフィルター: 4列グリッド */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
             {/* めざパタイプフィルター */}
             <div className="flex flex-col gap-1">
               <Label className="text-xs">{eggFilterHpTypeLabel[locale]}</Label>

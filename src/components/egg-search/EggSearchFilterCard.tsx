@@ -33,7 +33,7 @@ import {
 export function EggSearchFilterCard() {
   const locale = useLocale();
   const { isStack } = useResponsiveLayout();
-  const { draftParams, updateFilter, status } = useEggBootTimingSearchStore();
+  const { draftParams, updateFilter, updateResultFilters, resultFilters, status } = useEggBootTimingSearchStore();
   
   const isRunning = status === 'running' || status === 'starting' || status === 'stopping';
   
@@ -91,8 +91,8 @@ export function EggSearchFilterCard() {
       fullHeight={!isStack}
       scrollMode={isStack ? 'parent' : 'content'}
     >
-      {/* 性格・性別・特性・色違い: 4列グリッド */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      {/* 性格・性別・特性・色違い: 2列グリッド */}
+      <div className="grid grid-cols-2 gap-2">
         {/* 性格フィルター */}
         <div className="flex flex-col gap-1">
           <Label className="text-xs">{eggSearchFilterLabels.nature[locale]}</Label>
@@ -177,10 +177,7 @@ export function EggSearchFilterCard() {
             </SelectContent>
           </Select>
         </div>
-      </div>
 
-      {/* めざパフィルター: 2列グリッド */}
-      <div className="grid grid-cols-2 gap-2 mt-3">
         {/* めざパタイプフィルター */}
         <div className="flex flex-col gap-1">
           <Label className="text-xs">{eggSearchFilterLabels.hpType[locale]}</Label>
@@ -218,6 +215,32 @@ export function EggSearchFilterCard() {
             disabled={isRunning }
             placeholder={eggSearchFilterLabels.noSelection[locale]}
             className="text-xs h-8"
+          />
+        </div>
+
+        {/* Timer0 フィルター */}
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs" htmlFor="egg-search-filter-timer0">{eggSearchFilterLabels.timer0Range[locale]}</Label>
+          <Input
+            id="egg-search-filter-timer0"
+            value={resultFilters.timer0Filter ?? ''}
+            onChange={(e) => updateResultFilters({ timer0Filter: e.target.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase() })}
+            disabled={isRunning}
+            placeholder="例: 10ED"
+            className="font-mono text-xs h-8"
+          />
+        </div>
+
+        {/* VCount フィルター */}
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs" htmlFor="egg-search-filter-vcount">{eggSearchFilterLabels.vcountRange[locale]}</Label>
+          <Input
+            id="egg-search-filter-vcount"
+            value={resultFilters.vcountFilter ?? ''}
+            onChange={(e) => updateResultFilters({ vcountFilter: e.target.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase() })}
+            disabled={isRunning}
+            placeholder="例: 5C"
+            className="font-mono text-xs h-8"
           />
         </div>
       </div>
