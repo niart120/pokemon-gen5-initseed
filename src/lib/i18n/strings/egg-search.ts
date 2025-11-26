@@ -59,15 +59,15 @@ export const eggSearchResultsLabel: LocaleText = {
 
 export const eggSearchButtonLabels = {
   start: {
-    ja: '検索開始',
-    en: 'Start Search',
+    ja: 'Search',
+    en: 'Search',
   } satisfies LocaleText,
   stop: {
-    ja: '停止',
+    ja: 'Stop',
     en: 'Stop',
   } satisfies LocaleText,
   stopping: {
-    ja: '停止中...',
+    ja: 'Stopping...',
     en: 'Stopping...',
   } satisfies LocaleText,
 };
@@ -255,12 +255,12 @@ export const eggSearchFilterLabels = {
     en: 'Any',
   } satisfies LocaleText,
   timer0Range: {
-    ja: 'Timer0範囲',
-    en: 'Timer0 Range',
+    ja: 'Timer0',
+    en: 'Timer0',
   } satisfies LocaleText,
   vcountRange: {
-    ja: 'VCount範囲',
-    en: 'VCount Range',
+    ja: 'VCount',
+    en: 'VCount',
   } satisfies LocaleText,
   nature: {
     ja: '性格',

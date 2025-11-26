@@ -160,7 +160,16 @@ export function SearchPanel() {
           <ProfileCard />
         </div>
         <div className={`flex ${sizes.gap} max-w-full flex-1 min-h-0 min-w-fit overflow-hidden`}>
-          {/* 左カラム: 設定エリア */}
+          {/* 左カラム: 検索制御・進捗エリア */}
+          <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
+            <div className="flex-none">
+              <SearchControlCard />
+            </div>
+            <div className="flex-1 min-h-0">
+              <SearchProgressCard />
+            </div>
+          </div>
+          {/* 中央カラム: 設定エリア */}
           <div
             className={`flex-1 flex flex-col ${sizes.gap} min-w-0 overflow-y-auto`}
             style={{ minHeight: 0, width: LEFT_COLUMN_WIDTH_CLAMP, flex: `0 0 ${LEFT_COLUMN_WIDTH_CLAMP}` }}
@@ -170,16 +179,6 @@ export function SearchPanel() {
             </div>
             <div className="flex-1 min-h-0">
               <TargetSeedsCard />
-            </div>
-          </div>
-
-          {/* 中央カラム: 検索制御・進捗エリア */}
-          <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
-            <div className="flex-none">
-              <SearchControlCard />
-            </div>
-            <div className="flex-1 min-h-0">
-              <SearchProgressCard />
             </div>
           </div>
 
