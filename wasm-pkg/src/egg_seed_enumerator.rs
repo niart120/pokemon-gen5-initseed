@@ -136,7 +136,7 @@ impl EggSeedEnumerator {
     }
 }
 
-fn build_iv_sources(base_seed: u64, parents: ParentsIVs) -> IVResolutionConditions {
+pub(crate) fn build_iv_sources(base_seed: u64, parents: ParentsIVs) -> IVResolutionConditions {
     let mt_seed = derive_mt_seed(base_seed);
     let rng = generate_rng_iv_set(mt_seed);
     IVResolutionConditions {

@@ -3,15 +3,25 @@
 //! BW/BW2における孵化乱数（タマゴ生成）の起動時間検索機能を提供する。
 //! 起動日時・SHA-1パラメータ・消費範囲・個体フィルター条件に基づき、
 //! 条件に合致する個体とその起動条件を列挙する。
+//!
+//! ## ストリーミング設計
+//! 
+//! 検索は以下の2フェーズに分離されている:
+//! 1. LCG Seed列挙 (`LcgSeedIterator`): SHA-1計算→LCG Seed生成
+//! 2. 卵Enumerate (`EggEnumeratorRef`): LCG Seed→条件に合う卵を列挙
+//!
+//! これによりメモリ効率の向上と中断しやすい設計を実現している。
 
 use crate::datetime_codes::{DateCodeGenerator, TimeCodeGenerator};
 use crate::egg_iv::{
+    derive_pending_egg_with_state, matches_filter, resolve_egg_iv, resolve_npc_advance,
     Gender, GenerationConditions, GenerationConditionsJs, HiddenPowerInfo, IndividualFilter,
     IndividualFilterJs,
 };
-use crate::egg_seed_enumerator::{EggSeedEnumerator, ParentsIVs, ParentsIVsJs};
+use crate::egg_seed_enumerator::{build_iv_sources, ParentsIVs, ParentsIVsJs};
 use crate::integrated_search::generate_key_codes;
-use crate::offset_calculator::GameMode;
+use crate::offset_calculator::{calculate_game_offset, GameMode};
+use crate::personality_rng::PersonalityRNG;
 use crate::sha1::{calculate_pokemon_sha1, swap_bytes_32};
 use crate::sha1_simd::calculate_pokemon_sha1_simd;
 use chrono::{Datelike, NaiveDate, Timelike};
@@ -367,7 +377,12 @@ impl EggBootTimingSearcher {
         })
     }
 
-    /// SIMD最適化版検索メソッド
+    /// SIMD最適化版検索メソッド（ストリーミング設計）
+    /// 
+    /// 結果をまずRust側のVecに収集し、最後にJSArrayに変換する。
+    /// これにより:
+    /// - clone()による無駄なメモリ割り当てを削減
+    /// - max_results到達時に早期終了可能
     #[wasm_bindgen]
     #[allow(clippy::too_many_arguments)]
     #[inline(never)]
@@ -385,7 +400,40 @@ impl EggBootTimingSearcher {
         vcount_min: u32,
         vcount_max: u32,
     ) -> js_sys::Array {
-        let results = js_sys::Array::new();
+        // デフォルトの最大結果数
+        const DEFAULT_MAX_RESULTS: usize = 10000;
+        self.search_eggs_with_limit(
+            year_start, month_start, date_start,
+            hour_start, minute_start, second_start,
+            range_seconds,
+            timer0_min, timer0_max,
+            vcount_min, vcount_max,
+            DEFAULT_MAX_RESULTS,
+        )
+    }
+
+    /// 最大結果数を指定可能な検索メソッド
+    #[wasm_bindgen]
+    #[allow(clippy::too_many_arguments)]
+    pub fn search_eggs_with_limit(
+        &self,
+        year_start: u32,
+        month_start: u32,
+        date_start: u32,
+        hour_start: u32,
+        minute_start: u32,
+        second_start: u32,
+        range_seconds: u32,
+        timer0_min: u32,
+        timer0_max: u32,
+        vcount_min: u32,
+        vcount_max: u32,
+        max_results: usize,
+    ) -> js_sys::Array {
+        // Rust側で結果を収集
+        let mut results: Vec<EggBootTimingSearchResult> = Vec::with_capacity(
+            std::cmp::min(max_results, 1000) // 初期キャパシティは控えめに
+        );
 
         // 開始日時をUnix時間に変換
         let start_datetime =
@@ -393,14 +441,13 @@ impl EggBootTimingSearcher {
                 .and_then(|date| date.and_hms_opt(hour_start, minute_start, second_start))
             {
                 Some(datetime) => datetime,
-                None => return results,
+                None => return js_sys::Array::new(),
             };
 
         let start_unix = start_datetime.and_utc().timestamp();
         let base_seconds_since_2000 = start_unix - EPOCH_2000_UNIX;
 
-        // 外側ループ: Timer0 × VCount × KeyCode
-        for timer0 in timer0_min..=timer0_max {
+        'outer: for timer0 in timer0_min..=timer0_max {
             for vcount in vcount_min..=vcount_max {
                 for &key_code in &self.key_codes {
                     // SIMD バッチ処理用バッファ
@@ -428,35 +475,46 @@ impl EggBootTimingSearcher {
 
                         // 4件溜まったらSIMD処理
                         if batch_len == 4 {
-                            self.process_simd_batch_egg(
+                            if !self.process_simd_batch_egg(
                                 &messages,
                                 &batch_metadata,
                                 batch_len,
                                 key_code,
-                                &results,
-                            );
+                                &mut results,
+                                max_results,
+                            ) {
+                                break 'outer; // max_results到達
+                            }
                             batch_len = 0;
                         }
                     }
 
                     // 残りを処理
                     if batch_len > 0 {
-                        self.process_simd_batch_egg(
+                        if !self.process_simd_batch_egg(
                             &messages,
                             &batch_metadata,
                             batch_len,
                             key_code,
-                            &results,
-                        );
+                            &mut results,
+                            max_results,
+                        ) {
+                            break 'outer; // max_results到達
+                        }
                     }
                 }
             }
         }
 
-        results
+        // Rust Vec → JS Array 変換
+        let js_array = js_sys::Array::new_with_length(results.len() as u32);
+        for (i, result) in results.into_iter().enumerate() {
+            js_array.set(i as u32, JsValue::from(result));
+        }
+        js_array
     }
 
-    /// SIMDバッチ処理
+    /// SIMDバッチ処理 - 参照ベースの新設計
     #[inline]
     fn process_simd_batch_egg(
         &self,
@@ -464,10 +522,11 @@ impl EggBootTimingSearcher {
         batch_metadata: &[(i64, u32, u32); 4],
         batch_size: usize,
         key_code: u32,
-        results: &js_sys::Array,
-    ) {
+        results: &mut Vec<EggBootTimingSearchResult>,
+        max_results: usize,
+    ) -> bool {
         if batch_size == 0 {
-            return;
+            return true;
         }
 
         // SIMD または スカラー SHA-1 計算
@@ -490,7 +549,7 @@ impl EggBootTimingSearcher {
             scalar_results
         };
 
-        // 各LCG Seedに対して個体検索
+        // 各LCG Seedに対して個体検索（参照ベース）
         for i in 0..batch_size {
             let h0 = hash_results[i * 5];
             let h1 = hash_results[i * 5 + 1];
@@ -504,46 +563,137 @@ impl EggBootTimingSearcher {
                 None => continue,
             };
 
-            // EggSeedEnumeratorで個体検索
-            self.enumerate_eggs_for_seed(lcg_seed, datetime, timer0, vcount, key_code, results);
+            // 参照ベースの卵列挙（clone不要）
+            if !self.enumerate_eggs_for_seed_ref(
+                lcg_seed, datetime, timer0, vcount, key_code, results, max_results
+            ) {
+                return false; // max_results到達
+            }
         }
+        true
     }
 
-    /// 指定されたLCG Seedに対して条件に合う個体を列挙
-    fn enumerate_eggs_for_seed(
+    /// 指定されたLCG Seedに対して条件に合う個体を列挙（参照ベース）
+    /// 
+    /// `conditions`と`filter`をクローンせず参照で使用することでメモリ効率を向上
+    fn enumerate_eggs_for_seed_ref(
         &self,
         lcg_seed: u64,
         datetime: (u32, u32, u32, u32, u32, u32),
         timer0: u32,
         vcount: u32,
         key_code: u32,
-        results: &js_sys::Array,
-    ) {
+        results: &mut Vec<EggBootTimingSearchResult>,
+        max_results: usize,
+    ) -> bool {
         let (year, month, date, hour, minute, second) = datetime;
 
-        // EggSeedEnumeratorを作成
-        let mut enumerator = EggSeedEnumerator::new(
-            lcg_seed,
-            self.user_offset,
-            self.advance_count,
-            self.conditions.clone(),
-            self.parents,
-            self.filter.clone(),
-            self.consider_npc_consumption,
-            self.game_mode,
-        );
+        // IV計算用の情報を構築
+        let iv_sources = build_iv_sources(lcg_seed, self.parents);
+        
+        // game_offsetを計算してseedを進める
+        let game_offset = calculate_game_offset(lcg_seed, self.game_mode) as u64;
+        let total_offset = game_offset.saturating_add(self.user_offset);
+        let (mul, add) = PersonalityRNG::lcg_affine_for_steps(total_offset);
+        let mut current_seed = PersonalityRNG::lcg_apply(lcg_seed, mul, add);
+        let mut next_advance = self.user_offset;
 
-        // 条件に合う個体を列挙
-        while let Ok(Some(egg_data)) = enumerator.next_egg() {
-            let result = self.create_result(
-                year, month, date, hour, minute, second, timer0, vcount, key_code, lcg_seed,
-                &egg_data,
-            );
-            results.push(&JsValue::from(result));
+        const NPC_FRAME_THRESHOLD: u8 = 96;
+        const NPC_FRAME_SLACK: u8 = 30;
+
+        // advance_count回だけ列挙
+        for _ in 0..self.advance_count {
+            if results.len() >= max_results {
+                return false;
+            }
+
+            let (seed_after_npc, is_stable) = if self.consider_npc_consumption {
+                let (next_seed, _consumed, stable) =
+                    resolve_npc_advance(current_seed, NPC_FRAME_THRESHOLD, NPC_FRAME_SLACK);
+                (next_seed, stable)
+            } else {
+                (current_seed, false)
+            };
+
+            let (pending, _) = derive_pending_egg_with_state(seed_after_npc, &self.conditions);
+            
+            // IV解決
+            if let Ok(resolved) = resolve_egg_iv(&pending, &iv_sources, current_seed) {
+                // フィルターチェック（参照で判定）
+                let passes = self.filter
+                    .as_ref()
+                    .is_none_or(|filter| matches_filter(&resolved, filter));
+
+                if passes {
+                    let result = self.create_result_from_resolved(
+                        year, month, date, hour, minute, second,
+                        timer0, vcount, key_code, lcg_seed,
+                        next_advance, is_stable, &resolved,
+                    );
+                    results.push(result);
+                }
+            }
+
+            current_seed = PersonalityRNG::next_seed(current_seed);
+            next_advance = next_advance.saturating_add(1);
+        }
+        true
+    }
+
+    /// ResolvedEggから検索結果を作成
+    fn create_result_from_resolved(
+        &self,
+        year: u32,
+        month: u32,
+        date: u32,
+        hour: u32,
+        minute: u32,
+        second: u32,
+        timer0: u32,
+        vcount: u32,
+        key_code: u32,
+        lcg_seed: u64,
+        advance: u64,
+        is_stable: bool,
+        egg: &crate::egg_iv::ResolvedEgg,
+    ) -> EggBootTimingSearchResult {
+        let (hp_type, hp_power, hp_known) = match egg.hidden_power {
+            HiddenPowerInfo::Known { r#type, power } => (r#type as u8, power, true),
+            HiddenPowerInfo::Unknown => (0, 0, false),
+        };
+
+        EggBootTimingSearchResult {
+            year,
+            month,
+            date,
+            hour,
+            minute,
+            second,
+            timer0,
+            vcount,
+            key_code,
+            lcg_seed_high: (lcg_seed >> 32) as u32,
+            lcg_seed_low: lcg_seed as u32,
+            advance,
+            is_stable,
+            ivs: egg.ivs,
+            nature: egg.nature as u8,
+            gender: match egg.gender {
+                Gender::Male => 0,
+                Gender::Female => 1,
+                Gender::Genderless => 2,
+            },
+            ability: egg.ability as u8,
+            shiny: egg.shiny as u8,
+            pid: egg.pid,
+            hp_type,
+            hp_power,
+            hp_known,
         }
     }
 
-    /// 検索結果を作成
+    /// 検索結果を作成（後方互換用）
+    #[allow(dead_code)]
     fn create_result(
         &self,
         year: u32,

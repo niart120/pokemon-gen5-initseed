@@ -438,9 +438,10 @@ function executeSearchBatch(
     // 検索実行 - バッチの開始日から指定日数分
     const rangeSeconds = batchDays * 24 * 60 * 60;
 
-    console.log(`[EggBootTimingWorker] Calling search_eggs_integrated_simd: year=${batchStartDate.getFullYear()}, month=${batchStartDate.getMonth() + 1}, day=${batchStartDate.getDate()}, rangeSeconds=${rangeSeconds}`);
+    console.log(`[EggBootTimingWorker] Calling search_eggs_with_limit: year=${batchStartDate.getFullYear()}, month=${batchStartDate.getMonth() + 1}, day=${batchStartDate.getDate()}, rangeSeconds=${rangeSeconds}, maxResults=${params.maxResults}`);
 
-    const wasmResults = searcher.search_eggs_integrated_simd(
+    // search_eggs_with_limit を使用して max_results を WASM に渡す
+    const wasmResults = searcher.search_eggs_with_limit(
       batchStartDate.getFullYear(),
       batchStartDate.getMonth() + 1,
       batchStartDate.getDate(),
@@ -451,10 +452,11 @@ function executeSearchBatch(
       params.timer0Range.min,
       params.timer0Range.max,
       params.vcountRange.min,
-      params.vcountRange.max
+      params.vcountRange.max,
+      params.maxResults  // WASM側で早期終了可能
     );
 
-    console.log(`[EggBootTimingWorker] search_eggs_integrated_simd returned ${wasmResults.length} results`);
+    console.log(`[EggBootTimingWorker] search_eggs_with_limit returned ${wasmResults.length} results`);
 
     // 結果変換
     for (let i = 0; i < wasmResults.length && i < params.maxResults; i++) {
