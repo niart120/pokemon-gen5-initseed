@@ -18,7 +18,7 @@ import {
 import type { EggGenerationConditions, ParentsIVs, IvSet, EggIndividualFilter } from '@/types/egg';
 import type { DeviceProfile } from '@/types/profile';
 import type { DailyTimeRange } from '@/types/search';
-import { EggBootTimingWorkerManager } from '@/lib/egg';
+import { EggBootTimingMultiWorkerManager } from '@/lib/egg';
 
 /**
  * 検索実行状態
@@ -71,8 +71,8 @@ interface EggBootTimingSearchState {
   // --- 実行状態 ---
   /** 検索状態 */
   status: EggBootTimingSearchStatus;
-  /** Worker Manager */
-  workerManager: EggBootTimingWorkerManager | null;
+  /** Worker Manager (並列版) */
+  workerManager: EggBootTimingMultiWorkerManager | null;
   
   // --- 進捗 ---
   /** 進捗情報 */
@@ -287,43 +287,46 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
         params: draftParams,
       });
 
-      // Worker Manager初期化またはリユース
-      const manager = existingManager || new EggBootTimingWorkerManager();
+      // Worker Manager初期化またはリユース (並列版)
+      const manager = existingManager || new EggBootTimingMultiWorkerManager();
 
       try {
-        await manager.initialize({
-          onProgress: (progress) => {
+        set({ workerManager: manager, status: 'running' });
+        
+        await manager.startParallelSearch(draftParams, {
+          onProgress: (aggregatedProgress) => {
+            // 並列版の進捗を共通形式に変換
+            const progressPercent = aggregatedProgress.totalSteps > 0
+              ? (aggregatedProgress.totalCurrentStep / aggregatedProgress.totalSteps) * 100
+              : 0;
             get()._updateProgress({
-              processedCombinations: progress.processedCombinations,
-              totalCombinations: progress.totalCombinations,
-              foundCount: progress.foundCount,
-              progressPercent: progress.progressPercent,
-              elapsedMs: progress.elapsedMs,
+              processedCombinations: aggregatedProgress.totalCurrentStep,
+              totalCombinations: aggregatedProgress.totalSteps,
+              foundCount: aggregatedProgress.totalMatchesFound,
+              progressPercent,
+              elapsedMs: aggregatedProgress.totalElapsedTime,
             });
           },
-          onResults: (results) => {
-            for (const result of results) {
-              if (!get()._addPendingResult(result)) {
-                // 上限到達
-                break;
-              }
-            }
+          onResult: (result) => {
+            get()._addPendingResult(result);
           },
-          onComplete: (completion) => {
-            // 停止による完了か、通常完了かで処理を分岐
-            if (completion.reason === 'stopped') {
-              get()._onStopped();
-            } else {
-              get()._onComplete(completion);
-            }
+          onComplete: (message) => {
+            console.log('[EggSearch]', message);
+            get()._onComplete({
+              reason: 'completed',
+              processedCombinations: get().progress?.processedCombinations ?? 0,
+              totalCombinations: get().progress?.totalCombinations ?? 0,
+              resultsCount: get()._pendingResults.length,
+              elapsedMs: get().progress?.elapsedMs ?? 0,
+            });
           },
           onError: (error) => {
-            get()._onError(error.message);
+            get()._onError(error);
+          },
+          onStopped: () => {
+            get()._onStopped();
           },
         });
-
-        set({ workerManager: manager, status: 'running' });
-        await manager.startSearch(draftParams);
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
         set({ status: 'error', errorMessage: message });
@@ -334,7 +337,7 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
       const { workerManager } = get();
       set({ status: 'stopping' });
       if (workerManager) {
-        workerManager.stopSearch();
+        workerManager.terminateAll();
       }
     },
 
@@ -424,7 +427,7 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
     reset: () => {
       const { workerManager } = get();
       if (workerManager) {
-        workerManager.terminate();
+        workerManager.terminateAll();
       }
       set({
         draftParams: createDefaultEggBootTimingSearchParams(),
