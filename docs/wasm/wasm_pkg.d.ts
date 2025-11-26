@@ -1,20 +1,20 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+ * TID/SID決定処理統合API（仕様書準拠）
+ */
+export function calculate_tid_sid_from_seed(initial_seed: bigint, mode: GameMode): TidSidResult;
+/**
+ * オフセット計算統合API（仕様書準拠）
+ */
+export function calculate_game_offset(initial_seed: bigint, mode: GameMode): number;
+/**
  * キー入力マスクから有効なキーコード一覧を生成
  *
  * TypeScript側でセグメントループを構築する際に使用。
  * 各キーコードに対して、対応するEggBootTimingSearchIteratorを作成する。
  */
 export function generate_egg_key_codes(key_input_mask: number): Uint32Array;
-/**
- * オフセット計算統合API（仕様書準拠）
- */
-export function calculate_game_offset(initial_seed: bigint, mode: GameMode): number;
-/**
- * TID/SID決定処理統合API（仕様書準拠）
- */
-export function calculate_tid_sid_from_seed(initial_seed: bigint, mode: GameMode): TidSidResult;
 /**
  * WebAssembly向けバッチSHA-1計算エントリポイント
  * `messages` は 16 ワード単位（512bit）で並ぶフラットな配列である必要がある
@@ -164,26 +164,6 @@ export class ArrayUtils {
   private constructor();
   free(): void;
   /**
-   * 32bit配列の合計値を計算
-   *
-   * # Arguments
-   * * `array` - 対象配列
-   *
-   * # Returns
-   * 合計値
-   */
-  static sum_u32_array(array: Uint32Array): bigint;
-  /**
-   * 32bit配列の平均値を計算
-   *
-   * # Arguments
-   * * `array` - 対象配列
-   *
-   * # Returns
-   * 平均値
-   */
-  static average_u32_array(array: Uint32Array): number;
-  /**
    * 32bit配列の最大値を取得
    *
    * # Arguments
@@ -203,6 +183,26 @@ export class ArrayUtils {
    * 最小値（配列が空の場合は0）
    */
   static min_u32_array(array: Uint32Array): number;
+  /**
+   * 32bit配列の合計値を計算
+   *
+   * # Arguments
+   * * `array` - 対象配列
+   *
+   * # Returns
+   * 合計値
+   */
+  static sum_u32_array(array: Uint32Array): bigint;
+  /**
+   * 32bit配列の平均値を計算
+   *
+   * # Arguments
+   * * `array` - 対象配列
+   *
+   * # Returns
+   * 平均値
+   */
+  static average_u32_array(array: Uint32Array): number;
   /**
    * 配列の重複要素を除去
    *
@@ -227,13 +227,13 @@ export class BWGenerationConfig {
    * getter methods
    */
   readonly get_version: GameVersion;
-  readonly get_encounter_type: EncounterType;
-  readonly get_tid: number;
-  readonly get_sid: number;
   readonly get_sync_enabled: boolean;
+  readonly get_encounter_type: EncounterType;
   readonly get_sync_nature_id: number;
-  readonly get_is_shiny_locked: boolean;
   readonly get_has_shiny_charm: boolean;
+  readonly get_is_shiny_locked: boolean;
+  readonly get_sid: number;
+  readonly get_tid: number;
 }
 /**
  * ビット操作ユーティリティ
@@ -241,6 +241,28 @@ export class BWGenerationConfig {
 export class BitUtils {
   private constructor();
   free(): void;
+  /**
+   * ビット数をカウント
+   *
+   * # Arguments
+   * * `value` - 対象の値
+   *
+   * # Returns
+   * 設定されているビット数
+   */
+  static count_bits(value: number): number;
+  /**
+   * ビットフィールドを抽出
+   *
+   * # Arguments
+   * * `value` - 対象の値
+   * * `start_bit` - 開始ビット位置
+   * * `bit_count` - 抽出するビット数
+   *
+   * # Returns
+   * 抽出されたビットフィールド
+   */
+  static extract_bits(value: number, start_bit: number, bit_count: number): number;
   /**
    * 32bit値の左ローテート
    *
@@ -286,28 +308,6 @@ export class BitUtils {
    * ビットが設定された値
    */
   static set_bit(value: number, bit_position: number, bit_value: number): number;
-  /**
-   * ビット数をカウント
-   *
-   * # Arguments
-   * * `value` - 対象の値
-   *
-   * # Returns
-   * 設定されているビット数
-   */
-  static count_bits(value: number): number;
-  /**
-   * ビットフィールドを抽出
-   *
-   * # Arguments
-   * * `value` - 対象の値
-   * * `start_bit` - 開始ビット位置
-   * * `bit_count` - 抽出するビット数
-   *
-   * # Returns
-   * 抽出されたビットフィールド
-   */
-  static extract_bits(value: number, start_bit: number, bit_count: number): number;
 }
 /**
  * 孵化乱数起動時間検索イテレータ
@@ -336,13 +336,6 @@ export class BitUtils {
 export class EggBootTimingSearchIterator {
   free(): void;
   /**
-   * コンストラクタ
-   *
-   * 単一セグメント（固定 timer0/vcount/keyCode）のイテレータを作成。
-   * frame は hardware から自動導出される。
-   */
-  constructor(mac: Uint8Array, nazo: Uint32Array, hardware: string, timer0: number, vcount: number, key_code: number, hour_start: number, hour_end: number, minute_start: number, minute_end: number, second_start: number, second_end: number, year_start: number, month_start: number, date_start: number, range_seconds: number, conditions: GenerationConditionsJs, parents: ParentsIVsJs, filter_js: IndividualFilterJs | null | undefined, consider_npc_consumption: boolean, game_mode: GameMode, user_offset: bigint, advance_count: number);
-  /**
    * 次のバッチを取得
    *
    * - result_limit件見つかったら即return
@@ -350,6 +343,13 @@ export class EggBootTimingSearchIterator {
    * - 検索範囲を全て処理したらfinished=trueになる
    */
   next_batch(result_limit: number, chunk_seconds: number): Array<any>;
+  /**
+   * コンストラクタ
+   *
+   * 単一セグメント（固定 timer0/vcount/keyCode）のイテレータを作成。
+   * frame は hardware から自動導出される。
+   */
+  constructor(mac: Uint8Array, nazo: Uint32Array, hardware: string, timer0: number, vcount: number, key_code: number, hour_start: number, hour_end: number, minute_start: number, minute_end: number, second_start: number, second_end: number, year_start: number, month_start: number, date_start: number, range_seconds: number, conditions: GenerationConditionsJs, parents: ParentsIVsJs, filter_js: IndividualFilterJs | null | undefined, consider_npc_consumption: boolean, game_mode: GameMode, user_offset: bigint, advance_count: number);
   /**
    * 検索が完了したかどうか
    */
@@ -361,38 +361,38 @@ export class EggBootTimingSearchIterator {
 export class EggBootTimingSearchResult {
   private constructor();
   free(): void;
-  readonly year: number;
-  readonly month: number;
+  readonly mtSeedHex: string;
+  readonly lcgSeedHex: string;
+  readonly ivs: Uint8Array;
+  readonly pid: number;
   readonly date: number;
   readonly hour: number;
-  readonly minute: number;
-  readonly second: number;
-  readonly timer0: number;
-  readonly vcount: number;
-  readonly keyCode: number;
-  readonly lcgSeedHex: string;
-  readonly advance: bigint;
-  readonly isStable: boolean;
-  readonly ivs: Uint8Array;
-  readonly nature: number;
-  /**
-   * Gender: 0=Male, 1=Female, 2=Genderless
-   */
-  readonly gender: number;
-  /**
-   * Ability slot: 0=Ability1, 1=Ability2, 2=Hidden
-   */
-  readonly ability: number;
+  readonly year: number;
+  readonly month: number;
   /**
    * Shiny type: 0=Normal (not shiny), 1=Square shiny, 2=Star shiny
    */
   readonly shiny: number;
-  readonly pid: number;
+  /**
+   * Gender: 0=Male, 1=Female, 2=Genderless
+   */
+  readonly gender: number;
+  readonly minute: number;
+  readonly nature: number;
+  readonly second: number;
+  readonly timer0: number;
+  readonly vcount: number;
+  /**
+   * Ability slot: 0=Ability1, 1=Ability2, 2=Hidden
+   */
+  readonly ability: number;
+  readonly advance: bigint;
   readonly hpType: number;
-  readonly hpPower: number;
-  readonly hpKnown: boolean;
   readonly mtSeed: number;
-  readonly mtSeedHex: string;
+  readonly hpKnown: boolean;
+  readonly hpPower: number;
+  readonly keyCode: number;
+  readonly isStable: boolean;
 }
 /**
  * WASM wrapper for EggSeedEnumerator
@@ -411,22 +411,6 @@ export class EggSeedEnumeratorJs {
  */
 export class EncounterCalculator {
   free(): void;
-  /**
-   * 新しいEncounterCalculatorインスタンスを作成
-   */
-  constructor();
-  /**
-   * エンカウントスロットを計算
-   *
-   * # Arguments
-   * * `version` - ゲームバージョン
-   * * `encounter_type` - エンカウントタイプ
-   * * `random_value` - 乱数値（32bit）
-   *
-   * # Returns
-   * エンカウントスロット番号（0-11）
-   */
-  static calculate_encounter_slot(version: GameVersion, encounter_type: EncounterType, random_value: number): number;
   /**
    * スロット番号をテーブルインデックスに変換
    *
@@ -448,6 +432,22 @@ export class EncounterCalculator {
    * 出現内容の種類
    */
   static get_dust_cloud_content(slot: number): DustCloudContent;
+  /**
+   * エンカウントスロットを計算
+   *
+   * # Arguments
+   * * `version` - ゲームバージョン
+   * * `encounter_type` - エンカウントタイプ
+   * * `random_value` - 乱数値（32bit）
+   *
+   * # Returns
+   * エンカウントスロット番号（0-11）
+   */
+  static calculate_encounter_slot(version: GameVersion, encounter_type: EncounterType, random_value: number): number;
+  /**
+   * 新しいEncounterCalculatorインスタンスを作成
+   */
+  constructor();
 }
 /**
  * エンディアン変換ユーティリティ
@@ -456,15 +456,13 @@ export class EndianUtils {
   private constructor();
   free(): void;
   /**
-   * 32bit値のバイトスワップ
-   *
-   * # Arguments
-   * * `value` - 変換する32bit値
-   *
-   * # Returns
-   * バイトスワップされた値
+   * ビッグエンディアン32bit値をリトルエンディアンに変換
    */
-  static swap_bytes_32(value: number): number;
+  static be32_to_le(value: number): number;
+  /**
+   * リトルエンディアン32bit値をビッグエンディアンに変換
+   */
+  static le32_to_be(value: number): number;
   /**
    * 16bit値のバイトスワップ
    *
@@ -476,6 +474,16 @@ export class EndianUtils {
    */
   static swap_bytes_16(value: number): number;
   /**
+   * 32bit値のバイトスワップ
+   *
+   * # Arguments
+   * * `value` - 変換する32bit値
+   *
+   * # Returns
+   * バイトスワップされた値
+   */
+  static swap_bytes_32(value: number): number;
+  /**
    * 64bit値のバイトスワップ
    *
    * # Arguments
@@ -485,14 +493,6 @@ export class EndianUtils {
    * バイトスワップされた値
    */
   static swap_bytes_64(value: bigint): bigint;
-  /**
-   * ビッグエンディアン32bit値をリトルエンディアンに変換
-   */
-  static be32_to_le(value: number): number;
-  /**
-   * リトルエンディアン32bit値をビッグエンディアンに変換
-   */
-  static le32_to_be(value: number): number;
 }
 export class EnumeratedPokemonData {
   private constructor();
@@ -501,17 +501,17 @@ export class EnumeratedPokemonData {
    * 任意: 元の RawPokemonData を複製して取得
    */
   into_raw(): RawPokemonData;
-  readonly get_advance: bigint;
-  readonly get_seed: bigint;
-  readonly get_pid: number;
   readonly get_nature: number;
-  readonly get_sync_applied: boolean;
+  readonly get_advance: bigint;
+  readonly get_shiny_type: number;
   readonly get_ability_slot: number;
   readonly get_gender_value: number;
-  readonly get_encounter_slot_value: number;
+  readonly get_sync_applied: boolean;
   readonly get_encounter_type: number;
   readonly get_level_rand_value: bigint;
-  readonly get_shiny_type: number;
+  readonly get_encounter_slot_value: number;
+  readonly get_pid: number;
+  readonly get_seed: bigint;
 }
 /**
  * WASM wrapper for EverstonePlan
@@ -528,6 +528,11 @@ export class EverstonePlanJs {
 export class ExtraResult {
   private constructor();
   free(): void;
+  readonly get_value1: number;
+  readonly get_value2: number;
+  readonly get_value3: number;
+  readonly get_success: boolean;
+  readonly get_advances: number;
   /**
    * 消費した乱数回数
    */
@@ -542,11 +547,6 @@ export class ExtraResult {
   value1: number;
   value2: number;
   value3: number;
-  readonly get_advances: number;
-  readonly get_success: boolean;
-  readonly get_value1: number;
-  readonly get_value2: number;
-  readonly get_value3: number;
 }
 export class GenderRatio {
   free(): void;
@@ -560,10 +560,10 @@ export class GenderRatio {
  */
 export class GenerationConditionsJs {
   free(): void;
-  constructor();
   set_everstone(plan: EverstonePlanJs): void;
   set_trainer_ids(ids: TrainerIds): void;
   set_gender_ratio(ratio: GenderRatio): void;
+  constructor();
   has_nidoran_flag: boolean;
   uses_ditto: boolean;
   allow_hidden_ability: boolean;
@@ -575,14 +575,14 @@ export class GenerationConditionsJs {
  */
 export class IndividualFilterJs {
   free(): void;
-  constructor();
-  set_iv_range(stat_index: number, min: number, max: number): void;
-  set_nature(nature_index: number): void;
   set_gender(gender: number): void;
+  set_nature(nature_index: number): void;
   set_ability(ability: number): void;
-  set_shiny(shiny: number): void;
+  set_iv_range(stat_index: number, min: number, max: number): void;
   set_hidden_power_type(hp_type: number): void;
   set_hidden_power_power(power: number): void;
+  constructor();
+  set_shiny(shiny: number): void;
 }
 /**
  * 統合Seed探索器
@@ -590,10 +590,6 @@ export class IndividualFilterJs {
  */
 export class IntegratedSeedSearcher {
   free(): void;
-  /**
-   * コンストラクタ: 固定パラメータの事前計算
-   */
-  constructor(mac: Uint8Array, nazo: Uint32Array, hardware: string, key_input_mask: number, frame: number, hour_start: number, hour_end: number, minute_start: number, minute_end: number, second_start: number, second_end: number);
   /**
    * 統合Seed探索メイン関数
    * 日時範囲とTimer0/VCount範囲を指定して一括探索
@@ -604,6 +600,10 @@ export class IntegratedSeedSearcher {
    * range_secondsを最内ループに配置してSIMD SHA-1計算を活用
    */
   search_seeds_integrated_simd(year_start: number, month_start: number, date_start: number, hour_start: number, minute_start: number, second_start: number, range_seconds: number, timer0_min: number, timer0_max: number, vcount_min: number, vcount_max: number, target_seeds: Uint32Array): Array<any>;
+  /**
+   * コンストラクタ: 固定パラメータの事前計算
+   */
+  constructor(mac: Uint8Array, nazo: Uint32Array, hardware: string, key_input_mask: number, frame: number, hour_start: number, hour_end: number, minute_start: number, minute_end: number, second_start: number, second_end: number);
 }
 /**
  * 数値変換ユーティリティ
@@ -611,6 +611,26 @@ export class IntegratedSeedSearcher {
 export class NumberUtils {
   private constructor();
   free(): void;
+  /**
+   * BCD（Binary Coded Decimal）デコード
+   *
+   * # Arguments
+   * * `bcd_value` - デコードするBCD値
+   *
+   * # Returns
+   * デコードされた値
+   */
+  static decode_bcd(bcd_value: number): number;
+  /**
+   * BCD（Binary Coded Decimal）エンコード
+   *
+   * # Arguments
+   * * `value` - エンコードする値（0-99）
+   *
+   * # Returns
+   * BCDエンコードされた値
+   */
+  static encode_bcd(value: number): number;
   /**
    * 16進数文字列を32bit整数に変換
    *
@@ -632,26 +652,6 @@ export class NumberUtils {
    * 16進数文字列
    */
   static u32_to_hex_string(value: number, uppercase: boolean): string;
-  /**
-   * BCD（Binary Coded Decimal）エンコード
-   *
-   * # Arguments
-   * * `value` - エンコードする値（0-99）
-   *
-   * # Returns
-   * BCDエンコードされた値
-   */
-  static encode_bcd(value: number): number;
-  /**
-   * BCD（Binary Coded Decimal）デコード
-   *
-   * # Arguments
-   * * `bcd_value` - デコードするBCD値
-   *
-   * # Returns
-   * デコードされた値
-   */
-  static decode_bcd(bcd_value: number): number;
   /**
    * パーセンテージを乱数閾値に変換
    *
@@ -679,19 +679,10 @@ export class NumberUtils {
 export class OffsetCalculator {
   free(): void;
   /**
-   * 新しいOffsetCalculatorインスタンスを作成
-   *
-   * # Arguments
-   * * `seed` - 初期Seed値
+   * Extra処理（BW2専用：重複値回避ループ）
+   * 3つの値（0-14範囲）がすべて異なるまでループ
    */
-  constructor(seed: bigint);
-  /**
-   * 次の32bit乱数値を取得（上位32bit）
-   *
-   * # Returns
-   * 32bit乱数値
-   */
-  next_rand(): number;
+  extra_process(): ExtraResult;
   /**
    * 指定回数だけ乱数を消費（Rand×n）
    *
@@ -700,13 +691,6 @@ export class OffsetCalculator {
    */
   consume_random(count: number): void;
   /**
-   * 計算器をリセット
-   *
-   * # Arguments
-   * * `new_seed` - 新しいSeed値
-   */
-  reset(new_seed: bigint): void;
-  /**
    * TID/SID決定処理（リファレンス実装準拠）
    *
    * # Returns
@@ -714,30 +698,21 @@ export class OffsetCalculator {
    */
   calculate_tid_sid(): TidSidResult;
   /**
-   * 表住人決定処理（BW：固定10回乱数消費）
+   * 住人決定一括処理（BW専用）
    */
-  determine_front_residents(): void;
+  determine_all_residents(): void;
   /**
    * 裏住人決定処理（BW：固定3回乱数消費）
    */
   determine_back_residents(): void;
   /**
-   * 住人決定一括処理（BW専用）
+   * 表住人決定処理（BW：固定10回乱数消費）
    */
-  determine_all_residents(): void;
+  determine_front_residents(): void;
   /**
    * Probability Table処理（仕様書準拠の6段階テーブル処理）
    */
   probability_table_process(): void;
-  /**
-   * PT操作×n回
-   */
-  probability_table_process_multiple(count: number): void;
-  /**
-   * Extra処理（BW2専用：重複値回避ループ）
-   * 3つの値（0-14範囲）がすべて異なるまでループ
-   */
-  extra_process(): ExtraResult;
   /**
    * ゲーム初期化処理の総合実行（仕様書準拠）
    *
@@ -748,6 +723,31 @@ export class OffsetCalculator {
    * 初期化完了時の進行回数
    */
   execute_game_initialization(mode: GameMode): number;
+  /**
+   * PT操作×n回
+   */
+  probability_table_process_multiple(count: number): void;
+  /**
+   * 新しいOffsetCalculatorインスタンスを作成
+   *
+   * # Arguments
+   * * `seed` - 初期Seed値
+   */
+  constructor(seed: bigint);
+  /**
+   * 計算器をリセット
+   *
+   * # Arguments
+   * * `new_seed` - 新しいSeed値
+   */
+  reset(new_seed: bigint): void;
+  /**
+   * 次の32bit乱数値を取得（上位32bit）
+   *
+   * # Returns
+   * 32bit乱数値
+   */
+  next_rand(): number;
   /**
    * 現在の進行回数を取得
    *
@@ -769,9 +769,17 @@ export class OffsetCalculator {
 export class PIDCalculator {
   free(): void;
   /**
-   * 新しいPIDCalculatorインスタンスを作成
+   * タマゴのPID生成
+   * 特殊な計算式を使用
+   *
+   * # Arguments
+   * * `r1` - 乱数値1
+   * * `r2` - 乱数値2
+   *
+   * # Returns
+   * 生成されたPID
    */
-  constructor();
+  static generate_egg_pid(r1: number, r2: number): number;
   /**
    * BW/BW2準拠 統一PID生成
    * 32bit乱数 ^ 0x10000 の計算（固定・野生共通）
@@ -784,18 +792,17 @@ export class PIDCalculator {
    */
   static generate_base_pid(r1: number): number;
   /**
-   * ID補正処理
-   * 性格値下位 ^ トレーナーID ^ 裏ID の奇偶性で最上位bitを調整
+   * ギフトポケモンのPID生成
+   * 特殊な計算式を使用
    *
    * # Arguments
-   * * `pid` - 基本PID
-   * * `tid` - トレーナーID
-   * * `sid` - シークレットID
+   * * `r1` - 乱数値1
+   * * `r2` - 乱数値2
    *
    * # Returns
-   * ID補正後PID
+   * 生成されたPID
    */
-  static apply_id_correction(pid: number, tid: number, sid: number): number;
+  static generate_gift_pid(r1: number, r2: number): number;
   /**
    * BW/BW2準拠 野生ポケモンのPID生成
    * 32bit乱数 ^ 0x10000 + ID補正処理
@@ -810,18 +817,29 @@ export class PIDCalculator {
    */
   static generate_wild_pid(r1: number, tid: number, sid: number): number;
   /**
-   * BW/BW2準拠 固定シンボルポケモンのPID生成
-   * 32bit乱数 ^ 0x10000 + ID補正処理
+   * BW/BW2準拠 イベントポケモンのPID生成
+   * 32bit乱数 ^ 0x10000（ID補正なし - 先頭特性無効）
    *
    * # Arguments
    * * `r1` - 乱数値1
+   *
+   * # Returns
+   * 生成されたPID（ID補正なし）
+   */
+  static generate_event_pid(r1: number): number;
+  /**
+   * ID補正処理
+   * 性格値下位 ^ トレーナーID ^ 裏ID の奇偶性で最上位bitを調整
+   *
+   * # Arguments
+   * * `pid` - 基本PID
    * * `tid` - トレーナーID
    * * `sid` - シークレットID
    *
    * # Returns
-   * 生成されたPID（ID補正適用後）
+   * ID補正後PID
    */
-  static generate_static_pid(r1: number, tid: number, sid: number): number;
+  static apply_id_correction(pid: number, tid: number, sid: number): number;
   /**
    * BW/BW2準拠 徘徊ポケモンのPID生成
    * 32bit乱数 ^ 0x10000 + ID補正処理
@@ -836,40 +854,22 @@ export class PIDCalculator {
    */
   static generate_roamer_pid(r1: number, tid: number, sid: number): number;
   /**
-   * BW/BW2準拠 イベントポケモンのPID生成
-   * 32bit乱数 ^ 0x10000（ID補正なし - 先頭特性無効）
+   * BW/BW2準拠 固定シンボルポケモンのPID生成
+   * 32bit乱数 ^ 0x10000 + ID補正処理
    *
    * # Arguments
    * * `r1` - 乱数値1
+   * * `tid` - トレーナーID
+   * * `sid` - シークレットID
    *
    * # Returns
-   * 生成されたPID（ID補正なし）
+   * 生成されたPID（ID補正適用後）
    */
-  static generate_event_pid(r1: number): number;
+  static generate_static_pid(r1: number, tid: number, sid: number): number;
   /**
-   * ギフトポケモンのPID生成
-   * 特殊な計算式を使用
-   *
-   * # Arguments
-   * * `r1` - 乱数値1
-   * * `r2` - 乱数値2
-   *
-   * # Returns
-   * 生成されたPID
+   * 新しいPIDCalculatorインスタンスを作成
    */
-  static generate_gift_pid(r1: number, r2: number): number;
-  /**
-   * タマゴのPID生成
-   * 特殊な計算式を使用
-   *
-   * # Arguments
-   * * `r1` - 乱数値1
-   * * `r2` - 乱数値2
-   *
-   * # Returns
-   * 生成されたPID
-   */
-  static generate_egg_pid(r1: number, r2: number): number;
+  constructor();
 }
 /**
  * WASM wrapper for ParentsIVs
@@ -877,8 +877,8 @@ export class PIDCalculator {
 export class ParentsIVsJs {
   free(): void;
   constructor();
-  set male(value: Uint8Array);
   set female(value: Uint8Array);
+  set male(value: Uint8Array);
 }
 /**
  * PersonalityRNG構造体
@@ -886,6 +886,27 @@ export class ParentsIVsJs {
  */
 export class PersonalityRNG {
   free(): void;
+  /**
+   * 指定Seedから現在のSeedまでの距離
+   *
+   * # Arguments
+   * * `source_seed` - 開始Seed
+   *
+   * # Returns
+   * source_seedから現在のSeedまでの距離
+   */
+  distance_from(source_seed: bigint): bigint;
+  /**
+   * 2つのSeed間の距離を計算
+   *
+   * # Arguments
+   * * `from_seed` - 開始Seed
+   * * `to_seed` - 終了Seed
+   *
+   * # Returns
+   * from_seedからto_seedまでの距離
+   */
+  static distance_between(from_seed: bigint, to_seed: bigint): bigint;
   /**
    * 新しいPersonalityRNGインスタンスを作成
    *
@@ -901,12 +922,12 @@ export class PersonalityRNG {
    */
   next(): number;
   /**
-   * 次の64bit乱数値を取得
+   * Seedをリセット
    *
-   * # Returns
-   * 64bit乱数値（内部状態そのもの）
+   * # Arguments
+   * * `initial_seed` - リセット後のSeed値
    */
-  next_u64(): bigint;
+  reset(initial_seed: bigint): void;
   /**
    * 指定回数だけ乱数を進める
    *
@@ -915,12 +936,12 @@ export class PersonalityRNG {
    */
   advance(advances: number): void;
   /**
-   * Seedをリセット
+   * 次の64bit乱数値を取得
    *
-   * # Arguments
-   * * `initial_seed` - リセット後のSeed値
+   * # Returns
+   * 64bit乱数値（内部状態そのもの）
    */
-  reset(initial_seed: bigint): void;
+  next_u64(): bigint;
   /**
    * 0x0からの進行度を計算
    *
@@ -931,27 +952,6 @@ export class PersonalityRNG {
    * 0x0からの進行度
    */
   static get_index(seed: bigint): bigint;
-  /**
-   * 2つのSeed間の距離を計算
-   *
-   * # Arguments
-   * * `from_seed` - 開始Seed
-   * * `to_seed` - 終了Seed
-   *
-   * # Returns
-   * from_seedからto_seedまでの距離
-   */
-  static distance_between(from_seed: bigint, to_seed: bigint): bigint;
-  /**
-   * 指定Seedから現在のSeedまでの距離
-   *
-   * # Arguments
-   * * `source_seed` - 開始Seed
-   *
-   * # Returns
-   * source_seedから現在のSeedまでの距離
-   */
-  distance_from(source_seed: bigint): bigint;
   /**
    * 現在のSeed値を取得
    *
@@ -973,21 +973,6 @@ export class PersonalityRNG {
 export class PokemonGenerator {
   free(): void;
   /**
-   * 新しいPokemonGeneratorインスタンスを作成
-   */
-  constructor();
-  /**
-   * BW/BW2準拠 単体ポケモン生成（統括関数）
-   *
-   * # Arguments
-   * * `seed` - 初期Seed値
-   * * `config` - BW準拠設定
-   *
-   * # Returns
-   * 生成されたポケモンデータ
-   */
-  static generate_single_pokemon_bw(seed: bigint, config: BWGenerationConfig): RawPokemonData;
-  /**
    * オフセット適用後の生成開始Seedを計算
    */
   static calculate_generation_seed(initial_seed: bigint, offset: bigint): bigint;
@@ -1004,6 +989,21 @@ export class PokemonGenerator {
    * 生成されたポケモンデータの配列
    */
   static generate_pokemon_batch_bw(base_seed: bigint, offset: bigint, count: number, config: BWGenerationConfig): RawPokemonData[];
+  /**
+   * BW/BW2準拠 単体ポケモン生成（統括関数）
+   *
+   * # Arguments
+   * * `seed` - 初期Seed値
+   * * `config` - BW準拠設定
+   *
+   * # Returns
+   * 生成されたポケモンデータ
+   */
+  static generate_single_pokemon_bw(seed: bigint, config: BWGenerationConfig): RawPokemonData;
+  /**
+   * 新しいPokemonGeneratorインスタンスを作成
+   */
+  constructor();
 }
 /**
  * 生ポケモンデータ構造体
@@ -1011,19 +1011,19 @@ export class PokemonGenerator {
 export class RawPokemonData {
   private constructor();
   free(): void;
+  readonly get_nature: number;
+  readonly get_shiny_type: number;
+  readonly get_ability_slot: number;
+  readonly get_gender_value: number;
+  readonly get_sync_applied: boolean;
+  readonly get_encounter_type: number;
+  readonly get_level_rand_value: bigint;
+  readonly get_encounter_slot_value: number;
+  readonly get_pid: number;
   /**
    * getter methods for JavaScript access
    */
   readonly get_seed: bigint;
-  readonly get_pid: number;
-  readonly get_nature: number;
-  readonly get_ability_slot: number;
-  readonly get_gender_value: number;
-  readonly get_encounter_slot_value: number;
-  readonly get_level_rand_value: bigint;
-  readonly get_shiny_type: number;
-  readonly get_sync_applied: boolean;
-  readonly get_encounter_type: number;
 }
 /**
  * 探索結果構造体
@@ -1031,12 +1031,12 @@ export class RawPokemonData {
 export class SearchResult {
   free(): void;
   constructor(seed: number, hash: string, year: number, month: number, date: number, hour: number, minute: number, second: number, key_code: number, timer0: number, vcount: number);
-  readonly seed: number;
+  readonly date: number;
   readonly hash: string;
+  readonly hour: number;
+  readonly seed: number;
   readonly year: number;
   readonly month: number;
-  readonly date: number;
-  readonly hour: number;
   readonly minute: number;
   readonly second: number;
   readonly timer0: number;
@@ -1049,13 +1049,13 @@ export class SearchResult {
 export class SeedEnumerator {
   free(): void;
   /**
-   * 列挙器を作成
-   */
-  constructor(base_seed: bigint, user_offset: bigint, count: number, config: BWGenerationConfig, game_mode: GameMode);
-  /**
    * 次のポケモンを生成（残数0なら undefined を返す）
    */
   next_pokemon(): EnumeratedPokemonData | undefined;
+  /**
+   * 列挙器を作成
+   */
+  constructor(base_seed: bigint, user_offset: bigint, count: number, config: BWGenerationConfig, game_mode: GameMode);
   /**
    * 残数を取得
    */
@@ -1067,21 +1067,15 @@ export class SeedEnumerator {
 export class ShinyChecker {
   free(): void;
   /**
-   * 新しいShinyCheckerインスタンスを作成
-   */
-  constructor();
-  /**
-   * 色違い判定
+   * 色違いタイプの判定
    *
    * # Arguments
-   * * `tid` - トレーナーID
-   * * `sid` - シークレットID
-   * * `pid` - ポケモンのPID
+   * * `shiny_value` - 色違い値
    *
    * # Returns
-   * 色違いかどうか
+   * 色違いタイプ
    */
-  static is_shiny(tid: number, sid: number, pid: number): boolean;
+  static get_shiny_type(shiny_value: number): ShinyType;
   /**
    * 色違い値の計算
    * TID ^ SID ^ PID上位16bit ^ PID下位16bit
@@ -1095,16 +1089,6 @@ export class ShinyChecker {
    * 色違い値
    */
   static get_shiny_value(tid: number, sid: number, pid: number): number;
-  /**
-   * 色違いタイプの判定
-   *
-   * # Arguments
-   * * `shiny_value` - 色違い値
-   *
-   * # Returns
-   * 色違いタイプ
-   */
-  static get_shiny_type(shiny_value: number): ShinyType;
   /**
    * 色違い判定とタイプを同時に取得
    *
@@ -1135,6 +1119,22 @@ export class ShinyChecker {
    * 色違い確率（分母）
    */
   static shiny_probability_with_charm(has_shiny_charm: boolean): number;
+  /**
+   * 新しいShinyCheckerインスタンスを作成
+   */
+  constructor();
+  /**
+   * 色違い判定
+   *
+   * # Arguments
+   * * `tid` - トレーナーID
+   * * `sid` - シークレットID
+   * * `pid` - ポケモンのPID
+   *
+   * # Returns
+   * 色違いかどうか
+   */
+  static is_shiny(tid: number, sid: number, pid: number): boolean;
 }
 export class StatRange {
   free(): void;
@@ -1149,6 +1149,9 @@ export class StatRange {
 export class TidSidResult {
   private constructor();
   free(): void;
+  readonly get_advances_used: number;
+  readonly get_sid: number;
+  readonly get_tid: number;
   /**
    * TID（トレーナーID下位16bit）
    */
@@ -1161,9 +1164,6 @@ export class TidSidResult {
    * 消費した乱数回数
    */
   advances_used: number;
-  readonly get_tid: number;
-  readonly get_sid: number;
-  readonly get_advances_used: number;
 }
 export class TrainerIds {
   free(): void;
@@ -1179,6 +1179,16 @@ export class ValidationUtils {
   private constructor();
   free(): void;
   /**
+   * SIDの妥当性チェック
+   *
+   * # Arguments
+   * * `sid` - シークレットID
+   *
+   * # Returns
+   * 妥当性
+   */
+  static is_valid_sid(_sid: number): boolean;
+  /**
    * TIDの妥当性チェック
    *
    * # Arguments
@@ -1189,15 +1199,15 @@ export class ValidationUtils {
    */
   static is_valid_tid(_tid: number): boolean;
   /**
-   * SIDの妥当性チェック
+   * Seed値の妥当性チェック
    *
    * # Arguments
-   * * `sid` - シークレットID
+   * * `seed` - Seed値
    *
    * # Returns
    * 妥当性
    */
-  static is_valid_sid(_sid: number): boolean;
+  static is_valid_seed(seed: bigint): boolean;
   /**
    * 性格値の妥当性チェック
    *
@@ -1209,16 +1219,6 @@ export class ValidationUtils {
    */
   static is_valid_nature(nature: number): boolean;
   /**
-   * 特性スロットの妥当性チェック
-   *
-   * # Arguments
-   * * `ability_slot` - 特性スロット
-   *
-   * # Returns
-   * 妥当性
-   */
-  static is_valid_ability_slot(ability_slot: number): boolean;
-  /**
    * 16進数文字列の妥当性チェック
    *
    * # Arguments
@@ -1229,283 +1229,283 @@ export class ValidationUtils {
    */
   static is_valid_hex_string(hex_str: string): boolean;
   /**
-   * Seed値の妥当性チェック
+   * 特性スロットの妥当性チェック
    *
    * # Arguments
-   * * `seed` - Seed値
+   * * `ability_slot` - 特性スロット
    *
    * # Returns
    * 妥当性
    */
-  static is_valid_seed(seed: bigint): boolean;
+  static is_valid_ability_slot(ability_slot: number): boolean;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly generate_egg_key_codes: (a: number, b: number) => void;
+  readonly __wbg_arrayutils_free: (a: number, b: number) => void;
+  readonly __wbg_bwgenerationconfig_free: (a: number, b: number) => void;
+  readonly __wbg_eggboottimingsearchiterator_free: (a: number, b: number) => void;
   readonly __wbg_eggboottimingsearchresult_free: (a: number, b: number) => void;
-  readonly eggboottimingsearchresult_year: (a: number) => number;
-  readonly eggboottimingsearchresult_month: (a: number) => number;
-  readonly eggboottimingsearchresult_date: (a: number) => number;
-  readonly eggboottimingsearchresult_hour: (a: number) => number;
-  readonly eggboottimingsearchresult_minute: (a: number) => number;
-  readonly eggboottimingsearchresult_second: (a: number) => number;
-  readonly eggboottimingsearchresult_timer0: (a: number) => number;
-  readonly eggboottimingsearchresult_vcount: (a: number) => number;
-  readonly eggboottimingsearchresult_key_code: (a: number) => number;
-  readonly eggboottimingsearchresult_lcg_seed_hex: (a: number, b: number) => void;
+  readonly __wbg_eggseedenumeratorjs_free: (a: number, b: number) => void;
+  readonly __wbg_enumeratedpokemondata_free: (a: number, b: number) => void;
+  readonly __wbg_everstoneplanjs_free: (a: number, b: number) => void;
+  readonly __wbg_extraresult_free: (a: number, b: number) => void;
+  readonly __wbg_generationconditionsjs_free: (a: number, b: number) => void;
+  readonly __wbg_get_extraresult_advances: (a: number) => number;
+  readonly __wbg_get_extraresult_success: (a: number) => number;
+  readonly __wbg_get_extraresult_value1: (a: number) => number;
+  readonly __wbg_get_extraresult_value2: (a: number) => number;
+  readonly __wbg_get_extraresult_value3: (a: number) => number;
+  readonly __wbg_get_genderratio_genderless: (a: number) => number;
+  readonly __wbg_get_genderratio_threshold: (a: number) => number;
+  readonly __wbg_get_generationconditionsjs_allow_hidden_ability: (a: number) => number;
+  readonly __wbg_get_generationconditionsjs_female_parent_has_hidden: (a: number) => number;
+  readonly __wbg_get_generationconditionsjs_has_nidoran_flag: (a: number) => number;
+  readonly __wbg_get_generationconditionsjs_reroll_count: (a: number) => number;
+  readonly __wbg_get_generationconditionsjs_uses_ditto: (a: number) => number;
+  readonly __wbg_get_statrange_min: (a: number) => number;
+  readonly __wbg_get_tidsidresult_sid: (a: number) => number;
+  readonly __wbg_get_tidsidresult_tid: (a: number) => number;
+  readonly __wbg_get_trainerids_sid: (a: number) => number;
+  readonly __wbg_get_trainerids_tid: (a: number) => number;
+  readonly __wbg_get_trainerids_tsv: (a: number) => number;
+  readonly __wbg_integratedseedsearcher_free: (a: number, b: number) => void;
+  readonly __wbg_offsetcalculator_free: (a: number, b: number) => void;
+  readonly __wbg_personalityrng_free: (a: number, b: number) => void;
+  readonly __wbg_rawpokemondata_free: (a: number, b: number) => void;
+  readonly __wbg_searchresult_free: (a: number, b: number) => void;
+  readonly __wbg_set_extraresult_advances: (a: number, b: number) => void;
+  readonly __wbg_set_extraresult_success: (a: number, b: number) => void;
+  readonly __wbg_set_extraresult_value1: (a: number, b: number) => void;
+  readonly __wbg_set_extraresult_value2: (a: number, b: number) => void;
+  readonly __wbg_set_extraresult_value3: (a: number, b: number) => void;
+  readonly __wbg_set_genderratio_genderless: (a: number, b: number) => void;
+  readonly __wbg_set_genderratio_threshold: (a: number, b: number) => void;
+  readonly __wbg_set_generationconditionsjs_allow_hidden_ability: (a: number, b: number) => void;
+  readonly __wbg_set_generationconditionsjs_female_parent_has_hidden: (a: number, b: number) => void;
+  readonly __wbg_set_generationconditionsjs_has_nidoran_flag: (a: number, b: number) => void;
+  readonly __wbg_set_generationconditionsjs_reroll_count: (a: number, b: number) => void;
+  readonly __wbg_set_generationconditionsjs_uses_ditto: (a: number, b: number) => void;
+  readonly __wbg_set_statrange_min: (a: number, b: number) => void;
+  readonly __wbg_set_tidsidresult_sid: (a: number, b: number) => void;
+  readonly __wbg_set_tidsidresult_tid: (a: number, b: number) => void;
+  readonly __wbg_set_trainerids_sid: (a: number, b: number) => void;
+  readonly __wbg_set_trainerids_tid: (a: number, b: number) => void;
+  readonly __wbg_set_trainerids_tsv: (a: number, b: number) => void;
+  readonly __wbg_tidsidresult_free: (a: number, b: number) => void;
+  readonly arrayutils_average_u32_array: (a: number, b: number) => number;
+  readonly arrayutils_deduplicate_u32_array: (a: number, b: number, c: number) => void;
+  readonly arrayutils_max_u32_array: (a: number, b: number) => number;
+  readonly arrayutils_min_u32_array: (a: number, b: number) => number;
+  readonly arrayutils_sum_u32_array: (a: number, b: number) => bigint;
+  readonly bitutils_count_bits: (a: number) => number;
+  readonly bitutils_extract_bits: (a: number, b: number, c: number) => number;
+  readonly bitutils_get_bit: (a: number, b: number) => number;
+  readonly bitutils_rotate_left_32: (a: number, b: number) => number;
+  readonly bitutils_rotate_right_32: (a: number, b: number) => number;
+  readonly bitutils_set_bit: (a: number, b: number, c: number) => number;
+  readonly bwgenerationconfig_get_encounter_type: (a: number) => number;
+  readonly bwgenerationconfig_get_has_shiny_charm: (a: number) => number;
+  readonly bwgenerationconfig_get_is_shiny_locked: (a: number) => number;
+  readonly bwgenerationconfig_get_sid: (a: number) => number;
+  readonly bwgenerationconfig_get_sync_enabled: (a: number) => number;
+  readonly bwgenerationconfig_get_sync_nature_id: (a: number) => number;
+  readonly bwgenerationconfig_get_tid: (a: number) => number;
+  readonly bwgenerationconfig_get_version: (a: number) => number;
+  readonly bwgenerationconfig_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+  readonly calculate_game_offset: (a: bigint, b: number) => number;
+  readonly calculate_tid_sid_from_seed: (a: bigint, b: number) => number;
+  readonly eggboottimingsearchiterator_is_finished: (a: number) => number;
+  readonly eggboottimingsearchiterator_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: bigint, a1: number) => void;
+  readonly eggboottimingsearchiterator_next_batch: (a: number, b: number, c: number) => number;
+  readonly eggboottimingsearchresult_ability: (a: number) => number;
   readonly eggboottimingsearchresult_advance: (a: number) => bigint;
+  readonly eggboottimingsearchresult_date: (a: number) => number;
+  readonly eggboottimingsearchresult_gender: (a: number) => number;
+  readonly eggboottimingsearchresult_hour: (a: number) => number;
+  readonly eggboottimingsearchresult_hp_known: (a: number) => number;
+  readonly eggboottimingsearchresult_hp_power: (a: number) => number;
+  readonly eggboottimingsearchresult_hp_type: (a: number) => number;
   readonly eggboottimingsearchresult_is_stable: (a: number) => number;
   readonly eggboottimingsearchresult_ivs: (a: number, b: number) => void;
-  readonly eggboottimingsearchresult_nature: (a: number) => number;
-  readonly eggboottimingsearchresult_gender: (a: number) => number;
-  readonly eggboottimingsearchresult_ability: (a: number) => number;
-  readonly eggboottimingsearchresult_shiny: (a: number) => number;
-  readonly eggboottimingsearchresult_pid: (a: number) => number;
-  readonly eggboottimingsearchresult_hp_type: (a: number) => number;
-  readonly eggboottimingsearchresult_hp_power: (a: number) => number;
-  readonly eggboottimingsearchresult_hp_known: (a: number) => number;
+  readonly eggboottimingsearchresult_key_code: (a: number) => number;
+  readonly eggboottimingsearchresult_lcg_seed_hex: (a: number, b: number) => void;
+  readonly eggboottimingsearchresult_minute: (a: number) => number;
+  readonly eggboottimingsearchresult_month: (a: number) => number;
   readonly eggboottimingsearchresult_mt_seed: (a: number) => number;
   readonly eggboottimingsearchresult_mt_seed_hex: (a: number, b: number) => void;
-  readonly __wbg_eggboottimingsearchiterator_free: (a: number, b: number) => void;
-  readonly eggboottimingsearchiterator_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: bigint, a1: number) => void;
-  readonly eggboottimingsearchiterator_is_finished: (a: number) => number;
-  readonly eggboottimingsearchiterator_next_batch: (a: number, b: number, c: number) => number;
-  readonly __wbg_get_statrange_min: (a: number) => number;
-  readonly __wbg_set_statrange_min: (a: number, b: number) => void;
-  readonly statrange_new: (a: number, b: number) => number;
-  readonly statrange_contains: (a: number, b: number) => number;
-  readonly __wbg_get_genderratio_threshold: (a: number) => number;
-  readonly __wbg_set_genderratio_threshold: (a: number, b: number) => void;
-  readonly __wbg_get_genderratio_genderless: (a: number) => number;
-  readonly __wbg_set_genderratio_genderless: (a: number, b: number) => void;
-  readonly genderratio_new: (a: number, b: number) => number;
-  readonly genderratio_resolve: (a: number, b: number) => number;
-  readonly __wbg_everstoneplanjs_free: (a: number, b: number) => void;
-  readonly everstoneplanjs_none: () => number;
-  readonly everstoneplanjs_fixed: (a: number) => number;
-  readonly __wbg_get_trainerids_tid: (a: number) => number;
-  readonly __wbg_set_trainerids_tid: (a: number, b: number) => void;
-  readonly __wbg_get_trainerids_sid: (a: number) => number;
-  readonly __wbg_set_trainerids_sid: (a: number, b: number) => void;
-  readonly __wbg_get_trainerids_tsv: (a: number) => number;
-  readonly __wbg_set_trainerids_tsv: (a: number, b: number) => void;
-  readonly trainerids_new: (a: number, b: number) => number;
-  readonly __wbg_generationconditionsjs_free: (a: number, b: number) => void;
-  readonly __wbg_get_generationconditionsjs_has_nidoran_flag: (a: number) => number;
-  readonly __wbg_set_generationconditionsjs_has_nidoran_flag: (a: number, b: number) => void;
-  readonly __wbg_get_generationconditionsjs_uses_ditto: (a: number) => number;
-  readonly __wbg_set_generationconditionsjs_uses_ditto: (a: number, b: number) => void;
-  readonly __wbg_get_generationconditionsjs_allow_hidden_ability: (a: number) => number;
-  readonly __wbg_set_generationconditionsjs_allow_hidden_ability: (a: number, b: number) => void;
-  readonly __wbg_get_generationconditionsjs_female_parent_has_hidden: (a: number) => number;
-  readonly __wbg_set_generationconditionsjs_female_parent_has_hidden: (a: number, b: number) => void;
-  readonly __wbg_get_generationconditionsjs_reroll_count: (a: number) => number;
-  readonly __wbg_set_generationconditionsjs_reroll_count: (a: number, b: number) => void;
-  readonly generationconditionsjs_new: () => number;
-  readonly generationconditionsjs_set_everstone: (a: number, b: number) => void;
-  readonly generationconditionsjs_set_trainer_ids: (a: number, b: number) => void;
-  readonly generationconditionsjs_set_gender_ratio: (a: number, b: number) => void;
-  readonly individualfilterjs_new: () => number;
-  readonly individualfilterjs_set_iv_range: (a: number, b: number, c: number, d: number) => void;
-  readonly individualfilterjs_set_nature: (a: number, b: number) => void;
-  readonly individualfilterjs_set_gender: (a: number, b: number) => void;
-  readonly individualfilterjs_set_ability: (a: number, b: number) => void;
-  readonly individualfilterjs_set_shiny: (a: number, b: number) => void;
-  readonly individualfilterjs_set_hidden_power_type: (a: number, b: number) => void;
-  readonly individualfilterjs_set_hidden_power_power: (a: number, b: number) => void;
-  readonly parentsivsjs_new: () => number;
-  readonly parentsivsjs_set_male: (a: number, b: number, c: number) => void;
-  readonly parentsivsjs_set_female: (a: number, b: number, c: number) => void;
-  readonly __wbg_eggseedenumeratorjs_free: (a: number, b: number) => void;
+  readonly eggboottimingsearchresult_nature: (a: number) => number;
+  readonly eggboottimingsearchresult_pid: (a: number) => number;
+  readonly eggboottimingsearchresult_second: (a: number) => number;
+  readonly eggboottimingsearchresult_shiny: (a: number) => number;
+  readonly eggboottimingsearchresult_timer0: (a: number) => number;
+  readonly eggboottimingsearchresult_vcount: (a: number) => number;
+  readonly eggboottimingsearchresult_year: (a: number) => number;
   readonly eggseedenumeratorjs_new: (a: bigint, b: bigint, c: number, d: number, e: number, f: number, g: number, h: number) => number;
   readonly eggseedenumeratorjs_next_egg: (a: number) => number;
   readonly eggseedenumeratorjs_remaining: (a: number) => number;
-  readonly encountercalculator_new: () => number;
   readonly encountercalculator_calculate_encounter_slot: (a: number, b: number, c: number) => number;
-  readonly encountercalculator_slot_to_table_index: (a: number, b: number) => number;
   readonly encountercalculator_get_dust_cloud_content: (a: number) => number;
-  readonly __wbg_searchresult_free: (a: number, b: number) => void;
-  readonly searchresult_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => number;
-  readonly searchresult_hash: (a: number, b: number) => void;
-  readonly searchresult_month: (a: number) => number;
-  readonly searchresult_hour: (a: number) => number;
-  readonly searchresult_second: (a: number) => number;
-  readonly searchresult_vcount: (a: number) => number;
-  readonly searchresult_key_code: (a: number) => number;
-  readonly __wbg_integratedseedsearcher_free: (a: number, b: number) => void;
-  readonly integratedseedsearcher_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number) => void;
-  readonly integratedseedsearcher_search_seeds_integrated: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => number;
-  readonly integratedseedsearcher_search_seeds_integrated_simd: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => number;
-  readonly __wbg_tidsidresult_free: (a: number, b: number) => void;
-  readonly __wbg_get_tidsidresult_tid: (a: number) => number;
-  readonly __wbg_set_tidsidresult_tid: (a: number, b: number) => void;
-  readonly __wbg_get_tidsidresult_sid: (a: number) => number;
-  readonly __wbg_set_tidsidresult_sid: (a: number, b: number) => void;
-  readonly tidsidresult_get_tid: (a: number) => number;
-  readonly tidsidresult_get_sid: (a: number) => number;
-  readonly __wbg_extraresult_free: (a: number, b: number) => void;
-  readonly __wbg_get_extraresult_advances: (a: number) => number;
-  readonly __wbg_set_extraresult_advances: (a: number, b: number) => void;
-  readonly __wbg_get_extraresult_success: (a: number) => number;
-  readonly __wbg_set_extraresult_success: (a: number, b: number) => void;
-  readonly __wbg_get_extraresult_value1: (a: number) => number;
-  readonly __wbg_set_extraresult_value1: (a: number, b: number) => void;
-  readonly __wbg_get_extraresult_value2: (a: number) => number;
-  readonly __wbg_set_extraresult_value2: (a: number, b: number) => void;
-  readonly __wbg_get_extraresult_value3: (a: number) => number;
-  readonly __wbg_set_extraresult_value3: (a: number, b: number) => void;
+  readonly encountercalculator_new: () => number;
+  readonly encountercalculator_slot_to_table_index: (a: number, b: number) => number;
+  readonly endianutils_be32_to_le: (a: number) => number;
+  readonly endianutils_le32_to_be: (a: number) => number;
+  readonly endianutils_swap_bytes_16: (a: number) => number;
+  readonly endianutils_swap_bytes_64: (a: bigint) => bigint;
+  readonly enumeratedpokemondata_get_ability_slot: (a: number) => number;
+  readonly enumeratedpokemondata_get_encounter_slot_value: (a: number) => number;
+  readonly enumeratedpokemondata_get_encounter_type: (a: number) => number;
+  readonly enumeratedpokemondata_get_gender_value: (a: number) => number;
+  readonly enumeratedpokemondata_get_level_rand_value: (a: number) => bigint;
+  readonly enumeratedpokemondata_get_nature: (a: number) => number;
+  readonly enumeratedpokemondata_get_seed: (a: number) => bigint;
+  readonly enumeratedpokemondata_get_shiny_type: (a: number) => number;
+  readonly enumeratedpokemondata_get_sync_applied: (a: number) => number;
+  readonly enumeratedpokemondata_into_raw: (a: number) => number;
+  readonly everstoneplanjs_fixed: (a: number) => number;
+  readonly everstoneplanjs_none: () => number;
   readonly extraresult_get_advances: (a: number) => number;
   readonly extraresult_get_success: (a: number) => number;
   readonly extraresult_get_value1: (a: number) => number;
   readonly extraresult_get_value2: (a: number) => number;
   readonly extraresult_get_value3: (a: number) => number;
-  readonly __wbg_offsetcalculator_free: (a: number, b: number) => void;
+  readonly genderratio_new: (a: number, b: number) => number;
+  readonly genderratio_resolve: (a: number, b: number) => number;
+  readonly generate_egg_key_codes: (a: number, b: number) => void;
+  readonly generationconditionsjs_new: () => number;
+  readonly generationconditionsjs_set_everstone: (a: number, b: number) => void;
+  readonly generationconditionsjs_set_gender_ratio: (a: number, b: number) => void;
+  readonly generationconditionsjs_set_trainer_ids: (a: number, b: number) => void;
+  readonly individualfilterjs_new: () => number;
+  readonly individualfilterjs_set_ability: (a: number, b: number) => void;
+  readonly individualfilterjs_set_gender: (a: number, b: number) => void;
+  readonly individualfilterjs_set_hidden_power_power: (a: number, b: number) => void;
+  readonly individualfilterjs_set_hidden_power_type: (a: number, b: number) => void;
+  readonly individualfilterjs_set_iv_range: (a: number, b: number, c: number, d: number) => void;
+  readonly individualfilterjs_set_nature: (a: number, b: number) => void;
+  readonly individualfilterjs_set_shiny: (a: number, b: number) => void;
+  readonly integratedseedsearcher_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number) => void;
+  readonly integratedseedsearcher_search_seeds_integrated: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => number;
+  readonly integratedseedsearcher_search_seeds_integrated_simd: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => number;
+  readonly numberutils_decode_bcd: (a: number) => number;
+  readonly numberutils_encode_bcd: (a: number) => number;
+  readonly numberutils_hex_string_to_u32: (a: number, b: number) => number;
+  readonly numberutils_percentage_to_threshold: (a: number) => number;
+  readonly numberutils_threshold_to_percentage: (a: number) => number;
+  readonly numberutils_u32_to_hex_string: (a: number, b: number, c: number) => void;
+  readonly offsetcalculator_calculate_tid_sid: (a: number) => number;
+  readonly offsetcalculator_consume_random: (a: number, b: number) => void;
+  readonly offsetcalculator_determine_all_residents: (a: number) => void;
+  readonly offsetcalculator_determine_back_residents: (a: number) => void;
+  readonly offsetcalculator_determine_front_residents: (a: number) => void;
+  readonly offsetcalculator_execute_game_initialization: (a: number, b: number) => number;
+  readonly offsetcalculator_extra_process: (a: number) => number;
   readonly offsetcalculator_new: (a: bigint) => number;
   readonly offsetcalculator_next_rand: (a: number) => number;
-  readonly offsetcalculator_consume_random: (a: number, b: number) => void;
-  readonly offsetcalculator_reset: (a: number, b: bigint) => void;
-  readonly offsetcalculator_calculate_tid_sid: (a: number) => number;
-  readonly offsetcalculator_determine_front_residents: (a: number) => void;
-  readonly offsetcalculator_determine_back_residents: (a: number) => void;
-  readonly offsetcalculator_determine_all_residents: (a: number) => void;
   readonly offsetcalculator_probability_table_process: (a: number) => void;
   readonly offsetcalculator_probability_table_process_multiple: (a: number, b: number) => void;
-  readonly offsetcalculator_extra_process: (a: number) => number;
-  readonly offsetcalculator_execute_game_initialization: (a: number, b: number) => number;
-  readonly calculate_game_offset: (a: bigint, b: number) => number;
-  readonly calculate_tid_sid_from_seed: (a: bigint, b: number) => number;
-  readonly __wbg_personalityrng_free: (a: number, b: number) => void;
+  readonly offsetcalculator_reset: (a: number, b: bigint) => void;
+  readonly parentsivsjs_new: () => number;
+  readonly parentsivsjs_set_female: (a: number, b: number, c: number) => void;
+  readonly parentsivsjs_set_male: (a: number, b: number, c: number) => void;
+  readonly personalityrng_advance: (a: number, b: number) => void;
+  readonly personalityrng_distance_between: (a: bigint, b: bigint) => bigint;
+  readonly personalityrng_distance_from: (a: number, b: bigint) => bigint;
+  readonly personalityrng_get_index: (a: bigint) => bigint;
   readonly personalityrng_new: (a: bigint) => number;
   readonly personalityrng_next: (a: number) => number;
   readonly personalityrng_next_u64: (a: number) => bigint;
-  readonly personalityrng_advance: (a: number, b: number) => void;
   readonly personalityrng_reset: (a: number, b: bigint) => void;
-  readonly personalityrng_get_index: (a: bigint) => bigint;
-  readonly personalityrng_distance_between: (a: bigint, b: bigint) => bigint;
-  readonly personalityrng_distance_from: (a: number, b: bigint) => bigint;
-  readonly pidcalculator_generate_base_pid: (a: number) => number;
   readonly pidcalculator_apply_id_correction: (a: number, b: number, c: number) => number;
-  readonly pidcalculator_generate_roamer_pid: (a: number, b: number, c: number) => number;
-  readonly pidcalculator_generate_gift_pid: (a: number, b: number) => number;
+  readonly pidcalculator_generate_base_pid: (a: number) => number;
   readonly pidcalculator_generate_egg_pid: (a: number, b: number) => number;
-  readonly shinychecker_is_shiny: (a: number, b: number, c: number) => number;
-  readonly shinychecker_get_shiny_value: (a: number, b: number, c: number) => number;
-  readonly shinychecker_get_shiny_type: (a: number) => number;
-  readonly shinychecker_check_shiny_type: (a: number, b: number, c: number) => number;
-  readonly shinychecker_shiny_probability: () => number;
-  readonly shinychecker_shiny_probability_with_charm: (a: number) => number;
-  readonly __wbg_rawpokemondata_free: (a: number, b: number) => void;
-  readonly __wbg_enumeratedpokemondata_free: (a: number, b: number) => void;
-  readonly enumeratedpokemondata_get_seed: (a: number) => bigint;
-  readonly enumeratedpokemondata_get_nature: (a: number) => number;
-  readonly enumeratedpokemondata_get_sync_applied: (a: number) => number;
-  readonly enumeratedpokemondata_get_ability_slot: (a: number) => number;
-  readonly enumeratedpokemondata_get_gender_value: (a: number) => number;
-  readonly enumeratedpokemondata_get_encounter_slot_value: (a: number) => number;
-  readonly enumeratedpokemondata_get_encounter_type: (a: number) => number;
-  readonly enumeratedpokemondata_get_level_rand_value: (a: number) => bigint;
-  readonly enumeratedpokemondata_get_shiny_type: (a: number) => number;
-  readonly enumeratedpokemondata_into_raw: (a: number) => number;
-  readonly rawpokemondata_get_nature: (a: number) => number;
-  readonly rawpokemondata_get_ability_slot: (a: number) => number;
-  readonly rawpokemondata_get_gender_value: (a: number) => number;
-  readonly rawpokemondata_get_encounter_slot_value: (a: number) => number;
-  readonly rawpokemondata_get_level_rand_value: (a: number) => bigint;
-  readonly rawpokemondata_get_shiny_type: (a: number) => number;
-  readonly rawpokemondata_get_sync_applied: (a: number) => number;
-  readonly rawpokemondata_get_encounter_type: (a: number) => number;
-  readonly __wbg_bwgenerationconfig_free: (a: number, b: number) => void;
-  readonly bwgenerationconfig_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
-  readonly bwgenerationconfig_get_version: (a: number) => number;
-  readonly bwgenerationconfig_get_encounter_type: (a: number) => number;
-  readonly bwgenerationconfig_get_tid: (a: number) => number;
-  readonly bwgenerationconfig_get_sid: (a: number) => number;
-  readonly bwgenerationconfig_get_sync_enabled: (a: number) => number;
-  readonly bwgenerationconfig_get_sync_nature_id: (a: number) => number;
-  readonly bwgenerationconfig_get_is_shiny_locked: (a: number) => number;
-  readonly bwgenerationconfig_get_has_shiny_charm: (a: number) => number;
-  readonly pokemongenerator_generate_single_pokemon_bw: (a: bigint, b: number) => number;
+  readonly pidcalculator_generate_gift_pid: (a: number, b: number) => number;
+  readonly pidcalculator_generate_roamer_pid: (a: number, b: number, c: number) => number;
   readonly pokemongenerator_calculate_generation_seed: (a: bigint, b: bigint) => bigint;
   readonly pokemongenerator_generate_pokemon_batch_bw: (a: number, b: bigint, c: bigint, d: number, e: number) => void;
+  readonly pokemongenerator_generate_single_pokemon_bw: (a: bigint, b: number) => number;
+  readonly rawpokemondata_get_ability_slot: (a: number) => number;
+  readonly rawpokemondata_get_encounter_slot_value: (a: number) => number;
+  readonly rawpokemondata_get_encounter_type: (a: number) => number;
+  readonly rawpokemondata_get_gender_value: (a: number) => number;
+  readonly rawpokemondata_get_level_rand_value: (a: number) => bigint;
+  readonly rawpokemondata_get_nature: (a: number) => number;
+  readonly rawpokemondata_get_shiny_type: (a: number) => number;
+  readonly rawpokemondata_get_sync_applied: (a: number) => number;
+  readonly searchresult_hash: (a: number, b: number) => void;
+  readonly searchresult_hour: (a: number) => number;
+  readonly searchresult_key_code: (a: number) => number;
+  readonly searchresult_month: (a: number) => number;
+  readonly searchresult_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => number;
+  readonly searchresult_second: (a: number) => number;
+  readonly searchresult_vcount: (a: number) => number;
   readonly seedenumerator_new: (a: bigint, b: bigint, c: number, d: number, e: number) => number;
   readonly seedenumerator_next_pokemon: (a: number) => number;
   readonly sha1_hash_batch: (a: number, b: number, c: number) => void;
-  readonly endianutils_swap_bytes_16: (a: number) => number;
-  readonly endianutils_swap_bytes_64: (a: bigint) => bigint;
-  readonly endianutils_be32_to_le: (a: number) => number;
-  readonly endianutils_le32_to_be: (a: number) => number;
-  readonly bitutils_rotate_left_32: (a: number, b: number) => number;
-  readonly bitutils_rotate_right_32: (a: number, b: number) => number;
-  readonly bitutils_get_bit: (a: number, b: number) => number;
-  readonly bitutils_set_bit: (a: number, b: number, c: number) => number;
-  readonly bitutils_count_bits: (a: number) => number;
-  readonly bitutils_extract_bits: (a: number, b: number, c: number) => number;
-  readonly numberutils_hex_string_to_u32: (a: number, b: number) => number;
-  readonly numberutils_u32_to_hex_string: (a: number, b: number, c: number) => void;
-  readonly numberutils_encode_bcd: (a: number) => number;
-  readonly numberutils_decode_bcd: (a: number) => number;
-  readonly numberutils_percentage_to_threshold: (a: number) => number;
-  readonly numberutils_threshold_to_percentage: (a: number) => number;
-  readonly __wbg_arrayutils_free: (a: number, b: number) => void;
-  readonly arrayutils_sum_u32_array: (a: number, b: number) => bigint;
-  readonly arrayutils_average_u32_array: (a: number, b: number) => number;
-  readonly arrayutils_max_u32_array: (a: number, b: number) => number;
-  readonly arrayutils_min_u32_array: (a: number, b: number) => number;
-  readonly arrayutils_deduplicate_u32_array: (a: number, b: number, c: number) => void;
-  readonly validationutils_is_valid_sid: (a: number) => number;
-  readonly validationutils_is_valid_nature: (a: number) => number;
+  readonly shinychecker_check_shiny_type: (a: number, b: number, c: number) => number;
+  readonly shinychecker_get_shiny_type: (a: number) => number;
+  readonly shinychecker_get_shiny_value: (a: number, b: number, c: number) => number;
+  readonly shinychecker_is_shiny: (a: number, b: number, c: number) => number;
+  readonly shinychecker_shiny_probability: () => number;
+  readonly shinychecker_shiny_probability_with_charm: (a: number) => number;
+  readonly statrange_contains: (a: number, b: number) => number;
+  readonly statrange_new: (a: number, b: number) => number;
+  readonly tidsidresult_get_sid: (a: number) => number;
+  readonly tidsidresult_get_tid: (a: number) => number;
+  readonly trainerids_new: (a: number, b: number) => number;
   readonly validationutils_is_valid_ability_slot: (a: number) => number;
   readonly validationutils_is_valid_hex_string: (a: number, b: number) => number;
+  readonly validationutils_is_valid_nature: (a: number) => number;
   readonly validationutils_is_valid_seed: (a: bigint) => number;
-  readonly pidcalculator_new: () => number;
-  readonly shinychecker_new: () => number;
-  readonly pokemongenerator_new: () => number;
+  readonly validationutils_is_valid_sid: (a: number) => number;
   readonly __wbg_set_tidsidresult_advances_used: (a: number, b: number) => void;
   readonly validationutils_is_valid_tid: (a: number) => number;
   readonly personalityrng_set_seed: (a: number, b: bigint) => void;
-  readonly pidcalculator_generate_event_pid: (a: number) => number;
-  readonly pidcalculator_generate_wild_pid: (a: number, b: number, c: number) => number;
+  readonly __wbg_get_statrange_max: (a: number) => number;
+  readonly __wbg_set_statrange_max: (a: number, b: number) => void;
   readonly pidcalculator_generate_static_pid: (a: number, b: number, c: number) => number;
+  readonly pidcalculator_generate_wild_pid: (a: number, b: number, c: number) => number;
+  readonly pidcalculator_generate_event_pid: (a: number) => number;
   readonly __wbg_get_tidsidresult_advances_used: (a: number) => number;
-  readonly searchresult_year: (a: number) => number;
-  readonly searchresult_date: (a: number) => number;
-  readonly searchresult_minute: (a: number) => number;
-  readonly searchresult_timer0: (a: number) => number;
-  readonly tidsidresult_get_advances_used: (a: number) => number;
-  readonly searchresult_seed: (a: number) => number;
+  readonly enumeratedpokemondata_get_advance: (a: number) => bigint;
+  readonly enumeratedpokemondata_get_pid: (a: number) => number;
   readonly offsetcalculator_get_advances: (a: number) => number;
   readonly offsetcalculator_get_current_seed: (a: number) => bigint;
   readonly personalityrng_current_seed: (a: number) => bigint;
-  readonly enumeratedpokemondata_get_advance: (a: number) => bigint;
-  readonly enumeratedpokemondata_get_pid: (a: number) => number;
-  readonly rawpokemondata_get_seed: (a: number) => bigint;
   readonly rawpokemondata_get_pid: (a: number) => number;
+  readonly rawpokemondata_get_seed: (a: number) => bigint;
+  readonly searchresult_date: (a: number) => number;
+  readonly searchresult_minute: (a: number) => number;
+  readonly searchresult_seed: (a: number) => number;
+  readonly searchresult_timer0: (a: number) => number;
+  readonly searchresult_year: (a: number) => number;
   readonly seedenumerator_remaining: (a: number) => number;
-  readonly __wbg_set_statrange_max: (a: number, b: number) => void;
-  readonly __wbg_get_statrange_max: (a: number) => number;
+  readonly tidsidresult_get_advances_used: (a: number) => number;
   readonly endianutils_swap_bytes_32: (a: number) => number;
-  readonly __wbg_statrange_free: (a: number, b: number) => void;
+  readonly __wbg_bitutils_free: (a: number, b: number) => void;
+  readonly __wbg_encountercalculator_free: (a: number, b: number) => void;
+  readonly __wbg_endianutils_free: (a: number, b: number) => void;
   readonly __wbg_genderratio_free: (a: number, b: number) => void;
-  readonly __wbg_trainerids_free: (a: number, b: number) => void;
   readonly __wbg_individualfilterjs_free: (a: number, b: number) => void;
-  readonly __wbg_pidcalculator_free: (a: number, b: number) => void;
-  readonly __wbg_shinychecker_free: (a: number, b: number) => void;
+  readonly __wbg_numberutils_free: (a: number, b: number) => void;
   readonly __wbg_parentsivsjs_free: (a: number, b: number) => void;
+  readonly __wbg_pidcalculator_free: (a: number, b: number) => void;
   readonly __wbg_pokemongenerator_free: (a: number, b: number) => void;
   readonly __wbg_seedenumerator_free: (a: number, b: number) => void;
-  readonly __wbg_endianutils_free: (a: number, b: number) => void;
-  readonly __wbg_encountercalculator_free: (a: number, b: number) => void;
-  readonly __wbg_numberutils_free: (a: number, b: number) => void;
-  readonly __wbg_bitutils_free: (a: number, b: number) => void;
+  readonly __wbg_shinychecker_free: (a: number, b: number) => void;
+  readonly __wbg_statrange_free: (a: number, b: number) => void;
+  readonly __wbg_trainerids_free: (a: number, b: number) => void;
   readonly __wbg_validationutils_free: (a: number, b: number) => void;
+  readonly pidcalculator_new: () => number;
+  readonly pokemongenerator_new: () => number;
+  readonly shinychecker_new: () => number;
   readonly __wbindgen_export_0: (a: number) => void;
+  readonly __wbindgen_export_1: (a: number, b: number) => number;
+  readonly __wbindgen_export_2: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
-  readonly __wbindgen_export_1: (a: number, b: number, c: number) => void;
-  readonly __wbindgen_export_2: (a: number, b: number) => number;
-  readonly __wbindgen_export_3: (a: number, b: number, c: number, d: number) => number;
+  readonly __wbindgen_export_3: (a: number, b: number, c: number) => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
