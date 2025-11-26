@@ -260,7 +260,8 @@ function executeEnumeration(params: EggGenerationParams) {
   ));
 
   // IndividualFilterJs 構築
-  const filter = buildFilter(wasmAny, params.filter);
+  // filterDisabled の場合は全pass-throughフィルタ、それ以外は指定フィルタ
+  const filter = buildFilter(wasmAny, params.filterDisabled ? null : params.filter);
 
   // EggSeedEnumeratorJs 作成
   const enumerator = new wasmAny.EggSeedEnumeratorJs(
