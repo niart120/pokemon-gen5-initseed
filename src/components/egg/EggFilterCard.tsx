@@ -107,19 +107,6 @@ export const EggFilterCard: React.FC = () => {
       aria-labelledby="egg-filter-title"
       role="form"
     >
-      {/* フィルター無効化チェック */}
-      <div className="flex items-center gap-2 mb-3">
-        <Checkbox
-          id="egg-filter-disabled"
-          checked={filterDisabled}
-          onCheckedChange={(checked) => {
-            updateDraftParams({ filterDisabled: !!checked });
-          }}
-          disabled={disabled}
-        />
-        <Label htmlFor="egg-filter-disabled" className="text-xs">{eggFilterDisabledLabel[locale]}</Label>
-      </div>
-
       <>
         {/* 性格・性別・特性・色違い・めざパ・Timer0/VCount: 2列グリッド */}
           <div className="grid grid-cols-2 gap-2">
@@ -322,7 +309,18 @@ export const EggFilterCard: React.FC = () => {
               })}
             </div>
           </section>
-
+          {/* フィルター無効化チェック */}
+          <div className="flex items-center gap-2 mb-3">
+            <Checkbox
+              id="egg-filter-disabled"
+              checked={filterDisabled}
+              onCheckedChange={(checked) => {
+                updateDraftParams({ filterDisabled: !!checked });
+              }}
+              disabled={disabled}
+            />
+            <Label htmlFor="egg-filter-disabled" className="text-xs">{eggFilterDisabledLabel[locale]}</Label>
+          </div>
         </>
     </PanelCard>
   );
