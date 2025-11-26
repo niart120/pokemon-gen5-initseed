@@ -73,7 +73,7 @@ export class EggBootTimingMultiWorkerManager {
   private workers: Map<number, Worker> = new Map();
   private workerProgresses: Map<number, WorkerProgress> = new Map();
   private activeChunks: Map<number, EggBootTimingWorkerChunk> = new Map();
-  private results: EggBootTimingSearchResult[] = [];
+  private resultsCount = 0; // 結果はストリーミングのみ、配列保持しない
   private completedWorkers = 0;
   private callbacks: EggBootTimingMultiWorkerCallbacks | null = null;
   private searchRunning = false;
@@ -240,7 +240,8 @@ export class EggBootTimingMultiWorkerManager {
       case 'RESULTS':
         if (response.payload?.results) {
           for (const result of response.payload.results) {
-            this.results.push(result);
+            // 結果は配列保持せずストリーミング（OOM対策）
+            this.resultsCount++;
             this.callbacks.onResult(result);
 
             const progress = this.workerProgresses.get(workerId);
@@ -372,7 +373,7 @@ export class EggBootTimingMultiWorkerManager {
    */
   private handleAllWorkersCompleted(): void {
     const totalElapsed = this.getManagerElapsedTime();
-    const totalResults = this.results.length;
+    const totalResults = this.resultsCount;
 
     // 最終進捗レポート
     this.aggregateAndReportProgress();
@@ -455,7 +456,7 @@ export class EggBootTimingMultiWorkerManager {
     return this.workers.size;
   }
   getResultsCount(): number {
-    return this.results.length;
+    return this.resultsCount;
   }
 
   // --- Timer管理 ---
@@ -501,7 +502,7 @@ export class EggBootTimingMultiWorkerManager {
     this.searchRunning = false;
     this.activeChunks.clear();
     this.lastProgressCheck.clear();
-    this.results = [];
+    this.resultsCount = 0;
   }
 
   safeCleanup(): void {

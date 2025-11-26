@@ -312,7 +312,12 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
             });
           },
           onResult: (result) => {
-            get()._addPendingResult(result);
+            const canContinue = get()._addPendingResult(result);
+            if (!canContinue) {
+              // MAX_RESULTS到達: 検索を停止
+              console.log(`[EggSearch] MAX_RESULTS (${MAX_RESULTS}) reached, stopping search`);
+              get().stopSearch();
+            }
           },
           onComplete: (message) => {
             console.log('[EggSearch]', message);
@@ -351,15 +356,16 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
     },
 
     _addPendingResult: (result) => {
-      const currentCount = get()._pendingResults.length;
-      if (currentCount >= MAX_RESULTS) {
+      // ミュータブルにpushして参照更新（O(n²)スプレッド問題回避）
+      const pending = get()._pendingResults;
+      if (pending.length >= MAX_RESULTS) {
         // 上限到達
         return false;
       }
-      set((state) => ({
-        _pendingResults: [...state._pendingResults, result],
-      }));
-      return get()._pendingResults.length < MAX_RESULTS;
+      pending.push(result);
+      // 配列自体は同じ参照だが、Zustandに変更を通知するためsetを呼ぶ
+      set({ _pendingResults: pending });
+      return pending.length < MAX_RESULTS;
     },
 
     _onComplete: (completion) => {

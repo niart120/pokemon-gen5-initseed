@@ -116,7 +116,7 @@ async function handleStart(params: EggBootTimingSearchParams) {
     // 1バッチあたりの日数（進捗報告間隔を調整）
     const DAYS_PER_BATCH = 1;
 
-    let allResults: EggBootTimingSearchResult[] = [];
+    let totalResultsCount = 0; // 結果はストリーミングのみ、配列保持しない（OOM対策）
     let batchIndex = 0;
 
     for (let dayOffset = 0; dayOffset < totalDays; dayOffset += DAYS_PER_BATCH) {
@@ -130,9 +130,9 @@ async function handleStart(params: EggBootTimingSearchParams) {
       const batchResults = executeSearchBatch(params, batchStartDate, batchDays);
 
       if (batchResults.length > 0) {
-        allResults = allResults.concat(batchResults);
+        totalResultsCount += batchResults.length;
 
-        // 結果送信
+        // 結果送信（ストリーミング）
         post({
           type: 'RESULTS',
           payload: { results: batchResults, batchIndex },
@@ -150,7 +150,7 @@ async function handleStart(params: EggBootTimingSearchParams) {
       const progress: EggBootTimingProgress = {
         processedCombinations: processedDays,
         totalCombinations: totalDays,
-        foundCount: allResults.length,
+        foundCount: totalResultsCount,
         progressPercent,
         elapsedMs,
         estimatedRemainingMs,
@@ -160,7 +160,7 @@ async function handleStart(params: EggBootTimingSearchParams) {
       batchIndex++;
 
       // maxResultsに達したら終了
-      if (allResults.length >= params.maxResults) break;
+      if (totalResultsCount >= params.maxResults) break;
     }
 
     // 完了通知
@@ -168,7 +168,7 @@ async function handleStart(params: EggBootTimingSearchParams) {
       reason: state.stopRequested ? 'stopped' : 'completed',
       processedCombinations: totalDays,
       totalCombinations: totalDays,
-      resultsCount: allResults.length,
+      resultsCount: totalResultsCount,
       elapsedMs: performance.now() - startTime,
     };
     post({ type: 'COMPLETE', payload: completion });
