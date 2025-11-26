@@ -38,6 +38,7 @@ import {
 } from '@/lib/i18n/strings/egg-search';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import type { EggBootTimingSearchResult } from '@/types/egg-boot-timing-search';
+import { IV_UNKNOWN } from '@/types/egg';
 
 export function EggSearchResultsCard() {
   const locale = useLocale();
@@ -64,8 +65,12 @@ export function EggSearchResultsCard() {
     return `0x${value.toString(16).toUpperCase().padStart(2, '0')}`;
   };
 
+  const formatIv = (iv: number): string => {
+    return iv === IV_UNKNOWN ? '?' : String(iv);
+  };
+
   const formatIVs = (ivs: readonly [number, number, number, number, number, number]): string => {
-    return ivs.join('-');
+    return ivs.map(formatIv).join('-');
   };
 
   const getShinyDisplay = (shiny: number): { text: string; className: string } => {
@@ -89,8 +94,8 @@ export function EggSearchResultsCard() {
 
   const getHiddenPowerDisplay = (result: EggBootTimingSearchResult): string => {
     const hpInfo = result.egg.egg.hiddenPower;
-    if (!hpInfo.known) return '-';
-    return `${hpTypeNames[hpInfo.type]} ${hpInfo.power}`;
+    if (hpInfo.type === 'unknown') return '-';
+    return `${hpTypeNames[hpInfo.hpType]} ${hpInfo.power}`;
   };
 
   const getKeysDisplay = (keyInputNames: string[]): string => {
@@ -200,12 +205,12 @@ export function EggSearchResultsCard() {
                       <TableCell className={`px-1 py-1 text-center ${shinyDisplay.className}`}>
                         {shinyDisplay.text}
                       </TableCell>
-                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{ivs[0]}</TableCell>
-                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{ivs[1]}</TableCell>
-                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{ivs[2]}</TableCell>
-                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{ivs[3]}</TableCell>
-                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{ivs[4]}</TableCell>
-                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{ivs[5]}</TableCell>
+                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{formatIv(ivs[0])}</TableCell>
+                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{formatIv(ivs[1])}</TableCell>
+                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{formatIv(ivs[2])}</TableCell>
+                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{formatIv(ivs[3])}</TableCell>
+                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{formatIv(ivs[4])}</TableCell>
+                      <TableCell className="px-1 py-1 font-mono text-[11px] text-center">{formatIv(ivs[5])}</TableCell>
                       <TableCell className="px-2 py-1 text-[11px] whitespace-nowrap">
                         {getHiddenPowerDisplay(result)}
                       </TableCell>
