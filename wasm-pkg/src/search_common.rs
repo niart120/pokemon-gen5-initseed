@@ -6,16 +6,19 @@
 //!
 //! ### 内部型（Rust内部のみ）
 //! - `HardwareType`: ハードウェア種別enum
-//! - `DailyTimeRangeConfig`: 日次時刻範囲設定
+//! - `DSConfig`: DS設定パラメータ
+//! - `SegmentParams`: セグメントパラメータ
+//! - `TimeRangeParams`: 時刻範囲パラメータ
+//! - `SearchRangeParams`: 検索範囲パラメータ
 //! - `BaseMessageBuilder`: SHA-1メッセージ構築
 //! - `DateTimeCodeCalculator`: 日時コード計算
 //! - `HashValues`: SHA-1ハッシュ値
 //!
 //! ### 公開型（wasm-bindgen経由でTSに公開）
-//! - `DSConfigJs`: DS設定パラメータ（MAC/Nazo/Hardware）
-//! - `SegmentParamsJs`: セグメントパラメータ（Timer0/VCount/KeyCode）
-//! - `TimeRangeParamsJs`: 時刻範囲パラメータ
-//! - `SearchRangeParamsJs`: 検索範囲パラメータ
+//! - `DSConfigJs`: DS設定パラメータ（→ DSConfig に変換）
+//! - `SegmentParamsJs`: セグメントパラメータ（→ SegmentParams に変換）
+//! - `TimeRangeParamsJs`: 時刻範囲パラメータ（→ TimeRangeParams に変換）
+//! - `SearchRangeParamsJs`: 検索範囲パラメータ（→ SearchRangeParams に変換）
 
 use crate::datetime_codes::{DateCodeGenerator, TimeCodeGenerator};
 use crate::sha1::swap_bytes_32;
@@ -80,14 +83,51 @@ impl HardwareType {
 }
 
 // =============================================================================
-// 日時範囲設定
+// 内部型: パラメータ
 // =============================================================================
 
-/// 日次時刻範囲設定
+/// DS設定パラメータ（内部型）
+#[derive(Debug, Clone)]
+pub struct DSConfig {
+    pub mac: [u8; 6],
+    pub nazo: [u32; 5],
+    pub hardware: HardwareType,
+}
+
+impl DSConfig {
+    pub fn new(
+        mac: [u8; 6],
+        nazo: [u32; 5],
+        hardware: HardwareType,
+    ) -> Self {
+        Self { mac, nazo, hardware }
+    }
+
+    /// frame値を取得
+    pub fn frame(&self) -> u32 {
+        self.hardware.frame()
+    }
+}
+
+/// セグメントパラメータ（内部型）
+#[derive(Debug, Clone, Copy)]
+pub struct SegmentParams {
+    pub timer0: u32,
+    pub vcount: u32,
+    pub key_code: u32,
+}
+
+impl SegmentParams {
+    pub fn new(timer0: u32, vcount: u32, key_code: u32) -> Self {
+        Self { timer0, vcount, key_code }
+    }
+}
+
+/// 時刻範囲パラメータ（内部型）
 ///
 /// 1日の中で検索対象とする時刻範囲を指定する。
 #[derive(Debug, Clone, Copy)]
-pub struct DailyTimeRangeConfig {
+pub struct TimeRangeParams {
     pub hour_start: u32,
     pub hour_end: u32,
     pub minute_start: u32,
@@ -96,7 +136,7 @@ pub struct DailyTimeRangeConfig {
     pub second_end: u32,
 }
 
-impl DailyTimeRangeConfig {
+impl TimeRangeParams {
     /// 新規作成（バリデーション付き）
     pub fn new(
         hour_start: u32,
@@ -130,7 +170,7 @@ impl DailyTimeRangeConfig {
             return Err("second range start must be <= end");
         }
 
-        Ok(DailyTimeRangeConfig {
+        Ok(TimeRangeParams {
             hour_start,
             hour_end,
             minute_start,
@@ -149,11 +189,47 @@ impl DailyTimeRangeConfig {
     }
 }
 
+/// 検索範囲パラメータ（内部型）
+#[derive(Debug, Clone, Copy)]
+pub struct SearchRangeParams {
+    pub start_year: u32,
+    pub start_month: u32,
+    pub start_day: u32,
+    pub range_seconds: u32,
+}
+
+impl SearchRangeParams {
+    /// 新規作成（バリデーション付き）
+    pub fn new(
+        start_year: u32,
+        start_month: u32,
+        start_day: u32,
+        range_seconds: u32,
+    ) -> Result<Self, &'static str> {
+        // 日付の検証
+        if date_to_seconds_since_2000(start_year, start_month, start_day).is_none() {
+            return Err("Invalid date");
+        }
+
+        Ok(SearchRangeParams {
+            start_year,
+            start_month,
+            start_day,
+            range_seconds,
+        })
+    }
+
+    /// 開始秒（2000年からの経過秒）を計算
+    pub fn start_seconds_since_2000(&self) -> i64 {
+        date_to_seconds_since_2000(self.start_year, self.start_month, self.start_day).unwrap()
+    }
+}
+
 /// 許可秒マスクを構築
 ///
 /// 86,400要素の配列で、各インデックスが1日の秒数（0-86399）に対応し、
 /// 検索対象とする秒かどうかを示す。
-pub fn build_allowed_second_mask(range: &DailyTimeRangeConfig) -> Box<[bool; 86400]> {
+pub fn build_allowed_second_mask(range: &TimeRangeParams) -> Box<[bool; 86400]> {
     let mut mask = Box::new([false; 86400]);
     for hour in range.hour_start..=range.hour_end {
         for minute in range.minute_start..=range.minute_end {
@@ -180,7 +256,23 @@ pub struct BaseMessageBuilder {
 }
 
 impl BaseMessageBuilder {
-    /// 新規作成
+    /// 新規作成（内部型から構築）
+    ///
+    /// # Arguments
+    /// - `ds_config`: DS設定パラメータ
+    /// - `segment`: セグメントパラメータ
+    pub fn from_params(ds_config: &DSConfig, segment: &SegmentParams) -> Self {
+        Self::new_internal(
+            &ds_config.mac,
+            &ds_config.nazo,
+            ds_config.frame(),
+            segment.timer0,
+            segment.vcount,
+            segment.key_code,
+        )
+    }
+
+    /// 新規作成（プリミティブ引数版、バリデーション付き）
     ///
     /// # Arguments
     /// - `mac`: MACアドレス（6バイト）
@@ -203,6 +295,23 @@ impl BaseMessageBuilder {
         if nazo.len() != 5 {
             return Err("nazo must be 5 32-bit words");
         }
+
+        let mut mac_arr = [0u8; 6];
+        mac_arr.copy_from_slice(mac);
+        let mut nazo_arr = [0u32; 5];
+        nazo_arr.copy_from_slice(nazo);
+
+        Ok(Self::new_internal(&mac_arr, &nazo_arr, frame, timer0, vcount, key_code))
+    }
+
+    fn new_internal(
+        mac: &[u8; 6],
+        nazo: &[u32; 5],
+        frame: u32,
+        timer0: u32,
+        vcount: u32,
+        key_code: u32,
+    ) -> Self {
 
         let mut base_message = [0u32; 16];
 
@@ -241,7 +350,7 @@ impl BaseMessageBuilder {
         base_message[14] = 0x00000000;
         base_message[15] = 0x000001A0;
 
-        Ok(Self { base_message })
+        Self { base_message }
     }
 
     /// 基本メッセージを取得
@@ -461,15 +570,26 @@ impl DSConfigJs {
 }
 
 impl DSConfigJs {
-    /// 内部型への変換用アクセサ
+    /// 内部型への変換
+    pub fn to_ds_config(&self) -> DSConfig {
+        DSConfig {
+            mac: self.mac,
+            nazo: self.nazo,
+            hardware: HardwareType::from_str(&self.hardware).unwrap(),
+        }
+    }
+
+    /// MACアドレス配列への参照
     pub fn mac_array(&self) -> &[u8; 6] {
         &self.mac
     }
 
+    /// Nazo配列への参照
     pub fn nazo_array(&self) -> &[u32; 5] {
         &self.nazo
     }
 
+    /// ハードウェア種別を取得
     pub fn hardware_type(&self) -> HardwareType {
         HardwareType::from_str(&self.hardware).unwrap()
     }
@@ -515,6 +635,17 @@ impl SegmentParamsJs {
     }
 }
 
+impl SegmentParamsJs {
+    /// 内部型への変換
+    pub fn to_segment_params(&self) -> SegmentParams {
+        SegmentParams {
+            timer0: self.timer0,
+            vcount: self.vcount,
+            key_code: self.key_code,
+        }
+    }
+}
+
 /// 時刻範囲パラメータ
 ///
 /// 1日内の許可時刻範囲を指定する。
@@ -549,8 +680,8 @@ impl TimeRangeParamsJs {
         second_start: u32,
         second_end: u32,
     ) -> Result<TimeRangeParamsJs, String> {
-        // 検証はDailyTimeRangeConfigと同じロジック
-        DailyTimeRangeConfig::new(
+        // 内部型で検証
+        TimeRangeParams::new(
             hour_start,
             hour_end,
             minute_start,
@@ -603,8 +734,8 @@ impl TimeRangeParamsJs {
 
 impl TimeRangeParamsJs {
     /// 内部型への変換
-    pub fn to_daily_time_range_config(&self) -> DailyTimeRangeConfig {
-        DailyTimeRangeConfig {
+    pub fn to_time_range_params(&self) -> TimeRangeParams {
+        TimeRangeParams {
             hour_start: self.hour_start,
             hour_end: self.hour_end,
             minute_start: self.minute_start,
@@ -681,6 +812,16 @@ impl SearchRangeParamsJs {
 }
 
 impl SearchRangeParamsJs {
+    /// 内部型への変換
+    pub fn to_search_range_params(&self) -> SearchRangeParams {
+        SearchRangeParams {
+            start_year: self.start_year,
+            start_month: self.start_month,
+            start_day: self.start_day,
+            range_seconds: self.range_seconds,
+        }
+    }
+
     /// 開始秒（2000年からの経過秒）を計算
     pub fn start_seconds_since_2000(&self) -> i64 {
         date_to_seconds_since_2000(self.start_year, self.start_month, self.start_day).unwrap()
@@ -723,23 +864,79 @@ mod tests {
         assert_eq!(HardwareType::ThreeDS.as_str(), "3DS");
     }
 
+    // =========================================================================
+    // 内部型テスト
+    // =========================================================================
+
     #[test]
-    fn test_daily_time_range_config() {
-        let config = DailyTimeRangeConfig::new(10, 12, 0, 59, 0, 59).unwrap();
+    fn test_ds_config() {
+        let mac = [0x00, 0x09, 0xBF, 0xAA, 0xBB, 0xCC];
+        let nazo = [0x02215F10, 0x02215F30, 0x02215F20, 0x02761008, 0x00000000];
+        let config = DSConfig::new(mac, nazo, HardwareType::DS);
+
+        assert_eq!(config.mac, mac);
+        assert_eq!(config.nazo, nazo);
+        assert_eq!(config.hardware, HardwareType::DS);
+        assert_eq!(config.frame(), 8);
+    }
+
+    #[test]
+    fn test_segment_params() {
+        let params = SegmentParams::new(0x1000, 0x60, 0x2FFF);
+        assert_eq!(params.timer0, 0x1000);
+        assert_eq!(params.vcount, 0x60);
+        assert_eq!(params.key_code, 0x2FFF);
+    }
+
+    #[test]
+    fn test_search_range_params() {
+        let params = SearchRangeParams::new(2024, 1, 15, 86400).unwrap();
+        assert_eq!(params.start_year, 2024);
+        assert_eq!(params.start_month, 1);
+        assert_eq!(params.start_day, 15);
+        assert_eq!(params.range_seconds, 86400);
+        assert!(params.start_seconds_since_2000() > 0);
+    }
+
+    #[test]
+    fn test_search_range_params_invalid() {
+        assert!(SearchRangeParams::new(2024, 13, 1, 86400).is_err());
+        assert!(SearchRangeParams::new(2024, 2, 30, 86400).is_err());
+    }
+
+    #[test]
+    fn test_base_message_builder_from_params() {
+        let mac = [0x00, 0x09, 0xBF, 0xAA, 0xBB, 0xCC];
+        let nazo = [0x02215F10, 0x02215F30, 0x02215F20, 0x02761008, 0x00000000];
+        let ds_config = DSConfig::new(mac, nazo, HardwareType::DS);
+        let segment = SegmentParams::new(0x1000, 0x60, 0x2FFF);
+
+        let builder = BaseMessageBuilder::from_params(&ds_config, &segment);
+        let base = builder.base_message();
+
+        // Check padding values
+        assert_eq!(base[13], 0x80000000);
+        assert_eq!(base[14], 0x00000000);
+        assert_eq!(base[15], 0x000001A0);
+    }
+
+    #[test]
+    fn test_time_range_params() {
+        let config = TimeRangeParams::new(10, 12, 0, 59, 0, 59).unwrap();
         assert_eq!(config.combos_per_day(), 3 * 60 * 60);
     }
 
     #[test]
-    fn test_daily_time_range_config_validation() {
+    fn test_time_range_params_validation() {
         // Invalid hour range
-        assert!(DailyTimeRangeConfig::new(24, 25, 0, 59, 0, 59).is_err());
+        assert!(TimeRangeParams::new(24, 25, 0, 59, 0, 59).is_err());
         // Start > End
-        assert!(DailyTimeRangeConfig::new(12, 10, 0, 59, 0, 59).is_err());
+        assert!(TimeRangeParams::new(12, 10, 0, 59, 0, 59).is_err());
     }
 
     #[test]
     fn test_build_allowed_second_mask() {
-        let config = DailyTimeRangeConfig {
+        let config = TimeRangeParams {
             hour_start: 10,
             hour_end: 10,
             minute_start: 30,
@@ -760,7 +957,7 @@ mod tests {
 
     #[test]
     fn test_combos_per_day() {
-        let config = DailyTimeRangeConfig {
+        let config = TimeRangeParams {
             hour_start: 10,
             hour_end: 12,
             minute_start: 0,
@@ -913,7 +1110,7 @@ mod tests {
         assert_eq!(params.hour_start(), 10);
         assert_eq!(params.hour_end(), 12);
 
-        let config = params.to_daily_time_range_config();
+        let config = params.to_time_range_params();
         assert_eq!(config.hour_start, 10);
         assert_eq!(config.hour_end, 12);
     }
