@@ -12,7 +12,15 @@ import type {
 } from '@/types/egg-boot-timing-search';
 import type { IvSet, HiddenPowerInfo } from '@/types/egg';
 import { EggGameMode } from '@/types/egg';
-import { initWasm, getWasm, isWasmReady } from '@/lib/core/wasm-interface';
+import {
+  initWasm,
+  getWasm,
+  isWasmReady,
+  type DSConfigJs,
+  type SegmentParamsJs,
+  type TimeRangeParamsJs,
+  type SearchRangeParamsJs,
+} from '@/lib/core/wasm-interface';
 import { keyCodeToNames } from '@/lib/utils/key-input';
 import romParameters from '@/data/rom-parameters';
 
@@ -44,6 +52,69 @@ function eggGameModeToWasm(mode: EggGameMode): number {
     default:
       return 2;
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type WasmAny = any;
+
+/**
+ * DS設定パラメータを構築
+ */
+function buildDSConfig(
+  wasmAny: WasmAny,
+  params: EggBootTimingSearchParams,
+  nazo: readonly number[]
+): DSConfigJs {
+  return new wasmAny.DSConfigJs(
+    new Uint8Array(params.macAddress),
+    new Uint32Array(nazo),
+    params.hardware
+  );
+}
+
+/**
+ * セグメントパラメータを構築
+ */
+function buildSegmentParams(
+  wasmAny: WasmAny,
+  timer0: number,
+  vcount: number,
+  keyCode: number
+): SegmentParamsJs {
+  return new wasmAny.SegmentParamsJs(timer0, vcount, keyCode);
+}
+
+/**
+ * 時刻範囲パラメータを構築
+ */
+function buildTimeRangeParams(
+  wasmAny: WasmAny,
+  timeRange: EggBootTimingSearchParams['timeRange']
+): TimeRangeParamsJs {
+  return new wasmAny.TimeRangeParamsJs(
+    timeRange.hour.start,
+    timeRange.hour.end,
+    timeRange.minute.start,
+    timeRange.minute.end,
+    timeRange.second.start,
+    timeRange.second.end
+  );
+}
+
+/**
+ * 検索範囲パラメータを構築
+ */
+function buildSearchRangeParams(
+  wasmAny: WasmAny,
+  searchStartDate: Date,
+  rangeSeconds: number
+): SearchRangeParamsJs {
+  return new wasmAny.SearchRangeParamsJs(
+    searchStartDate.getFullYear(),
+    searchStartDate.getMonth() + 1,
+    searchStartDate.getDate(),
+    rangeSeconds
+  );
 }
 
 const ctx = self as typeof self & { onclose?: () => void };
@@ -425,28 +496,22 @@ async function executeSearch(
           params.filterDisabled ? null : params.filter
         );
 
+        // 構造化パラメータを構築
+        const dsConfig = buildDSConfig(wasmAny, params, nazo);
+        const segmentParams = buildSegmentParams(wasmAny, timer0, vcount, keyCode);
+        const timeRangeParams = buildTimeRangeParams(wasmAny, params.timeRange);
+        const searchRangeParams = buildSearchRangeParams(wasmAny, searchStartDate, rangeSeconds);
+
         // イテレータを作成（単一セグメント: 固定 timer0/vcount/keyCode）
         const iterator: {
           isFinished: boolean;
           next_batch: (limit: number, chunk: number) => unknown[];
           free?: () => void;
         } = new wasmAny.EggBootTimingSearchIterator(
-          new Uint8Array(params.macAddress),
-          new Uint32Array(nazo),
-          params.hardware,
-          timer0,
-          vcount,
-          keyCode,
-          params.timeRange.hour.start,
-          params.timeRange.hour.end,
-          params.timeRange.minute.start,
-          params.timeRange.minute.end,
-          params.timeRange.second.start,
-          params.timeRange.second.end,
-          searchStartDate.getFullYear(),
-          searchStartDate.getMonth() + 1,
-          searchStartDate.getDate(),
-          rangeSeconds,
+          dsConfig,
+          segmentParams,
+          timeRangeParams,
+          searchRangeParams,
           conditions,
           parentsIVs,
           filter,

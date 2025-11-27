@@ -23,6 +23,15 @@ import type {
   // Egg boot timing search types
   EggBootTimingSearchResult as WasmEggBootTimingSearchResult,
   EggBootTimingSearchIterator as WasmEggBootTimingSearchIterator,
+  // Search common types (for boot timing search parameters)
+  DSConfigJs as WasmDSConfigJs,
+  SegmentParamsJs as WasmSegmentParamsJs,
+  TimeRangeParamsJs as WasmTimeRangeParamsJs,
+  SearchRangeParamsJs as WasmSearchRangeParamsJs,
+  // IV boot timing search types
+  IVBootTimingSearchIterator as WasmIVBootTimingSearchIterator,
+  IVBootTimingSearchResult as WasmIVBootTimingSearchResult,
+  IVBootTimingSearchResults as WasmIVBootTimingSearchResults,
 } from '../../wasm/wasm_pkg';
 // Local type alias for internal interface references
 type WasmSearchResult = import('../../wasm/wasm_pkg').SearchResult;
@@ -88,6 +97,17 @@ export interface WasmModule {
   EggBootTimingSearchIterator: typeof WasmEggBootTimingSearchIterator;
   generate_egg_key_codes(key_input_mask: number): Uint32Array;
 
+  // 追加: 検索共通パラメータ型 (Boot Timing Search)
+  DSConfigJs: typeof WasmDSConfigJs;
+  SegmentParamsJs: typeof WasmSegmentParamsJs;
+  TimeRangeParamsJs: typeof WasmTimeRangeParamsJs;
+  SearchRangeParamsJs: typeof WasmSearchRangeParamsJs;
+
+  // 追加: IV起動時間検索API
+  IVBootTimingSearchIterator: typeof WasmIVBootTimingSearchIterator;
+  IVBootTimingSearchResult: typeof WasmIVBootTimingSearchResult;
+  IVBootTimingSearchResults: typeof WasmIVBootTimingSearchResults;
+
   calculate_game_offset(initial_seed: bigint, mode: number): number;
   sha1_hash_batch(messages: Uint32Array): Uint32Array;
 }
@@ -150,6 +170,15 @@ export async function initWasm(): Promise<WasmModule> {
         EggBootTimingSearchResult: module.EggBootTimingSearchResult,
         EggBootTimingSearchIterator: module.EggBootTimingSearchIterator,
         generate_egg_key_codes: module.generate_egg_key_codes,
+        // 検索共通パラメータ型
+        DSConfigJs: module.DSConfigJs,
+        SegmentParamsJs: module.SegmentParamsJs,
+        TimeRangeParamsJs: module.TimeRangeParamsJs,
+        SearchRangeParamsJs: module.SearchRangeParamsJs,
+        // IV起動時間検索API
+        IVBootTimingSearchIterator: module.IVBootTimingSearchIterator,
+        IVBootTimingSearchResult: module.IVBootTimingSearchResult,
+        IVBootTimingSearchResults: module.IVBootTimingSearchResults,
         calculate_game_offset: module.calculate_game_offset,
         sha1_hash_batch: module.sha1_hash_batch,
       } as unknown as WasmModule;
@@ -190,3 +219,14 @@ export type { WasmSearchResult };
 export type BWGenerationConfigCtor = typeof WasmBWGenerationConfig;
 export type SeedEnumeratorCtor = typeof WasmSeedEnumerator;
 export type SeedEnumeratorInstance = InstanceType<SeedEnumeratorCtor>;
+
+// Boot Timing Search 用パラメータ型を公開
+export type DSConfigJs = WasmDSConfigJs;
+export type SegmentParamsJs = WasmSegmentParamsJs;
+export type TimeRangeParamsJs = WasmTimeRangeParamsJs;
+export type SearchRangeParamsJs = WasmSearchRangeParamsJs;
+
+// IV Boot Timing Search 型を公開
+export type IVBootTimingSearchIterator = WasmIVBootTimingSearchIterator;
+export type IVBootTimingSearchResult = WasmIVBootTimingSearchResult;
+export type IVBootTimingSearchResults = WasmIVBootTimingSearchResults;
