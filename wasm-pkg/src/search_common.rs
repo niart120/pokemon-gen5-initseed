@@ -1,11 +1,26 @@
 //! 検索処理共通モジュール
 //!
-//! `integrated_search` と `egg_boot_timing_search` で共通利用される
-//! 定数・型・ユーティリティ関数を提供する。
+//! 起動時間検索で共通利用される定数・型・ユーティリティ関数を提供する。
+//!
+//! ## モジュール構成
+//!
+//! ### 内部型（Rust内部のみ）
+//! - `HardwareType`: ハードウェア種別enum
+//! - `DailyTimeRangeConfig`: 日次時刻範囲設定
+//! - `BaseMessageBuilder`: SHA-1メッセージ構築
+//! - `DateTimeCodeCalculator`: 日時コード計算
+//! - `HashValues`: SHA-1ハッシュ値
+//!
+//! ### 公開型（wasm-bindgen経由でTSに公開）
+//! - `DSConfigJs`: DS設定パラメータ（MAC/Nazo/Hardware）
+//! - `SegmentParamsJs`: セグメントパラメータ（Timer0/VCount/KeyCode）
+//! - `TimeRangeParamsJs`: 時刻範囲パラメータ
+//! - `SearchRangeParamsJs`: 検索範囲パラメータ
 
 use crate::datetime_codes::{DateCodeGenerator, TimeCodeGenerator};
 use crate::sha1::swap_bytes_32;
 use chrono::{Datelike, NaiveDate, Timelike};
+use wasm_bindgen::prelude::*;
 
 // =============================================================================
 // 定数
@@ -379,6 +394,300 @@ impl HashValues {
 }
 
 // =============================================================================
+// 公開Value Object（wasm-bindgen経由でTSに公開）
+// =============================================================================
+
+/// DS設定パラメータ
+///
+/// DSハードウェア固有の設定を保持する。
+/// TypeScriptから受け取り、Rust内部型に変換して使用する。
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct DSConfigJs {
+    mac: [u8; 6],
+    nazo: [u32; 5],
+    hardware: String,
+}
+
+#[wasm_bindgen]
+impl DSConfigJs {
+    /// 新規作成
+    ///
+    /// # Arguments
+    /// * `mac` - MACアドレス（6バイト）
+    /// * `nazo` - Nazo値（5要素）
+    /// * `hardware` - ハードウェア種別 ("DS", "DS_LITE", "3DS")
+    #[wasm_bindgen(constructor)]
+    pub fn new(mac: &[u8], nazo: &[u32], hardware: &str) -> Result<DSConfigJs, String> {
+        if mac.len() != 6 {
+            return Err(format!("MAC address must be 6 bytes, got {}", mac.len()));
+        }
+        if nazo.len() != 5 {
+            return Err(format!("Nazo must be 5 elements, got {}", nazo.len()));
+        }
+        // ハードウェア種別の検証
+        HardwareType::from_str(hardware)
+            .map_err(|e| e.to_string())?;
+
+        let mut mac_arr = [0u8; 6];
+        mac_arr.copy_from_slice(mac);
+        let mut nazo_arr = [0u32; 5];
+        nazo_arr.copy_from_slice(nazo);
+
+        Ok(DSConfigJs {
+            mac: mac_arr,
+            nazo: nazo_arr,
+            hardware: hardware.to_string(),
+        })
+    }
+
+    /// MACアドレス取得
+    #[wasm_bindgen(getter)]
+    pub fn mac(&self) -> Vec<u8> {
+        self.mac.to_vec()
+    }
+
+    /// Nazo値取得
+    #[wasm_bindgen(getter)]
+    pub fn nazo(&self) -> Vec<u32> {
+        self.nazo.to_vec()
+    }
+
+    /// ハードウェア種別取得
+    #[wasm_bindgen(getter)]
+    pub fn hardware(&self) -> String {
+        self.hardware.clone()
+    }
+}
+
+impl DSConfigJs {
+    /// 内部型への変換用アクセサ
+    pub fn mac_array(&self) -> &[u8; 6] {
+        &self.mac
+    }
+
+    pub fn nazo_array(&self) -> &[u32; 5] {
+        &self.nazo
+    }
+
+    pub fn hardware_type(&self) -> HardwareType {
+        HardwareType::from_str(&self.hardware).unwrap()
+    }
+}
+
+/// セグメントパラメータ
+///
+/// Timer0/VCount/KeyCodeの組み合わせを保持する。
+/// TypeScriptで生成し、検索イテレータに渡す。
+#[wasm_bindgen]
+#[derive(Debug, Clone, Copy)]
+pub struct SegmentParamsJs {
+    timer0: u32,
+    vcount: u32,
+    key_code: u32,
+}
+
+#[wasm_bindgen]
+impl SegmentParamsJs {
+    /// 新規作成
+    #[wasm_bindgen(constructor)]
+    pub fn new(timer0: u32, vcount: u32, key_code: u32) -> SegmentParamsJs {
+        SegmentParamsJs {
+            timer0,
+            vcount,
+            key_code,
+        }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn timer0(&self) -> u32 {
+        self.timer0
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn vcount(&self) -> u32 {
+        self.vcount
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn key_code(&self) -> u32 {
+        self.key_code
+    }
+}
+
+/// 時刻範囲パラメータ
+///
+/// 1日内の許可時刻範囲を指定する。
+#[wasm_bindgen]
+#[derive(Debug, Clone, Copy)]
+pub struct TimeRangeParamsJs {
+    hour_start: u32,
+    hour_end: u32,
+    minute_start: u32,
+    minute_end: u32,
+    second_start: u32,
+    second_end: u32,
+}
+
+#[wasm_bindgen]
+impl TimeRangeParamsJs {
+    /// 新規作成
+    ///
+    /// # Arguments
+    /// * `hour_start` - 開始時 (0-23)
+    /// * `hour_end` - 終了時 (0-23)
+    /// * `minute_start` - 開始分 (0-59)
+    /// * `minute_end` - 終了分 (0-59)
+    /// * `second_start` - 開始秒 (0-59)
+    /// * `second_end` - 終了秒 (0-59)
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        hour_start: u32,
+        hour_end: u32,
+        minute_start: u32,
+        minute_end: u32,
+        second_start: u32,
+        second_end: u32,
+    ) -> Result<TimeRangeParamsJs, String> {
+        // 検証はDailyTimeRangeConfigと同じロジック
+        DailyTimeRangeConfig::new(
+            hour_start,
+            hour_end,
+            minute_start,
+            minute_end,
+            second_start,
+            second_end,
+        )
+        .map_err(|e| e.to_string())?;
+
+        Ok(TimeRangeParamsJs {
+            hour_start,
+            hour_end,
+            minute_start,
+            minute_end,
+            second_start,
+            second_end,
+        })
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn hour_start(&self) -> u32 {
+        self.hour_start
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn hour_end(&self) -> u32 {
+        self.hour_end
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn minute_start(&self) -> u32 {
+        self.minute_start
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn minute_end(&self) -> u32 {
+        self.minute_end
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn second_start(&self) -> u32 {
+        self.second_start
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn second_end(&self) -> u32 {
+        self.second_end
+    }
+}
+
+impl TimeRangeParamsJs {
+    /// 内部型への変換
+    pub fn to_daily_time_range_config(&self) -> DailyTimeRangeConfig {
+        DailyTimeRangeConfig {
+            hour_start: self.hour_start,
+            hour_end: self.hour_end,
+            minute_start: self.minute_start,
+            minute_end: self.minute_end,
+            second_start: self.second_start,
+            second_end: self.second_end,
+        }
+    }
+}
+
+/// 検索範囲パラメータ
+///
+/// 検索開始日と範囲（秒数）を指定する。
+#[wasm_bindgen]
+#[derive(Debug, Clone, Copy)]
+pub struct SearchRangeParamsJs {
+    start_year: u32,
+    start_month: u32,
+    start_day: u32,
+    range_seconds: u32,
+}
+
+#[wasm_bindgen]
+impl SearchRangeParamsJs {
+    /// 新規作成
+    ///
+    /// # Arguments
+    /// * `start_year` - 開始年 (2000-2099)
+    /// * `start_month` - 開始月 (1-12)
+    /// * `start_day` - 開始日 (1-31)
+    /// * `range_seconds` - 検索範囲（秒数）
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        start_year: u32,
+        start_month: u32,
+        start_day: u32,
+        range_seconds: u32,
+    ) -> Result<SearchRangeParamsJs, String> {
+        // 日付の検証
+        if date_to_seconds_since_2000(start_year, start_month, start_day).is_none() {
+            return Err(format!(
+                "Invalid date: {}-{}-{}",
+                start_year, start_month, start_day
+            ));
+        }
+
+        Ok(SearchRangeParamsJs {
+            start_year,
+            start_month,
+            start_day,
+            range_seconds,
+        })
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn start_year(&self) -> u32 {
+        self.start_year
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn start_month(&self) -> u32 {
+        self.start_month
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn start_day(&self) -> u32 {
+        self.start_day
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn range_seconds(&self) -> u32 {
+        self.range_seconds
+    }
+}
+
+impl SearchRangeParamsJs {
+    /// 開始秒（2000年からの経過秒）を計算
+    pub fn start_seconds_since_2000(&self) -> i64 {
+        date_to_seconds_since_2000(self.start_year, self.start_month, self.start_day).unwrap()
+    }
+}
+
+// =============================================================================
 // テスト
 // =============================================================================
 
@@ -552,5 +861,89 @@ mod tests {
             (year, month, day, hour, minute, second),
             (2000, 1, 2, 0, 0, 0)
         );
+    }
+
+    // =========================================================================
+    // 公開Value Objectテスト
+    // =========================================================================
+
+    #[test]
+    fn test_ds_config_js_valid() {
+        let mac = [0x00, 0x09, 0xBF, 0xAA, 0xBB, 0xCC];
+        let nazo = [0x02215F10, 0x02215F30, 0x02215F20, 0x02761008, 0x00000000];
+        let config = DSConfigJs::new(&mac, &nazo, "DS").unwrap();
+
+        assert_eq!(config.mac_array(), &mac);
+        assert_eq!(config.nazo_array(), &nazo);
+        assert_eq!(config.hardware_type(), HardwareType::DS);
+    }
+
+    #[test]
+    fn test_ds_config_js_invalid_mac() {
+        let mac = [0x00, 0x09, 0xBF, 0xAA]; // 4 bytes instead of 6
+        let nazo = [0x02215F10, 0x02215F30, 0x02215F20, 0x02761008, 0x00000000];
+        assert!(DSConfigJs::new(&mac, &nazo, "DS").is_err());
+    }
+
+    #[test]
+    fn test_ds_config_js_invalid_nazo() {
+        let mac = [0x00, 0x09, 0xBF, 0xAA, 0xBB, 0xCC];
+        let nazo = [0x02215F10, 0x02215F30]; // 2 elements instead of 5
+        assert!(DSConfigJs::new(&mac, &nazo, "DS").is_err());
+    }
+
+    #[test]
+    fn test_ds_config_js_invalid_hardware() {
+        let mac = [0x00, 0x09, 0xBF, 0xAA, 0xBB, 0xCC];
+        let nazo = [0x02215F10, 0x02215F30, 0x02215F20, 0x02761008, 0x00000000];
+        assert!(DSConfigJs::new(&mac, &nazo, "Invalid").is_err());
+    }
+
+    #[test]
+    fn test_segment_params_js() {
+        let params = SegmentParamsJs::new(0x1000, 0x60, 0x2FFF);
+        assert_eq!(params.timer0(), 0x1000);
+        assert_eq!(params.vcount(), 0x60);
+        assert_eq!(params.key_code(), 0x2FFF);
+    }
+
+    #[test]
+    fn test_time_range_params_js_valid() {
+        let params = TimeRangeParamsJs::new(10, 12, 0, 59, 0, 59).unwrap();
+        assert_eq!(params.hour_start(), 10);
+        assert_eq!(params.hour_end(), 12);
+
+        let config = params.to_daily_time_range_config();
+        assert_eq!(config.hour_start, 10);
+        assert_eq!(config.hour_end, 12);
+    }
+
+    #[test]
+    fn test_time_range_params_js_invalid() {
+        // Invalid hour
+        assert!(TimeRangeParamsJs::new(24, 25, 0, 59, 0, 59).is_err());
+        // Start > End
+        assert!(TimeRangeParamsJs::new(12, 10, 0, 59, 0, 59).is_err());
+    }
+
+    #[test]
+    fn test_search_range_params_js_valid() {
+        let params = SearchRangeParamsJs::new(2024, 1, 15, 86400).unwrap();
+        assert_eq!(params.start_year(), 2024);
+        assert_eq!(params.start_month(), 1);
+        assert_eq!(params.start_day(), 15);
+        assert_eq!(params.range_seconds(), 86400);
+
+        // Verify start_seconds_since_2000
+        let seconds = params.start_seconds_since_2000();
+        assert!(seconds > 0);
+    }
+
+    #[test]
+    fn test_search_range_params_js_invalid_date() {
+        // Invalid month
+        assert!(SearchRangeParamsJs::new(2024, 13, 1, 86400).is_err());
+        // Invalid day
+        assert!(SearchRangeParamsJs::new(2024, 2, 30, 86400).is_err());
     }
 }
