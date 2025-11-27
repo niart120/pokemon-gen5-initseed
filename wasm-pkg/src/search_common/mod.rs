@@ -44,6 +44,6 @@ pub use message::{BaseMessageBuilder, HashValues};
 
 // datetime モジュール
 pub use datetime::{
-    build_time_code_mask, date_to_seconds_since_2000, datetime_to_seconds_since_2000,
-    generate_display_datetime, DateTimeCode, DateTimeCodeEnumerator, TimeCodeMask,
+    build_ranged_time_code_table, date_to_seconds_since_2000, datetime_to_seconds_since_2000,
+    generate_display_datetime, DateTimeCode, DateTimeCodeEnumerator, RangedTimeCodeTable,
 };

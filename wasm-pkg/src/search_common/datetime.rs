@@ -25,20 +25,20 @@ impl DateTimeCode {
 }
 
 // =============================================================================
-// タイムコードマスク
+// 範囲制限タイムコードテーブル
 // =============================================================================
 
-/// タイムコードマスク
+/// 範囲制限タイムコードテーブル
 ///
 /// 86,400要素の配列で、各インデックスが1日の秒数（0-86399）に対応する。
 /// `Some(time_code)` なら検索対象、`None` なら対象外。
-pub type TimeCodeMask = Box<[Option<u32>; 86400]>;
+pub type RangedTimeCodeTable = Box<[Option<u32>; 86400]>;
 
-/// タイムコードマスクを構築
+/// 範囲制限タイムコードテーブルを構築
 ///
 /// 許可秒に対応する time_code を事前計算し、O(1)でアクセス可能にする。
-pub fn build_time_code_mask(range: &TimeRangeParams, hardware: HardwareType) -> TimeCodeMask {
-    let mut mask: TimeCodeMask = Box::new([None; 86400]);
+pub fn build_ranged_time_code_table(range: &TimeRangeParams, hardware: HardwareType) -> RangedTimeCodeTable {
+    let mut table: RangedTimeCodeTable = Box::new([None; 86400]);
     let hardware_str = hardware.as_str();
 
     for hour in range.hour_start..=range.hour_end {
@@ -47,11 +47,11 @@ pub fn build_time_code_mask(range: &TimeRangeParams, hardware: HardwareType) -> 
                 let second_of_day = hour * 3600 + minute * 60 + second;
                 let time_code =
                     TimeCodeGenerator::get_time_code_for_hardware(second_of_day, hardware_str);
-                mask[second_of_day as usize] = Some(time_code);
+                table[second_of_day as usize] = Some(time_code);
             }
         }
     }
-    mask
+    table
 }
 
 // =============================================================================
@@ -63,7 +63,7 @@ pub fn build_time_code_mask(range: &TimeRangeParams, hardware: HardwareType) -> 
 /// 開始時刻から指定秒数分の DateTimeCode を順次生成する Iterator。
 /// 許可範囲外の秒はスキップされるが、進捗計算にはスキップ分も含まれる。
 pub struct DateTimeCodeEnumerator<'a> {
-    time_code_mask: &'a TimeCodeMask,
+    time_code_table: &'a RangedTimeCodeTable,
     current_seconds: i64,
     end_seconds: i64,
     processed_seconds: u32,
@@ -73,16 +73,16 @@ impl<'a> DateTimeCodeEnumerator<'a> {
     /// 新規作成
     ///
     /// # Arguments
-    /// - `time_code_mask`: タイムコードマスク（許可秒のtime_codeを含む）
+    /// - `time_code_table`: 範囲制限タイムコードテーブル（許可秒のtime_codeを含む）
     /// - `start_seconds`: 開始秒（2000年からの経過秒）
     /// - `range_seconds`: 検索範囲（秒数）
     pub fn new(
-        time_code_mask: &'a TimeCodeMask,
+        time_code_table: &'a RangedTimeCodeTable,
         start_seconds: i64,
         range_seconds: u32,
     ) -> Self {
         Self {
-            time_code_mask,
+            time_code_table,
             current_seconds: start_seconds,
             end_seconds: start_seconds + range_seconds as i64,
             processed_seconds: 0,
@@ -109,7 +109,7 @@ impl Iterator for DateTimeCodeEnumerator<'_> {
             }
 
             let second_of_day = (seconds % SECONDS_PER_DAY) as usize;
-            if let Some(time_code) = self.time_code_mask[second_of_day] {
+            if let Some(time_code) = self.time_code_table[second_of_day] {
                 let date_index = (seconds / SECONDS_PER_DAY) as u32;
                 let date_code = DateCodeGenerator::get_date_code(date_index);
                 return Some(DateTimeCode::new(date_code, time_code));
@@ -182,35 +182,35 @@ mod tests {
     }
 
     #[test]
-    fn test_build_time_code_mask() {
+    fn test_build_ranged_time_code_table() {
         let range = create_test_time_range();
-        let mask = build_time_code_mask(&range, HardwareType::DS);
+        let table = build_ranged_time_code_table(&range, HardwareType::DS);
 
         // 0, 1, 2秒目は許可されている
-        assert!(mask[0].is_some());
-        assert!(mask[1].is_some());
-        assert!(mask[2].is_some());
+        assert!(table[0].is_some());
+        assert!(table[1].is_some());
+        assert!(table[2].is_some());
         // 3秒目以降は許可されていない
-        assert!(mask[3].is_none());
-        assert!(mask[3600].is_none());
+        assert!(table[3].is_none());
+        assert!(table[3600].is_none());
     }
 
     #[test]
-    fn test_time_code_mask_time_code_values() {
+    fn test_ranged_time_code_table_values() {
         let range = TimeRangeParams::new(0, 0, 0, 0, 0, 0).unwrap();
-        let mask = build_time_code_mask(&range, HardwareType::DS);
+        let table = build_ranged_time_code_table(&range, HardwareType::DS);
 
         let expected_time_code = TimeCodeGenerator::get_time_code_for_hardware(0, "DS");
-        assert_eq!(mask[0], Some(expected_time_code));
+        assert_eq!(table[0], Some(expected_time_code));
     }
 
     #[test]
     fn test_datetime_enumerator_basic() {
         let range = create_test_time_range();
-        let mask = build_time_code_mask(&range, HardwareType::DS);
+        let table = build_ranged_time_code_table(&range, HardwareType::DS);
 
         // 2000年1月1日 0:00:00 から開始
-        let enumerator = DateTimeCodeEnumerator::new(&mask, 0, 3);
+        let enumerator = DateTimeCodeEnumerator::new(&table, 0, 3);
 
         let results: Vec<DateTimeCode> = enumerator.collect();
         assert_eq!(results.len(), 3);
@@ -220,10 +220,10 @@ mod tests {
     fn test_datetime_enumerator_skips_disallowed() {
         // 1秒目のみ許可
         let range = TimeRangeParams::new(0, 0, 0, 0, 1, 1).unwrap();
-        let mask = build_time_code_mask(&range, HardwareType::DS);
+        let table = build_ranged_time_code_table(&range, HardwareType::DS);
 
         // 0秒目から5秒間
-        let enumerator = DateTimeCodeEnumerator::new(&mask, 0, 5);
+        let enumerator = DateTimeCodeEnumerator::new(&table, 0, 5);
 
         let results: Vec<DateTimeCode> = enumerator.collect();
         // 0, 2, 3, 4秒目はスキップされ、1秒目のみ返される
@@ -233,9 +233,9 @@ mod tests {
     #[test]
     fn test_datetime_enumerator_processed_seconds() {
         let range = TimeRangeParams::new(0, 0, 0, 0, 1, 1).unwrap();
-        let mask = build_time_code_mask(&range, HardwareType::DS);
+        let table = build_ranged_time_code_table(&range, HardwareType::DS);
 
-        let mut enumerator = DateTimeCodeEnumerator::new(&mask, 0, 5);
+        let mut enumerator = DateTimeCodeEnumerator::new(&table, 0, 5);
 
         // 全て消費
         while enumerator.next().is_some() {}
@@ -248,11 +248,11 @@ mod tests {
     fn test_datetime_enumerator_across_days() {
         // 全時間許可
         let range = TimeRangeParams::new(0, 23, 0, 59, 0, 59).unwrap();
-        let mask = build_time_code_mask(&range, HardwareType::DS);
+        let table = build_ranged_time_code_table(&range, HardwareType::DS);
 
         // 1日目の最後から2日目の最初にまたがる
         let start = SECONDS_PER_DAY - 2; // 86398秒目
-        let enumerator = DateTimeCodeEnumerator::new(&mask, start, 4);
+        let enumerator = DateTimeCodeEnumerator::new(&table, start, 4);
 
         let results: Vec<DateTimeCode> = enumerator.collect();
         assert_eq!(results.len(), 4);
