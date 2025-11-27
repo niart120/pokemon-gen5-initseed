@@ -33,10 +33,14 @@ pub const HARDWARE_FRAME_3DS: u32 = 9;
 // Re-exports
 // =============================================================================
 
-// params モジュール
+// params モジュール（公開型）
 pub use params::{
-    // 内部型
     DSConfigJs, SearchRangeParamsJs, SegmentParamsJs, TimeRangeParamsJs,
+};
+
+// params モジュール（内部型 - テスト用にも公開）
+pub use params::{
+    DSConfig, HardwareType, SearchRangeParams, SegmentParams, TimeRangeParams,
 };
 
 // message モジュール
