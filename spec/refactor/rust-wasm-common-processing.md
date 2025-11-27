@@ -80,14 +80,18 @@ pub struct IVBootTimingSearchResult { ... }
 // ハードウェア種別 (String → enum変換)
 pub enum HardwareType { DS, DSLite, ThreeDS }
 
-// 時刻範囲設定 (内部表現)
-pub struct DailyTimeRangeConfig { ... }
+// パラメータ内部型
+pub struct DSConfig { mac, nazo, hardware }
+pub struct SegmentParams { timer0, vcount, key_code }
+pub struct TimeRangeParams { hour_start/end, minute_start/end, second_start/end }
+pub struct SearchRangeParams { start_year/month/day, range_seconds }
 
 // SHA-1メッセージ構築
 pub struct BaseMessageBuilder { ... }
 
-// 日時コード計算
-pub struct DateTimeCodeCalculator { ... }
+// 日時コード列挙
+pub struct DateTimeCodeEnumerator { ... }
+pub struct DateTimeCode { date_code, time_code }
 
 // SHA-1ハッシュ値
 pub struct HashValues { h0..h4 }
@@ -107,7 +111,7 @@ pub struct HashValues { h0..h4 }
 
 ---
 
-## モジュール分割設計（B案: 役割別分離）
+## モジュール分割設計（B案: 役割別分離） ✅ 実装済み
 
 ### ファイル構成
 
@@ -118,8 +122,7 @@ wasm-pkg/src/
 │   ├── params.rs        # DSConfig, SegmentParams, TimeRangeParams, SearchRangeParams
 │   │                    # DSConfigJs, SegmentParamsJs, TimeRangeParamsJs, SearchRangeParamsJs
 │   ├── message.rs       # BaseMessageBuilder, HashValues
-│   └── datetime.rs      # DateTimeCodeEnumerator, ユーティリティ関数
-├── search_common.rs     # 削除（mod.rsに移行）
+│   └── datetime.rs      # DateTimeCodeEnumerator, RangedTimeCodeTable, ユーティリティ関数
 └── ...
 ```
 
@@ -133,96 +136,70 @@ params.rs ← message.rs ← datetime.rs
 
 ---
 
-## DateTimeCodeEnumerator 仕様
+## RangedTimeCodeTable 仕様 ✅ 実装済み
 
 ### 概要
 
-`SearchRangeParams` と `TimeRangeParams` と `HardwareType` を受け取り、
-有効な日時の `(date_code, time_code)` を順次生成するイテレータ。
+時刻範囲に基づいて許可された秒のtime_codeを事前計算するテーブル。
 
-### 設計方針
-
-- **Iterator trait 実装**: Rust標準のIteratorパターンに準拠
-- **TimeCodeマスク**: 構築時に `TimeRangeParams` から生成（Option<u32>で直接time_codeを保持）
-- **遅延評価**: 呼び出しごとに次の有効な日時を計算
-- **進捗計算**: スキップした秒も含めて計算
-
-### TimeCodeマスク設計
-
-従来の `build_allowed_second_mask` (bool配列) を廃止し、`Option<u32>` 配列に変更：
+### 設計
 
 ```rust
-/// TimeCodeマスク（1日分、86400要素）
+/// 範囲制限タイムコードテーブル（1日分、86400要素）
 /// 
 /// 各インデックスが1日の秒数（0-86399）に対応。
 /// - Some(time_code): 許可された秒、事前計算されたtime_code
 /// - None: 許可されていない秒
-type TimeCodeMask = Box<[Option<u32>; 86400]>;
+pub type RangedTimeCodeTable = Box<[Option<u32>; 86400]>;
 
-fn build_time_code_mask(time_range: &TimeRangeParams, hardware: HardwareType) -> TimeCodeMask {
-    let mut mask: TimeCodeMask = Box::new([None; 86400]);
-    for hour in time_range.hour_start..=time_range.hour_end {
-        for minute in time_range.minute_start..=time_range.minute_end {
-            for second in time_range.second_start..=time_range.second_end {
-                let second_of_day = hour * 3600 + minute * 60 + second;
-                let time_code = TimeCodeGenerator::get_time_code_for_hardware(
-                    second_of_day, 
-                    hardware.as_str()
-                );
-                mask[second_of_day as usize] = Some(time_code);
-            }
-        }
-    }
-    mask
-}
+pub fn build_ranged_time_code_table(
+    range: &TimeRangeParams, 
+    hardware: HardwareType
+) -> RangedTimeCodeTable;
 ```
 
 **メリット**:
 - 許可判定とtime_code取得を1回のルックアップで完了
 - time_code計算を事前に済ませ、イテレーション中の計算コスト削減
 
+---
+
+## DateTimeCodeEnumerator 仕様 ✅ 実装済み
+
+### 概要
+
+開始秒から指定秒数分の `DateTimeCode` を順次生成するIterator。
+許可範囲外の秒はスキップされるが、進捗計算にはスキップ分も含まれる。
+
 ### インターフェース
 
 ```rust
 /// 日時コード（イテレータの出力）
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DateTimeCode {
     pub date_code: u32,
     pub time_code: u32,
 }
 
 /// 日時コード列挙器
-pub struct DateTimeCodeEnumerator {
-    // 検索範囲
-    start_seconds: i64,
-    end_seconds: i64,
-    
-    // 現在位置
+pub struct DateTimeCodeEnumerator<'a> {
+    time_code_table: &'a RangedTimeCodeTable,
     current_seconds: i64,
-    
-    // TimeCodeマスク（1日分、Option<time_code>）
-    time_code_mask: Box<[Option<u32>; 86400]>,
+    end_seconds: i64,
+    processed_seconds: u32,
 }
 
-impl DateTimeCodeEnumerator {
-    /// 新規作成
+impl<'a> DateTimeCodeEnumerator<'a> {
     pub fn new(
-        search_range: &SearchRangeParams,
-        time_range: &TimeRangeParams,
-        hardware: HardwareType,
+        time_code_table: &'a RangedTimeCodeTable,
+        start_seconds: i64,
+        range_seconds: u32,
     ) -> Self;
     
-    /// 処理済み秒数（スキップ含む）
     pub fn processed_seconds(&self) -> u32;
-    
-    /// 残り秒数
-    pub fn remaining_seconds(&self) -> u32;
-    
-    /// 総秒数
-    pub fn total_seconds(&self) -> u32;
 }
 
-impl Iterator for DateTimeCodeEnumerator {
+impl Iterator for DateTimeCodeEnumerator<'_> {
     type Item = DateTimeCode;
     fn next(&mut self) -> Option<Self::Item>;
 }
@@ -233,103 +210,54 @@ impl Iterator for DateTimeCodeEnumerator {
 Iterator の標準機能 `take(4)` で4要素ずつ取得可能：
 
 ```rust
-let enumerator = DateTimeCodeEnumerator::new(&search_range, &time_range, hardware);
-let batch: Vec<DateTimeCode> = enumerator.by_ref().take(4).collect();
+let table = build_ranged_time_code_table(&time_range, hardware);
+let mut enumerator = DateTimeCodeEnumerator::new(&table, start_seconds, range_seconds);
 
-// SIMD処理
-if batch.len() == 4 {
-    // 4要素揃っている場合はSIMD
-    process_simd_batch(&batch);
-} else {
-    // 端数はスカラー処理
-    for dt in batch {
-        process_scalar(&dt);
+loop {
+    let batch: Vec<DateTimeCode> = enumerator.by_ref().take(4).collect();
+    if batch.is_empty() {
+        break;
     }
-}
-```
-
-### 使用例
-
-```rust
-let search_range = SearchRangeParams::new(2024, 1, 1, 86400 * 7)?;
-let time_range = TimeRangeParams::new(10, 12, 0, 59, 0, 59)?;
-let hardware = HardwareType::DS;
-
-let mut enumerator = DateTimeCodeEnumerator::new(&search_range, &time_range, hardware);
-
-while let Some(dt) = enumerator.next() {
-    let message = builder.build_message(dt.date_code, dt.time_code);
-    // SHA-1計算...
     
-    // 進捗報告
-    let progress = enumerator.processed_seconds() as f64 / enumerator.total_seconds() as f64;
+    if batch.len() == 4 {
+        // 4要素揃っている場合はSIMD
+        process_simd_batch(&batch);
+    } else {
+        // 端数はスカラー処理
+        for dt in batch {
+            process_scalar(&dt);
+        }
+    }
 }
 ```
 
 ---
 
-## リファクタリング方針
+## IVBootTimingSearchIterator 仕様
 
-### Phase 1: 共通モジュール抽出 ✅ 完了
+### 概要
 
-#### 1.1 `search_common.rs` 実装済み
+複数のtarget_seedsに対してマッチする起動時間を検索するIterator。
 
-```rust
-//! 検索処理共通モジュール
+### 設計
 
-// ========== 定数 ==========
-pub const EPOCH_2000_UNIX: i64 = 946684800;
-pub const SECONDS_PER_DAY: i64 = 86_400;
-pub const HARDWARE_FRAME_DS: u32 = 8;
-pub const HARDWARE_FRAME_DS_LITE: u32 = 6;
-pub const HARDWARE_FRAME_3DS: u32 = 9;
-
-// ========== 内部型 ==========
-pub enum HardwareType { DS, DSLite, ThreeDS }
-pub struct DailyTimeRangeConfig { ... }
-pub struct BaseMessageBuilder { ... }
-pub struct DateTimeCodeCalculator { ... }
-pub struct HashValues { ... }
-
-// ========== 公開Value Object ==========
-#[wasm_bindgen]
-pub struct DSConfigJs { ... }
-
-#[wasm_bindgen]
-pub struct SegmentParamsJs { ... }
-
-#[wasm_bindgen]
-pub struct TimeRangeParamsJs { ... }
-
-#[wasm_bindgen]
-pub struct SearchRangeParamsJs { ... }
-```
-
-### Phase 2: IVBootTimingSearchIterator 実装
-
-#### 目標
-`EggBootTimingSearchIterator` と同様のIteratorパターンでIV検索を実装。
-
-#### 設計
 ```rust
 #[wasm_bindgen]
 pub struct IVBootTimingSearchIterator {
-    // 設定
-    ds_config: DSConfigJs,
-    segment: SegmentParamsJs,
-    time_range: TimeRangeParamsJs,
-    search_range: SearchRangeParamsJs,
-    
-    // 検索条件
-    target_seed: u32,
-    
-    // 状態
-    current_offset: u32,
-    is_finished: bool,
-    
-    // 内部キャッシュ
+    // 内部状態
     base_message_builder: BaseMessageBuilder,
-    allowed_second_mask: Box<[bool; 86400]>,
+    time_code_table: RangedTimeCodeTable,
+    
+    // 検索条件（複数Seed対応）
+    target_seeds: Vec<u32>,
+    
+    // 検索範囲
+    start_seconds: i64,
+    range_seconds: u32,
+    
+    // 現在位置
+    current_seconds: i64,
+    processed_seconds: u32,
 }
 
 #[wasm_bindgen]
@@ -340,18 +268,113 @@ impl IVBootTimingSearchIterator {
         segment: &SegmentParamsJs,
         time_range: &TimeRangeParamsJs,
         search_range: &SearchRangeParamsJs,
-        target_seed: u32,
+        target_seeds: &[u32],  // 複数Seed対応
     ) -> Result<IVBootTimingSearchIterator, String>;
 
-    pub fn next_batch(&mut self, limit: u32, chunk_seconds: u32) -> IVBootTimingSearchResults;
+    /// バッチ処理で検索を進める
+    /// 
+    /// # Arguments
+    /// - `max_results`: 最大結果数（見つかったら早期終了）
+    /// - `chunk_seconds`: 処理する秒数（進捗報告用）
+    /// 
+    /// # Returns
+    /// 見つかった結果の配列
+    pub fn next_batch(
+        &mut self, 
+        max_results: u32, 
+        chunk_seconds: u32
+    ) -> IVBootTimingSearchResults;
     
     #[wasm_bindgen(getter)]
     pub fn is_finished(&self) -> bool;
     
     #[wasm_bindgen(getter)]
-    pub fn processed_count(&self) -> u32;
+    pub fn processed_seconds(&self) -> u32;
+    
+    #[wasm_bindgen(getter)]
+    pub fn total_seconds(&self) -> u32;
+    
+    #[wasm_bindgen(getter)]
+    pub fn progress(&self) -> f64;
+}
+
+#[wasm_bindgen]
+pub struct IVBootTimingSearchResult {
+    pub seed: u32,
+    pub year: u32,
+    pub month: u32,
+    pub day: u32,
+    pub hour: u32,
+    pub minute: u32,
+    pub second: u32,
+}
+
+#[wasm_bindgen]
+pub struct IVBootTimingSearchResults {
+    results: Vec<IVBootTimingSearchResult>,
+    processed_in_chunk: u32,
 }
 ```
+
+### 使用例（TS側）
+
+```typescript
+const iterator = new IVBootTimingSearchIterator(
+    dsConfig,
+    segment,
+    timeRange,
+    searchRange,
+    new Uint32Array([0x12345678, 0xABCDEF00])  // 複数Seed
+);
+
+while (!iterator.is_finished) {
+    const results = iterator.next_batch(10, 3600);  // 最大10件、1時間分処理
+    
+    if (results.length > 0) {
+        // 結果が見つかった
+        for (const result of results) {
+            console.log(`Seed: ${result.seed}, ${result.year}/${result.month}/${result.day}`);
+        }
+    }
+    
+    // 進捗報告
+    reportProgress(iterator.progress);
+    
+    // キャンセルチェック
+    if (shouldCancel) break;
+}
+```
+
+---
+
+## リファクタリング方針
+
+### Phase 1: 共通モジュール抽出 ✅ 完了
+
+#### 実装済み内容
+
+```
+wasm-pkg/src/search_common/
+├── mod.rs           # 定数 + re-exports
+├── params.rs        # 内部型 + 公開型（DSConfig, SegmentParams, TimeRangeParams, SearchRangeParams）
+├── message.rs       # BaseMessageBuilder, HashValues
+└── datetime.rs      # DateTimeCodeEnumerator, RangedTimeCodeTable, ユーティリティ関数
+```
+
+- 37テスト通過
+- 175テスト（全体）通過
+
+### Phase 2: IVBootTimingSearchIterator 実装 ⬜ 進行中
+
+#### 目標
+`EggBootTimingSearchIterator` と同様のIteratorパターンでIV検索を実装。
+
+#### タスク
+1. `iv_boot_timing_search.rs` 新規作成
+2. `IVBootTimingSearchIterator` 実装
+3. `IVBootTimingSearchResult` / `IVBootTimingSearchResults` 実装
+4. SIMD最適化
+5. テスト追加
 
 ### Phase 3: 既存コード移行
 
@@ -366,9 +389,13 @@ impl IVBootTimingSearchIterator {
 ```
 wasm-pkg/src/
 ├── lib.rs
-├── search_common.rs           # 定数・型・ユーティリティ ✅
-├── iv_boot_timing_search.rs   # IV起動時間検索 (NEW)
-├── egg_boot_timing_search.rs  # 孵化乱数検索 (既存、search_common利用へ移行)
+├── search_common/             # 共通モジュール ✅
+│   ├── mod.rs
+│   ├── params.rs
+│   ├── message.rs
+│   └── datetime.rs
+├── iv_boot_timing_search.rs   # IV起動時間検索 (NEW) ⬜
+├── egg_boot_timing_search.rs  # 孵化乱数検索 (既存)
 ├── integrated_search.rs       # 旧IV検索 (deprecated予定)
 ├── datetime_codes.rs          # 日時コード生成 (既存)
 └── ...
@@ -381,11 +408,13 @@ wasm-pkg/src/
 | Step | 内容 | 状態 |
 |------|------|------|
 | 1 | ブランチ作成 | ✅ 完了 |
-| 2 | `search_common.rs` 内部型実装 | ✅ 完了 |
-| 3 | 公開Value Object追加 | ✅ 完了 |
-| 4 | テスト (22件) | ✅ 通過 |
-| 5 | `IVBootTimingSearchIterator` 実装 | ⬜ 未着手 |
-| 6 | 既存コード移行 | ⬜ 未着手 |
+| 2 | `search_common/` モジュール分割 | ✅ 完了 |
+| 3 | 内部型 + 公開型実装 | ✅ 完了 |
+| 4 | `DateTimeCodeEnumerator` 実装 | ✅ 完了 |
+| 5 | `RangedTimeCodeTable` 実装 | ✅ 完了 |
+| 6 | テスト (37件) | ✅ 通過 |
+| 7 | `IVBootTimingSearchIterator` 実装 | ⬜ 進行中 |
+| 8 | 既存コード移行 | ⬜ 未着手 |
 
 ---
 
