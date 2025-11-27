@@ -33,17 +33,28 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct IVBootTimingSearchResult {
+    // MT Seed (IV用)
     seed: u32,
+
+    // LCG Seed
+    lcg_seed_high: u32,
+    lcg_seed_low: u32,
+
+    // 起動条件
     year: u32,
     month: u32,
     day: u32,
     hour: u32,
     minute: u32,
     second: u32,
+    timer0: u32,
+    vcount: u32,
+    key_code: u32,
 }
 
 #[wasm_bindgen]
 impl IVBootTimingSearchResult {
+    // MT Seed (IV用)
     #[wasm_bindgen(getter)]
     pub fn seed(&self) -> u32 {
         self.seed
@@ -54,6 +65,24 @@ impl IVBootTimingSearchResult {
         format!("{:08X}", self.seed)
     }
 
+    // LCG Seed
+    #[wasm_bindgen(getter = lcgSeedHigh)]
+    pub fn lcg_seed_high(&self) -> u32 {
+        self.lcg_seed_high
+    }
+
+    #[wasm_bindgen(getter = lcgSeedLow)]
+    pub fn lcg_seed_low(&self) -> u32 {
+        self.lcg_seed_low
+    }
+
+    #[wasm_bindgen(getter = lcgSeedHex)]
+    pub fn lcg_seed_hex(&self) -> String {
+        let lcg_seed = ((self.lcg_seed_high as u64) << 32) | (self.lcg_seed_low as u64);
+        format!("{:016X}", lcg_seed)
+    }
+
+    // 起動日時
     #[wasm_bindgen(getter)]
     pub fn year(&self) -> u32 {
         self.year
@@ -82,6 +111,22 @@ impl IVBootTimingSearchResult {
     #[wasm_bindgen(getter)]
     pub fn second(&self) -> u32 {
         self.second
+    }
+
+    // 起動パラメータ
+    #[wasm_bindgen(getter)]
+    pub fn timer0(&self) -> u32 {
+        self.timer0
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn vcount(&self) -> u32 {
+        self.vcount
+    }
+
+    #[wasm_bindgen(getter = keyCode)]
+    pub fn key_code(&self) -> u32 {
+        self.key_code
     }
 }
 
@@ -136,6 +181,11 @@ pub struct IVBootTimingSearchIterator {
     base_message_builder: BaseMessageBuilder,
     time_code_table: RangedTimeCodeTable,
     hardware: HardwareType,
+
+    // セグメントパラメータ（結果出力用に保持）
+    timer0: u32,
+    vcount: u32,
+    key_code: u32,
 
     // 検索条件（複数Seed対応）
     target_seeds: HashSet<u32>,
@@ -194,6 +244,9 @@ impl IVBootTimingSearchIterator {
             base_message_builder,
             time_code_table,
             hardware,
+            timer0: segment_internal.timer0,
+            vcount: segment_internal.vcount,
+            key_code: segment_internal.key_code,
             target_seeds: target_seeds_set,
             start_seconds,
             range_seconds: search_range.range_seconds(),
@@ -343,7 +396,7 @@ impl IVBootTimingSearchIterator {
 
             if self.target_seeds.contains(&seed) {
                 let (seconds_since_2000, _, _) = batch_metadata[i];
-                if let Some(result) = self.create_result(seed, seconds_since_2000) {
+                if let Some(result) = self.create_result(seed, h0, h1, seconds_since_2000) {
                     results.push(result);
                 }
             }
@@ -359,30 +412,56 @@ impl IVBootTimingSearchIterator {
         results: &mut Vec<IVBootTimingSearchResult>,
     ) {
         let hash = crate::sha1::calculate_pokemon_sha1(message);
-        let seed = calculate_pokemon_seed_from_hash(hash.0, hash.1);
+        let h0 = hash.0;
+        let h1 = hash.1;
+        let seed = calculate_pokemon_seed_from_hash(h0, h1);
 
         if self.target_seeds.contains(&seed) {
-            if let Some(result) = self.create_result(seed, seconds_since_2000) {
+            if let Some(result) = self.create_result(seed, h0, h1, seconds_since_2000) {
                 results.push(result);
             }
         }
     }
 
     /// 検索結果を生成
-    fn create_result(&self, seed: u32, seconds_since_2000: i64) -> Option<IVBootTimingSearchResult> {
+    fn create_result(
+        &self,
+        seed: u32,
+        h0: u32,
+        h1: u32,
+        seconds_since_2000: i64,
+    ) -> Option<IVBootTimingSearchResult> {
         let (year, month, day, hour, minute, second) =
             generate_display_datetime(seconds_since_2000)?;
 
+        // LCG Seed計算 (h0, h1からリトルエンディアンで64bit値を構築)
+        let (lcg_seed_high, lcg_seed_low) = calculate_lcg_seed_parts(h0, h1);
+
         Some(IVBootTimingSearchResult {
             seed,
+            lcg_seed_high,
+            lcg_seed_low,
             year,
             month,
             day,
             hour,
             minute,
             second,
+            timer0: self.timer0,
+            vcount: self.vcount,
+            key_code: self.key_code,
         })
     }
+}
+
+/// SHA-1ハッシュ値から64bit LCG Seedのhigh/lowパートを計算
+#[inline]
+fn calculate_lcg_seed_parts(h0: u32, h1: u32) -> (u32, u32) {
+    let h0_le = crate::sha1::swap_bytes_32(h0);
+    let h1_le = crate::sha1::swap_bytes_32(h1);
+    // LCG seed = (h1_le << 32) | h0_le
+    // high = h1_le, low = h0_le
+    (h1_le, h0_le)
 }
 
 // =============================================================================
