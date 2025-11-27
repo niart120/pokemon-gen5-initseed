@@ -11,6 +11,7 @@ mod egg_iv;
 mod egg_seed_enumerator;
 mod encounter_calculator;
 mod integrated_search;
+mod iv_boot_timing_search;
 mod mt19937;
 mod offset_calculator;
 mod personality_rng;
@@ -28,6 +29,9 @@ mod tests;
 pub use datetime_codes::{DateCodeGenerator, TimeCodeGenerator};
 pub use egg_boot_timing_search::{
     generate_egg_key_codes, EggBootTimingSearchIterator, EggBootTimingSearchResult,
+};
+pub use iv_boot_timing_search::{
+    IVBootTimingSearchIterator, IVBootTimingSearchResult, IVBootTimingSearchResults,
 };
 pub use egg_iv::{
     derive_pending_egg, derive_pending_egg_with_state, hidden_power_from_iv, matches_filter,
