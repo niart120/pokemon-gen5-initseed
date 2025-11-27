@@ -470,9 +470,7 @@ mod native_tests {
             // UP と DOWN が同時に押されているものは含まれないはず
             assert!(
                 !((raw & UP) != 0 && (raw & DOWN) != 0),
-                "UP + DOWN 同時押しが検出されました: raw=0x{:X}, key_code=0x{:X}",
-                raw,
-                key_code
+                "UP + DOWN 同時押しが検出されました: raw=0x{raw:X}, key_code=0x{key_code:X}"
             );
         }
 
@@ -494,9 +492,7 @@ mod native_tests {
             // LEFT と RIGHT が同時に押されているものは含まれないはず
             assert!(
                 !((raw & LEFT) != 0 && (raw & RIGHT) != 0),
-                "LEFT + RIGHT 同時押しが検出されました: raw=0x{:X}, key_code=0x{:X}",
-                raw,
-                key_code
+                "LEFT + RIGHT 同時押しが検出されました: raw=0x{raw:X}, key_code=0x{key_code:X}"
             );
         }
 
@@ -518,8 +514,7 @@ mod native_tests {
                 (raw & START) != 0 && (raw & SELECT) != 0 && (raw & L) != 0 && (raw & R) != 0;
             assert!(
                 !has_all_four,
-                "START + SELECT + L + R 4つ同時押しが検出されました: raw=0x{:X}, key_code=0x{:X}",
-                raw, key_code
+                "START + SELECT + L + R 4つ同時押しが検出されました: raw=0x{raw:X}, key_code=0x{key_code:X}"
             );
         }
 
@@ -540,15 +535,13 @@ mod native_tests {
             // UP + DOWN 同時押しチェック
             assert!(
                 !((raw & UP) != 0 && (raw & DOWN) != 0),
-                "UP + DOWN 同時押しが検出されました: raw=0x{:X}",
-                raw
+                "UP + DOWN 同時押しが検出されました: raw=0x{raw:X}"
             );
 
             // LEFT + RIGHT 同時押しチェック
             assert!(
                 !((raw & LEFT) != 0 && (raw & RIGHT) != 0),
-                "LEFT + RIGHT 同時押しが検出されました: raw=0x{:X}",
-                raw
+                "LEFT + RIGHT 同時押しが検出されました: raw=0x{raw:X}"
             );
 
             // START + SELECT + L + R 4つ同時押しチェック
@@ -556,15 +549,14 @@ mod native_tests {
                 (raw & START) != 0 && (raw & SELECT) != 0 && (raw & L) != 0 && (raw & R) != 0;
             assert!(
                 !has_all_four,
-                "START + SELECT + L + R 4つ同時押しが検出されました: raw=0x{:X}",
-                raw
+                "START + SELECT + L + R 4つ同時押しが検出されました: raw=0x{raw:X}"
             );
         }
 
         // 8ビット有効 (2^8 = 256通り) から不可能な組み合わせを除外
         // 正確な数は計算が複雑だが、256より少なくなることを確認
         assert!(key_codes.len() < 256);
-        assert!(key_codes.len() > 0);
+        assert!(!key_codes.is_empty());
     }
 
     #[test]
@@ -656,15 +648,13 @@ mod native_tests {
             // UP + DOWN 同時押しがないことを確認
             assert!(
                 !((raw & UP) != 0 && (raw & DOWN) != 0),
-                "UP + DOWN 同時押しが検出: 0x{:X}",
-                raw
+                "UP + DOWN 同時押しが検出: 0x{raw:X}"
             );
 
             // LEFT + RIGHT 同時押しがないことを確認
             assert!(
                 !((raw & LEFT) != 0 && (raw & RIGHT) != 0),
-                "LEFT + RIGHT 同時押しが検出: 0x{:X}",
-                raw
+                "LEFT + RIGHT 同時押しが検出: 0x{raw:X}"
             );
 
             // START + SELECT + L + R の4つ同時押しがないことを確認
@@ -672,8 +662,7 @@ mod native_tests {
                 (raw & START) != 0 && (raw & SELECT) != 0 && (raw & L) != 0 && (raw & R) != 0;
             assert!(
                 !has_all_four,
-                "START + SELECT + L + R 4つ同時押しが検出: 0x{:X}",
-                raw
+                "START + SELECT + L + R 4つ同時押しが検出: 0x{raw:X}"
             );
         }
 

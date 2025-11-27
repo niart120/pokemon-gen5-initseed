@@ -67,32 +67,27 @@ mod tests {
             let result_base = i * 5;
             assert_eq!(
                 simd_results[result_base], h0,
-                "h0 mismatch for message {}",
-                i
+                "h0 mismatch for message {i}"
             );
             assert_eq!(
                 simd_results[result_base + 1],
                 h1,
-                "h1 mismatch for message {}",
-                i
+                "h1 mismatch for message {i}"
             );
             assert_eq!(
                 simd_results[result_base + 2],
                 h2,
-                "h2 mismatch for message {}",
-                i
+                "h2 mismatch for message {i}"
             );
             assert_eq!(
                 simd_results[result_base + 3],
                 h3,
-                "h3 mismatch for message {}",
-                i
+                "h3 mismatch for message {i}"
             );
             assert_eq!(
                 simd_results[result_base + 4],
                 h4,
-                "h4 mismatch for message {}",
-                i
+                "h4 mismatch for message {i}"
             );
         }
     }
@@ -162,8 +157,7 @@ mod tests {
         );
 
         println!(
-            "SIMD基本性能テスト完了 - SIMD: {:?}, Normal: {:?}",
-            simd_duration, normal_duration
+            "SIMD基本性能テスト完了 - SIMD: {simd_duration:?}, Normal: {normal_duration:?}"
         );
     }
 
@@ -191,8 +185,7 @@ mod tests {
             // 4 messages × 5 hash values
             assert_eq!(
                 results_1[i], results_2[i],
-                "Deterministic test failed at index {}",
-                i
+                "Deterministic test failed at index {i}"
             );
         }
     }
@@ -221,11 +214,11 @@ mod tests {
         // 各ハッシュ値が0でないことを確認
         for i in 0..4 {
             let base_idx = i * 5;
-            assert_ne!(results[base_idx], 0, "h0 is 0 for message {}", i);
-            assert_ne!(results[base_idx + 1], 0, "h1 is 0 for message {}", i);
-            assert_ne!(results[base_idx + 2], 0, "h2 is 0 for message {}", i);
-            assert_ne!(results[base_idx + 3], 0, "h3 is 0 for message {}", i);
-            assert_ne!(results[base_idx + 4], 0, "h4 is 0 for message {}", i);
+            assert_ne!(results[base_idx], 0, "h0 is 0 for message {i}");
+            assert_ne!(results[base_idx + 1], 0, "h1 is 0 for message {i}");
+            assert_ne!(results[base_idx + 2], 0, "h2 is 0 for message {i}");
+            assert_ne!(results[base_idx + 3], 0, "h3 is 0 for message {i}");
+            assert_ne!(results[base_idx + 4], 0, "h4 is 0 for message {i}");
         }
     }
 }

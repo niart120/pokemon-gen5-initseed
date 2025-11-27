@@ -436,8 +436,7 @@ impl SearchRangeParamsJs {
     ) -> Result<SearchRangeParamsJs, String> {
         if date_to_seconds_since_2000_local(start_year, start_month, start_day).is_none() {
             return Err(format!(
-                "Invalid date: {}-{}-{}",
-                start_year, start_month, start_day
+                "Invalid date: {start_year}-{start_month}-{start_day}"
             ));
         }
 

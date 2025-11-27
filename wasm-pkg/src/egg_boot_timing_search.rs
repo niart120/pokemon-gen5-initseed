@@ -25,7 +25,7 @@ use crate::egg_seed_enumerator::{EggSeedEnumerator, ParentsIVs, ParentsIVsJs};
 use crate::integrated_search::generate_key_codes;
 use crate::offset_calculator::GameMode;
 use crate::search_common::{
-    build_ranged_time_code_table, BaseMessageBuilder, HashEntry, HashValuesEnumerator,
+    build_ranged_time_code_table, BaseMessageBuilder, HashValuesEnumerator,
     DSConfigJs, SearchRangeParamsJs, SegmentParamsJs, TimeRangeParamsJs,
 };
 use wasm_bindgen::prelude::*;
@@ -125,7 +125,7 @@ impl EggBootTimingSearchResult {
     #[wasm_bindgen(getter = lcgSeedHex)]
     pub fn lcg_seed_hex(&self) -> String {
         let seed = ((self.lcg_seed_high as u64) << 32) | (self.lcg_seed_low as u64);
-        format!("{:016X}", seed)
+        format!("{seed:016X}")
     }
 
     #[wasm_bindgen(getter)]
@@ -416,7 +416,7 @@ impl EggBootTimingSearchIterator {
             lcg_seed,
             self.user_offset,
             self.advance_count,
-            self.conditions.clone(),
+            self.conditions,
             self.parents,
             self.filter.clone(),
             self.consider_npc_consumption,
@@ -569,7 +569,7 @@ mod tests {
         let table = build_ranged_time_code_table(&range, HardwareType::DS);
 
         // 10:30:00 は許可される
-        let idx_10_30_00 = 10 * 3600 + 30 * 60 + 0;
+        let idx_10_30_00 = 10 * 3600 + 30 * 60;
         assert!(table[idx_10_30_00].is_some(), "10:30:00 should be allowed");
 
         // 10:30:30 は許可される
@@ -581,7 +581,7 @@ mod tests {
         assert!(table[idx_10_30_31].is_none(), "10:30:31 should NOT be allowed");
 
         // 10:29:00 は許可されない（分が範囲外）
-        let idx_10_29_00 = 10 * 3600 + 29 * 60 + 0;
+        let idx_10_29_00 = 10 * 3600 + 29 * 60;
         assert!(table[idx_10_29_00].is_none(), "10:29:00 should NOT be allowed");
 
         // 11:00:00 は許可されない（分が範囲外：0分は30-45の範囲外）
@@ -589,7 +589,7 @@ mod tests {
         assert!(table[idx_11_00_00].is_none(), "11:00:00 should NOT be allowed (minute 0 is outside 30-45)");
 
         // 11:30:00 は許可される
-        let idx_11_30_00 = 11 * 3600 + 30 * 60 + 0;
+        let idx_11_30_00 = 11 * 3600 + 30 * 60;
         assert!(table[idx_11_30_00].is_some(), "11:30:00 should be allowed");
 
         // 11:45:30 は許可される

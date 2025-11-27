@@ -186,7 +186,7 @@ mod native_tests {
         assert_eq!(parity(0xFFFFFFFF, 0x12345678, 0x9ABCDEF0), parity_result);
 
         let majority_result =
-            (0xFFFFFFFF & 0x12345678) | (0xFFFFFFFF & 0x9ABCDEF0) | (0x12345678 & 0x9ABCDEF0);
+            0x12345678 | 0x9ABCDEF0 | (0x12345678 & 0x9ABCDEF0);
         assert_eq!(
             majority(0xFFFFFFFF, 0x12345678, 0x9ABCDEF0),
             majority_result

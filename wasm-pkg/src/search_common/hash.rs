@@ -273,6 +273,6 @@ mod tests {
 
         // MT Seed が計算できることを確認
         let mt_seed = entry.hash.to_mt_seed();
-        assert!(mt_seed > 0 || mt_seed == 0); // 任意の値
+        assert!(mt_seed >= 0); // 任意の値
     }
 }

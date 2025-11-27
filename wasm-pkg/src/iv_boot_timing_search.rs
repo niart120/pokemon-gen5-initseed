@@ -76,7 +76,7 @@ impl IVBootTimingSearchResult {
     #[wasm_bindgen(getter = lcgSeedHex)]
     pub fn lcg_seed_hex(&self) -> String {
         let lcg_seed = ((self.lcg_seed_high as u64) << 32) | (self.lcg_seed_low as u64);
-        format!("{:016X}", lcg_seed)
+        format!("{lcg_seed:016X}")
     }
 
     // 起動日時
