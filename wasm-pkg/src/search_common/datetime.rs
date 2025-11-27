@@ -1,0 +1,320 @@
+//! 日時コード生成モジュール
+//!
+//! 日時コード計算・列挙とユーティリティ関数を提供する。
+
+use super::{EPOCH_2000_UNIX, SECONDS_PER_DAY};
+use crate::datetime_codes::{DateCodeGenerator, TimeCodeGenerator};
+use crate::search_common::params::{HardwareType, TimeRangeParams};
+use chrono::{Datelike, NaiveDate, Timelike};
+
+// =============================================================================
+// 日時コード
+// =============================================================================
+
+/// 日時コード（date_code と time_code のペア）
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DateTimeCode {
+    pub date_code: u32,
+    pub time_code: u32,
+}
+
+impl DateTimeCode {
+    pub fn new(date_code: u32, time_code: u32) -> Self {
+        Self { date_code, time_code }
+    }
+}
+
+// =============================================================================
+// タイムコードマスク
+// =============================================================================
+
+/// タイムコードマスク
+///
+/// 86,400要素の配列で、各インデックスが1日の秒数（0-86399）に対応する。
+/// `Some(time_code)` なら検索対象、`None` なら対象外。
+pub type TimeCodeMask = Box<[Option<u32>; 86400]>;
+
+/// タイムコードマスクを構築
+///
+/// 許可秒に対応する time_code を事前計算し、O(1)でアクセス可能にする。
+pub fn build_time_code_mask(range: &TimeRangeParams, hardware: HardwareType) -> TimeCodeMask {
+    let mut mask: TimeCodeMask = Box::new([None; 86400]);
+    let hardware_str = hardware.as_str();
+
+    for hour in range.hour_start..=range.hour_end {
+        for minute in range.minute_start..=range.minute_end {
+            for second in range.second_start..=range.second_end {
+                let second_of_day = hour * 3600 + minute * 60 + second;
+                let time_code =
+                    TimeCodeGenerator::get_time_code_for_hardware(second_of_day, hardware_str);
+                mask[second_of_day as usize] = Some(time_code);
+            }
+        }
+    }
+    mask
+}
+
+// =============================================================================
+// 日時コード列挙器
+// =============================================================================
+
+/// 日時コード列挙器
+///
+/// 開始時刻から指定秒数分の DateTimeCode を順次生成する Iterator。
+/// 許可範囲外の秒はスキップされるが、進捗計算にはスキップ分も含まれる。
+pub struct DateTimeCodeEnumerator<'a> {
+    time_code_mask: &'a TimeCodeMask,
+    current_seconds: i64,
+    end_seconds: i64,
+    processed_seconds: u32,
+}
+
+impl<'a> DateTimeCodeEnumerator<'a> {
+    /// 新規作成
+    ///
+    /// # Arguments
+    /// - `time_code_mask`: タイムコードマスク（許可秒のtime_codeを含む）
+    /// - `start_seconds`: 開始秒（2000年からの経過秒）
+    /// - `range_seconds`: 検索範囲（秒数）
+    pub fn new(
+        time_code_mask: &'a TimeCodeMask,
+        start_seconds: i64,
+        range_seconds: u32,
+    ) -> Self {
+        Self {
+            time_code_mask,
+            current_seconds: start_seconds,
+            end_seconds: start_seconds + range_seconds as i64,
+            processed_seconds: 0,
+        }
+    }
+
+    /// 処理済み秒数を取得（スキップ分含む）
+    pub fn processed_seconds(&self) -> u32 {
+        self.processed_seconds
+    }
+}
+
+impl Iterator for DateTimeCodeEnumerator<'_> {
+    type Item = DateTimeCode;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.current_seconds < self.end_seconds {
+            let seconds = self.current_seconds;
+            self.current_seconds += 1;
+            self.processed_seconds += 1;
+
+            if seconds < 0 {
+                continue;
+            }
+
+            let second_of_day = (seconds % SECONDS_PER_DAY) as usize;
+            if let Some(time_code) = self.time_code_mask[second_of_day] {
+                let date_index = (seconds / SECONDS_PER_DAY) as u32;
+                let date_code = DateCodeGenerator::get_date_code(date_index);
+                return Some(DateTimeCode::new(date_code, time_code));
+            }
+        }
+        None
+    }
+}
+
+// =============================================================================
+// ユーティリティ関数
+// =============================================================================
+
+/// 結果表示用の日時を生成
+///
+/// seconds_since_2000 から (year, month, day, hour, minute, second) を生成する。
+pub fn generate_display_datetime(
+    seconds_since_2000: i64,
+) -> Option<(u32, u32, u32, u32, u32, u32)> {
+    let result_datetime =
+        chrono::DateTime::from_timestamp(seconds_since_2000 + EPOCH_2000_UNIX, 0)?.naive_utc();
+
+    Some((
+        result_datetime.year() as u32,
+        result_datetime.month(),
+        result_datetime.day(),
+        result_datetime.hour(),
+        result_datetime.minute(),
+        result_datetime.second(),
+    ))
+}
+
+/// 開始日時をseconds_since_2000に変換
+pub fn datetime_to_seconds_since_2000(
+    year: u32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    minute: u32,
+    second: u32,
+) -> Option<i64> {
+    let datetime =
+        NaiveDate::from_ymd_opt(year as i32, month, day)?.and_hms_opt(hour, minute, second)?;
+    let unix = datetime.and_utc().timestamp();
+    Some(unix - EPOCH_2000_UNIX)
+}
+
+/// 開始日時（時刻0:0:0）をseconds_since_2000に変換
+pub fn date_to_seconds_since_2000(year: u32, month: u32, day: u32) -> Option<i64> {
+    datetime_to_seconds_since_2000(year, month, day, 0, 0, 0)
+}
+
+// =============================================================================
+// テスト
+// =============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_time_range() -> TimeRangeParams {
+        TimeRangeParams::new(0, 0, 0, 0, 0, 2).unwrap()
+    }
+
+    #[test]
+    fn test_date_time_code_creation() {
+        let dtc = DateTimeCode::new(0x12345678, 0xABCDEF00);
+        assert_eq!(dtc.date_code, 0x12345678);
+        assert_eq!(dtc.time_code, 0xABCDEF00);
+    }
+
+    #[test]
+    fn test_build_time_code_mask() {
+        let range = create_test_time_range();
+        let mask = build_time_code_mask(&range, HardwareType::DS);
+
+        // 0, 1, 2秒目は許可されている
+        assert!(mask[0].is_some());
+        assert!(mask[1].is_some());
+        assert!(mask[2].is_some());
+        // 3秒目以降は許可されていない
+        assert!(mask[3].is_none());
+        assert!(mask[3600].is_none());
+    }
+
+    #[test]
+    fn test_time_code_mask_time_code_values() {
+        let range = TimeRangeParams::new(0, 0, 0, 0, 0, 0).unwrap();
+        let mask = build_time_code_mask(&range, HardwareType::DS);
+
+        let expected_time_code = TimeCodeGenerator::get_time_code_for_hardware(0, "DS");
+        assert_eq!(mask[0], Some(expected_time_code));
+    }
+
+    #[test]
+    fn test_datetime_enumerator_basic() {
+        let range = create_test_time_range();
+        let mask = build_time_code_mask(&range, HardwareType::DS);
+
+        // 2000年1月1日 0:00:00 から開始
+        let enumerator = DateTimeCodeEnumerator::new(&mask, 0, 3);
+
+        let results: Vec<DateTimeCode> = enumerator.collect();
+        assert_eq!(results.len(), 3);
+    }
+
+    #[test]
+    fn test_datetime_enumerator_skips_disallowed() {
+        // 1秒目のみ許可
+        let range = TimeRangeParams::new(0, 0, 0, 0, 1, 1).unwrap();
+        let mask = build_time_code_mask(&range, HardwareType::DS);
+
+        // 0秒目から5秒間
+        let enumerator = DateTimeCodeEnumerator::new(&mask, 0, 5);
+
+        let results: Vec<DateTimeCode> = enumerator.collect();
+        // 0, 2, 3, 4秒目はスキップされ、1秒目のみ返される
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn test_datetime_enumerator_processed_seconds() {
+        let range = TimeRangeParams::new(0, 0, 0, 0, 1, 1).unwrap();
+        let mask = build_time_code_mask(&range, HardwareType::DS);
+
+        let mut enumerator = DateTimeCodeEnumerator::new(&mask, 0, 5);
+
+        // 全て消費
+        while enumerator.next().is_some() {}
+
+        // スキップ分も含めて5秒処理された
+        assert_eq!(enumerator.processed_seconds(), 5);
+    }
+
+    #[test]
+    fn test_datetime_enumerator_across_days() {
+        // 全時間許可
+        let range = TimeRangeParams::new(0, 23, 0, 59, 0, 59).unwrap();
+        let mask = build_time_code_mask(&range, HardwareType::DS);
+
+        // 1日目の最後から2日目の最初にまたがる
+        let start = SECONDS_PER_DAY - 2; // 86398秒目
+        let enumerator = DateTimeCodeEnumerator::new(&mask, start, 4);
+
+        let results: Vec<DateTimeCode> = enumerator.collect();
+        assert_eq!(results.len(), 4);
+
+        // date_codeが変わることを確認
+        let date_code_day1 = DateCodeGenerator::get_date_code(0);
+        let date_code_day2 = DateCodeGenerator::get_date_code(1);
+
+        // 最初の2つは1日目、残りは2日目
+        assert_eq!(results[0].date_code, date_code_day1);
+        assert_eq!(results[1].date_code, date_code_day1);
+        assert_eq!(results[2].date_code, date_code_day2);
+        assert_eq!(results[3].date_code, date_code_day2);
+    }
+
+    #[test]
+    fn test_datetime_to_seconds_since_2000() {
+        // 2000年1月1日 0:00:00
+        let result = datetime_to_seconds_since_2000(2000, 1, 1, 0, 0, 0);
+        assert_eq!(result, Some(0));
+
+        // 2000年1月2日 0:00:00
+        let result = datetime_to_seconds_since_2000(2000, 1, 2, 0, 0, 0);
+        assert_eq!(result, Some(86400));
+    }
+
+    #[test]
+    fn test_date_to_seconds_since_2000() {
+        let result = date_to_seconds_since_2000(2000, 1, 1);
+        assert_eq!(result, Some(0));
+
+        let result = date_to_seconds_since_2000(2024, 1, 15);
+        assert!(result.unwrap() > 0);
+    }
+
+    #[test]
+    fn test_date_to_seconds_since_2000_invalid() {
+        // 無効な日付
+        assert!(date_to_seconds_since_2000(2024, 13, 1).is_none());
+        assert!(date_to_seconds_since_2000(2024, 2, 30).is_none());
+    }
+
+    #[test]
+    fn test_generate_display_datetime() {
+        // 2000年1月1日 0:00:00
+        let result = generate_display_datetime(0);
+        assert_eq!(result, Some((2000, 1, 1, 0, 0, 0)));
+
+        // 2000年1月1日 1:00:00
+        let result = generate_display_datetime(3600);
+        assert_eq!(result, Some((2000, 1, 1, 1, 0, 0)));
+
+        // 2000年1月2日 0:00:00
+        let result = generate_display_datetime(86400);
+        assert_eq!(result, Some((2000, 1, 2, 0, 0, 0)));
+    }
+
+    #[test]
+    fn test_generate_display_datetime_2024() {
+        // 2024年のある時点
+        let seconds = datetime_to_seconds_since_2000(2024, 6, 15, 12, 30, 45).unwrap();
+        let result = generate_display_datetime(seconds);
+        assert_eq!(result, Some((2024, 6, 15, 12, 30, 45)));
+    }
+}

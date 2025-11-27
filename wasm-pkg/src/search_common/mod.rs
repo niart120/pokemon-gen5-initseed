@@ -1,0 +1,49 @@
+//! 検索処理共通モジュール
+//!
+//! 起動時間検索で共通利用される定数・型・ユーティリティ関数を提供する。
+//!
+//! ## サブモジュール構成
+//!
+//! - `params`: パラメータ型（内部型 + 公開型）
+//! - `message`: SHA-1メッセージ構築
+//! - `datetime`: 日時コード列挙・ユーティリティ
+
+mod datetime;
+mod message;
+mod params;
+
+// =============================================================================
+// 定数
+// =============================================================================
+
+/// 2000年1月1日 00:00:00 UTCのUnix時間
+pub const EPOCH_2000_UNIX: i64 = 946684800;
+
+/// 1日の秒数
+pub const SECONDS_PER_DAY: i64 = 86_400;
+
+/// Hardware別のframe値
+pub const HARDWARE_FRAME_DS: u32 = 8;
+pub const HARDWARE_FRAME_DS_LITE: u32 = 6;
+pub const HARDWARE_FRAME_3DS: u32 = 9;
+
+// =============================================================================
+// Re-exports
+// =============================================================================
+
+// params モジュール
+pub use params::{
+    // 内部型
+    DSConfig, HardwareType, SearchRangeParams, SegmentParams, TimeRangeParams,
+    // 公開型
+    DSConfigJs, SearchRangeParamsJs, SegmentParamsJs, TimeRangeParamsJs,
+};
+
+// message モジュール
+pub use message::{BaseMessageBuilder, HashValues};
+
+// datetime モジュール
+pub use datetime::{
+    build_time_code_mask, date_to_seconds_since_2000, datetime_to_seconds_since_2000,
+    generate_display_datetime, DateTimeCode, DateTimeCodeEnumerator, TimeCodeMask,
+};

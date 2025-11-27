@@ -107,6 +107,167 @@ pub struct HashValues { h0..h4 }
 
 ---
 
+## モジュール分割設計（B案: 役割別分離）
+
+### ファイル構成
+
+```
+wasm-pkg/src/
+├── search_common/
+│   ├── mod.rs           # re-export, 定数
+│   ├── params.rs        # DSConfig, SegmentParams, TimeRangeParams, SearchRangeParams
+│   │                    # DSConfigJs, SegmentParamsJs, TimeRangeParamsJs, SearchRangeParamsJs
+│   ├── message.rs       # BaseMessageBuilder, HashValues
+│   └── datetime.rs      # DateTimeCodeEnumerator, ユーティリティ関数
+├── search_common.rs     # 削除（mod.rsに移行）
+└── ...
+```
+
+### 依存関係
+
+```
+params.rs ← message.rs ← datetime.rs
+    ↑           ↑
+    └───────────┴─── (外部モジュールから参照)
+```
+
+---
+
+## DateTimeCodeEnumerator 仕様
+
+### 概要
+
+`SearchRangeParams` と `TimeRangeParams` と `HardwareType` を受け取り、
+有効な日時の `(date_code, time_code)` を順次生成するイテレータ。
+
+### 設計方針
+
+- **Iterator trait 実装**: Rust標準のIteratorパターンに準拠
+- **TimeCodeマスク**: 構築時に `TimeRangeParams` から生成（Option<u32>で直接time_codeを保持）
+- **遅延評価**: 呼び出しごとに次の有効な日時を計算
+- **進捗計算**: スキップした秒も含めて計算
+
+### TimeCodeマスク設計
+
+従来の `build_allowed_second_mask` (bool配列) を廃止し、`Option<u32>` 配列に変更：
+
+```rust
+/// TimeCodeマスク（1日分、86400要素）
+/// 
+/// 各インデックスが1日の秒数（0-86399）に対応。
+/// - Some(time_code): 許可された秒、事前計算されたtime_code
+/// - None: 許可されていない秒
+type TimeCodeMask = Box<[Option<u32>; 86400]>;
+
+fn build_time_code_mask(time_range: &TimeRangeParams, hardware: HardwareType) -> TimeCodeMask {
+    let mut mask: TimeCodeMask = Box::new([None; 86400]);
+    for hour in time_range.hour_start..=time_range.hour_end {
+        for minute in time_range.minute_start..=time_range.minute_end {
+            for second in time_range.second_start..=time_range.second_end {
+                let second_of_day = hour * 3600 + minute * 60 + second;
+                let time_code = TimeCodeGenerator::get_time_code_for_hardware(
+                    second_of_day, 
+                    hardware.as_str()
+                );
+                mask[second_of_day as usize] = Some(time_code);
+            }
+        }
+    }
+    mask
+}
+```
+
+**メリット**:
+- 許可判定とtime_code取得を1回のルックアップで完了
+- time_code計算を事前に済ませ、イテレーション中の計算コスト削減
+
+### インターフェース
+
+```rust
+/// 日時コード（イテレータの出力）
+#[derive(Debug, Clone, Copy)]
+pub struct DateTimeCode {
+    pub date_code: u32,
+    pub time_code: u32,
+}
+
+/// 日時コード列挙器
+pub struct DateTimeCodeEnumerator {
+    // 検索範囲
+    start_seconds: i64,
+    end_seconds: i64,
+    
+    // 現在位置
+    current_seconds: i64,
+    
+    // TimeCodeマスク（1日分、Option<time_code>）
+    time_code_mask: Box<[Option<u32>; 86400]>,
+}
+
+impl DateTimeCodeEnumerator {
+    /// 新規作成
+    pub fn new(
+        search_range: &SearchRangeParams,
+        time_range: &TimeRangeParams,
+        hardware: HardwareType,
+    ) -> Self;
+    
+    /// 処理済み秒数（スキップ含む）
+    pub fn processed_seconds(&self) -> u32;
+    
+    /// 残り秒数
+    pub fn remaining_seconds(&self) -> u32;
+    
+    /// 総秒数
+    pub fn total_seconds(&self) -> u32;
+}
+
+impl Iterator for DateTimeCodeEnumerator {
+    type Item = DateTimeCode;
+    fn next(&mut self) -> Option<Self::Item>;
+}
+```
+
+### SIMD バッチ処理対応
+
+Iterator の標準機能 `take(4)` で4要素ずつ取得可能：
+
+```rust
+let enumerator = DateTimeCodeEnumerator::new(&search_range, &time_range, hardware);
+let batch: Vec<DateTimeCode> = enumerator.by_ref().take(4).collect();
+
+// SIMD処理
+if batch.len() == 4 {
+    // 4要素揃っている場合はSIMD
+    process_simd_batch(&batch);
+} else {
+    // 端数はスカラー処理
+    for dt in batch {
+        process_scalar(&dt);
+    }
+}
+```
+
+### 使用例
+
+```rust
+let search_range = SearchRangeParams::new(2024, 1, 1, 86400 * 7)?;
+let time_range = TimeRangeParams::new(10, 12, 0, 59, 0, 59)?;
+let hardware = HardwareType::DS;
+
+let mut enumerator = DateTimeCodeEnumerator::new(&search_range, &time_range, hardware);
+
+while let Some(dt) = enumerator.next() {
+    let message = builder.build_message(dt.date_code, dt.time_code);
+    // SHA-1計算...
+    
+    // 進捗報告
+    let progress = enumerator.processed_seconds() as f64 / enumerator.total_seconds() as f64;
+}
+```
+
+---
+
 ## リファクタリング方針
 
 ### Phase 1: 共通モジュール抽出 ✅ 完了
