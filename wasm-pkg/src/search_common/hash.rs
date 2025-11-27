@@ -6,7 +6,6 @@
 
 use super::datetime::{DateTimeCode, DateTimeCodeEnumerator, RangedTimeCodeTable};
 use super::message::{BaseMessageBuilder, HashValues};
-use super::params::{DSConfig, SegmentParams, TimeRangeParams};
 use crate::sha1::calculate_pokemon_sha1;
 use crate::sha1_simd::calculate_pokemon_sha1_simd;
 
@@ -192,7 +191,7 @@ impl Iterator for HashValuesEnumerator {
 mod tests {
     use super::*;
     use crate::search_common::datetime::build_ranged_time_code_table;
-    use crate::search_common::params::HardwareType;
+    use crate::search_common::params::{HardwareType, DSConfig, SegmentParams, TimeRangeParams};
 
     fn create_test_ds_config() -> DSConfig {
         let mac = [0x00, 0x09, 0xBF, 0xAA, 0xBB, 0xCC];

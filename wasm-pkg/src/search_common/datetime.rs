@@ -159,51 +159,7 @@ impl Iterator for DateTimeCodeEnumerator {
     }
 }
 
-// =============================================================================
-// ユーティリティ関数
-// =============================================================================
 
-use super::EPOCH_2000_UNIX;
-use chrono::{Datelike, NaiveDate, Timelike};
-
-/// 結果表示用の日時を生成
-///
-/// seconds_since_2000 から (year, month, day, hour, minute, second) を生成する。
-pub fn generate_display_datetime(
-    seconds_since_2000: i64,
-) -> Option<(u32, u32, u32, u32, u32, u32)> {
-    let result_datetime =
-        chrono::DateTime::from_timestamp(seconds_since_2000 + EPOCH_2000_UNIX, 0)?.naive_utc();
-
-    Some((
-        result_datetime.year() as u32,
-        result_datetime.month(),
-        result_datetime.day(),
-        result_datetime.hour(),
-        result_datetime.minute(),
-        result_datetime.second(),
-    ))
-}
-
-/// 開始日時をseconds_since_2000に変換
-pub fn datetime_to_seconds_since_2000(
-    year: u32,
-    month: u32,
-    day: u32,
-    hour: u32,
-    minute: u32,
-    second: u32,
-) -> Option<i64> {
-    let datetime =
-        NaiveDate::from_ymd_opt(year as i32, month, day)?.and_hms_opt(hour, minute, second)?;
-    let unix = datetime.and_utc().timestamp();
-    Some(unix - EPOCH_2000_UNIX)
-}
-
-/// 開始日時（時刻0:0:0）をseconds_since_2000に変換
-pub fn date_to_seconds_since_2000(year: u32, month: u32, day: u32) -> Option<i64> {
-    datetime_to_seconds_since_2000(year, month, day, 0, 0, 0)
-}
 
 // =============================================================================
 // テスト
@@ -211,7 +167,54 @@ pub fn date_to_seconds_since_2000(year: u32, month: u32, day: u32) -> Option<i64
 
 #[cfg(test)]
 mod tests {
+    use crate::search_common::EPOCH_2000_UNIX;
     use super::*;
+    
+    // =============================================================================
+    // ユーティリティ関数
+    // =============================================================================
+
+    
+    use chrono::{Datelike, NaiveDate, Timelike};
+
+    /// 結果表示用の日時を生成
+    ///
+    /// seconds_since_2000 から (year, month, day, hour, minute, second) を生成する。
+    fn generate_display_datetime(
+        seconds_since_2000: i64,
+    ) -> Option<(u32, u32, u32, u32, u32, u32)> {
+        let result_datetime =
+            chrono::DateTime::from_timestamp(seconds_since_2000 + EPOCH_2000_UNIX, 0)?.naive_utc();
+
+        Some((
+            result_datetime.year() as u32,
+            result_datetime.month(),
+            result_datetime.day(),
+            result_datetime.hour(),
+            result_datetime.minute(),
+            result_datetime.second(),
+        ))
+    }
+
+    /// 開始日時をseconds_since_2000に変換
+    fn datetime_to_seconds_since_2000(
+        year: u32,
+        month: u32,
+        day: u32,
+        hour: u32,
+        minute: u32,
+        second: u32,
+    ) -> Option<i64> {
+        let datetime =
+            NaiveDate::from_ymd_opt(year as i32, month, day)?.and_hms_opt(hour, minute, second)?;
+        let unix = datetime.and_utc().timestamp();
+        Some(unix - EPOCH_2000_UNIX)
+    }
+
+    /// 開始日時（時刻0:0:0）をseconds_since_2000に変換
+    fn date_to_seconds_since_2000(year: u32, month: u32, day: u32) -> Option<i64> {
+        datetime_to_seconds_since_2000(year, month, day, 0, 0, 0)
+    }
 
     fn create_test_time_range() -> TimeRangeParams {
         TimeRangeParams::new(0, 0, 0, 0, 0, 2).unwrap()
