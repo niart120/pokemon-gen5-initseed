@@ -6,7 +6,6 @@
 use crate::datetime_codes::{DateCodeGenerator, TimeCodeGenerator};
 use crate::sha1::swap_bytes_32;
 use chrono::{Datelike, NaiveDate, Timelike};
-use wasm_bindgen::prelude::*;
 
 // =============================================================================
 // 定数
@@ -37,12 +36,12 @@ pub enum HardwareType {
 
 impl HardwareType {
     /// 文字列からHardwareTypeを生成
-    pub fn from_str(hardware: &str) -> Result<Self, JsValue> {
+    pub fn from_str(hardware: &str) -> Result<Self, &'static str> {
         match hardware {
             "DS" => Ok(HardwareType::DS),
             "DS_LITE" => Ok(HardwareType::DSLite),
             "3DS" => Ok(HardwareType::ThreeDS),
-            _ => Err(JsValue::from_str("Hardware must be DS, DS_LITE, or 3DS")),
+            _ => Err("Hardware must be DS, DS_LITE, or 3DS"),
         }
     }
 
@@ -91,30 +90,30 @@ impl DailyTimeRangeConfig {
         minute_end: u32,
         second_start: u32,
         second_end: u32,
-    ) -> Result<Self, JsValue> {
-        fn validate(
-            label: &str,
-            start: u32,
-            end: u32,
-            min: u32,
-            max: u32,
-        ) -> Result<(u32, u32), JsValue> {
-            if start < min || end > max {
-                return Err(JsValue::from_str(&format!(
-                    "{label} range must be within {min}..={max}",
-                )));
-            }
-            if start > end {
-                return Err(JsValue::from_str(&format!(
-                    "{label} range start ({start}) must be <= end ({end})",
-                )));
-            }
-            Ok((start, end))
+    ) -> Result<Self, &'static str> {
+        // Hour validation
+        if hour_start > 23 || hour_end > 23 {
+            return Err("hour range must be within 0..=23");
+        }
+        if hour_start > hour_end {
+            return Err("hour range start must be <= end");
         }
 
-        let (hour_start, hour_end) = validate("hour", hour_start, hour_end, 0, 23)?;
-        let (minute_start, minute_end) = validate("minute", minute_start, minute_end, 0, 59)?;
-        let (second_start, second_end) = validate("second", second_start, second_end, 0, 59)?;
+        // Minute validation
+        if minute_start > 59 || minute_end > 59 {
+            return Err("minute range must be within 0..=59");
+        }
+        if minute_start > minute_end {
+            return Err("minute range start must be <= end");
+        }
+
+        // Second validation
+        if second_start > 59 || second_end > 59 {
+            return Err("second range must be within 0..=59");
+        }
+        if second_start > second_end {
+            return Err("second range start must be <= end");
+        }
 
         Ok(DailyTimeRangeConfig {
             hour_start,
@@ -153,119 +152,13 @@ pub fn build_allowed_second_mask(range: &DailyTimeRangeConfig) -> Box<[bool; 864
 }
 
 // =============================================================================
-// キーコード生成
-// =============================================================================
-
-/// 実機上で不可能なキー入力の組み合わせをチェックする
-///
-/// XOR 0x2FFFする前の生のキーコード（押されているキーが1のビット）について判定
-///
-/// # 不可能な組み合わせ
-/// - 上下同時押し (UP: bit 6, DOWN: bit 7)
-/// - 左右同時押し (LEFT: bit 5, RIGHT: bit 4)
-/// - Start, Select, L, R の4つ同時押し (START: bit 3, SELECT: bit 2, L: bit 9, R: bit 8)
-fn is_invalid_key_combination(raw_key_input: u32) -> bool {
-    const RIGHT: u32 = 1 << 4;
-    const LEFT: u32 = 1 << 5;
-    const UP: u32 = 1 << 6;
-    const DOWN: u32 = 1 << 7;
-    const R: u32 = 1 << 8;
-    const L: u32 = 1 << 9;
-    const SELECT: u32 = 1 << 2;
-    const START: u32 = 1 << 3;
-
-    // 上下同時押しチェック
-    if (raw_key_input & UP) != 0 && (raw_key_input & DOWN) != 0 {
-        return true;
-    }
-
-    // 左右同時押しチェック
-    if (raw_key_input & LEFT) != 0 && (raw_key_input & RIGHT) != 0 {
-        return true;
-    }
-
-    // Start, Select, L, R の4つ同時押しチェック
-    if (raw_key_input & START) != 0
-        && (raw_key_input & SELECT) != 0
-        && (raw_key_input & L) != 0
-        && (raw_key_input & R) != 0
-    {
-        return true;
-    }
-
-    false
-}
-
-/// キーマスクからべき集合を生成し、各要素を 0x2FFF と XOR したキーコードを返す
-///
-/// 実機上で不可能なキー入力の組み合わせは除外される。
-pub fn generate_key_codes(key_input_mask: u32) -> Vec<u32> {
-    let mut enabled_bits = Vec::new();
-
-    // 有効なビット位置を収集
-    for bit in 0..12 {
-        if (key_input_mask & (1 << bit)) != 0 {
-            enabled_bits.push(bit);
-        }
-    }
-
-    // べき集合を生成（2^n 通りの組み合わせ）
-    let n = enabled_bits.len();
-    let total_combinations = 1 << n; // 2^n
-    let mut key_codes = Vec::with_capacity(total_combinations);
-
-    for i in 0..total_combinations {
-        let mut combination = 0u32;
-        for (bit_index, &bit_pos) in enabled_bits.iter().enumerate() {
-            if (i & (1 << bit_index)) != 0 {
-                combination |= 1 << bit_pos;
-            }
-        }
-
-        // 不可能なキー入力の組み合わせをチェック
-        if is_invalid_key_combination(combination) {
-            continue;
-        }
-
-        // 押されているビットが1、押されていないビットが0の状態を0x2FFFとXOR
-        let key_code = combination ^ 0x2FFF;
-        key_codes.push(key_code);
-    }
-
-    key_codes
-}
-
-// =============================================================================
-// セグメントパラメータ
-// =============================================================================
-
-/// 固定セグメントパラメータ
-///
-/// TypeScript側のセグメントループから渡される固定値。
-#[derive(Debug, Clone, Copy)]
-pub struct SegmentParams {
-    pub timer0: u32,
-    pub vcount: u32,
-    pub key_code: u32,
-}
-
-impl SegmentParams {
-    pub fn new(timer0: u32, vcount: u32, key_code: u32) -> Self {
-        Self {
-            timer0,
-            vcount,
-            key_code,
-        }
-    }
-}
-
-// =============================================================================
 // 基本メッセージ構築
 // =============================================================================
 
 /// SHA-1計算用の基本メッセージビルダー
 ///
-/// MAC/Nazo/Frame など固定パラメータから base_message を構築する。
+/// MAC/Nazo/Frame/Timer0/VCount/KeyCode など固定パラメータから base_message を構築する。
+/// セグメント（timer0, vcount, key_code）は構築時に固定される。
 #[derive(Debug, Clone)]
 pub struct BaseMessageBuilder {
     base_message: [u32; 16],
@@ -278,12 +171,22 @@ impl BaseMessageBuilder {
     /// - `mac`: MACアドレス（6バイト）
     /// - `nazo`: Nazo値（5ワード）
     /// - `frame`: Frame値（Hardware依存）
-    pub fn new(mac: &[u8], nazo: &[u32], frame: u32) -> Result<Self, JsValue> {
+    /// - `timer0`: Timer0値
+    /// - `vcount`: VCount値
+    /// - `key_code`: キーコード
+    pub fn new(
+        mac: &[u8],
+        nazo: &[u32],
+        frame: u32,
+        timer0: u32,
+        vcount: u32,
+        key_code: u32,
+    ) -> Result<Self, &'static str> {
         if mac.len() != 6 {
-            return Err(JsValue::from_str("MAC address must be 6 bytes"));
+            return Err("MAC address must be 6 bytes");
         }
         if nazo.len() != 5 {
-            return Err(JsValue::from_str("nazo must be 5 32-bit words"));
+            return Err("nazo must be 5 32-bit words");
         }
 
         let mut base_message = [0u32; 16];
@@ -293,8 +196,8 @@ impl BaseMessageBuilder {
             base_message[i] = swap_bytes_32(nazo[i]);
         }
 
-        // data[5]: (VCount << 16) | Timer0 - 動的に設定（ここでは0）
-        base_message[5] = 0;
+        // data[5]: (VCount << 16) | Timer0
+        base_message[5] = swap_bytes_32((vcount << 16) | timer0);
 
         // data[6]: MAC address lower 16 bits (no endian conversion)
         let mac_lower = ((mac[4] as u32) << 8) | (mac[5] as u32);
@@ -315,8 +218,8 @@ impl BaseMessageBuilder {
         base_message[10] = 0x00000000;
         base_message[11] = 0x00000000;
 
-        // data[12]: Key input - 動的に設定
-        base_message[12] = 0;
+        // data[12]: Key input
+        base_message[12] = swap_bytes_32(key_code);
 
         // data[13-15]: SHA-1 padding
         base_message[13] = 0x80000000;
@@ -331,19 +234,12 @@ impl BaseMessageBuilder {
         &self.base_message
     }
 
-    /// セグメントパラメータと日時コードを適用したメッセージを構築
+    /// 日時コードを適用したメッセージを構築
     #[inline(always)]
-    pub fn build_message(
-        &self,
-        segment: &SegmentParams,
-        date_code: u32,
-        time_code: u32,
-    ) -> [u32; 16] {
+    pub fn build_message(&self, date_code: u32, time_code: u32) -> [u32; 16] {
         let mut message = self.base_message;
-        message[5] = swap_bytes_32((segment.vcount << 16) | segment.timer0);
         message[8] = date_code;
         message[9] = time_code;
-        message[12] = swap_bytes_32(segment.key_code);
         message
     }
 }
@@ -429,8 +325,8 @@ pub fn datetime_to_seconds_since_2000(
     minute: u32,
     second: u32,
 ) -> Option<i64> {
-    let datetime = NaiveDate::from_ymd_opt(year as i32, month, day)?
-        .and_hms_opt(hour, minute, second)?;
+    let datetime =
+        NaiveDate::from_ymd_opt(year as i32, month, day)?.and_hms_opt(hour, minute, second)?;
     let unix = datetime.and_utc().timestamp();
     Some(unix - EPOCH_2000_UNIX)
 }
@@ -466,18 +362,20 @@ impl HashValues {
             self.h0, self.h1, self.h2, self.h3, self.h4
         )
     }
-}
 
-// =============================================================================
-// LCG Seed 計算
-// =============================================================================
+    /// 64bit LCG Seedを計算
+    #[inline]
+    pub fn to_lcg_seed(&self) -> u64 {
+        let h0_le = swap_bytes_32(self.h0) as u64;
+        let h1_le = swap_bytes_32(self.h1) as u64;
+        (h1_le << 32) | h0_le
+    }
 
-/// SHA-1ハッシュ値から64bit LCG Seedを計算
-#[inline]
-pub fn calculate_lcg_seed_from_hash(h0: u32, h1: u32) -> u64 {
-    let h0_le = swap_bytes_32(h0) as u64;
-    let h1_le = swap_bytes_32(h1) as u64;
-    (h1_le << 32) | h0_le
+    /// 32bit MT Seedを計算（ポケモンBW/BW2用）
+    #[inline]
+    pub fn to_mt_seed(&self) -> u32 {
+        crate::sha1::calculate_pokemon_seed_from_hash(self.h0, self.h1)
+    }
 }
 
 // =============================================================================
@@ -488,9 +386,19 @@ pub fn calculate_lcg_seed_from_hash(h0: u32, h1: u32) -> u64 {
 mod tests {
     use super::*;
 
-    // Note: Tests involving JsValue (like HardwareType::from_str, DailyTimeRangeConfig::new)
-    // are skipped in native test environment as JsValue operations panic outside WASM.
-    // These are tested via wasm-bindgen-test in browser environment.
+    #[test]
+    fn test_hardware_type_from_str() {
+        assert_eq!(HardwareType::from_str("DS").unwrap(), HardwareType::DS);
+        assert_eq!(
+            HardwareType::from_str("DS_LITE").unwrap(),
+            HardwareType::DSLite
+        );
+        assert_eq!(
+            HardwareType::from_str("3DS").unwrap(),
+            HardwareType::ThreeDS
+        );
+        assert!(HardwareType::from_str("Invalid").is_err());
+    }
 
     #[test]
     fn test_hardware_type_frame() {
@@ -507,8 +415,21 @@ mod tests {
     }
 
     #[test]
-    fn test_build_allowed_second_mask_direct() {
-        // Manually create config to avoid JsValue
+    fn test_daily_time_range_config() {
+        let config = DailyTimeRangeConfig::new(10, 12, 0, 59, 0, 59).unwrap();
+        assert_eq!(config.combos_per_day(), 3 * 60 * 60);
+    }
+
+    #[test]
+    fn test_daily_time_range_config_validation() {
+        // Invalid hour range
+        assert!(DailyTimeRangeConfig::new(24, 25, 0, 59, 0, 59).is_err());
+        // Start > End
+        assert!(DailyTimeRangeConfig::new(12, 10, 0, 59, 0, 59).is_err());
+    }
+
+    #[test]
+    fn test_build_allowed_second_mask() {
         let config = DailyTimeRangeConfig {
             hour_start: 10,
             hour_end: 10,
@@ -542,31 +463,41 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_key_codes() {
-        // No keys enabled
-        let codes = generate_key_codes(0);
-        assert_eq!(codes.len(), 1);
-        assert_eq!(codes[0], 0x2FFF);
+    fn test_base_message_builder() {
+        let mac = [0x00, 0x09, 0xBF, 0xAA, 0xBB, 0xCC];
+        let nazo = [0x02215F10, 0x02215F30, 0x02215F20, 0x02761008, 0x00000000];
+        let frame = 8;
+        let timer0 = 0x1000;
+        let vcount = 0x60;
+        let key_code = 0x2FFF;
 
-        // One key enabled (bit 0)
-        let codes = generate_key_codes(0b1);
-        assert_eq!(codes.len(), 2);
+        let builder =
+            BaseMessageBuilder::new(&mac, &nazo, frame, timer0, vcount, key_code).unwrap();
+        let base = builder.base_message();
+
+        // Check padding values
+        assert_eq!(base[13], 0x80000000);
+        assert_eq!(base[14], 0x00000000);
+        assert_eq!(base[15], 0x000001A0);
+
+        // Check that timer0/vcount are set
+        assert_ne!(base[5], 0);
+
+        // Check that key_code is set
+        assert_ne!(base[12], 0);
     }
 
     #[test]
-    fn test_generate_key_codes_invalid_combinations() {
-        // UP + DOWN enabled (should exclude simultaneous press)
-        let codes = generate_key_codes(0b11000000); // bit 6 and 7
-        // Should have: none pressed, UP only, DOWN only (not both)
-        assert_eq!(codes.len(), 3);
-    }
+    fn test_base_message_builder_build_message() {
+        let mac = [0x00, 0x09, 0xBF, 0xAA, 0xBB, 0xCC];
+        let nazo = [0x02215F10, 0x02215F30, 0x02215F20, 0x02761008, 0x00000000];
+        let frame = 8;
 
-    #[test]
-    fn test_segment_params() {
-        let segment = SegmentParams::new(0x1000, 0x60, 0x2FFF);
-        assert_eq!(segment.timer0, 0x1000);
-        assert_eq!(segment.vcount, 0x60);
-        assert_eq!(segment.key_code, 0x2FFF);
+        let builder = BaseMessageBuilder::new(&mac, &nazo, frame, 0x1000, 0x60, 0x2FFF).unwrap();
+        let message = builder.build_message(0x12345678, 0xABCDEF00);
+
+        assert_eq!(message[8], 0x12345678);
+        assert_eq!(message[9], 0xABCDEF00);
     }
 
     #[test]
@@ -579,10 +510,11 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_lcg_seed_from_hash() {
+    fn test_hash_values_to_lcg_seed() {
         let h0: u32 = 0x12345678;
         let h1: u32 = 0xABCDEF01;
-        let seed = calculate_lcg_seed_from_hash(h0, h1);
+        let hash = HashValues::new(h0, h1, 0, 0, 0);
+        let seed = hash.to_lcg_seed();
 
         let h0_le = swap_bytes_32(h0) as u64;
         let h1_le = swap_bytes_32(h1) as u64;
