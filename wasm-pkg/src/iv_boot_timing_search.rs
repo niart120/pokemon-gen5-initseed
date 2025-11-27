@@ -34,7 +34,7 @@ use wasm_bindgen::prelude::*;
 #[derive(Debug, Clone)]
 pub struct IVBootTimingSearchResult {
     // MT Seed (IV用)
-    seed: u32,
+    mt_seed: u32,
 
     // LCG Seed
     lcg_seed_high: u32,
@@ -55,14 +55,14 @@ pub struct IVBootTimingSearchResult {
 #[wasm_bindgen]
 impl IVBootTimingSearchResult {
     // MT Seed (IV用)
-    #[wasm_bindgen(getter)]
-    pub fn seed(&self) -> u32 {
-        self.seed
+    #[wasm_bindgen(getter = mtSeed)]
+    pub fn mt_seed(&self) -> u32 {
+        self.mt_seed
     }
 
-    #[wasm_bindgen(getter = seedHex)]
-    pub fn seed_hex(&self) -> String {
-        format!("{:08X}", self.seed)
+    #[wasm_bindgen(getter = mtSeedHex)]
+    pub fn mt_seed_hex(&self) -> String {
+        format!("{:08X}", self.mt_seed)
     }
 
     // LCG Seed
@@ -438,7 +438,7 @@ impl IVBootTimingSearchIterator {
         let (lcg_seed_high, lcg_seed_low) = calculate_lcg_seed_parts(h0, h1);
 
         Some(IVBootTimingSearchResult {
-            seed,
+            mt_seed: seed,
             lcg_seed_high,
             lcg_seed_low,
             year,
