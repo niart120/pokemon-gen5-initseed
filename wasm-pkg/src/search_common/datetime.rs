@@ -2,10 +2,10 @@
 //!
 //! 日時コード計算・列挙とユーティリティ関数を提供する。
 
-use super::{EPOCH_2000_UNIX, SECONDS_PER_DAY};
+use super::SECONDS_PER_DAY;
 use crate::datetime_codes::{DateCodeGenerator, TimeCodeGenerator};
 use crate::search_common::params::{HardwareType, TimeRangeParams};
-use chrono::{Datelike, NaiveDate, Timelike};
+use crate::utils::NumberUtils;
 
 // =============================================================================
 // 日時コード
@@ -23,32 +23,43 @@ pub struct DisplayDateTime {
 }
 
 /// 日時コード（date_code と time_code のペア）
+///
+/// - `date_code`: 0xYYMMDDWW (BCD形式、WW=曜日)
+/// - `time_code`: 0xHHMMSS00 (BCD形式、下位8bitは未使用)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DateTimeCode {
     pub date_code: u32,
     pub time_code: u32,
-    pub seconds_since_2000: i64,
 }
 
 impl DateTimeCode {
-    pub fn new(date_code: u32, time_code: u32, seconds_since_2000: i64) -> Self {
-        Self { date_code, time_code, seconds_since_2000 }
+    pub fn new(date_code: u32, time_code: u32) -> Self {
+        Self { date_code, time_code }
     }
 
-    /// 表示用日時に変換
-    pub fn to_display_datetime(&self) -> Option<DisplayDateTime> {
-        let datetime =
-            chrono::DateTime::from_timestamp(self.seconds_since_2000 + EPOCH_2000_UNIX, 0)?
-                .naive_utc();
+    /// 表示用日時に変換（BCDデコード）
+    pub fn to_display_datetime(&self) -> DisplayDateTime {
+        // date_code: 0xYYMMDDWW
+        let yy = NumberUtils::decode_bcd((self.date_code >> 24) as u8) as u32;
+        let mm = NumberUtils::decode_bcd((self.date_code >> 16) as u8) as u32;
+        let dd = NumberUtils::decode_bcd((self.date_code >> 8) as u8) as u32;
+        // WW (曜日) は下位8bitだが、表示には不要
 
-        Some(DisplayDateTime {
-            year: datetime.year() as u32,
-            month: datetime.month(),
-            day: datetime.day(),
-            hour: datetime.hour(),
-            minute: datetime.minute(),
-            second: datetime.second(),
-        })
+        // time_code: 0xHHMMSS00
+        // 注: HHは24時間制でエンコードされている
+        // DS/DS_LITEでは0x40000000フラグが午後に付くが、HH自体は24時間制のまま
+        let hh = NumberUtils::decode_bcd((self.time_code >> 24) as u8) as u32;
+        let mi = NumberUtils::decode_bcd((self.time_code >> 16) as u8) as u32;
+        let ss = NumberUtils::decode_bcd((self.time_code >> 8) as u8) as u32;
+
+        DisplayDateTime {
+            year: 2000 + yy,
+            month: mm,
+            day: dd,
+            hour: hh,
+            minute: mi,
+            second: ss,
+        }
     }
 }
 
@@ -88,24 +99,25 @@ pub fn build_ranged_time_code_table(range: &TimeRangeParams, hardware: HardwareT
 
 /// 日時コード列挙器
 ///
-/// 開始時刻から指定秒数分の DateTimeCode を順次生成する Iterator。
+/// RangedTimeCodeTable を所有し、開始時刻から指定秒数分の DateTimeCode を
+/// 順次生成する Iterator。
 /// 許可範囲外の秒はスキップされるが、進捗計算にはスキップ分も含まれる。
-pub struct DateTimeCodeEnumerator<'a> {
-    time_code_table: &'a RangedTimeCodeTable,
+pub struct DateTimeCodeEnumerator {
+    time_code_table: RangedTimeCodeTable,
     current_seconds: i64,
     end_seconds: i64,
     processed_seconds: u32,
 }
 
-impl<'a> DateTimeCodeEnumerator<'a> {
-    /// 新規作成
+impl DateTimeCodeEnumerator {
+    /// 新規作成（所有権を受け取る）
     ///
     /// # Arguments
     /// - `time_code_table`: 範囲制限タイムコードテーブル（許可秒のtime_codeを含む）
     /// - `start_seconds`: 開始秒（2000年からの経過秒）
     /// - `range_seconds`: 検索範囲（秒数）
     pub fn new(
-        time_code_table: &'a RangedTimeCodeTable,
+        time_code_table: RangedTimeCodeTable,
         start_seconds: i64,
         range_seconds: u32,
     ) -> Self {
@@ -123,7 +135,7 @@ impl<'a> DateTimeCodeEnumerator<'a> {
     }
 }
 
-impl Iterator for DateTimeCodeEnumerator<'_> {
+impl Iterator for DateTimeCodeEnumerator {
     type Item = DateTimeCode;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -140,7 +152,7 @@ impl Iterator for DateTimeCodeEnumerator<'_> {
             if let Some(time_code) = self.time_code_table[second_of_day] {
                 let date_index = (seconds / SECONDS_PER_DAY) as u32;
                 let date_code = DateCodeGenerator::get_date_code(date_index);
-                return Some(DateTimeCode::new(date_code, time_code, seconds));
+                return Some(DateTimeCode::new(date_code, time_code));
             }
         }
         None
@@ -150,6 +162,9 @@ impl Iterator for DateTimeCodeEnumerator<'_> {
 // =============================================================================
 // ユーティリティ関数
 // =============================================================================
+
+use super::EPOCH_2000_UNIX;
+use chrono::{Datelike, NaiveDate, Timelike};
 
 /// 結果表示用の日時を生成
 ///
@@ -204,17 +219,17 @@ mod tests {
 
     #[test]
     fn test_date_time_code_creation() {
-        let dtc = DateTimeCode::new(0x12345678, 0xABCDEF00, 12345);
+        let dtc = DateTimeCode::new(0x12345678, 0xABCDEF00);
         assert_eq!(dtc.date_code, 0x12345678);
         assert_eq!(dtc.time_code, 0xABCDEF00);
-        assert_eq!(dtc.seconds_since_2000, 12345);
     }
 
     #[test]
     fn test_date_time_code_to_display_datetime() {
-        // 2000年1月1日 0:00:00
-        let dtc = DateTimeCode::new(0, 0, 0);
-        let display = dtc.to_display_datetime().unwrap();
+        // 2000年1月1日 0:00:00 (date_code: 0x00010106 = YY=00, MM=01, DD=01, WW=06(土))
+        // time_code: 0x00000000 = HH=00, MM=00, SS=00
+        let dtc = DateTimeCode::new(0x00010106, 0x00000000);
+        let display = dtc.to_display_datetime();
         assert_eq!(display.year, 2000);
         assert_eq!(display.month, 1);
         assert_eq!(display.day, 1);
@@ -223,15 +238,27 @@ mod tests {
         assert_eq!(display.second, 0);
 
         // 2024年6月15日 12:30:45
-        let seconds = datetime_to_seconds_since_2000(2024, 6, 15, 12, 30, 45).unwrap();
-        let dtc = DateTimeCode::new(0, 0, seconds);
-        let display = dtc.to_display_datetime().unwrap();
+        // date_code: 0x24061505 = YY=24, MM=06, DD=15, WW=05(金)
+        // time_code: 0x12304500 = HH=12, MM=30, SS=45 (24時間制)
+        let dtc = DateTimeCode::new(0x24061505, 0x12304500);
+        let display = dtc.to_display_datetime();
         assert_eq!(display.year, 2024);
         assert_eq!(display.month, 6);
         assert_eq!(display.day, 15);
         assert_eq!(display.hour, 12);
         assert_eq!(display.minute, 30);
         assert_eq!(display.second, 45);
+    }
+
+    #[test]
+    fn test_bcd_decode() {
+        // BCD デコードの動作確認（NumberUtils::decode_bcd を使用）
+        assert_eq!(NumberUtils::decode_bcd(0x00), 0);
+        assert_eq!(NumberUtils::decode_bcd(0x09), 9);
+        assert_eq!(NumberUtils::decode_bcd(0x10), 10);
+        assert_eq!(NumberUtils::decode_bcd(0x23), 23);
+        assert_eq!(NumberUtils::decode_bcd(0x59), 59);
+        assert_eq!(NumberUtils::decode_bcd(0x99), 99);
     }
 
     #[test]
@@ -263,7 +290,7 @@ mod tests {
         let table = build_ranged_time_code_table(&range, HardwareType::DS);
 
         // 2000年1月1日 0:00:00 から開始
-        let enumerator = DateTimeCodeEnumerator::new(&table, 0, 3);
+        let enumerator = DateTimeCodeEnumerator::new(table, 0, 3);
 
         let results: Vec<DateTimeCode> = enumerator.collect();
         assert_eq!(results.len(), 3);
@@ -276,7 +303,7 @@ mod tests {
         let table = build_ranged_time_code_table(&range, HardwareType::DS);
 
         // 0秒目から5秒間
-        let enumerator = DateTimeCodeEnumerator::new(&table, 0, 5);
+        let enumerator = DateTimeCodeEnumerator::new(table, 0, 5);
 
         let results: Vec<DateTimeCode> = enumerator.collect();
         // 0, 2, 3, 4秒目はスキップされ、1秒目のみ返される
@@ -288,7 +315,7 @@ mod tests {
         let range = TimeRangeParams::new(0, 0, 0, 0, 1, 1).unwrap();
         let table = build_ranged_time_code_table(&range, HardwareType::DS);
 
-        let mut enumerator = DateTimeCodeEnumerator::new(&table, 0, 5);
+        let mut enumerator = DateTimeCodeEnumerator::new(table, 0, 5);
 
         // 全て消費
         while enumerator.next().is_some() {}
@@ -305,7 +332,7 @@ mod tests {
 
         // 1日目の最後から2日目の最初にまたがる
         let start = SECONDS_PER_DAY - 2; // 86398秒目
-        let enumerator = DateTimeCodeEnumerator::new(&table, start, 4);
+        let enumerator = DateTimeCodeEnumerator::new(table, start, 4);
 
         let results: Vec<DateTimeCode> = enumerator.collect();
         assert_eq!(results.len(), 4);

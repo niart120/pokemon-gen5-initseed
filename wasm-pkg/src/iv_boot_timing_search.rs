@@ -17,7 +17,7 @@
 
 use crate::search_common::{
     build_ranged_time_code_table, BaseMessageBuilder, DSConfigJs, HashEntry, HashValuesEnumerator,
-    RangedTimeCodeTable, SearchRangeParamsJs, SegmentParamsJs, TimeRangeParamsJs,
+    SearchRangeParamsJs, SegmentParamsJs, TimeRangeParamsJs,
 };
 use std::collections::HashSet;
 use wasm_bindgen::prelude::*;
@@ -174,9 +174,8 @@ impl IVBootTimingSearchResults {
 /// 各セグメントに対してこのイテレータを作成する。
 #[wasm_bindgen]
 pub struct IVBootTimingSearchIterator {
-    // 内部状態（HashValuesEnumerator構築用）
-    base_message_builder: BaseMessageBuilder,
-    time_code_table: RangedTimeCodeTable,
+    // ハッシュ値列挙器（所有）
+    hash_enumerator: HashValuesEnumerator,
 
     // セグメントパラメータ（結果出力用に保持）
     timer0: u32,
@@ -187,7 +186,6 @@ pub struct IVBootTimingSearchIterator {
     target_seeds: HashSet<u32>,
 
     // 検索範囲
-    start_seconds: i64,
     range_seconds: u32,
 
     // 現在位置
@@ -232,19 +230,22 @@ impl IVBootTimingSearchIterator {
 
         // 開始秒を計算
         let start_seconds = search_range.start_seconds_since_2000();
+        let range_seconds = search_range.range_seconds();
 
         // target_seedsをHashSetに変換（高速な検索のため）
         let target_seeds_set: HashSet<u32> = target_seeds.iter().copied().collect();
 
+        // HashValuesEnumerator構築
+        let hash_enumerator =
+            HashValuesEnumerator::new(base_message_builder, time_code_table, start_seconds, range_seconds);
+
         Ok(IVBootTimingSearchIterator {
-            base_message_builder,
-            time_code_table,
+            hash_enumerator,
             timer0: segment_internal.timer0,
             vcount: segment_internal.vcount,
             key_code: segment_internal.key_code,
             target_seeds: target_seeds_set,
-            start_seconds,
-            range_seconds: search_range.range_seconds(),
+            range_seconds,
             current_offset: 0,
             finished: false,
         })
@@ -292,40 +293,34 @@ impl IVBootTimingSearchIterator {
         }
 
         let mut results: Vec<IVBootTimingSearchResult> = Vec::new();
-        let initial_offset = self.current_offset;
-
-        // 残り検索範囲を計算してEnumeratorを作成
-        let remaining_seconds = self.range_seconds.saturating_sub(self.current_offset);
-        let chunk_to_process = remaining_seconds.min(chunk_seconds);
-
-        let enumerator = HashValuesEnumerator::new(
-            &self.base_message_builder,
-            &self.time_code_table,
-            self.start_seconds + self.current_offset as i64,
-            chunk_to_process,
-        );
+        let initial_processed = self.hash_enumerator.processed_seconds();
+        let target_processed = initial_processed + chunk_seconds;
 
         // HashValuesEnumeratorからハッシュ値を取得して検証
-        for entry in enumerator {
+        while let Some(entry) = self.hash_enumerator.next() {
             // MT Seed を計算してターゲットと照合
             let mt_seed = entry.hash.to_mt_seed();
 
             if self.target_seeds.contains(&mt_seed) {
-                if let Some(result) = self.create_result(&entry) {
-                    results.push(result);
-                    if results.len() >= max_results as usize {
-                        break;
-                    }
+                results.push(self.create_result(&entry));
+                if results.len() >= max_results as usize {
+                    break;
                 }
+            }
+
+            // チャンク処理制限
+            if self.hash_enumerator.processed_seconds() >= target_processed {
+                break;
             }
         }
 
         // 処理済み秒数を更新
-        self.current_offset += chunk_to_process;
-        let seconds_processed = self.current_offset - initial_offset;
+        let current_processed = self.hash_enumerator.processed_seconds();
+        self.current_offset = current_processed;
+        let seconds_processed = current_processed - initial_processed;
 
         // 検索完了チェック
-        if self.current_offset >= self.range_seconds {
+        if current_processed >= self.range_seconds {
             self.finished = true;
         }
 
@@ -336,11 +331,11 @@ impl IVBootTimingSearchIterator {
     }
 
     /// HashEntryから検索結果を生成
-    fn create_result(&self, entry: &HashEntry) -> Option<IVBootTimingSearchResult> {
-        let display = entry.datetime_code.to_display_datetime()?;
+    fn create_result(&self, entry: &HashEntry) -> IVBootTimingSearchResult {
+        let display = entry.datetime_code.to_display_datetime();
         let lcg_seed = entry.hash.to_lcg_seed();
 
-        Some(IVBootTimingSearchResult {
+        IVBootTimingSearchResult {
             mt_seed: entry.hash.to_mt_seed(),
             lcg_seed_high: (lcg_seed >> 32) as u32,
             lcg_seed_low: lcg_seed as u32,
@@ -353,7 +348,7 @@ impl IVBootTimingSearchIterator {
             timer0: self.timer0,
             vcount: self.vcount,
             key_code: self.key_code,
-        })
+        }
     }
 }
 

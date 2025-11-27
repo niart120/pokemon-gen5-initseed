@@ -796,7 +796,7 @@ mod tests {
         }
 
         // 10:00:00 should be allowed
-        let idx_10_00_00 = 10 * 3600 + 0 * 60 + 0;
+        let idx_10_00_00 = 10 * 3600;
         assert!(mask[idx_10_00_00]);
 
         // 09:59:59 should not be allowed
@@ -804,7 +804,7 @@ mod tests {
         assert!(!mask[idx_09_59_59]);
 
         // 13:00:00 should not be allowed
-        let idx_13_00_00 = 13 * 3600 + 0 * 60 + 0;
+        let idx_13_00_00 = 13 * 3600;
         assert!(!mask[idx_13_00_00]);
     }
 
@@ -1042,7 +1042,7 @@ mod tests {
         assert!(!mask[idx_10_29_00], "10:29:00 should NOT be allowed");
 
         // 11:00:00 は許可されない（分が範囲外：0分は30-45の範囲外）
-        let idx_11_00_00 = 11 * 3600 + 0 * 60 + 0;
+        let idx_11_00_00 = 11 * 3600;
         assert!(!mask[idx_11_00_00], "11:00:00 should NOT be allowed (minute 0 is outside 30-45)");
 
         // 11:30:00 は許可される

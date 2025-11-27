@@ -1,12 +1,12 @@
 //! ハッシュ値列挙モジュール
 //!
 //! SHA-1ハッシュ値の列挙処理を提供する。
-//! DateTimeCodeEnumerator と BaseMessageBuilder を組み合わせて、
-//! ハッシュ値を効率的に列挙する。
+//! BaseMessageBuilder と DateTimeCodeEnumerator を所有し、
+//! ハッシュ値を効率的に列挙する（段階的所有権移譲パターン）。
 
 use super::datetime::{DateTimeCode, DateTimeCodeEnumerator, RangedTimeCodeTable};
 use super::message::{BaseMessageBuilder, HashValues};
-use super::params::{DSConfig, SearchRangeParams, SegmentParams, TimeRangeParams};
+use super::params::{DSConfig, SegmentParams, TimeRangeParams};
 use crate::sha1::calculate_pokemon_sha1;
 use crate::sha1_simd::calculate_pokemon_sha1_simd;
 
@@ -33,12 +33,13 @@ impl HashEntry {
 
 /// ハッシュ値列挙器
 ///
-/// BaseMessageBuilder と DateTimeCodeEnumerator を組み合わせて、
+/// BaseMessageBuilder と DateTimeCodeEnumerator を所有し、
 /// SHA-1ハッシュ値を順次生成する。
 /// SIMD最適化により4つずつバッチ処理を行う。
-pub struct HashValuesEnumerator<'a> {
-    base_message_builder: &'a BaseMessageBuilder,
-    datetime_enumerator: DateTimeCodeEnumerator<'a>,
+pub struct HashValuesEnumerator {
+    // 所有権を持つデータ（段階的所有権移譲）
+    base_message_builder: BaseMessageBuilder,
+    datetime_enumerator: DateTimeCodeEnumerator,
 
     // SIMD バッファ
     message_buffer: [u32; 64], // 4メッセージ × 16ワード
@@ -50,11 +51,11 @@ pub struct HashValuesEnumerator<'a> {
     output_index: usize,
 }
 
-impl<'a> HashValuesEnumerator<'a> {
-    /// 新規作成
+impl HashValuesEnumerator {
+    /// 新規作成（所有権を受け取る）
     pub fn new(
-        base_message_builder: &'a BaseMessageBuilder,
-        time_code_table: &'a RangedTimeCodeTable,
+        base_message_builder: BaseMessageBuilder,
+        time_code_table: RangedTimeCodeTable,
         start_seconds: i64,
         range_seconds: u32,
     ) -> Self {
@@ -137,7 +138,7 @@ impl<'a> HashValuesEnumerator<'a> {
     }
 }
 
-impl Iterator for HashValuesEnumerator<'_> {
+impl Iterator for HashValuesEnumerator {
     type Item = HashEntry;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -203,37 +204,40 @@ mod tests {
         SegmentParams::new(0x1000, 0x60, 0x2FFF)
     }
 
-    #[test]
-    fn test_hash_values_enumerator_basic() {
+    fn create_test_builder() -> BaseMessageBuilder {
         let ds_config = create_test_ds_config();
         let segment = create_test_segment();
-        let builder = BaseMessageBuilder::from_params(&ds_config, &segment);
+        BaseMessageBuilder::from_params(&ds_config, &segment)
+    }
 
+    #[test]
+    fn test_hash_values_enumerator_basic() {
+        let builder = create_test_builder();
         let time_range = TimeRangeParams::new(0, 0, 0, 0, 0, 2).unwrap();
         let table = build_ranged_time_code_table(&time_range, HardwareType::DS);
 
-        let enumerator = HashValuesEnumerator::new(&builder, &table, 0, 3);
+        let enumerator = HashValuesEnumerator::new(builder, table, 0, 3);
         let results: Vec<HashEntry> = enumerator.collect();
 
         assert_eq!(results.len(), 3);
 
         // 各結果がHashValuesとDateTimeCodeを持つことを確認
         for entry in &results {
-            assert!(entry.datetime_code.seconds_since_2000 >= 0);
+            // BCDデコードで表示日時が取得できることを確認
+            let display = entry.datetime_code.to_display_datetime();
+            assert!(display.year >= 2000);
         }
     }
 
     #[test]
     fn test_hash_values_enumerator_simd_batch() {
-        let ds_config = create_test_ds_config();
-        let segment = create_test_segment();
-        let builder = BaseMessageBuilder::from_params(&ds_config, &segment);
+        let builder = create_test_builder();
 
         // 全時間許可で5秒分（SIMD 4 + スカラー 1）
         let time_range = TimeRangeParams::new(0, 23, 0, 59, 0, 59).unwrap();
         let table = build_ranged_time_code_table(&time_range, HardwareType::DS);
 
-        let enumerator = HashValuesEnumerator::new(&builder, &table, 0, 5);
+        let enumerator = HashValuesEnumerator::new(builder, table, 0, 5);
         let results: Vec<HashEntry> = enumerator.collect();
 
         assert_eq!(results.len(), 5);
@@ -241,18 +245,17 @@ mod tests {
 
     #[test]
     fn test_hash_values_enumerator_consistency() {
-        let ds_config = create_test_ds_config();
-        let segment = create_test_segment();
-        let builder = BaseMessageBuilder::from_params(&ds_config, &segment);
-
-        let time_range = TimeRangeParams::new(0, 0, 0, 0, 0, 0).unwrap();
-        let table = build_ranged_time_code_table(&time_range, HardwareType::DS);
-
         // 同じ入力で同じ結果が得られることを確認
-        let enumerator1 = HashValuesEnumerator::new(&builder, &table, 0, 1);
-        let enumerator2 = HashValuesEnumerator::new(&builder, &table, 0, 1);
-
+        let builder1 = create_test_builder();
+        let time_range1 = TimeRangeParams::new(0, 0, 0, 0, 0, 0).unwrap();
+        let table1 = build_ranged_time_code_table(&time_range1, HardwareType::DS);
+        let enumerator1 = HashValuesEnumerator::new(builder1, table1, 0, 1);
         let results1: Vec<HashEntry> = enumerator1.collect();
+
+        let builder2 = create_test_builder();
+        let time_range2 = TimeRangeParams::new(0, 0, 0, 0, 0, 0).unwrap();
+        let table2 = build_ranged_time_code_table(&time_range2, HardwareType::DS);
+        let enumerator2 = HashValuesEnumerator::new(builder2, table2, 0, 1);
         let results2: Vec<HashEntry> = enumerator2.collect();
 
         assert_eq!(results1.len(), results2.len());
@@ -262,14 +265,11 @@ mod tests {
 
     #[test]
     fn test_hash_entry_mt_seed() {
-        let ds_config = create_test_ds_config();
-        let segment = create_test_segment();
-        let builder = BaseMessageBuilder::from_params(&ds_config, &segment);
-
+        let builder = create_test_builder();
         let time_range = TimeRangeParams::new(0, 0, 0, 0, 0, 0).unwrap();
         let table = build_ranged_time_code_table(&time_range, HardwareType::DS);
 
-        let mut enumerator = HashValuesEnumerator::new(&builder, &table, 0, 1);
+        let mut enumerator = HashValuesEnumerator::new(builder, table, 0, 1);
         let entry = enumerator.next().unwrap();
 
         // MT Seed が計算できることを確認
