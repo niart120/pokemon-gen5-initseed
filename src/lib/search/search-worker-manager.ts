@@ -17,9 +17,53 @@ import type {
   IVBootTimingSearchResult,
 } from '@/types/iv-boot-timing-search';
 import type { SingleWorkerSearchCallbacks } from '../../types/callbacks';
-import { shouldUseWebGpuSearch } from './search-mode';
 import { useAppStore } from '@/store/app-store';
 import type { SearchExecutionMode } from '@/store/app-store';
+
+/**
+ * SearchConditions を IVBootTimingSearchParams に変換
+ */
+function convertToIVBootTimingSearchParams(
+  conditions: SearchConditions,
+  targetSeeds: number[]
+): IVBootTimingSearchParams {
+  // MACアドレスを6要素のタプルに正規化
+  const macAddress: readonly [number, number, number, number, number, number] = [
+    conditions.macAddress[0] ?? 0,
+    conditions.macAddress[1] ?? 0,
+    conditions.macAddress[2] ?? 0,
+    conditions.macAddress[3] ?? 0,
+    conditions.macAddress[4] ?? 0,
+    conditions.macAddress[5] ?? 0,
+  ];
+
+  return {
+    dateRange: {
+      startYear: conditions.dateRange.startYear,
+      startMonth: conditions.dateRange.startMonth,
+      startDay: conditions.dateRange.startDay,
+      endYear: conditions.dateRange.endYear,
+      endMonth: conditions.dateRange.endMonth,
+      endDay: conditions.dateRange.endDay,
+    },
+    timer0Range: {
+      min: conditions.timer0VCountConfig.timer0Range.min,
+      max: conditions.timer0VCountConfig.timer0Range.max,
+    },
+    vcountRange: {
+      min: conditions.timer0VCountConfig.vcountRange.min,
+      max: conditions.timer0VCountConfig.vcountRange.max,
+    },
+    keyInputMask: conditions.keyInput,
+    macAddress,
+    hardware: conditions.hardware,
+    romVersion: conditions.romVersion,
+    romRegion: conditions.romRegion,
+    timeRange: conditions.timeRange,
+    targetSeeds,
+    maxResults: 10000, // デフォルト上限
+  };
+}
 
 export type SearchCallbacks = SingleWorkerSearchCallbacks<InitialSeedResult> & {
   onParallelProgress?: (progress: AggregatedProgress | null) => void;
@@ -221,7 +265,11 @@ export class SearchWorkerManager {
       targetSeeds: [...normalizedTargetSeeds],
     };
 
-    if (shouldUseWebGpuSearch()) {
+    // モード判定
+    const executionMode = this.getCurrentExecutionMode();
+
+    // WebGPU モード
+    if (executionMode === 'gpu') {
       const gpuStarted = this.tryStartGpuSearch(conditions, normalizedTargetSeeds);
       if (gpuStarted) {
         return true;
@@ -229,7 +277,89 @@ export class SearchWorkerManager {
       console.warn('WebGPU search could not be started. Falling back to CPU mode.');
     }
 
+    // 新規実装 (cpu-parallel-new) モード
+    if (executionMode === 'cpu-parallel-new') {
+      return this.startCpuSearchNewInternal(conditions, normalizedTargetSeeds, callbacks);
+    }
+
+    // 既存実装 (cpu-parallel) モード
     return this.startCpuSearchInternal(conditions, normalizedTargetSeeds, callbacks);
+  }
+
+  /**
+   * 現在の実行モードを取得
+   */
+  private getCurrentExecutionMode(): SearchExecutionMode {
+    try {
+      return useAppStore.getState().searchExecutionMode;
+    } catch {
+      return 'cpu-parallel';
+    }
+  }
+
+  /**
+   * 新規CPU並列検索（IVBootTimingMultiWorkerManager使用）
+   */
+  private startCpuSearchNewInternal(
+    conditions: SearchConditions,
+    targetSeeds: number[],
+    callbacks: SearchCallbacks
+  ): boolean {
+    if (!this.isParallelSearchAvailable()) {
+      callbacks.onError('Parallel CPU search is not available in this environment.');
+      return false;
+    }
+
+    const ivParams = convertToIVBootTimingSearchParams(conditions, targetSeeds);
+
+    // IVBootTimingSearchResult を InitialSeedResult に変換するコールバック
+    const ivCallbacks: IVBootTimingSearchCallbacks = {
+      onProgress: callbacks.onProgress,
+      onResult: (result: IVBootTimingSearchResult) => {
+        // IVBootTimingSearchResult を InitialSeedResult に変換
+        const converted: InitialSeedResult = {
+          seed: result.mtSeed,
+          datetime: result.boot.datetime,
+          timer0: result.boot.timer0,
+          vcount: result.boot.vcount,
+          keyCode: result.boot.keyCode,
+          keyInputNames: result.boot.keyInputNames,
+          conditions,
+          message: [], // WASMからは取得していない
+          sha1Hash: '', // WASMからは取得していない
+          lcgSeed: BigInt('0x' + result.lcgSeedHex),
+          isMatch: true,
+        };
+        callbacks.onResult(converted);
+      },
+      onComplete: callbacks.onComplete,
+      onError: callbacks.onError,
+      onPaused: callbacks.onPaused,
+      onResumed: callbacks.onResumed,
+      onStopped: callbacks.onStopped,
+      onParallelProgress: callbacks.onParallelProgress 
+        ? (progress) => {
+            // AggregatedIVBootTimingProgress を AggregatedProgress に変換
+            if (progress) {
+              const converted: AggregatedProgress = {
+                totalCurrentStep: progress.totalCurrentStep,
+                totalSteps: progress.totalSteps,
+                totalElapsedTime: progress.totalElapsedTime,
+                totalEstimatedTimeRemaining: progress.totalEstimatedTimeRemaining,
+                totalMatchesFound: progress.totalMatchesFound,
+                activeWorkers: progress.activeWorkers,
+                completedWorkers: progress.completedWorkers,
+                workerProgresses: progress.workerProgresses,
+              };
+              callbacks.onParallelProgress!(converted);
+            } else {
+              callbacks.onParallelProgress!(null);
+            }
+          }
+        : undefined,
+    };
+
+    return this.startIVBootTimingSearch(ivParams, ivCallbacks);
   }
 
   /**
