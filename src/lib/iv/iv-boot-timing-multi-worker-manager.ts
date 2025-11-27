@@ -1,19 +1,19 @@
 /**
- * Egg Boot Timing Multi Worker Manager - 並列Worker版
- * 孵化乱数起動時間検索の並列Worker管理
+ * IV Boot Timing Multi Worker Manager - 並列Worker版
+ * IV起動時間検索の並列Worker管理
  */
 
 import type {
-  EggBootTimingSearchParams,
-  EggBootTimingSearchResult,
-  EggBootTimingWorkerResponse,
-  EggBootTimingProgress,
-} from '@/types/egg-boot-timing-search';
-import { isEggBootTimingWorkerResponse } from '@/types/egg-boot-timing-search';
+  IVBootTimingSearchParams,
+  IVBootTimingSearchResult,
+  IVBootTimingWorkerResponse,
+  IVBootTimingProgress,
+} from '@/types/iv-boot-timing-search';
+import { isIVBootTimingWorkerResponse } from '@/types/iv-boot-timing-search';
 import {
-  calculateEggBootTimingChunks,
+  calculateIVBootTimingChunks,
   getDefaultWorkerCount,
-  type EggBootTimingWorkerChunk,
+  type IVBootTimingWorkerChunk,
 } from './boot-timing-chunk-calculator';
 
 /**
@@ -32,7 +32,7 @@ interface WorkerProgress {
 /**
  * 集約された進捗状態
  */
-export interface AggregatedEggBootTimingProgress {
+export interface AggregatedIVBootTimingProgress {
   totalCurrentStep: number;
   totalSteps: number;
   totalElapsedTime: number;
@@ -46,9 +46,9 @@ export interface AggregatedEggBootTimingProgress {
 /**
  * コールバック定義
  */
-export interface EggBootTimingMultiWorkerCallbacks {
-  onProgress: (progress: AggregatedEggBootTimingProgress) => void;
-  onResult: (result: EggBootTimingSearchResult) => void;
+export interface IVBootTimingMultiWorkerCallbacks {
+  onProgress: (progress: AggregatedIVBootTimingProgress) => void;
+  onResult: (result: IVBootTimingSearchResult) => void;
   onComplete: (message: string) => void;
   onError: (error: string) => void;
   onPaused?: () => void;
@@ -68,13 +68,13 @@ interface TimerState {
 /**
  * 並列 Worker 管理システム
  */
-export class EggBootTimingMultiWorkerManager {
+export class IVBootTimingMultiWorkerManager {
   private workers: Map<number, Worker> = new Map();
   private workerProgresses: Map<number, WorkerProgress> = new Map();
-  private activeChunks: Map<number, EggBootTimingWorkerChunk> = new Map();
+  private activeChunks: Map<number, IVBootTimingWorkerChunk> = new Map();
   private resultsCount = 0; // 結果はストリーミングのみ、配列保持しない
   private completedWorkers = 0;
-  private callbacks: EggBootTimingMultiWorkerCallbacks | null = null;
+  private callbacks: IVBootTimingMultiWorkerCallbacks | null = null;
   private searchRunning = false;
   private progressUpdateTimer: ReturnType<typeof setInterval> | null = null;
   private lastProgressCheck: Map<number, number> = new Map();
@@ -85,9 +85,7 @@ export class EggBootTimingMultiWorkerManager {
     isPaused: false,
   };
 
-  constructor(
-    private maxWorkers: number = getDefaultWorkerCount()
-  ) {}
+  constructor(private maxWorkers: number = getDefaultWorkerCount()) {}
 
   /**
    * Worker数設定
@@ -109,8 +107,8 @@ export class EggBootTimingMultiWorkerManager {
    * 並列検索開始
    */
   async startParallelSearch(
-    params: EggBootTimingSearchParams,
-    callbacks: EggBootTimingMultiWorkerCallbacks
+    params: IVBootTimingSearchParams,
+    callbacks: IVBootTimingMultiWorkerCallbacks
   ): Promise<void> {
     if (this.searchRunning) {
       throw new Error('Search is already running');
@@ -123,7 +121,7 @@ export class EggBootTimingMultiWorkerManager {
 
     try {
       // チャンク分割
-      const chunks = calculateEggBootTimingChunks(params, this.maxWorkers);
+      const chunks = calculateIVBootTimingChunks(params, this.maxWorkers);
 
       if (chunks.length === 0) {
         throw new Error('No valid chunks created for search');
@@ -149,15 +147,15 @@ export class EggBootTimingMultiWorkerManager {
    * Worker初期化
    */
   private async initializeWorker(
-    chunk: EggBootTimingWorkerChunk,
-    params: EggBootTimingSearchParams
+    chunk: IVBootTimingWorkerChunk,
+    params: IVBootTimingSearchParams
   ): Promise<void> {
     const worker = new Worker(
-      new URL('../../workers/egg-boot-timing-worker.ts', import.meta.url),
+      new URL('../../workers/iv-boot-timing-worker.ts', import.meta.url),
       { type: 'module' }
     );
 
-    worker.onmessage = (event: MessageEvent<EggBootTimingWorkerResponse>) => {
+    worker.onmessage = (event: MessageEvent<IVBootTimingWorkerResponse>) => {
       this.handleWorkerMessage(chunk.workerId, event.data);
     };
 
@@ -185,10 +183,9 @@ export class EggBootTimingMultiWorkerManager {
 
     // チャンク用パラメータを構築
     const chunkStartDatetime = chunk.startDatetime;
-    // rangeSecondsをdateRangeに変換（チャンクの終了日時を正確に計算）
     const chunkEndDatetime = chunk.endDatetime;
-    
-    const chunkParams: EggBootTimingSearchParams = {
+
+    const chunkParams: IVBootTimingSearchParams = {
       ...params,
       dateRange: {
         startYear: chunkStartDatetime.getFullYear(),
@@ -215,12 +212,9 @@ export class EggBootTimingMultiWorkerManager {
   /**
    * Workerメッセージ処理
    */
-  private handleWorkerMessage(
-    workerId: number,
-    data: unknown
-  ): void {
+  private handleWorkerMessage(workerId: number, data: unknown): void {
     if (!this.callbacks) return;
-    if (!isEggBootTimingWorkerResponse(data)) return;
+    if (!isIVBootTimingWorkerResponse(data)) return;
 
     const response = data;
 
@@ -265,7 +259,7 @@ export class EggBootTimingMultiWorkerManager {
    */
   private updateWorkerProgress(
     workerId: number,
-    progressData: EggBootTimingProgress
+    progressData: IVBootTimingProgress
   ): void {
     const current = this.workerProgresses.get(workerId);
     if (!current) return;
@@ -311,7 +305,7 @@ export class EggBootTimingMultiWorkerManager {
     const totalEstimatedTimeRemaining =
       this.calculateAggregatedTimeRemaining(progresses);
 
-    const aggregatedProgress: AggregatedEggBootTimingProgress = {
+    const aggregatedProgress: AggregatedIVBootTimingProgress = {
       totalCurrentStep,
       totalSteps,
       totalElapsedTime,
@@ -419,7 +413,7 @@ export class EggBootTimingMultiWorkerManager {
   pauseAll(): void {
     this.pauseManagerTimer();
     for (const worker of this.workers.values()) {
-      worker.postMessage({ type: 'PAUSE' });
+      worker.postMessage({ type: 'STOP' }); // IV workerはPAUSEがないためSTOPを使用
     }
     this.callbacks?.onPaused?.();
   }
@@ -429,9 +423,11 @@ export class EggBootTimingMultiWorkerManager {
    */
   resumeAll(): void {
     this.resumeManagerTimer();
-    for (const worker of this.workers.values()) {
-      worker.postMessage({ type: 'RESUME' });
-    }
+    // IV workerはRESUMEをサポートしていないため、再開は新規検索が必要
+    // 現状では警告のみ
+    console.warn(
+      'IV boot timing worker does not support resume. Please restart search.'
+    );
     this.callbacks?.onResumed?.();
   }
 
