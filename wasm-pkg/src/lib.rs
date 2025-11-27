@@ -16,6 +16,7 @@ mod offset_calculator;
 mod personality_rng;
 mod pid_shiny_checker;
 mod pokemon_generator;
+mod search_common;
 mod sha1;
 mod sha1_simd;
 mod utils;
