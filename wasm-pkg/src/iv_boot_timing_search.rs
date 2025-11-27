@@ -16,12 +16,9 @@
 //! - `IVBootTimingSearchResults`: バッチ結果
 
 use crate::search_common::{
-    build_ranged_time_code_table, generate_display_datetime, BaseMessageBuilder, DSConfigJs,
-    HardwareType, RangedTimeCodeTable, SearchRangeParamsJs, SegmentParamsJs, TimeRangeParamsJs,
-    SECONDS_PER_DAY,
+    build_ranged_time_code_table, BaseMessageBuilder, DSConfigJs, HashEntry, HashValuesEnumerator,
+    RangedTimeCodeTable, SearchRangeParamsJs, SegmentParamsJs, TimeRangeParamsJs,
 };
-use crate::sha1::calculate_pokemon_seed_from_hash;
-use crate::sha1_simd::calculate_pokemon_sha1_simd;
 use std::collections::HashSet;
 use wasm_bindgen::prelude::*;
 
@@ -177,10 +174,9 @@ impl IVBootTimingSearchResults {
 /// 各セグメントに対してこのイテレータを作成する。
 #[wasm_bindgen]
 pub struct IVBootTimingSearchIterator {
-    // 内部状態
+    // 内部状態（HashValuesEnumerator構築用）
     base_message_builder: BaseMessageBuilder,
     time_code_table: RangedTimeCodeTable,
-    hardware: HardwareType,
 
     // セグメントパラメータ（結果出力用に保持）
     timer0: u32,
@@ -243,7 +239,6 @@ impl IVBootTimingSearchIterator {
         Ok(IVBootTimingSearchIterator {
             base_message_builder,
             time_code_table,
-            hardware,
             timer0: segment_internal.timer0,
             vcount: segment_internal.vcount,
             key_code: segment_internal.key_code,
@@ -297,74 +292,37 @@ impl IVBootTimingSearchIterator {
         }
 
         let mut results: Vec<IVBootTimingSearchResult> = Vec::new();
-        let mut seconds_processed: u32 = 0;
+        let initial_offset = self.current_offset;
 
-        // SIMD バッチ処理用バッファ
-        let mut messages = [0u32; 64]; // 4メッセージ × 16ワード
-        let mut batch_metadata: [(i64, u32, u32); 4] = [(0, 0, 0); 4]; // (seconds_since_2000, date_code, time_code)
-        let mut batch_len = 0usize;
+        // 残り検索範囲を計算してEnumeratorを作成
+        let remaining_seconds = self.range_seconds.saturating_sub(self.current_offset);
+        let chunk_to_process = remaining_seconds.min(chunk_seconds);
 
-        let hardware_str = self.hardware.as_str();
+        let enumerator = HashValuesEnumerator::new(
+            &self.base_message_builder,
+            &self.time_code_table,
+            self.start_seconds + self.current_offset as i64,
+            chunk_to_process,
+        );
 
-        while self.current_offset < self.range_seconds {
-            // 終了条件チェック
-            if results.len() >= max_results as usize {
-                break;
-            }
-            if seconds_processed >= chunk_seconds {
-                break;
-            }
+        // HashValuesEnumeratorからハッシュ値を取得して検証
+        for entry in enumerator {
+            // MT Seed を計算してターゲットと照合
+            let mt_seed = entry.hash.to_mt_seed();
 
-            let seconds_since_2000 = self.start_seconds + self.current_offset as i64;
-            self.current_offset += 1;
-            seconds_processed += 1;
-
-            // 日内秒数を計算
-            let second_of_day = (seconds_since_2000.rem_euclid(SECONDS_PER_DAY)) as usize;
-
-            // 許可された秒かチェック + time_code取得
-            let time_code = match self.time_code_table[second_of_day] {
-                Some(tc) => tc,
-                None => continue,
-            };
-
-            // date_code計算
-            let date_index = (seconds_since_2000 / SECONDS_PER_DAY) as u32;
-            let date_code = crate::datetime_codes::DateCodeGenerator::get_date_code(date_index);
-
-            // メッセージをバッファに追加
-            let message = self.base_message_builder.build_message(date_code, time_code);
-            let offset = batch_len * 16;
-            messages[offset..offset + 16].copy_from_slice(&message);
-            batch_metadata[batch_len] = (seconds_since_2000, date_code, time_code);
-            batch_len += 1;
-
-            // 4つ溜まったらSIMD処理
-            if batch_len == 4 {
-                self.process_simd_batch(
-                    &messages,
-                    &batch_metadata,
-                    hardware_str,
-                    &mut results,
-                );
-                batch_len = 0;
+            if self.target_seeds.contains(&mt_seed) {
+                if let Some(result) = self.create_result(&entry) {
+                    results.push(result);
+                    if results.len() >= max_results as usize {
+                        break;
+                    }
+                }
             }
         }
 
-        // 残りをスカラー処理
-        for i in 0..batch_len {
-            let offset = i * 16;
-            let mut message = [0u32; 16];
-            message.copy_from_slice(&messages[offset..offset + 16]);
-            let (seconds_since_2000, _, _) = batch_metadata[i];
-
-            self.process_scalar(
-                &message,
-                seconds_since_2000,
-                hardware_str,
-                &mut results,
-            );
-        }
+        // 処理済み秒数を更新
+        self.current_offset += chunk_to_process;
+        let seconds_processed = self.current_offset - initial_offset;
 
         // 検索完了チェック
         if self.current_offset >= self.range_seconds {
@@ -377,91 +335,26 @@ impl IVBootTimingSearchIterator {
         }
     }
 
-    /// SIMDバッチ処理
-    fn process_simd_batch(
-        &self,
-        messages: &[u32; 64],
-        batch_metadata: &[(i64, u32, u32); 4],
-        _hardware_str: &str,
-        results: &mut Vec<IVBootTimingSearchResult>,
-    ) {
-        // SIMD SHA-1計算
-        let hashes = calculate_pokemon_sha1_simd(messages);
-
-        // 各結果をチェック
-        for i in 0..4 {
-            let h0 = hashes[i * 5];
-            let h1 = hashes[i * 5 + 1];
-            let seed = calculate_pokemon_seed_from_hash(h0, h1);
-
-            if self.target_seeds.contains(&seed) {
-                let (seconds_since_2000, _, _) = batch_metadata[i];
-                if let Some(result) = self.create_result(seed, h0, h1, seconds_since_2000) {
-                    results.push(result);
-                }
-            }
-        }
-    }
-
-    /// スカラー処理
-    fn process_scalar(
-        &self,
-        message: &[u32; 16],
-        seconds_since_2000: i64,
-        _hardware_str: &str,
-        results: &mut Vec<IVBootTimingSearchResult>,
-    ) {
-        let hash = crate::sha1::calculate_pokemon_sha1(message);
-        let h0 = hash.0;
-        let h1 = hash.1;
-        let seed = calculate_pokemon_seed_from_hash(h0, h1);
-
-        if self.target_seeds.contains(&seed) {
-            if let Some(result) = self.create_result(seed, h0, h1, seconds_since_2000) {
-                results.push(result);
-            }
-        }
-    }
-
-    /// 検索結果を生成
-    fn create_result(
-        &self,
-        seed: u32,
-        h0: u32,
-        h1: u32,
-        seconds_since_2000: i64,
-    ) -> Option<IVBootTimingSearchResult> {
-        let (year, month, day, hour, minute, second) =
-            generate_display_datetime(seconds_since_2000)?;
-
-        // LCG Seed計算 (h0, h1からリトルエンディアンで64bit値を構築)
-        let (lcg_seed_high, lcg_seed_low) = calculate_lcg_seed_parts(h0, h1);
+    /// HashEntryから検索結果を生成
+    fn create_result(&self, entry: &HashEntry) -> Option<IVBootTimingSearchResult> {
+        let display = entry.datetime_code.to_display_datetime()?;
+        let lcg_seed = entry.hash.to_lcg_seed();
 
         Some(IVBootTimingSearchResult {
-            mt_seed: seed,
-            lcg_seed_high,
-            lcg_seed_low,
-            year,
-            month,
-            day,
-            hour,
-            minute,
-            second,
+            mt_seed: entry.hash.to_mt_seed(),
+            lcg_seed_high: (lcg_seed >> 32) as u32,
+            lcg_seed_low: lcg_seed as u32,
+            year: display.year,
+            month: display.month,
+            day: display.day,
+            hour: display.hour,
+            minute: display.minute,
+            second: display.second,
             timer0: self.timer0,
             vcount: self.vcount,
             key_code: self.key_code,
         })
     }
-}
-
-/// SHA-1ハッシュ値から64bit LCG Seedのhigh/lowパートを計算
-#[inline]
-fn calculate_lcg_seed_parts(h0: u32, h1: u32) -> (u32, u32) {
-    let h0_le = crate::sha1::swap_bytes_32(h0);
-    let h1_le = crate::sha1::swap_bytes_32(h1);
-    // LCG seed = (h1_le << 32) | h0_le
-    // high = h1_le, low = h0_le
-    (h1_le, h0_le)
 }
 
 // =============================================================================

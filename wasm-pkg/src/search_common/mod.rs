@@ -7,8 +7,10 @@
 //! - `params`: パラメータ型（内部型 + 公開型）
 //! - `message`: SHA-1メッセージ構築
 //! - `datetime`: 日時コード列挙・ユーティリティ
+//! - `hash`: ハッシュ値列挙器
 
 mod datetime;
+mod hash;
 mod message;
 mod params;
 
@@ -45,5 +47,9 @@ pub use message::{BaseMessageBuilder, HashValues};
 // datetime モジュール
 pub use datetime::{
     build_ranged_time_code_table, date_to_seconds_since_2000, datetime_to_seconds_since_2000,
-    generate_display_datetime, DateTimeCode, DateTimeCodeEnumerator, RangedTimeCodeTable,
+    generate_display_datetime, DateTimeCode, DateTimeCodeEnumerator, DisplayDateTime,
+    RangedTimeCodeTable,
 };
+
+// hash モジュール
+pub use hash::{HashEntry, HashValuesEnumerator};

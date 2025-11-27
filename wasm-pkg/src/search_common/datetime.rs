@@ -11,16 +11,44 @@ use chrono::{Datelike, NaiveDate, Timelike};
 // 日時コード
 // =============================================================================
 
+/// 表示用日時情報
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DisplayDateTime {
+    pub year: u32,
+    pub month: u32,
+    pub day: u32,
+    pub hour: u32,
+    pub minute: u32,
+    pub second: u32,
+}
+
 /// 日時コード（date_code と time_code のペア）
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DateTimeCode {
     pub date_code: u32,
     pub time_code: u32,
+    pub seconds_since_2000: i64,
 }
 
 impl DateTimeCode {
-    pub fn new(date_code: u32, time_code: u32) -> Self {
-        Self { date_code, time_code }
+    pub fn new(date_code: u32, time_code: u32, seconds_since_2000: i64) -> Self {
+        Self { date_code, time_code, seconds_since_2000 }
+    }
+
+    /// 表示用日時に変換
+    pub fn to_display_datetime(&self) -> Option<DisplayDateTime> {
+        let datetime =
+            chrono::DateTime::from_timestamp(self.seconds_since_2000 + EPOCH_2000_UNIX, 0)?
+                .naive_utc();
+
+        Some(DisplayDateTime {
+            year: datetime.year() as u32,
+            month: datetime.month(),
+            day: datetime.day(),
+            hour: datetime.hour(),
+            minute: datetime.minute(),
+            second: datetime.second(),
+        })
     }
 }
 
@@ -112,7 +140,7 @@ impl Iterator for DateTimeCodeEnumerator<'_> {
             if let Some(time_code) = self.time_code_table[second_of_day] {
                 let date_index = (seconds / SECONDS_PER_DAY) as u32;
                 let date_code = DateCodeGenerator::get_date_code(date_index);
-                return Some(DateTimeCode::new(date_code, time_code));
+                return Some(DateTimeCode::new(date_code, time_code, seconds));
             }
         }
         None
@@ -176,9 +204,34 @@ mod tests {
 
     #[test]
     fn test_date_time_code_creation() {
-        let dtc = DateTimeCode::new(0x12345678, 0xABCDEF00);
+        let dtc = DateTimeCode::new(0x12345678, 0xABCDEF00, 12345);
         assert_eq!(dtc.date_code, 0x12345678);
         assert_eq!(dtc.time_code, 0xABCDEF00);
+        assert_eq!(dtc.seconds_since_2000, 12345);
+    }
+
+    #[test]
+    fn test_date_time_code_to_display_datetime() {
+        // 2000年1月1日 0:00:00
+        let dtc = DateTimeCode::new(0, 0, 0);
+        let display = dtc.to_display_datetime().unwrap();
+        assert_eq!(display.year, 2000);
+        assert_eq!(display.month, 1);
+        assert_eq!(display.day, 1);
+        assert_eq!(display.hour, 0);
+        assert_eq!(display.minute, 0);
+        assert_eq!(display.second, 0);
+
+        // 2024年6月15日 12:30:45
+        let seconds = datetime_to_seconds_since_2000(2024, 6, 15, 12, 30, 45).unwrap();
+        let dtc = DateTimeCode::new(0, 0, seconds);
+        let display = dtc.to_display_datetime().unwrap();
+        assert_eq!(display.year, 2024);
+        assert_eq!(display.month, 6);
+        assert_eq!(display.day, 15);
+        assert_eq!(display.hour, 12);
+        assert_eq!(display.minute, 30);
+        assert_eq!(display.second, 45);
     }
 
     #[test]
