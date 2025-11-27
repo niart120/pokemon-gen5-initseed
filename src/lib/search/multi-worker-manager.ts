@@ -1,6 +1,10 @@
 /**
  * 複数WebWorker管理システム
  * 並列検索の調整・監視・結果統合を担当
+ *
+ * @deprecated IVBootTimingMultiWorkerManager に移行予定。
+ * 新規開発では IVBootTimingMultiWorkerManager を使用してください。
+ * 既存の startSearch API は引き続き動作しますが、将来のリリースで削除されます。
  */
 
 import { calculateOptimalChunks } from './chunk-calculator';

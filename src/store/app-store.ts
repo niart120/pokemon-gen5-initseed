@@ -20,7 +20,13 @@ import { bootTimingDraftFromProfile, normalizeBootTimingDraft } from '@/store/ut
 import { DEFAULT_LOCALE } from '@/types/i18n';
 import { DomainShinyType } from '@/types/domain';
 
-export type SearchExecutionMode = 'gpu' | 'cpu-parallel';
+/**
+ * 検索実行モード
+ * - 'gpu': WebGPU による並列検索
+ * - 'cpu-parallel': 既存の MultiWorkerSearchManager による並列検索
+ * - 'cpu-parallel-new': 新規実装の IVBootTimingMultiWorkerManager による並列検索 (実験版)
+ */
+export type SearchExecutionMode = 'gpu' | 'cpu-parallel' | 'cpu-parallel-new';
 
 interface AppStore extends GenerationSlice {
   profiles: DeviceProfile[];

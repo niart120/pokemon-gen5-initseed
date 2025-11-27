@@ -8,6 +8,14 @@ import type { SearchConditions, InitialSeedResult } from '../../types/search';
 import type { AggregatedProgress } from '../../types/parallel';
 import type { WorkerRequest, WorkerResponse } from '@/types/worker';
 import { MultiWorkerSearchManager } from './multi-worker-manager';
+import {
+  IVBootTimingMultiWorkerManager,
+  type AggregatedIVBootTimingProgress,
+} from '../iv/iv-boot-timing-multi-worker-manager';
+import type {
+  IVBootTimingSearchParams,
+  IVBootTimingSearchResult,
+} from '@/types/iv-boot-timing-search';
 import type { SingleWorkerSearchCallbacks } from '../../types/callbacks';
 import { shouldUseWebGpuSearch } from './search-mode';
 import { useAppStore } from '@/store/app-store';
@@ -17,11 +25,19 @@ export type SearchCallbacks = SingleWorkerSearchCallbacks<InitialSeedResult> & {
   onParallelProgress?: (progress: AggregatedProgress | null) => void;
 };
 
+/**
+ * IV Boot Timing検索用コールバック
+ */
+export type IVBootTimingSearchCallbacks = SingleWorkerSearchCallbacks<IVBootTimingSearchResult> & {
+  onParallelProgress?: (progress: AggregatedIVBootTimingProgress | null) => void;
+};
+
 export class SearchWorkerManager {
   private gpuWorker: Worker | null = null;
   private callbacks: SearchCallbacks | null = null;
   private multiWorkerManager: MultiWorkerSearchManager | null = null;
-  private activeMode: 'cpu-parallel' | 'gpu' = 'cpu-parallel';
+  private ivBootTimingManager: IVBootTimingMultiWorkerManager | null = null;
+  private activeMode: 'cpu-parallel' | 'gpu' | 'iv-boot-timing' = 'cpu-parallel';
   private lastRequest: { conditions: SearchConditions; targetSeeds: number[] } | null = null;
 
   constructor() {
@@ -285,10 +301,69 @@ export class SearchWorkerManager {
     }
   }
 
+  /**
+   * IV Boot Timing検索開始
+   * 指定されたMT Seedに対応する起動時間を検索
+   */
+  public startIVBootTimingSearch(
+    params: IVBootTimingSearchParams,
+    callbacks: IVBootTimingSearchCallbacks
+  ): boolean {
+    try {
+      if (!this.ivBootTimingManager) {
+        this.ivBootTimingManager = new IVBootTimingMultiWorkerManager();
+      }
+
+      const currentMaxWorkers = this.getMaxWorkers();
+      this.ivBootTimingManager.setMaxWorkers(currentMaxWorkers);
+
+      const ivCallbacks = {
+        onProgress: (aggregatedProgress: AggregatedIVBootTimingProgress) => {
+          callbacks.onProgress({
+            currentStep: aggregatedProgress.totalCurrentStep,
+            totalSteps: aggregatedProgress.totalSteps,
+            elapsedTime: aggregatedProgress.totalElapsedTime,
+            estimatedTimeRemaining: aggregatedProgress.totalEstimatedTimeRemaining,
+            matchesFound: aggregatedProgress.totalMatchesFound
+          });
+
+          if (callbacks.onParallelProgress) {
+            callbacks.onParallelProgress(aggregatedProgress);
+          }
+        },
+        onResult: callbacks.onResult,
+        onComplete: callbacks.onComplete,
+        onError: (error: string) => {
+          if (callbacks.onParallelProgress) {
+            callbacks.onParallelProgress(null);
+          }
+          callbacks.onError(error);
+        },
+        onPaused: callbacks.onPaused,
+        onResumed: callbacks.onResumed,
+        onStopped: callbacks.onStopped
+      };
+
+      this.ivBootTimingManager.startParallelSearch(params, ivCallbacks);
+      this.activeMode = 'iv-boot-timing';
+      return true;
+
+    } catch (error) {
+      console.error('Failed to start IV boot timing search:', error);
+      callbacks.onError('Failed to start IV boot timing search.');
+      return false;
+    }
+  }
+
   public pauseSearch() {
     if (this.activeMode === 'gpu' && this.gpuWorker) {
       const request: WorkerRequest = { type: 'PAUSE_SEARCH' };
       this.gpuWorker.postMessage(request);
+      return;
+    }
+
+    if (this.activeMode === 'iv-boot-timing' && this.ivBootTimingManager) {
+      this.ivBootTimingManager.pauseAll();
       return;
     }
 
@@ -304,6 +379,11 @@ export class SearchWorkerManager {
       return;
     }
 
+    if (this.activeMode === 'iv-boot-timing' && this.ivBootTimingManager) {
+      this.ivBootTimingManager.resumeAll();
+      return;
+    }
+
     if (this.multiWorkerManager) {
       this.multiWorkerManager.resumeAll();
     }
@@ -313,6 +393,11 @@ export class SearchWorkerManager {
     if (this.activeMode === 'gpu' && this.gpuWorker) {
       const request: WorkerRequest = { type: 'STOP_SEARCH' };
       this.gpuWorker.postMessage(request);
+      return;
+    }
+
+    if (this.activeMode === 'iv-boot-timing' && this.ivBootTimingManager) {
+      this.ivBootTimingManager.terminateAll();
       return;
     }
 
@@ -352,6 +437,11 @@ export class SearchWorkerManager {
     if (this.multiWorkerManager) {
       this.multiWorkerManager.terminateAll();
       this.multiWorkerManager = null;
+    }
+
+    if (this.ivBootTimingManager) {
+      this.ivBootTimingManager.terminateAll();
+      this.ivBootTimingManager = null;
     }
     
     if (this.gpuWorker) {
