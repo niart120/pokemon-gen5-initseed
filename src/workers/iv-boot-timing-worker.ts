@@ -296,13 +296,16 @@ async function executeSearch(
   const totalSegments = timer0Count * vcountCount * keyCodes.length;
 
   // イテレータパラメータ
-  const RESULT_LIMIT = 32;
-  const CHUNK_SECONDS = 3600 * 24 * 30; // 30日ずつ取得
+  const RESULT_LIMIT = 4;
+  const CHUNK_SECONDS = 3600 * 24 * 90; // 90日ずつ取得
   const PROGRESS_INTERVAL_MS = 500;
 
   let resultsCount = 0;
   let processedSegments = 0;
   let lastProgressTime = startTime;
+
+  // セグメント内進捗追跡（0.0〜1.0）
+  let currentSegmentProgress = 0;
 
   // Target seeds を Uint32Array に変換
   const targetSeedsArray = new Uint32Array(params.targetSeeds);
@@ -336,6 +339,7 @@ async function executeSearch(
         // イテレータを作成
         let iterator: {
           isFinished: boolean;
+          progress: number; // 0.0〜1.0のセグメント内進捗
           next_batch: (
             limit: number,
             chunk: number
@@ -366,6 +370,9 @@ async function executeSearch(
             const batchResults = iterator.next_batch(RESULT_LIMIT, CHUNK_SECONDS);
             const resultsArray = batchResults.to_array();
 
+            // セグメント内進捗を取得（0.0〜1.0）
+            currentSegmentProgress = iterator.progress;
+
             // 結果をストリーミング送信
             if (resultsArray.length > 0) {
               const convertedResults: IVBootTimingSearchResult[] = [];
@@ -391,11 +398,14 @@ async function executeSearch(
             const now = performance.now();
             if (now - lastProgressTime >= PROGRESS_INTERVAL_MS) {
               const elapsedMs = now - startTime;
-              const progressPercent = (processedSegments / totalSegments) * 100;
+              // セグメント内進捗を含めた実効進捗を計算
+              const effectiveProgress =
+                processedSegments + currentSegmentProgress;
+              const progressPercent = (effectiveProgress / totalSegments) * 100;
               const estimatedRemainingMs =
-                processedSegments > 0
-                  ? (elapsedMs / processedSegments) *
-                    (totalSegments - processedSegments)
+                effectiveProgress > 0
+                  ? (elapsedMs / effectiveProgress) *
+                    (totalSegments - effectiveProgress)
                   : 0;
 
               const progress: IVBootTimingProgress = {
@@ -417,6 +427,8 @@ async function executeSearch(
           iterator.free?.();
         }
 
+        // セグメント完了時に進捗リセット
+        currentSegmentProgress = 0;
         processedSegments++;
       }
     }
