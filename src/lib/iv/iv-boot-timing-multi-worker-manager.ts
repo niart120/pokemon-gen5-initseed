@@ -135,10 +135,10 @@ export class IVBootTimingMultiWorkerManager {
         throw new Error('No valid chunks created for search');
       }
 
-      // 各チャンクに対してWorker初期化
-      for (const chunk of chunks) {
-        await this.initializeWorker(chunk, params);
-      }
+      // 全Workerを並列初期化（直列だと先に初期化したWorkerが先行してしまう）
+      await Promise.all(
+        chunks.map((chunk) => this.initializeWorker(chunk, params))
+      );
 
       // 進捗監視開始
       this.startProgressMonitoring();
