@@ -13,9 +13,7 @@ interface TimeDisplayProps {
   estimatedTimeRemaining: number;
   currentStep: number;
   totalSteps?: number;
-  /** 処理速度計算用の実効進捗（指定時はcurrentStepの代わりに使用） */
-  effectiveProgress?: number;
-  /** 処理速度計算用の処理済み秒数（最優先で使用） */
+  /** 処理速度計算用の処理済み秒数（指定時はcurrentStepの代わりに使用） */
   processedSeconds?: number;
 }
 
@@ -28,11 +26,10 @@ export function TimeDisplay({
   estimatedTimeRemaining, 
   currentStep, 
   totalSteps: _,
-  effectiveProgress,
   processedSeconds,
 }: TimeDisplayProps) {
-  // 処理速度計算：processedSeconds > effectiveProgress > currentStep の優先順
-  const progressForRate = processedSeconds ?? effectiveProgress ?? currentStep;
+  // 処理速度計算：processedSeconds があれば使用、なければ currentStep
+  const progressForRate = processedSeconds ?? currentStep;
   const processingRate = formatProcessingRate(progressForRate, elapsedTime);
   const locale = useLocale();
   const elapsedLabel = resolveLocaleValue(searchProgressTimeElapsedLabel, locale);

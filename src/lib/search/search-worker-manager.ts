@@ -350,7 +350,7 @@ export class SearchWorkerManager {
                 activeWorkers: progress.activeWorkers,
                 completedWorkers: progress.completedWorkers,
                 workerProgresses: progress.workerProgresses,
-                totalEffectiveProgress: progress.totalEffectiveProgress,
+                progressPercent: progress.progressPercent,
                 totalProcessedSeconds: progress.totalProcessedSeconds,
               };
               callbacks.onParallelProgress!(converted);

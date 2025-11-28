@@ -53,11 +53,10 @@ export function SearchProgressCard() {
   const baseEstimatedTimeRemaining = isParallelMode
     ? parallelData?.totalEstimatedTimeRemaining ?? 0
     : searchProgress.estimatedTimeRemaining;
-  // 進捗バー用：セグメント内進捗を含む実効進捗を使用（より細かく進む）
-  const effectiveProgressForBar = isParallelMode ? parallelData?.totalEffectiveProgress ?? 0 : searchProgress.currentStep;
-  // 処理速度計算用：処理済み秒数を優先、なければ実効進捗を使用
+  // 進捗バー用：秒数ベースの進捗パーセントを使用
+  const progressPercentForBar = isParallelMode ? parallelData?.progressPercent ?? 0 : 0;
+  // 処理速度計算用：処理済み秒数を使用
   const processedSecondsForSpeed = isParallelMode ? parallelData?.totalProcessedSeconds : undefined;
-  const effectiveProgressForSpeed = isParallelMode ? parallelData?.totalEffectiveProgress : undefined;
 
   const hasParallelProgress = isParallelMode && parallelData !== null;
   const hasNonParallelProgress = !isParallelMode
@@ -66,10 +65,12 @@ export function SearchProgressCard() {
   const showBaseProgress = isRunning || hasAnyProgress;
   const showReadyState = !isRunning && !hasAnyProgress;
 
-  // 進捗バー：effectiveProgressを使用してセグメント内進捗も反映
-  const progressPercent = baseTotalSteps > 0 ? Math.min(100, (effectiveProgressForBar / baseTotalSteps) * 100) : 0;
+  // 進捗バー：並列モードは秒数ベースのprogressPercent、それ以外はステップベース
+  const progressPercent = isParallelMode
+    ? progressPercentForBar
+    : (baseTotalSteps > 0 ? Math.min(100, (baseCurrentStep / baseTotalSteps) * 100) : 0);
   
-  // 起動したワーカー総数を基準にする（停止・完了含む）
+  // 起動したWorker総数を基準にする（停止・完了含む）
   const totalWorkerCount = parallelData?.workerProgresses?.size || 0;
 
   // ワーカー数に応じたレイアウト決定（モバイル考慮）
@@ -128,7 +129,6 @@ export function SearchProgressCard() {
               estimatedTimeRemaining={baseEstimatedTimeRemaining}
               currentStep={baseCurrentStep}
               totalSteps={baseTotalSteps}
-              effectiveProgress={effectiveProgressForSpeed}
               processedSeconds={processedSecondsForSpeed}
             />
             
@@ -248,7 +248,7 @@ export function SearchProgressCard() {
                                     {formatSearchProgressPercent(clampedPercent, locale, 0)}
                                   </span>
                                   <span className="font-mono">
-                                    {formatProcessingRate(progress.processedSeconds ?? progress.effectiveProgress ?? progress.currentStep, progress.elapsedTime)}
+                                    {formatProcessingRate(progress.processedSeconds ?? progress.currentStep, progress.elapsedTime)}
                                   </span>
                                 </div>
                               </div>

@@ -27,8 +27,8 @@ interface WorkerProgress {
   estimatedTimeRemaining: number;
   matchesFound: number;
   status: 'initializing' | 'running' | 'paused' | 'completed' | 'error';
-  /** 実効進捗（セグメント内進捗を含む） */
-  effectiveProgress: number;
+  /** 進捗パーセント（0-100） */
+  progressPercent: number;
   /** 処理済み秒数（処理速度計算用） */
   processedSeconds: number;
 }
@@ -45,8 +45,8 @@ export interface AggregatedIVBootTimingProgress {
   activeWorkers: number;
   completedWorkers: number;
   workerProgresses: Map<number, WorkerProgress>;
-  /** 全Worker合計の実効進捗 */
-  totalEffectiveProgress: number;
+  /** 全体の進捗パーセント（0-100、各Workerの平均） */
+  progressPercent: number;
   /** 全Worker合計の処理済み秒数（処理速度計算用） */
   totalProcessedSeconds: number;
 }
@@ -187,7 +187,7 @@ export class IVBootTimingMultiWorkerManager {
       estimatedTimeRemaining: 0,
       matchesFound: 0,
       status: 'initializing',
-      effectiveProgress: 0,
+      progressPercent: 0,
       processedSeconds: 0,
     });
 
@@ -280,9 +280,8 @@ export class IVBootTimingMultiWorkerManager {
     current.estimatedTimeRemaining = progressData.estimatedRemainingMs;
     current.matchesFound = progressData.foundCount;
     current.status = 'running';
-    // effectiveProgressがない場合はprocessedCombinationsを使用（後方互換性）
-    current.effectiveProgress =
-      progressData.effectiveProgress ?? progressData.processedCombinations;
+    // progressPercentがない場合は0を使用（後方互換性）
+    current.progressPercent = progressData.progressPercent ?? 0;
     // processedSecondsがない場合は0（後方互換性）
     current.processedSeconds = progressData.processedSeconds ?? 0;
 
@@ -308,10 +307,10 @@ export class IVBootTimingMultiWorkerManager {
       (sum, p) => sum + p.matchesFound,
       0
     );
-    const totalEffectiveProgress = progresses.reduce(
-      (sum, p) => sum + p.effectiveProgress,
-      0
-    );
+    // 各Workerの進捗パーセントの平均を計算
+    const progressPercent = progresses.length > 0
+      ? progresses.reduce((sum, p) => sum + p.progressPercent, 0) / progresses.length
+      : 0;
     const totalProcessedSeconds = progresses.reduce(
       (sum, p) => sum + p.processedSeconds,
       0
@@ -337,7 +336,7 @@ export class IVBootTimingMultiWorkerManager {
       activeWorkers,
       completedWorkers,
       workerProgresses: new Map(this.workerProgresses),
-      totalEffectiveProgress,
+      progressPercent,
       totalProcessedSeconds,
     };
 

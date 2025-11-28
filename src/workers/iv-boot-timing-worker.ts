@@ -295,6 +295,9 @@ async function executeSearch(
   const vcountCount = params.vcountRange.max - params.vcountRange.min + 1;
   const totalSegments = timer0Count * vcountCount * keyCodes.length;
 
+  // 総処理秒数（進捗計算用）: 全セグメント × 各セグメントの秒数
+  const totalSecondsToProcess = totalSegments * rangeSeconds;
+
   // イテレータパラメータ
   const RESULT_LIMIT = 4;
   const CHUNK_SECONDS = 3600 * 24 * 5; // 5日ずつ取得
@@ -302,6 +305,7 @@ async function executeSearch(
 
   let resultsCount = 0;
   let processedSegments = 0;
+  let totalProcessedSeconds = 0; // 累積処理済み秒数
   let lastProgressTime = startTime;
 
   // Target seeds を Uint32Array に変換
@@ -361,16 +365,15 @@ async function executeSearch(
 
         try {
           // イテレータループ（時刻方向）
-          // セグメント内進捗をTS側で計算（WASMプロパティアクセス回避）
-          let processedChunksInSegment = 0;
-          const chunksPerSegment = Math.ceil(rangeSeconds / CHUNK_SECONDS);
+          let processedSecondsInSegment = 0;
 
           while (!iterator.isFinished && resultsCount < params.maxResults) {
             if (state.stopRequested) break;
 
             const batchResults = iterator.next_batch(RESULT_LIMIT, CHUNK_SECONDS);
             const resultsArray = batchResults.to_array();
-            processedChunksInSegment++;
+            // 処理済み秒数を加算（最後のチャンクは端数になる可能性があるが、次セグメントでリセットされるので問題なし）
+            processedSecondsInSegment = Math.min(processedSecondsInSegment + CHUNK_SECONDS, rangeSeconds);
 
             // 結果をストリーミング送信
             if (resultsArray.length > 0) {
@@ -397,19 +400,17 @@ async function executeSearch(
             const now = performance.now();
             if (now - lastProgressTime >= PROGRESS_INTERVAL_MS) {
               const elapsedMs = now - startTime;
-              // セグメント内進捗をTS側で計算（WASMプロパティアクセス不要）
-              const segmentProgress = Math.min(1, processedChunksInSegment / chunksPerSegment);
-              // セグメント内進捗を含めた実効進捗を計算
-              const effectiveProgress = processedSegments + segmentProgress;
-              const progressPercent = (effectiveProgress / totalSegments) * 100;
+              // 現在の処理済み秒数（完了セグメント + 現在セグメント内）
+              const currentProcessedSeconds = totalProcessedSeconds + processedSecondsInSegment;
+              // 進捗パーセント（秒数ベース）
+              const progressPercent = totalSecondsToProcess > 0
+                ? (currentProcessedSeconds / totalSecondsToProcess) * 100
+                : 0;
               const estimatedRemainingMs =
-                effectiveProgress > 0
-                  ? (elapsedMs / effectiveProgress) *
-                    (totalSegments - effectiveProgress)
+                currentProcessedSeconds > 0
+                  ? (elapsedMs / currentProcessedSeconds) *
+                    (totalSecondsToProcess - currentProcessedSeconds)
                   : 0;
-
-              // 処理済み秒数を計算（処理速度表示用）
-              const processedSeconds = effectiveProgress * rangeSeconds;
 
               const progress: IVBootTimingProgress = {
                 processedCombinations: processedSegments,
@@ -418,20 +419,18 @@ async function executeSearch(
                 progressPercent,
                 elapsedMs,
                 estimatedRemainingMs,
-                effectiveProgress,
-                processedSeconds,
+                processedSeconds: currentProcessedSeconds,
               };
               post({ type: 'PROGRESS', payload: progress });
               lastProgressTime = now;
-
-              // イベントループに制御を戻す
-              await yieldToEventLoop();
             }
           }
         } finally {
           iterator.free?.();
         }
 
+        // セグメント完了時に累積秒数を更新
+        totalProcessedSeconds += rangeSeconds;
         processedSegments++;
       }
     }

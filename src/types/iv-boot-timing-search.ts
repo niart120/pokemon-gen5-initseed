@@ -195,14 +195,8 @@ export interface IVBootTimingProgress {
   estimatedRemainingMs: number;
 
   /**
-   * 実効進捗（セグメント内進捗を含む、セグメント単位）
-   * 進捗バー計算用。省略時は processedCombinations を使用。
-   */
-  effectiveProgress?: number;
-
-  /**
    * 処理済み秒数（検索範囲の秒数単位）
-   * 処理速度計算用。
+   * 処理速度計算・進捗表示用。
    */
   processedSeconds?: number;
 }
