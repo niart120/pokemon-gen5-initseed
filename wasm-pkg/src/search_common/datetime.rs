@@ -97,6 +97,41 @@ pub fn build_ranged_time_code_table(range: &TimeRangeParams, hardware: HardwareT
 // 日時コード列挙器
 // =============================================================================
 
+/// 日時コードバッチ（固定長配列 + 長さカウンタ）
+///
+/// Option を使用しない設計でパフォーマンスを最適化。
+#[derive(Debug)]
+pub struct DateTimeBatch {
+    entries: [DateTimeCode; 4],
+    len: u8,
+}
+
+/// ダミーのDateTimeCode（初期化用）
+const DUMMY_DATETIME_CODE: DateTimeCode = DateTimeCode {
+    date_code: 0,
+    time_code: 0,
+};
+
+impl DateTimeBatch {
+    /// バッチ内の有効エントリ数を取得
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.len as usize
+    }
+
+    /// バッチが空かどうかを確認
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    /// 有効エントリのスライスを取得
+    #[inline]
+    pub fn entries(&self) -> &[DateTimeCode] {
+        &self.entries[..self.len as usize]
+    }
+}
+
 /// 日時コード列挙器
 ///
 /// RangedTimeCodeTable を所有し、開始時刻から指定秒数分の DateTimeCode を
@@ -132,6 +167,51 @@ impl DateTimeCodeEnumerator {
     /// 処理済み秒数を取得（スキップ分含む）
     pub fn processed_seconds(&self) -> u32 {
         self.processed_seconds
+    }
+
+    /// バッチイテレータを取得（for文での利用向け）
+    ///
+    /// `for batch in enumerator.batches() { ... }` の形式で使用可能。
+    /// 各バッチは最大4エントリを含む。
+    pub fn batches(self) -> DateTimeBatchIterator {
+        DateTimeBatchIterator { inner: self }
+    }
+
+    /// 次のバッチを取得（内部用）
+    fn next_batch(&mut self) -> Option<DateTimeBatch> {
+        let mut batch = DateTimeBatch {
+            entries: [DUMMY_DATETIME_CODE; 4],
+            len: 0,
+        };
+
+        while batch.len < 4 {
+            if let Some(datetime_code) = self.next() {
+                batch.entries[batch.len as usize] = datetime_code;
+                batch.len += 1;
+            } else {
+                break;
+            }
+        }
+
+        if batch.len == 0 {
+            None
+        } else {
+            Some(batch)
+        }
+    }
+}
+
+/// バッチイテレータ（for文での利用向け）
+pub struct DateTimeBatchIterator {
+    inner: DateTimeCodeEnumerator,
+}
+
+impl Iterator for DateTimeBatchIterator {
+    type Item = DateTimeBatch;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next_batch()
     }
 }
 
@@ -399,5 +479,25 @@ mod tests {
         let seconds = datetime_to_seconds_since_2000(2024, 6, 15, 12, 30, 45).unwrap();
         let result = generate_display_datetime(seconds);
         assert_eq!(result, Some((2024, 6, 15, 12, 30, 45)));
+    }
+
+    #[test]
+    fn test_batch_iterator() {
+        // 全時間許可
+        let range = TimeRangeParams::new(0, 23, 0, 59, 0, 59).unwrap();
+        let table = build_ranged_time_code_table(&range, HardwareType::DS);
+
+        let enumerator = DateTimeCodeEnumerator::new(table, 0, 10);
+        
+        let mut total_entries = 0;
+        for batch in enumerator.batches() {
+            assert!(!batch.is_empty());
+            assert!(batch.len() <= 4);
+            for _entry in batch.entries() {
+                total_entries += 1;
+            }
+        }
+        
+        assert_eq!(total_entries, 10);
     }
 }

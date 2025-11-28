@@ -39,6 +39,7 @@ pub use params::{
 };
 
 // params モジュール（内部型 - テスト用にも公開）
+#[allow(unused_imports)]
 pub use params::{
     DSConfig, HardwareType, SearchRangeParams, SegmentParams, TimeRangeParams,
 };
@@ -47,9 +48,11 @@ pub use params::{
 pub use message::BaseMessageBuilder;
 
 // datetime モジュール
+#[allow(unused_imports)]
 pub use datetime::{
-    build_ranged_time_code_table, DisplayDateTime,
+    build_ranged_time_code_table, DateTimeBatch, DateTimeBatchIterator, DisplayDateTime,
 };
 
 // hash モジュール
-pub use hash::{HashEntry, HashValuesEnumerator};
+#[allow(unused_imports)]
+pub use hash::{HashBatch, HashBatchIterator, HashEntry, HashValuesEnumerator};

@@ -27,6 +27,39 @@ impl HashEntry {
 }
 
 // =============================================================================
+// ハッシュバッチ（Option排除版）
+// =============================================================================
+
+/// ハッシュ値バッチ（固定長配列 + 長さカウンタ）
+///
+/// Option を使用しない設計でパフォーマンスを最適化。
+#[derive(Debug)]
+pub struct HashBatch {
+    entries: [HashEntry; 4],
+    len: u8,
+}
+
+impl HashBatch {
+    /// バッチ内の有効エントリ数を取得
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.len as usize
+    }
+
+    /// バッチが空かどうかを確認
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    /// 有効エントリのスライスを取得
+    #[inline]
+    pub fn entries(&self) -> &[HashEntry] {
+        &self.entries[..self.len as usize]
+    }
+}
+
+// =============================================================================
 // ハッシュ値列挙器
 // =============================================================================
 
@@ -40,15 +73,34 @@ pub struct HashValuesEnumerator {
     base_message_builder: BaseMessageBuilder,
     datetime_enumerator: DateTimeCodeEnumerator,
 
-    // SIMD バッファ
+    // SIMD バッファ（Option排除版）
     message_buffer: [u32; 64], // 4メッセージ × 16ワード
-    datetime_buffer: [Option<DateTimeCode>; 4],
-    buffer_len: usize,
+    datetime_buffer: [DateTimeCode; 4],
+    buffer_len: u8,
 
-    // 出力バッファ（SIMDバッチ処理結果を保持）
-    output_buffer: [Option<HashEntry>; 4],
-    output_index: usize,
+    // 出力バッファ（Option排除版）
+    output_buffer: [HashEntry; 4],
+    output_len: u8,
+    output_index: u8,
 }
+
+/// ダミーのDateTimeCode（初期化用）
+const DUMMY_DATETIME_CODE: DateTimeCode = DateTimeCode {
+    date_code: 0,
+    time_code: 0,
+};
+
+/// ダミーのHashEntry（初期化用）
+const DUMMY_HASH_ENTRY: HashEntry = HashEntry {
+    hash: HashValues {
+        h0: 0,
+        h1: 0,
+        h2: 0,
+        h3: 0,
+        h4: 0,
+    },
+    datetime_code: DUMMY_DATETIME_CODE,
+};
 
 impl HashValuesEnumerator {
     /// 新規作成（所有権を受け取る）
@@ -66,9 +118,10 @@ impl HashValuesEnumerator {
                 range_seconds,
             ),
             message_buffer: [0u32; 64],
-            datetime_buffer: [None; 4],
+            datetime_buffer: [DUMMY_DATETIME_CODE; 4],
             buffer_len: 0,
-            output_buffer: [None; 4],
+            output_buffer: [DUMMY_HASH_ENTRY; 4],
+            output_len: 0,
             output_index: 0,
         }
     }
@@ -78,7 +131,7 @@ impl HashValuesEnumerator {
         self.datetime_enumerator.processed_seconds()
     }
 
-    /// SIMDバッチ処理を実行
+    /// SIMDバッチ処理を実行（Option排除版）
     fn process_simd_batch(&mut self) {
         if self.buffer_len == 0 {
             return;
@@ -89,30 +142,29 @@ impl HashValuesEnumerator {
             let hashes = calculate_pokemon_sha1_simd(&self.message_buffer);
 
             for i in 0..4 {
-                if let Some(datetime_code) = self.datetime_buffer[i] {
-                    let hash = HashValues::new(
-                        hashes[i * 5],
-                        hashes[i * 5 + 1],
-                        hashes[i * 5 + 2],
-                        hashes[i * 5 + 3],
-                        hashes[i * 5 + 4],
-                    );
-                    self.output_buffer[i] = Some(HashEntry::new(hash, datetime_code));
-                }
+                let hash = HashValues::new(
+                    hashes[i * 5],
+                    hashes[i * 5 + 1],
+                    hashes[i * 5 + 2],
+                    hashes[i * 5 + 3],
+                    hashes[i * 5 + 4],
+                );
+                self.output_buffer[i] = HashEntry::new(hash, self.datetime_buffer[i]);
             }
+            self.output_len = 4;
         } else {
             // 端数はスカラー処理
-            for i in 0..self.buffer_len {
-                if let Some(datetime_code) = self.datetime_buffer[i] {
-                    let offset = i * 16;
-                    let mut message = [0u32; 16];
-                    message.copy_from_slice(&self.message_buffer[offset..offset + 16]);
+            let len = self.buffer_len as usize;
+            for i in 0..len {
+                let offset = i * 16;
+                let mut message = [0u32; 16];
+                message.copy_from_slice(&self.message_buffer[offset..offset + 16]);
 
-                    let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(&message);
-                    let hash = HashValues::new(h0, h1, h2, h3, h4);
-                    self.output_buffer[i] = Some(HashEntry::new(hash, datetime_code));
-                }
+                let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(&message);
+                let hash = HashValues::new(h0, h1, h2, h3, h4);
+                self.output_buffer[i] = HashEntry::new(hash, self.datetime_buffer[i]);
             }
+            self.output_len = self.buffer_len;
         }
 
         self.output_index = 0;
@@ -126,14 +178,61 @@ impl HashValuesEnumerator {
                 .base_message_builder
                 .build_message(datetime_code.date_code, datetime_code.time_code);
 
-            let offset = self.buffer_len * 16;
+            let idx = self.buffer_len as usize;
+            let offset = idx * 16;
             self.message_buffer[offset..offset + 16].copy_from_slice(&message);
-            self.datetime_buffer[self.buffer_len] = Some(datetime_code);
+            self.datetime_buffer[idx] = datetime_code;
             self.buffer_len += 1;
             true
         } else {
             false
         }
+    }
+
+    /// バッチイテレータを取得（for文での利用向け）
+    ///
+    /// `for batch in enumerator.batches() { ... }` の形式で使用可能。
+    /// 各バッチは最大4エントリを含む。
+    pub fn batches(self) -> HashBatchIterator {
+        HashBatchIterator { inner: self }
+    }
+
+    /// 次のバッチを取得（内部用）
+    fn next_batch(&mut self) -> Option<HashBatch> {
+        // 新しいバッチを収集
+        self.buffer_len = 0;
+        while self.buffer_len < 4 {
+            if !self.buffer_next() {
+                break;
+            }
+        }
+
+        if self.buffer_len == 0 {
+            return None;
+        }
+
+        // バッチ処理実行
+        self.process_simd_batch();
+
+        // HashBatchを構築
+        Some(HashBatch {
+            entries: self.output_buffer,
+            len: self.output_len,
+        })
+    }
+}
+
+/// バッチイテレータ（for文での利用向け）
+pub struct HashBatchIterator {
+    inner: HashValuesEnumerator,
+}
+
+impl Iterator for HashBatchIterator {
+    type Item = HashBatch;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next_batch()
     }
 }
 
@@ -142,20 +241,14 @@ impl Iterator for HashValuesEnumerator {
 
     fn next(&mut self) -> Option<Self::Item> {
         // 出力バッファに残りがあれば返す
-        while self.output_index < 4 {
-            if let Some(entry) = self.output_buffer[self.output_index].take() {
-                self.output_index += 1;
-                return Some(entry);
-            }
+        if self.output_index < self.output_len {
+            let entry = self.output_buffer[self.output_index as usize];
             self.output_index += 1;
+            return Some(entry);
         }
 
-        // バッファをクリア
-        self.output_buffer = [None; 4];
-        self.datetime_buffer = [None; 4];
-        self.buffer_len = 0;
-
         // 新しいバッチを収集
+        self.buffer_len = 0;
         while self.buffer_len < 4 {
             if !self.buffer_next() {
                 break;
@@ -170,13 +263,10 @@ impl Iterator for HashValuesEnumerator {
         self.process_simd_batch();
 
         // 最初の結果を返す
-        self.output_index = 0;
-        while self.output_index < 4 {
-            if let Some(entry) = self.output_buffer[self.output_index].take() {
-                self.output_index += 1;
-                return Some(entry);
-            }
-            self.output_index += 1;
+        if self.output_len > 0 {
+            let entry = self.output_buffer[0];
+            self.output_index = 1;
+            return Some(entry);
         }
 
         None
@@ -273,6 +363,27 @@ mod tests {
 
         // MT Seed が計算できることを確認
         let mt_seed = entry.hash.to_mt_seed();
-        assert!(mt_seed >= 0); // 任意の値
+        // u32は常に0以上なので、値が取得できていることを確認
+        let _seed = mt_seed; // 値が取得できることを確認
+    }
+
+    #[test]
+    fn test_batch_iterator() {
+        let builder = create_test_builder();
+        let time_range = TimeRangeParams::new(0, 23, 0, 59, 0, 59).unwrap();
+        let table = build_ranged_time_code_table(&time_range, HardwareType::DS);
+
+        let enumerator = HashValuesEnumerator::new(builder, table, 0, 10);
+        
+        let mut total_entries = 0;
+        for batch in enumerator.batches() {
+            assert!(!batch.is_empty());
+            assert!(batch.len() <= 4);
+            for _entry in batch.entries() {
+                total_entries += 1;
+            }
+        }
+        
+        assert_eq!(total_entries, 10);
     }
 }
