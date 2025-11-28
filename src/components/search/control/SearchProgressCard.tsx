@@ -53,6 +53,8 @@ export function SearchProgressCard() {
   const baseEstimatedTimeRemaining = isParallelMode
     ? parallelData?.totalEstimatedTimeRemaining ?? 0
     : searchProgress.estimatedTimeRemaining;
+  // 進捗バー用：セグメント内進捗を含む実効進捗を使用（より細かく進む）
+  const effectiveProgressForBar = isParallelMode ? parallelData?.totalEffectiveProgress ?? 0 : searchProgress.currentStep;
   // 処理速度計算用：処理済み秒数を優先、なければ実効進捗を使用
   const processedSecondsForSpeed = isParallelMode ? parallelData?.totalProcessedSeconds : undefined;
   const effectiveProgressForSpeed = isParallelMode ? parallelData?.totalEffectiveProgress : undefined;
@@ -64,7 +66,8 @@ export function SearchProgressCard() {
   const showBaseProgress = isRunning || hasAnyProgress;
   const showReadyState = !isRunning && !hasAnyProgress;
 
-  const progressPercent = baseTotalSteps > 0 ? Math.min(100, (baseCurrentStep / baseTotalSteps) * 100) : 0;
+  // 進捗バー：effectiveProgressを使用してセグメント内進捗も反映
+  const progressPercent = baseTotalSteps > 0 ? Math.min(100, (effectiveProgressForBar / baseTotalSteps) * 100) : 0;
   
   // 起動したワーカー総数を基準にする（停止・完了含む）
   const totalWorkerCount = parallelData?.workerProgresses?.size || 0;
