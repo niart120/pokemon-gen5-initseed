@@ -304,9 +304,6 @@ async function executeSearch(
   let processedSegments = 0;
   let lastProgressTime = startTime;
 
-  // セグメント内進捗追跡（0.0〜1.0）
-  let currentSegmentProgress = 0;
-
   // Target seeds を Uint32Array に変換
   const targetSeedsArray = new Uint32Array(params.targetSeeds);
 
@@ -364,11 +361,16 @@ async function executeSearch(
 
         try {
           // イテレータループ（時刻方向）
+          // セグメント内進捗をTS側で計算（WASMプロパティアクセス回避）
+          let processedChunksInSegment = 0;
+          const chunksPerSegment = Math.ceil(rangeSeconds / CHUNK_SECONDS);
+
           while (!iterator.isFinished && resultsCount < params.maxResults) {
             if (state.stopRequested) break;
 
             const batchResults = iterator.next_batch(RESULT_LIMIT, CHUNK_SECONDS);
             const resultsArray = batchResults.to_array();
+            processedChunksInSegment++;
 
             // 結果をストリーミング送信
             if (resultsArray.length > 0) {
@@ -395,11 +397,10 @@ async function executeSearch(
             const now = performance.now();
             if (now - lastProgressTime >= PROGRESS_INTERVAL_MS) {
               const elapsedMs = now - startTime;
-              // 進捗報告時のみWASMプロパティにアクセス（毎バッチだとJS↔WASM境界オーバーヘッドが大きい）
-              currentSegmentProgress = iterator.progress;
+              // セグメント内進捗をTS側で計算（WASMプロパティアクセス不要）
+              const segmentProgress = Math.min(1, processedChunksInSegment / chunksPerSegment);
               // セグメント内進捗を含めた実効進捗を計算
-              const effectiveProgress =
-                processedSegments + currentSegmentProgress;
+              const effectiveProgress = processedSegments + segmentProgress;
               const progressPercent = (effectiveProgress / totalSegments) * 100;
               const estimatedRemainingMs =
                 effectiveProgress > 0
@@ -431,8 +432,6 @@ async function executeSearch(
           iterator.free?.();
         }
 
-        // セグメント完了時に進捗リセット
-        currentSegmentProgress = 0;
         processedSegments++;
       }
     }
