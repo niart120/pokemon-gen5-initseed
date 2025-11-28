@@ -351,6 +351,7 @@ export class SearchWorkerManager {
                 completedWorkers: progress.completedWorkers,
                 workerProgresses: progress.workerProgresses,
                 totalEffectiveProgress: progress.totalEffectiveProgress,
+                totalProcessedSeconds: progress.totalProcessedSeconds,
               };
               callbacks.onParallelProgress!(converted);
             } else {

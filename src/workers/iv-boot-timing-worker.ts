@@ -408,6 +408,9 @@ async function executeSearch(
                     (totalSegments - effectiveProgress)
                   : 0;
 
+              // 処理済み秒数を計算（処理速度表示用）
+              const processedSeconds = effectiveProgress * rangeSeconds;
+
               const progress: IVBootTimingProgress = {
                 processedCombinations: processedSegments,
                 totalCombinations: totalSegments,
@@ -416,6 +419,7 @@ async function executeSearch(
                 elapsedMs,
                 estimatedRemainingMs,
                 effectiveProgress,
+                processedSeconds,
               };
               post({ type: 'PROGRESS', payload: progress });
               lastProgressTime = now;

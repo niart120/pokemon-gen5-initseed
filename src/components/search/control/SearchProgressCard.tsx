@@ -53,7 +53,8 @@ export function SearchProgressCard() {
   const baseEstimatedTimeRemaining = isParallelMode
     ? parallelData?.totalEstimatedTimeRemaining ?? 0
     : searchProgress.estimatedTimeRemaining;
-  // 処理速度計算用の実効進捗（セグメント内進捗を含む）
+  // 処理速度計算用：処理済み秒数を優先、なければ実効進捗を使用
+  const processedSecondsForSpeed = isParallelMode ? parallelData?.totalProcessedSeconds : undefined;
   const effectiveProgressForSpeed = isParallelMode ? parallelData?.totalEffectiveProgress : undefined;
 
   const hasParallelProgress = isParallelMode && parallelData !== null;
@@ -125,6 +126,7 @@ export function SearchProgressCard() {
               currentStep={baseCurrentStep}
               totalSteps={baseTotalSteps}
               effectiveProgress={effectiveProgressForSpeed}
+              processedSeconds={processedSecondsForSpeed}
             />
             
             {/* 進捗・マッチ情報 - 直列時のみ表示 */}
@@ -243,7 +245,7 @@ export function SearchProgressCard() {
                                     {formatSearchProgressPercent(clampedPercent, locale, 0)}
                                   </span>
                                   <span className="font-mono">
-                                    {formatProcessingRate(progress.effectiveProgress ?? progress.currentStep, progress.elapsedTime)}
+                                    {formatProcessingRate(progress.processedSeconds ?? progress.effectiveProgress ?? progress.currentStep, progress.elapsedTime)}
                                   </span>
                                 </div>
                               </div>

@@ -27,6 +27,8 @@ export interface AggregatedProgress {
   workerProgresses: Map<number, WorkerProgress>;
   /** 全Worker合計の実効進捗（セグメント内進捗を含む） */
   totalEffectiveProgress?: number;
+  /** 全Worker合計の処理済み秒数（処理速度計算用） */
+  totalProcessedSeconds?: number;
 }
 
 export interface WorkerProgress {
@@ -40,6 +42,8 @@ export interface WorkerProgress {
   status: 'initializing' | 'running' | 'paused' | 'completed' | 'error';
   /** 実効進捗（セグメント内進捗を含む） */
   effectiveProgress?: number;
+  /** 処理済み秒数（処理速度計算用） */
+  processedSeconds?: number;
 }
 
 export interface ParallelWorkerRequest {

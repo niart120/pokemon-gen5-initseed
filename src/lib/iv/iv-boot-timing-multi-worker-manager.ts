@@ -29,6 +29,8 @@ interface WorkerProgress {
   status: 'initializing' | 'running' | 'paused' | 'completed' | 'error';
   /** 実効進捗（セグメント内進捗を含む） */
   effectiveProgress: number;
+  /** 処理済み秒数（処理速度計算用） */
+  processedSeconds: number;
 }
 
 /**
@@ -45,6 +47,8 @@ export interface AggregatedIVBootTimingProgress {
   workerProgresses: Map<number, WorkerProgress>;
   /** 全Worker合計の実効進捗 */
   totalEffectiveProgress: number;
+  /** 全Worker合計の処理済み秒数（処理速度計算用） */
+  totalProcessedSeconds: number;
 }
 
 /**
@@ -184,6 +188,7 @@ export class IVBootTimingMultiWorkerManager {
       matchesFound: 0,
       status: 'initializing',
       effectiveProgress: 0,
+      processedSeconds: 0,
     });
 
     // チャンク用パラメータを構築
@@ -278,6 +283,8 @@ export class IVBootTimingMultiWorkerManager {
     // effectiveProgressがない場合はprocessedCombinationsを使用（後方互換性）
     current.effectiveProgress =
       progressData.effectiveProgress ?? progressData.processedCombinations;
+    // processedSecondsがない場合は0（後方互換性）
+    current.processedSeconds = progressData.processedSeconds ?? 0;
 
     this.lastProgressCheck.set(workerId, Date.now());
   }
@@ -305,6 +312,10 @@ export class IVBootTimingMultiWorkerManager {
       (sum, p) => sum + p.effectiveProgress,
       0
     );
+    const totalProcessedSeconds = progresses.reduce(
+      (sum, p) => sum + p.processedSeconds,
+      0
+    );
 
     const activeWorkers = progresses.filter(
       (p) => p.status === 'running' || p.status === 'initializing'
@@ -327,6 +338,7 @@ export class IVBootTimingMultiWorkerManager {
       completedWorkers,
       workerProgresses: new Map(this.workerProgresses),
       totalEffectiveProgress,
+      totalProcessedSeconds,
     };
 
     this.callbacks.onProgress(aggregatedProgress);
