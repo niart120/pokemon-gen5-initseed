@@ -25,6 +25,8 @@ export interface AggregatedProgress {
   activeWorkers: number;
   completedWorkers: number;
   workerProgresses: Map<number, WorkerProgress>;
+  /** 全Worker合計の実効進捗（セグメント内進捗を含む） */
+  totalEffectiveProgress?: number;
 }
 
 export interface WorkerProgress {
@@ -36,6 +38,8 @@ export interface WorkerProgress {
   matchesFound: number;
   currentDateTime?: Date;
   status: 'initializing' | 'running' | 'paused' | 'completed' | 'error';
+  /** 実効進捗（セグメント内進捗を含む） */
+  effectiveProgress?: number;
 }
 
 export interface ParallelWorkerRequest {

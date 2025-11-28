@@ -297,7 +297,7 @@ async function executeSearch(
 
   // イテレータパラメータ
   const RESULT_LIMIT = 4;
-  const CHUNK_SECONDS = 3600 * 24 * 90; // 90日ずつ取得
+  const CHUNK_SECONDS = 3600 * 24 * 5; // 5日ずつ取得
   const PROGRESS_INTERVAL_MS = 500;
 
   let resultsCount = 0;
