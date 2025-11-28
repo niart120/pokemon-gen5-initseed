@@ -345,24 +345,19 @@ export class IVBootTimingMultiWorkerManager {
 
   /**
    * 残り時間推定
+   * 各Workerから報告された残り時間の最大値を使用
    */
   private calculateAggregatedTimeRemaining(
     progresses: WorkerProgress[]
   ): number {
     const activeProgresses = progresses.filter(
-      (p) => p.status === 'running' && p.currentStep > 0
+      (p) => p.status === 'running' && p.progressPercent > 0
     );
 
     if (activeProgresses.length === 0) return 0;
 
-    const remainingTimes = activeProgresses.map((p) => {
-      if (p.currentStep === 0) return 0;
-      const progressRatio = p.currentStep / p.totalSteps;
-      if (progressRatio === 0) return 0;
-      const estimatedTotalTime = p.elapsedTime / progressRatio;
-      return Math.max(0, estimatedTotalTime - p.elapsedTime);
-    });
-
+    // 各Workerの推定残り時間の最大値を使用
+    const remainingTimes = activeProgresses.map((p) => p.estimatedTimeRemaining);
     return Math.max(...remainingTimes);
   }
 
