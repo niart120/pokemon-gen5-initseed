@@ -176,7 +176,7 @@ export type IVBootTimingWorkerResponse =
  * 進捗情報
  */
 export interface IVBootTimingProgress {
-  /** 処理済み起動条件の組み合わせ数 */
+  /** 処理済み起動条件の組み合わせ数（完了セグメント数） */
   processedCombinations: number;
 
   /** 総組み合わせ数 */
@@ -193,6 +193,12 @@ export interface IVBootTimingProgress {
 
   /** 推定残り時間 (ms) */
   estimatedRemainingMs: number;
+
+  /**
+   * 実効進捗（セグメント内進捗を含む）
+   * 処理速度計算用。省略時は processedCombinations を使用。
+   */
+  effectiveProgress?: number;
 }
 
 /**

@@ -415,6 +415,7 @@ async function executeSearch(
                 progressPercent,
                 elapsedMs,
                 estimatedRemainingMs,
+                effectiveProgress,
               };
               post({ type: 'PROGRESS', payload: progress });
               lastProgressTime = now;
