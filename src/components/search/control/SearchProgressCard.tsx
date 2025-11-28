@@ -209,7 +209,8 @@ export function SearchProgressCard() {
                               'grid-cols-4'
                         }`}>
                           {Array.from(parallelData.workerProgresses.entries()).map(([workerId, progress]) => {
-                            const workerPercent = progress.totalSteps > 0 ? (progress.currentStep / progress.totalSteps) * 100 : 0;
+                            // progressPercentを使用（秒数ベース）、なければcurrentStep/totalStepsにフォールバック
+                            const workerPercent = progress.progressPercent ?? (progress.totalSteps > 0 ? (progress.currentStep / progress.totalSteps) * 100 : 0);
                             const clampedPercent = progress.status === 'completed' ? 100 : Math.min(100, workerPercent);
                             return (
                               <div
