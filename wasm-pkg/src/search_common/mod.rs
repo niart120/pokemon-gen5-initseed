@@ -50,7 +50,7 @@ pub use message::BaseMessageBuilder;
 // datetime モジュール
 #[allow(unused_imports)]
 pub use datetime::{
-    build_ranged_time_code_table, DateTimeBatch, DateTimeBatchIterator, DisplayDateTime,
+    build_ranged_time_code_table, DisplayDateTime,
 };
 
 // hash モジュール
