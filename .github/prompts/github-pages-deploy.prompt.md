@@ -12,7 +12,7 @@ agent: agent
 
 - 目的の操作を行える push 権限を持っていること。PR ベースであれば手動 or 自動 PR 作成に切替が必要。
 - 作業ブランチと `main` のワーキングツリーがクリーンであること。未コミット変更は `git status --porcelain` で確認し、必要なら `git stash` かコミット。
-- `npm ci` と `npm run build`/`npm run deploy` が通る Node.js 環境。
+- `npm run deploy` が通る Node.js 環境。
 
 ### 実行時のチェックリスト（Agent が順に確認）
 
@@ -22,8 +22,6 @@ agent: agent
 4. 作業ブランチに戻って `git merge --no-ff --no-edit <作業ブランチ>`（場合によっては `--no-commit` で事前確認）を実行し、競合があれば停止して一覧を報告。
 5. `main` 上で以下を実行（必要に応じてコマンドを調整）。失敗時はログと原因を含むエラーメッセージを返す。
    ```powershell
-   npm ci
-   npm run build
    npm run deploy
    ```
 6. `docs/` または `public/` の差分を確認し、存在すればコミット・push。例:
