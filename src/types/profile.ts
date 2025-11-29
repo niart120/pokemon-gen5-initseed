@@ -112,6 +112,8 @@ export function normalizeDraft(draft: DeviceProfileDraft): Omit<DeviceProfile, '
 }
 
 export function createDefaultDeviceProfile(): DeviceProfile {
+  // B版 JPN: Timer0=0xC79-0xC7A (3193-3194) の場合、VCount=0x60 (96) が正しい
+  // 参照: src/data/rom-parameters.ts の vcountTimerRanges
   return createDeviceProfile({
     name: 'Default Device',
     description: undefined,
@@ -120,7 +122,7 @@ export function createDefaultDeviceProfile(): DeviceProfile {
     hardware: 'DS',
     timer0Auto: true,
     timer0Range: { min: 3193, max: 3194 },
-    vcountRange: { min: 95, max: 95 },
+    vcountRange: { min: 96, max: 96 },
     macAddress: [0x00, 0x1B, 0x2C, 0x3D, 0x4E, 0x5F],
     tid: 1,
     sid: 2,

@@ -18,6 +18,43 @@ import type {
 import type { SingleWorkerSearchCallbacks } from '../../types/callbacks';
 import { useAppStore } from '@/store/app-store';
 import type { SearchExecutionMode } from '@/store/app-store';
+import { getVCountFromTimer0 } from '@/lib/utils/rom-parameter-helpers';
+
+/**
+ * Auto設定時にTimer0範囲から対応するVCount範囲を計算
+ * @param romVersion ROM version
+ * @param romRegion ROM region
+ * @param timer0Min Timer0 minimum
+ * @param timer0Max Timer0 maximum
+ * @returns VCount範囲 (min/max)
+ */
+function computeVCountRangeFromTimer0(
+  romVersion: string,
+  romRegion: string,
+  timer0Min: number,
+  timer0Max: number
+): { min: number; max: number } {
+  const vcountSet = new Set<number>();
+
+  // Timer0範囲内の全値についてVCountを取得
+  for (let timer0 = timer0Min; timer0 <= timer0Max; timer0++) {
+    const vcount = getVCountFromTimer0(romVersion, romRegion, timer0);
+    if (vcount !== null) {
+      vcountSet.add(vcount);
+    }
+  }
+
+  if (vcountSet.size === 0) {
+    // フォールバック: デフォルト値 0x60
+    return { min: 0x60, max: 0x60 };
+  }
+
+  const vcounts = Array.from(vcountSet);
+  return {
+    min: Math.min(...vcounts),
+    max: Math.max(...vcounts),
+  };
+}
 
 /**
  * SearchConditions を IVBootTimingSearchParams に変換
@@ -36,6 +73,20 @@ function convertToIVBootTimingSearchParams(
     conditions.macAddress[5] ?? 0,
   ];
 
+  // Auto設定時はROMパラメータからVCount範囲を計算
+  // GPU検索と同様の動作を保証する
+  const vcountRange = conditions.timer0VCountConfig.useAutoConfiguration
+    ? computeVCountRangeFromTimer0(
+        conditions.romVersion,
+        conditions.romRegion,
+        conditions.timer0VCountConfig.timer0Range.min,
+        conditions.timer0VCountConfig.timer0Range.max
+      )
+    : {
+        min: conditions.timer0VCountConfig.vcountRange.min,
+        max: conditions.timer0VCountConfig.vcountRange.max,
+      };
+
   return {
     dateRange: {
       startYear: conditions.dateRange.startYear,
@@ -49,10 +100,7 @@ function convertToIVBootTimingSearchParams(
       min: conditions.timer0VCountConfig.timer0Range.min,
       max: conditions.timer0VCountConfig.timer0Range.max,
     },
-    vcountRange: {
-      min: conditions.timer0VCountConfig.vcountRange.min,
-      max: conditions.timer0VCountConfig.vcountRange.max,
-    },
+    vcountRange,
     keyInputMask: conditions.keyInput,
     macAddress,
     hardware: conditions.hardware,
