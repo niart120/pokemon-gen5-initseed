@@ -6,7 +6,6 @@
 
 use super::datetime::{DateTimeCode, DateTimeCodeEnumerator, RangedTimeCodeTable};
 use super::message::{BaseMessageBuilder, HashValues};
-use crate::sha1::calculate_pokemon_sha1;
 use crate::sha1_simd::calculate_pokemon_sha1_simd;
 
 // =============================================================================
@@ -21,6 +20,7 @@ pub struct HashEntry {
 }
 
 impl HashEntry {
+    #[inline]
     pub fn new(hash: HashValues, datetime_code: DateTimeCode) -> Self {
         Self { hash, datetime_code }
     }
@@ -33,22 +33,11 @@ impl HashEntry {
 /// ハッシュ値列挙器
 ///
 /// BaseMessageBuilder と DateTimeCodeEnumerator を所有し、
-/// SHA-1ハッシュ値を順次生成する。
-/// SIMD最適化により4つずつバッチ処理を行う。
+/// SHA-1ハッシュ値を4件ずつ生成する。
+/// SIMD最適化により効率的なバッチ処理を行う。
 pub struct HashValuesEnumerator {
-    // 所有権を持つデータ（段階的所有権移譲）
     base_message_builder: BaseMessageBuilder,
     datetime_enumerator: DateTimeCodeEnumerator,
-
-    // SIMD バッファ（Option排除版）
-    message_buffer: [u32; 64], // 4メッセージ × 16ワード
-    datetime_buffer: [DateTimeCode; 4],
-    buffer_len: u8,
-
-    // 出力バッファ（Option排除版）
-    output_buffer: [HashEntry; 4],
-    output_len: u8,
-    output_index: u8,
 }
 
 /// ダミーのDateTimeCode（初期化用）
@@ -84,113 +73,58 @@ impl HashValuesEnumerator {
                 start_seconds,
                 range_seconds,
             ),
-            message_buffer: [0u32; 64],
-            datetime_buffer: [DUMMY_DATETIME_CODE; 4],
-            buffer_len: 0,
-            output_buffer: [DUMMY_HASH_ENTRY; 4],
-            output_len: 0,
-            output_index: 0,
         }
     }
 
     /// 処理済み秒数を取得（スキップ分含む）
+    #[inline]
     pub fn processed_seconds(&self) -> u32 {
         self.datetime_enumerator.processed_seconds()
     }
 
-    /// SIMDバッチ処理を実行（Option排除版）
-    fn process_simd_batch(&mut self) {
-        if self.buffer_len == 0 {
-            return;
+    /// 次の4件を取得（SIMD処理向け）
+    ///
+    /// 戻り値: (entries, len)
+    /// - entries: 4要素の配列（len未満のインデックスは無効値）
+    /// - len: 有効なエントリ数 (0-4)
+    ///
+    /// len == 0 の場合、列挙終了を意味する
+    pub fn next_quad(&mut self) -> ([HashEntry; 4], u8) {
+        let (datetime_entries, len) = self.datetime_enumerator.next_quad();
+        if len == 0 {
+            return ([DUMMY_HASH_ENTRY; 4], 0);
         }
 
-        if self.buffer_len == 4 {
-            // 4つ揃っている場合はSIMD処理
-            let hashes = calculate_pokemon_sha1_simd(&self.message_buffer);
+        // バッファをbase_messageで初期化（全スロット）
+        let mut message_buffer = [0u32; 64];
+        self.base_message_builder.init_message_buffer(&mut message_buffer);
 
-            for i in 0..4 {
-                let hash = HashValues::new(
-                    hashes[i * 5],
-                    hashes[i * 5 + 1],
-                    hashes[i * 5 + 2],
-                    hashes[i * 5 + 3],
-                    hashes[i * 5 + 4],
-                );
-                self.output_buffer[i] = HashEntry::new(hash, self.datetime_buffer[i]);
-            }
-            self.output_len = 4;
-        } else {
-            // 端数はスカラー処理
-            let len = self.buffer_len as usize;
-            for i in 0..len {
-                let offset = i * 16;
-                let mut message = [0u32; 16];
-                message.copy_from_slice(&self.message_buffer[offset..offset + 16]);
-
-                let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(&message);
-                let hash = HashValues::new(h0, h1, h2, h3, h4);
-                self.output_buffer[i] = HashEntry::new(hash, self.datetime_buffer[i]);
-            }
-            self.output_len = self.buffer_len;
+        // date/timeのみを書き込み（base_messageのコピーをスキップ）
+        for i in 0..len as usize {
+            let offset = i * 16;
+            self.base_message_builder.write_datetime_only(
+                datetime_entries[i].date_code,
+                datetime_entries[i].time_code,
+                &mut message_buffer[offset..offset + 16],
+            );
         }
 
-        self.output_index = 0;
-        self.buffer_len = 0;
-    }
+        let mut entries = [DUMMY_HASH_ENTRY; 4];
 
-    /// 次のDateTimeCodeをバッファに追加
-    fn buffer_next(&mut self) -> bool {
-        if let Some(datetime_code) = self.datetime_enumerator.next() {
-            let message = self
-                .base_message_builder
-                .build_message(datetime_code.date_code, datetime_code.time_code);
-
-            let idx = self.buffer_len as usize;
-            let offset = idx * 16;
-            self.message_buffer[offset..offset + 16].copy_from_slice(&message);
-            self.datetime_buffer[idx] = datetime_code;
-            self.buffer_len += 1;
-            true
-        } else {
-            false
-        }
-    }
-}
-
-impl Iterator for HashValuesEnumerator {
-    type Item = HashEntry;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        // 出力バッファに残りがあれば返す
-        if self.output_index < self.output_len {
-            let entry = self.output_buffer[self.output_index as usize];
-            self.output_index += 1;
-            return Some(entry);
+        // 常にSIMD処理（端数でも4件分計算し、必要な分だけ使用）
+        let hashes = calculate_pokemon_sha1_simd(&message_buffer);
+        for i in 0..len as usize {
+            let hash = HashValues::new(
+                hashes[i * 5],
+                hashes[i * 5 + 1],
+                hashes[i * 5 + 2],
+                hashes[i * 5 + 3],
+                hashes[i * 5 + 4],
+            );
+            entries[i] = HashEntry::new(hash, datetime_entries[i]);
         }
 
-        // 新しいバッチを収集
-        self.buffer_len = 0;
-        while self.buffer_len < 4 {
-            if !self.buffer_next() {
-                break;
-            }
-        }
-
-        if self.buffer_len == 0 {
-            return None;
-        }
-
-        // バッチ処理実行
-        self.process_simd_batch();
-
-        // 最初の結果を返す
-        if self.output_len > 0 {
-            let entry = self.output_buffer[0];
-            self.output_index = 1;
-            return Some(entry);
-        }
-
-        None
+        (entries, len)
     }
 }
 
@@ -220,14 +154,29 @@ mod tests {
         BaseMessageBuilder::from_params(&ds_config, &segment)
     }
 
+    /// next_quad で全件取得するヘルパー
+    fn collect_all(enumerator: &mut HashValuesEnumerator) -> Vec<HashEntry> {
+        let mut results = Vec::new();
+        loop {
+            let (entries, len) = enumerator.next_quad();
+            if len == 0 {
+                break;
+            }
+            for i in 0..len as usize {
+                results.push(entries[i]);
+            }
+        }
+        results
+    }
+
     #[test]
     fn test_hash_values_enumerator_basic() {
         let builder = create_test_builder();
         let time_range = TimeRangeParams::new(0, 0, 0, 0, 0, 2).unwrap();
         let table = build_ranged_time_code_table(&time_range, HardwareType::DS);
 
-        let enumerator = HashValuesEnumerator::new(builder, table, 0, 3);
-        let results: Vec<HashEntry> = enumerator.collect();
+        let mut enumerator = HashValuesEnumerator::new(builder, table, 0, 3);
+        let results = collect_all(&mut enumerator);
 
         assert_eq!(results.len(), 3);
 
@@ -247,8 +196,8 @@ mod tests {
         let time_range = TimeRangeParams::new(0, 23, 0, 59, 0, 59).unwrap();
         let table = build_ranged_time_code_table(&time_range, HardwareType::DS);
 
-        let enumerator = HashValuesEnumerator::new(builder, table, 0, 5);
-        let results: Vec<HashEntry> = enumerator.collect();
+        let mut enumerator = HashValuesEnumerator::new(builder, table, 0, 5);
+        let results = collect_all(&mut enumerator);
 
         assert_eq!(results.len(), 5);
     }
@@ -259,14 +208,14 @@ mod tests {
         let builder1 = create_test_builder();
         let time_range1 = TimeRangeParams::new(0, 0, 0, 0, 0, 0).unwrap();
         let table1 = build_ranged_time_code_table(&time_range1, HardwareType::DS);
-        let enumerator1 = HashValuesEnumerator::new(builder1, table1, 0, 1);
-        let results1: Vec<HashEntry> = enumerator1.collect();
+        let mut enumerator1 = HashValuesEnumerator::new(builder1, table1, 0, 1);
+        let results1 = collect_all(&mut enumerator1);
 
         let builder2 = create_test_builder();
         let time_range2 = TimeRangeParams::new(0, 0, 0, 0, 0, 0).unwrap();
         let table2 = build_ranged_time_code_table(&time_range2, HardwareType::DS);
-        let enumerator2 = HashValuesEnumerator::new(builder2, table2, 0, 1);
-        let results2: Vec<HashEntry> = enumerator2.collect();
+        let mut enumerator2 = HashValuesEnumerator::new(builder2, table2, 0, 1);
+        let results2 = collect_all(&mut enumerator2);
 
         assert_eq!(results1.len(), results2.len());
         assert_eq!(results1[0].hash.h0, results2[0].hash.h0);
@@ -280,11 +229,40 @@ mod tests {
         let table = build_ranged_time_code_table(&time_range, HardwareType::DS);
 
         let mut enumerator = HashValuesEnumerator::new(builder, table, 0, 1);
-        let entry = enumerator.next().unwrap();
+        let (entries, len) = enumerator.next_quad();
+        assert_eq!(len, 1);
 
         // MT Seed が計算できることを確認
-        let mt_seed = entry.hash.to_mt_seed();
-        // u32は常に0以上なので、値が取得できていることを確認
+        let mt_seed = entries[0].hash.to_mt_seed();
         let _seed = mt_seed; // 値が取得できることを確認
+    }
+
+    #[test]
+    fn test_next_quad_basic() {
+        let builder = create_test_builder();
+        let time_range = TimeRangeParams::new(0, 23, 0, 59, 0, 59).unwrap();
+        let table = build_ranged_time_code_table(&time_range, HardwareType::DS);
+
+        let mut enumerator = HashValuesEnumerator::new(builder, table, 0, 10);
+
+        // 最初の4件
+        let (entries1, len1) = enumerator.next_quad();
+        assert_eq!(len1, 4);
+
+        // 次の4件
+        let (entries2, len2) = enumerator.next_quad();
+        assert_eq!(len2, 4);
+
+        // 残り2件
+        let (entries3, len3) = enumerator.next_quad();
+        assert_eq!(len3, 2);
+
+        // 終了
+        let (_, len4) = enumerator.next_quad();
+        assert_eq!(len4, 0);
+
+        // エントリが異なることを確認
+        assert_ne!(entries1[0].hash.h0, entries2[0].hash.h0);
+        assert_ne!(entries2[0].hash.h0, entries3[0].hash.h0);
     }
 }

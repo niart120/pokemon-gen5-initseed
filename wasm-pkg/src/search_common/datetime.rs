@@ -33,6 +33,7 @@ pub struct DateTimeCode {
 }
 
 impl DateTimeCode {
+    #[inline]
     pub fn new(date_code: u32, time_code: u32) -> Self {
         Self { date_code, time_code }
     }
@@ -96,6 +97,13 @@ pub fn build_ranged_time_code_table(range: &TimeRangeParams, hardware: HardwareT
 // =============================================================================
 // 日時コード列挙器
 // =============================================================================
+
+/// ダミーのDateTimeCode（初期化用）
+const DUMMY_DATETIME_CODE: DateTimeCode = DateTimeCode {
+    date_code: 0,
+    time_code: 0,
+};
+
 /// 日時コード列挙器
 ///
 /// RangedTimeCodeTable を所有し、開始時刻から指定秒数分の DateTimeCode を
@@ -106,6 +114,10 @@ pub struct DateTimeCodeEnumerator {
     current_seconds: i64,
     end_seconds: i64,
     processed_seconds: u32,
+    // next() 用の内部バッファ
+    quad_buffer: [DateTimeCode; 4],
+    quad_len: u8,
+    quad_index: u8,
 }
 
 impl DateTimeCodeEnumerator {
@@ -125,21 +137,30 @@ impl DateTimeCodeEnumerator {
             current_seconds: start_seconds,
             end_seconds: start_seconds + range_seconds as i64,
             processed_seconds: 0,
+            quad_buffer: [DUMMY_DATETIME_CODE; 4],
+            quad_len: 0,
+            quad_index: 0,
         }
     }
 
     /// 処理済み秒数を取得（スキップ分含む）
+    #[inline]
     pub fn processed_seconds(&self) -> u32 {
         self.processed_seconds
     }
-}
 
+    /// 次の4件を取得（SIMD処理向け）
+    ///
+    /// 戻り値: (entries, len)
+    /// - entries: 4要素の配列（len未満のインデックスは無効値）
+    /// - len: 有効なエントリ数 (0-4)
+    ///
+    /// len == 0 の場合、列挙終了を意味する
+    pub fn next_quad(&mut self) -> ([DateTimeCode; 4], u8) {
+        let mut entries = [DUMMY_DATETIME_CODE; 4];
+        let mut len = 0u8;
 
-impl Iterator for DateTimeCodeEnumerator {
-    type Item = DateTimeCode;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        while self.current_seconds < self.end_seconds {
+        while len < 4 && self.current_seconds < self.end_seconds {
             let seconds = self.current_seconds;
             self.current_seconds += 1;
             self.processed_seconds += 1;
@@ -152,10 +173,38 @@ impl Iterator for DateTimeCodeEnumerator {
             if let Some(time_code) = self.time_code_table[second_of_day] {
                 let date_index = (seconds / SECONDS_PER_DAY) as u32;
                 let date_code = DateCodeGenerator::get_date_code(date_index);
-                return Some(DateTimeCode::new(date_code, time_code));
+                entries[len as usize] = DateTimeCode::new(date_code, time_code);
+                len += 1;
             }
         }
-        None
+
+        (entries, len)
+    }
+}
+
+
+impl Iterator for DateTimeCodeEnumerator {
+    type Item = DateTimeCode;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // バッファに残りがあれば返す
+        if self.quad_index < self.quad_len {
+            let entry = self.quad_buffer[self.quad_index as usize];
+            self.quad_index += 1;
+            return Some(entry);
+        }
+
+        // バッファが空なので next_quad で補充
+        let (entries, len) = self.next_quad();
+        if len == 0 {
+            return None;
+        }
+
+        self.quad_buffer = entries;
+        self.quad_len = len;
+        self.quad_index = 1; // 0番目は今から返す
+
+        Some(entries[0])
     }
 }
 

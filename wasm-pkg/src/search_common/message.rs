@@ -129,6 +129,18 @@ impl BaseMessageBuilder {
         &self.base_message
     }
 
+    /// 4組分のメッセージバッファをbase_messageで初期化
+    ///
+    /// SIMD処理前に1回だけ呼び出し、その後は`write_datetime_only`で
+    /// date/timeのみを書き換えることで、不要なコピーを削減する。
+    #[inline(always)]
+    pub fn init_message_buffer(&self, buffer: &mut [u32; 64]) {
+        buffer[0..16].copy_from_slice(&self.base_message);
+        buffer[16..32].copy_from_slice(&self.base_message);
+        buffer[32..48].copy_from_slice(&self.base_message);
+        buffer[48..64].copy_from_slice(&self.base_message);
+    }
+
     /// 日時コードを適用したメッセージを構築
     #[inline(always)]
     pub fn build_message(&self, date_code: u32, time_code: u32) -> [u32; 16] {
@@ -136,6 +148,17 @@ impl BaseMessageBuilder {
         message[8] = date_code;
         message[9] = time_code;
         message
+    }
+
+    /// バッファの指定位置にdate/timeのみを書き込む
+    ///
+    /// `init_message_buffer`で事前初期化されたバッファに対して使用する。
+    /// base_messageのコピーをスキップし、date/timeのみを書き換える。
+    #[inline(always)]
+    pub fn write_datetime_only(&self, date_code: u32, time_code: u32, dest: &mut [u32]) {
+        debug_assert!(dest.len() >= 16, "destination buffer must be at least 16 elements");
+        dest[8] = date_code;
+        dest[9] = time_code;
     }
 }
 
@@ -154,6 +177,7 @@ pub struct HashValues {
 }
 
 impl HashValues {
+    #[inline]
     pub fn new(h0: u32, h1: u32, h2: u32, h3: u32, h4: u32) -> Self {
         Self { h0, h1, h2, h3, h4 }
     }

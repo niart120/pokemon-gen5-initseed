@@ -364,13 +364,23 @@ impl EggBootTimingSearchIterator {
         let initial_processed = self.hash_enumerator.processed_seconds();
         let target_processed = initial_processed + chunk_seconds;
 
-        // HashValuesEnumeratorからハッシュ値を取得して個体列挙
-        while let Some(entry) = self.hash_enumerator.next() {
-            let lcg_seed = entry.hash.to_lcg_seed();
-            let display = entry.datetime_code.to_display_datetime();
+        // HashValuesEnumeratorからハッシュ値を4件ずつ取得して個体列挙
+        loop {
+            let (entries, len) = self.hash_enumerator.next_quad();
+            if len == 0 {
+                break;
+            }
 
-            self.enumerate_eggs_for_seed(lcg_seed, &display, &mut results, result_limit);
+            // 同一バッチ内のエントリはすべて処理（境界での取りこぼし防止）
+            for i in 0..len as usize {
+                let entry = &entries[i];
+                let lcg_seed = entry.hash.to_lcg_seed();
+                let display = entry.datetime_code.to_display_datetime();
 
+                self.enumerate_eggs_for_seed(lcg_seed, &display, &mut results, result_limit);
+            }
+
+            // result_limit到達チェック（バッチ処理完了後）
             if results.len() >= result_limit {
                 break;
             }

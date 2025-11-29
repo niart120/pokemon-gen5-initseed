@@ -19,7 +19,7 @@ use crate::search_common::{
     build_ranged_time_code_table, BaseMessageBuilder, DSConfigJs, HashEntry, HashValuesEnumerator,
     SearchRangeParamsJs, SegmentParamsJs, TimeRangeParamsJs,
 };
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use wasm_bindgen::prelude::*;
 
 // =============================================================================
@@ -183,7 +183,7 @@ pub struct IVBootTimingSearchIterator {
     key_code: u32,
 
     // 検索条件（複数Seed対応）
-    target_seeds: HashSet<u32>,
+    target_seeds: BTreeSet<u32>,
 
     // 検索範囲
     range_seconds: u32,
@@ -232,8 +232,8 @@ impl IVBootTimingSearchIterator {
         let start_seconds = search_range.start_seconds_since_2000();
         let range_seconds = search_range.range_seconds();
 
-        // target_seedsをHashSetに変換（高速な検索のため）
-        let target_seeds_set: HashSet<u32> = target_seeds.iter().copied().collect();
+        // target_seedsをBTreeSetに変換（高速な検索のため）
+        let target_seeds_set: BTreeSet<u32> = target_seeds.iter().copied().collect();
 
         // HashValuesEnumerator構築
         let hash_enumerator =
@@ -296,16 +296,27 @@ impl IVBootTimingSearchIterator {
         let initial_processed = self.hash_enumerator.processed_seconds();
         let target_processed = initial_processed + chunk_seconds;
 
-        // HashValuesEnumeratorからハッシュ値を取得して検証
-        while let Some(entry) = self.hash_enumerator.next() {
-            // MT Seed を計算してターゲットと照合
-            let mt_seed = entry.hash.to_mt_seed();
+        // HashValuesEnumeratorからハッシュ値を4件ずつ取得して検証
+        loop {
+            let (entries, len) = self.hash_enumerator.next_quad();
+            if len == 0 {
+                break;
+            }
 
-            if self.target_seeds.contains(&mt_seed) {
-                results.push(self.create_result(&entry));
-                if results.len() >= max_results as usize {
-                    break;
+            // 同一バッチ内のエントリはすべて処理（境界での取りこぼし防止）
+            for i in 0..len as usize {
+                let entry = &entries[i];
+                // MT Seed を計算してターゲットと照合
+                let mt_seed = entry.hash.to_mt_seed();
+
+                if self.target_seeds.contains(&mt_seed) {
+                    results.push(self.create_result(entry));
                 }
+            }
+
+            // max_results到達チェック（バッチ処理完了後）
+            if results.len() >= max_results as usize {
+                break;
             }
 
             // チャンク処理制限
