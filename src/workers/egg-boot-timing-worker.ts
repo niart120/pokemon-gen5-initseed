@@ -570,8 +570,6 @@ async function executeSearch(
               post({ type: 'PROGRESS', payload: progress });
               lastProgressTime = now;
 
-              // イベントループに制御を戻してSTOPメッセージを受け取れるようにする
-              await yieldToEventLoop();
             }
           }
         } finally {
