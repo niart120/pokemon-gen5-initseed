@@ -7,7 +7,6 @@
 import type { SearchConditions, InitialSeedResult } from '../../types/search';
 import type { AggregatedProgress } from '../../types/parallel';
 import type { WorkerRequest, WorkerResponse } from '@/types/worker';
-import { MultiWorkerSearchManager } from './multi-worker-manager';
 import {
   IVBootTimingMultiWorkerManager,
   type AggregatedIVBootTimingProgress,
@@ -79,7 +78,6 @@ export type IVBootTimingSearchCallbacks = SingleWorkerSearchCallbacks<IVBootTimi
 export class SearchWorkerManager {
   private gpuWorker: Worker | null = null;
   private callbacks: SearchCallbacks | null = null;
-  private multiWorkerManager: MultiWorkerSearchManager | null = null;
   private ivBootTimingManager: IVBootTimingMultiWorkerManager | null = null;
   private activeMode: 'cpu-parallel' | 'gpu' | 'iv-boot-timing' = 'cpu-parallel';
   private lastRequest: { conditions: SearchConditions; targetSeeds: number[] } | null = null;
@@ -206,101 +204,10 @@ export class SearchWorkerManager {
     console.warn('CPU search fallback activated after WebGPU failure.');
   }
 
+  /**
+   * CPU並列検索（IVBootTimingMultiWorkerManager使用）
+   */
   private startCpuSearchInternal(
-    conditions: SearchConditions,
-    targetSeeds: number[],
-    callbacks: SearchCallbacks
-  ): boolean {
-    if (!this.isParallelSearchAvailable()) {
-      callbacks.onError('Parallel CPU search is not available in this environment.');
-      return false;
-    }
-
-    return this.startParallelSearch(conditions, targetSeeds, callbacks);
-  }
-
-  private tryStartGpuSearch(
-    conditions: SearchConditions,
-    targetSeeds: number[]
-  ): boolean {
-    this.initializeGpuWorker();
-
-    if (!this.gpuWorker) {
-      return false;
-    }
-
-    const request: WorkerRequest = {
-      type: 'START_SEARCH',
-      conditions,
-      targetSeeds
-    };
-
-    try {
-      this.gpuWorker.postMessage(request);
-      this.activeMode = 'gpu';
-      return true;
-    } catch (error) {
-      console.error('Failed to start WebGPU search worker:', error);
-      return false;
-    }
-  }
-
-  public startSearch(
-    conditions: SearchConditions,
-    targetSeeds: number[],
-    callbacks: SearchCallbacks
-  ): boolean {
-    this.callbacks = callbacks;
-
-    const normalizedTargetSeeds = this.normalizeTargetSeeds(targetSeeds);
-    if (normalizedTargetSeeds.length === 0) {
-      const errorMessage = 'Target seed list is empty or invalid. Please configure at least one seed before starting the search.';
-      console.error(errorMessage, { targetSeeds });
-      this.callbacks.onError(errorMessage);
-      return false;
-    }
-
-    this.lastRequest = {
-      conditions,
-      targetSeeds: [...normalizedTargetSeeds],
-    };
-
-    // モード判定
-    const executionMode = this.getCurrentExecutionMode();
-
-    // WebGPU モード
-    if (executionMode === 'gpu') {
-      const gpuStarted = this.tryStartGpuSearch(conditions, normalizedTargetSeeds);
-      if (gpuStarted) {
-        return true;
-      }
-      console.warn('WebGPU search could not be started. Falling back to CPU mode.');
-    }
-
-    // 新規実装 (cpu-parallel-new) モード
-    if (executionMode === 'cpu-parallel-new') {
-      return this.startCpuSearchNewInternal(conditions, normalizedTargetSeeds, callbacks);
-    }
-
-    // 既存実装 (cpu-parallel) モード
-    return this.startCpuSearchInternal(conditions, normalizedTargetSeeds, callbacks);
-  }
-
-  /**
-   * 現在の実行モードを取得
-   */
-  private getCurrentExecutionMode(): SearchExecutionMode {
-    try {
-      return useAppStore.getState().searchExecutionMode;
-    } catch {
-      return 'cpu-parallel';
-    }
-  }
-
-  /**
-   * 新規CPU並列検索（IVBootTimingMultiWorkerManager使用）
-   */
-  private startCpuSearchNewInternal(
     conditions: SearchConditions,
     targetSeeds: number[],
     callbacks: SearchCallbacks
@@ -364,72 +271,76 @@ export class SearchWorkerManager {
     return this.startIVBootTimingSearch(ivParams, ivCallbacks);
   }
 
-  /**
-   * 並列検索開始
-   */
-  private startParallelSearch(
+  private tryStartGpuSearch(
+    conditions: SearchConditions,
+    targetSeeds: number[]
+  ): boolean {
+    this.initializeGpuWorker();
+
+    if (!this.gpuWorker) {
+      return false;
+    }
+
+    const request: WorkerRequest = {
+      type: 'START_SEARCH',
+      conditions,
+      targetSeeds
+    };
+
+    try {
+      this.gpuWorker.postMessage(request);
+      this.activeMode = 'gpu';
+      return true;
+    } catch (error) {
+      console.error('Failed to start WebGPU search worker:', error);
+      return false;
+    }
+  }
+
+  public startSearch(
     conditions: SearchConditions,
     targetSeeds: number[],
     callbacks: SearchCallbacks
   ): boolean {
-    try {
-      if (!this.multiWorkerManager) {
-        this.multiWorkerManager = new MultiWorkerSearchManager();
-      }
+    this.callbacks = callbacks;
 
-      // アプリストアから現在のワーカー数設定を取得
-      // 注意: ここでは直接importを避けて、公開APIを使用
-      const currentMaxWorkers = this.getMaxWorkers();
-      this.multiWorkerManager.setMaxWorkers(currentMaxWorkers);
-
-      // 📝 Note: MultiWorkerSearchManager.startParallelSearch()内で
-      // safeCleanup()が自動実行されるため、ここでの明示的な呼び出しは不要
-
-      // 並列検索用のコールバック変換
-      const parallelCallbacks = {
-        onProgress: (aggregatedProgress: AggregatedProgress) => {
-          // 既存の進捗フォーマットに変換
-          callbacks.onProgress({
-            currentStep: aggregatedProgress.totalCurrentStep,
-            totalSteps: aggregatedProgress.totalSteps,
-            elapsedTime: aggregatedProgress.totalElapsedTime,
-            estimatedTimeRemaining: aggregatedProgress.totalEstimatedTimeRemaining,
-            matchesFound: aggregatedProgress.totalMatchesFound
-          });
-
-          // 並列進捗情報も送信（利用可能な場合）
-          if (callbacks.onParallelProgress) {
-            callbacks.onParallelProgress(aggregatedProgress);
-          }
-        },
-        onResult: callbacks.onResult,
-        onComplete: (message: string) => {
-          // 並列進捗は保持（統計表示のため）
-          // if (callbacks.onParallelProgress) {
-          //   callbacks.onParallelProgress(null);
-          // }
-          callbacks.onComplete(message);
-        },
-        onError: (error: string) => {
-          // エラー時は進捗をクリア（不正な状態を避けるため）
-          if (callbacks.onParallelProgress) {
-            callbacks.onParallelProgress(null);
-          }
-          callbacks.onError(error);
-        },
-        onPaused: callbacks.onPaused,
-        onResumed: callbacks.onResumed,
-        onStopped: callbacks.onStopped
-      };
-
-      this.multiWorkerManager.startParallelSearch(conditions, targetSeeds, parallelCallbacks);
-      this.activeMode = 'cpu-parallel';
-      return true;
-
-    } catch (error) {
-      console.error('Failed to start parallel search:', error);
-      callbacks.onError('Failed to start parallel search.');
+    const normalizedTargetSeeds = this.normalizeTargetSeeds(targetSeeds);
+    if (normalizedTargetSeeds.length === 0) {
+      const errorMessage = 'Target seed list is empty or invalid. Please configure at least one seed before starting the search.';
+      console.error(errorMessage, { targetSeeds });
+      this.callbacks.onError(errorMessage);
       return false;
+    }
+
+    this.lastRequest = {
+      conditions,
+      targetSeeds: [...normalizedTargetSeeds],
+    };
+
+    // モード判定
+    const executionMode = this.getCurrentExecutionMode();
+
+    // WebGPU モード
+    if (executionMode === 'gpu') {
+      const gpuStarted = this.tryStartGpuSearch(conditions, normalizedTargetSeeds);
+      if (gpuStarted) {
+        return true;
+      }
+      console.warn('WebGPU search could not be started. Falling back to CPU mode.');
+    }
+
+    // CPU並列検索モード
+    return this.startCpuSearchInternal(conditions, normalizedTargetSeeds, callbacks);
+  }
+
+  /**
+   * 現在の実行モードを取得
+   */
+  private getCurrentExecutionMode(): SearchExecutionMode {
+    try {
+      return useAppStore.getState().searchExecutionMode;
+    } catch {
+      return 'cpu-parallel';
     }
   }
 
@@ -494,13 +405,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (this.activeMode === 'iv-boot-timing' && this.ivBootTimingManager) {
+    if (this.ivBootTimingManager) {
       this.ivBootTimingManager.pauseAll();
-      return;
-    }
-
-    if (this.multiWorkerManager) {
-      this.multiWorkerManager.pauseAll();
     }
   }
 
@@ -511,13 +417,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (this.activeMode === 'iv-boot-timing' && this.ivBootTimingManager) {
+    if (this.ivBootTimingManager) {
       this.ivBootTimingManager.resumeAll();
-      return;
-    }
-
-    if (this.multiWorkerManager) {
-      this.multiWorkerManager.resumeAll();
     }
   }
 
@@ -528,13 +429,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (this.activeMode === 'iv-boot-timing' && this.ivBootTimingManager) {
+    if (this.ivBootTimingManager) {
       this.ivBootTimingManager.terminateAll();
-      return;
-    }
-
-    if (this.multiWorkerManager) {
-      this.multiWorkerManager.terminateAll();
     }
   }
 
@@ -542,20 +438,20 @@ export class SearchWorkerManager {
    * ワーカー数設定
    */
   public setMaxWorkers(count: number): void {
-    if (!this.multiWorkerManager) {
-      this.multiWorkerManager = new MultiWorkerSearchManager();
+    if (!this.ivBootTimingManager) {
+      this.ivBootTimingManager = new IVBootTimingMultiWorkerManager();
     }
-    this.multiWorkerManager.setMaxWorkers(count);
+    this.ivBootTimingManager.setMaxWorkers(count);
   }
 
   /**
    * 現在のワーカー数設定を取得
    */
   public getMaxWorkers(): number {
-    if (!this.multiWorkerManager) {
+    if (!this.ivBootTimingManager) {
       return navigator.hardwareConcurrency || 4;
     }
-    return this.multiWorkerManager.getMaxWorkers();
+    return this.ivBootTimingManager.getMaxWorkers();
   }
 
   /**
@@ -566,11 +462,6 @@ export class SearchWorkerManager {
   }
 
   public terminate() {
-    if (this.multiWorkerManager) {
-      this.multiWorkerManager.terminateAll();
-      this.multiWorkerManager = null;
-    }
-
     if (this.ivBootTimingManager) {
       this.ivBootTimingManager.terminateAll();
       this.ivBootTimingManager = null;

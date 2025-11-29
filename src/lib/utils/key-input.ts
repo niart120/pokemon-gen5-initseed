@@ -114,8 +114,18 @@ export function keyCodeToNames(keyCode: number): KeyName[] {
   return collectKeyNames(normalizedMask);
 }
 
-export function countValidKeyCombinations(mask: number): number {
-  const normalized = toMask(mask, 'mask');
+/**
+ * キーマスクから有効なキーコードの配列を生成する
+ *
+ * keyInputMaskで指定されたキーの全べき集合組み合わせを列挙し、
+ * 不可能なキー組み合わせ（上下同時押し等）を除外した上で、
+ * 各組み合わせを 0x2FFF とXORしたキーコードを返す。
+ *
+ * @param keyInputMask 有効なキーのビットマスク（押す可能性のあるキー）
+ * @returns 有効なキーコードの配列
+ */
+export function generateValidKeyCodes(keyInputMask: number): number[] {
+  const normalized = toMask(keyInputMask, 'mask');
   const enabledBits: number[] = [];
   for (let bit = 0; bit < KEY_BIT_COUNT; bit += 1) {
     if ((normalized & (1 << bit)) !== 0) {
@@ -123,22 +133,28 @@ export function countValidKeyCombinations(mask: number): number {
     }
   }
 
+  const keyCodes: number[] = [];
   const totalCombinations = 1 << enabledBits.length;
-  let validCount = 0;
 
   for (let combinationIndex = 0; combinationIndex < totalCombinations; combinationIndex += 1) {
-    let combinationMask = 0;
+    let pressedMask = 0;
     for (let bitIndex = 0; bitIndex < enabledBits.length; bitIndex += 1) {
       if ((combinationIndex & (1 << bitIndex)) !== 0) {
-        combinationMask |= 1 << enabledBits[bitIndex]!;
+        pressedMask |= 1 << enabledBits[bitIndex]!;
       }
     }
 
-    if (hasImpossibleKeyCombination(combinationMask)) {
+    if (hasImpossibleKeyCombination(pressedMask)) {
       continue;
     }
-    validCount += 1;
+
+    keyCodes.push((pressedMask ^ KEY_CODE_BASE) >>> 0);
   }
 
-  return validCount > 0 ? validCount : 1;
+  return keyCodes;
+}
+
+export function countValidKeyCombinations(mask: number): number {
+  const count = generateValidKeyCodes(mask).length;
+  return count > 0 ? count : 1;
 }

@@ -43,7 +43,7 @@ export function SearchProgressCard() {
   // const sizes = getResponsiveSizes(uiScale);
   const locale = useLocale();
 
-  const isParallelMode = searchExecutionMode === 'cpu-parallel' || searchExecutionMode === 'cpu-parallel-new';
+  const isParallelMode = searchExecutionMode === 'cpu-parallel';
   const isRunning = searchProgress.isRunning;
   const parallelData = parallelProgress ?? null;
 

@@ -14,7 +14,6 @@
 //! 4. `is_finished` で完了判定
 //!
 //! ## 公開API
-//! - `generate_egg_key_codes(key_input_mask)`: キーコード一覧を取得
 //! - `EggBootTimingSearchIterator`: 単一セグメントの検索イテレータ
 
 use crate::egg_iv::{
@@ -22,22 +21,12 @@ use crate::egg_iv::{
     IndividualFilterJs,
 };
 use crate::egg_seed_enumerator::{EggSeedEnumerator, ParentsIVs, ParentsIVsJs};
-use crate::integrated_search::generate_key_codes;
 use crate::offset_calculator::GameMode;
 use crate::search_common::{
     build_ranged_time_code_table, BaseMessageBuilder, HashValuesEnumerator,
     DSConfigJs, SearchRangeParamsJs, SegmentParamsJs, TimeRangeParamsJs,
 };
 use wasm_bindgen::prelude::*;
-
-/// キー入力マスクから有効なキーコード一覧を生成
-///
-/// TypeScript側でセグメントループを構築する際に使用。
-/// 各キーコードに対して、対応するEggBootTimingSearchIteratorを作成する。
-#[wasm_bindgen]
-pub fn generate_egg_key_codes(key_input_mask: u32) -> Vec<u32> {
-    generate_key_codes(key_input_mask)
-}
 
 /// 検索結果1件（起動条件 + 個体情報）
 #[wasm_bindgen]
@@ -480,7 +469,6 @@ impl EggBootTimingSearchIterator {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::search_common::{
         build_ranged_time_code_table, HardwareType, TimeRangeParams, EPOCH_2000_UNIX, SECONDS_PER_DAY,
     };
@@ -553,22 +541,6 @@ mod tests {
         // 7日間で許可される総秒数
         let total_allowed_in_7_days = allowed_seconds_per_day * 7;
         assert_eq!(total_allowed_in_7_days, 75600);
-    }
-
-    /// キーコード生成のテスト
-    #[test]
-    fn test_key_code_generation_for_search() {
-        // キー入力なし
-        let codes_no_key = generate_key_codes(0);
-        assert!(!codes_no_key.is_empty());
-
-        // Aボタンのみ
-        let codes_a_only = generate_key_codes(0x0001);
-        assert!(codes_a_only.len() >= 2); // Aなし + Aあり
-
-        // 複数キー
-        let codes_multi = generate_key_codes(0x0003); // A + B
-        assert!(codes_multi.len() >= 4); // 2^2の組み合わせ
     }
 
     /// 時刻範囲マスクのテスト（分・秒に制約がある場合）

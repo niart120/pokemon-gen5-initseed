@@ -21,7 +21,7 @@ import {
   type TimeRangeParamsJs,
   type SearchRangeParamsJs,
 } from '@/lib/core/wasm-interface';
-import { keyCodeToNames } from '@/lib/utils/key-input';
+import { keyCodeToNames, generateValidKeyCodes } from '@/lib/utils/key-input';
 import romParameters from '@/data/rom-parameters';
 
 interface InternalState {
@@ -394,17 +394,12 @@ async function executeSearch(
   if (!wasmAny.EggBootTimingSearchIterator) {
     throw new Error('EggBootTimingSearchIterator not exposed in WASM');
   }
-  if (!wasmAny.generate_egg_key_codes) {
-    throw new Error('generate_egg_key_codes not exposed in WASM');
-  }
 
   // nazo値を解決
   const nazo = resolveNazoValue(params.romVersion, params.romRegion);
 
-  // キーコード一覧を生成
-  const keyCodes: number[] = Array.from(
-    wasmAny.generate_egg_key_codes(params.keyInputMask)
-  );
+  // キーコード一覧を生成（TS実装）
+  const keyCodes: number[] = generateValidKeyCodes(params.keyInputMask);
 
   // dateRangeから検索期間を計算
   const { dateRange } = params;

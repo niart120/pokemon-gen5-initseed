@@ -23,10 +23,9 @@ import { DomainShinyType } from '@/types/domain';
 /**
  * 検索実行モード
  * - 'gpu': WebGPU による並列検索
- * - 'cpu-parallel': 既存の MultiWorkerSearchManager による並列検索
- * - 'cpu-parallel-new': 新規実装の IVBootTimingMultiWorkerManager による並列検索 (実験版)
+ * - 'cpu-parallel': IVBootTimingMultiWorkerManager による CPU 並列検索
  */
-export type SearchExecutionMode = 'gpu' | 'cpu-parallel' | 'cpu-parallel-new';
+export type SearchExecutionMode = 'gpu' | 'cpu-parallel';
 
 interface AppStore extends GenerationSlice {
   profiles: DeviceProfile[];

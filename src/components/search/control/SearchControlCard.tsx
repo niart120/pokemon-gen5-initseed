@@ -240,14 +240,6 @@ export function SearchControlCard() {
         : undefined,
     },
     {
-      value: 'cpu-parallel-new',
-      label: resolveSearchControlExecutionModeLabel('cpuParallelNew', locale),
-      disabled: !isParallelAvailable,
-      hint: !isParallelAvailable
-        ? resolveSearchControlExecutionModeHint('cpuParallelUnavailable', locale)
-        : undefined,
-    },
-    {
       value: 'gpu',
       label: resolveSearchControlExecutionModeLabel('gpu', locale),
       disabled: !isWebGpuAvailable,
@@ -269,7 +261,7 @@ export function SearchControlCard() {
       return;
     }
 
-    if ((nextMode === 'cpu-parallel' || nextMode === 'cpu-parallel-new') && !isParallelAvailable) {
+    if (nextMode === 'cpu-parallel' && !isParallelAvailable) {
       return;
     }
 
@@ -284,7 +276,7 @@ export function SearchControlCard() {
       return;
     }
 
-    if ((searchExecutionMode === 'cpu-parallel' || searchExecutionMode === 'cpu-parallel-new') && !isParallelAvailable && isWebGpuAvailable) {
+    if (searchExecutionMode === 'cpu-parallel' && !isParallelAvailable && isWebGpuAvailable) {
       setSearchExecutionMode('gpu');
     }
   }, [isWebGpuAvailable, isParallelAvailable, searchExecutionMode, setSearchExecutionMode]);
@@ -402,7 +394,7 @@ export function SearchControlCard() {
           </div>
 
           {/* 並列検索詳細設定 */}
-          {isParallelAvailable && (searchExecutionMode === 'cpu-parallel' || searchExecutionMode === 'cpu-parallel-new') && (
+          {isParallelAvailable && searchExecutionMode === 'cpu-parallel' && (
             <>
               <Separator />
               <div className="space-y-2">
@@ -421,7 +413,7 @@ export function SearchControlCard() {
                   min={1}
                   max={Math.max(maxCpuCores, 8)}
                   step={1}
-                  disabled={searchProgress.isRunning || (searchExecutionMode !== 'cpu-parallel' && searchExecutionMode !== 'cpu-parallel-new')}
+                  disabled={searchProgress.isRunning || searchExecutionMode !== 'cpu-parallel'}
                   className="flex-1"
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
