@@ -20,6 +20,11 @@ import { bootTimingDraftFromProfile, normalizeBootTimingDraft } from '@/store/ut
 import { DEFAULT_LOCALE } from '@/types/i18n';
 import { DomainShinyType } from '@/types/domain';
 
+/**
+ * 検索実行モード
+ * - 'gpu': WebGPU による並列検索
+ * - 'cpu-parallel': IVBootTimingMultiWorkerManager による CPU 並列検索
+ */
 export type SearchExecutionMode = 'gpu' | 'cpu-parallel';
 
 interface AppStore extends GenerationSlice {

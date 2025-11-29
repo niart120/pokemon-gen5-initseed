@@ -23,47 +23,23 @@ import type {
   // Egg boot timing search types
   EggBootTimingSearchResult as WasmEggBootTimingSearchResult,
   EggBootTimingSearchIterator as WasmEggBootTimingSearchIterator,
+  // Search common types (for boot timing search parameters)
+  DSConfigJs as WasmDSConfigJs,
+  SegmentParamsJs as WasmSegmentParamsJs,
+  TimeRangeParamsJs as WasmTimeRangeParamsJs,
+  SearchRangeParamsJs as WasmSearchRangeParamsJs,
+  // IV boot timing search types
+  IVBootTimingSearchIterator as WasmIVBootTimingSearchIterator,
+  IVBootTimingSearchResult as WasmIVBootTimingSearchResult,
+  IVBootTimingSearchResults as WasmIVBootTimingSearchResults,
 } from '../../wasm/wasm_pkg';
-// Local type alias for internal interface references
-type WasmSearchResult = import('../../wasm/wasm_pkg').SearchResult;
 
 // Init arg for wasm-bindgen init function
 type WasmInitArg = { module_or_path: BufferSource | URL };
 
-// WebAssembly module interface - 統合検索とポケモン生成API
+// WebAssembly module interface - ポケモン生成API
 export interface WasmModule {
-  // 統合検索機能（従来実装）
-  IntegratedSeedSearcher: new (
-    mac: Uint8Array,
-    nazo: Uint32Array,
-    hardware: string,
-    key_input: number,
-    frame: number,
-    hourStart: number,
-    hourEnd: number,
-    minuteStart: number,
-    minuteEnd: number,
-    secondStart: number,
-    secondEnd: number
-  ) => {
-    search_seeds_integrated_simd(
-      year_start: number,
-      month_start: number,
-      date_start: number,
-      hour_start: number,
-      minute_start: number,
-      second_start: number,
-      range_seconds: number,
-      timer0_min: number,
-      timer0_max: number,
-      vcount_min: number,
-      vcount_max: number,
-      target_seeds: Uint32Array
-    ): WasmSearchResult[];
-    free(): void;
-  };
-
-  // 追加: ポケモン生成API
+  // ポケモン生成API
   BWGenerationConfig: typeof WasmBWGenerationConfig;
   PokemonGenerator: typeof WasmPokemonGenerator;
   SeedEnumerator: typeof WasmSeedEnumerator;
@@ -86,7 +62,17 @@ export interface WasmModule {
   // 追加: 孵化乱数起動時間検索API
   EggBootTimingSearchResult: typeof WasmEggBootTimingSearchResult;
   EggBootTimingSearchIterator: typeof WasmEggBootTimingSearchIterator;
-  generate_egg_key_codes(key_input_mask: number): Uint32Array;
+
+  // 追加: 検索共通パラメータ型 (Boot Timing Search)
+  DSConfigJs: typeof WasmDSConfigJs;
+  SegmentParamsJs: typeof WasmSegmentParamsJs;
+  TimeRangeParamsJs: typeof WasmTimeRangeParamsJs;
+  SearchRangeParamsJs: typeof WasmSearchRangeParamsJs;
+
+  // 追加: IV起動時間検索API
+  IVBootTimingSearchIterator: typeof WasmIVBootTimingSearchIterator;
+  IVBootTimingSearchResult: typeof WasmIVBootTimingSearchResult;
+  IVBootTimingSearchResults: typeof WasmIVBootTimingSearchResults;
 
   calculate_game_offset(initial_seed: bigint, mode: number): number;
   sha1_hash_batch(messages: Uint32Array): Uint32Array;
@@ -130,7 +116,6 @@ export async function initWasm(): Promise<WasmModule> {
       await module.default(initArg);
       
       wasmModule = {
-        IntegratedSeedSearcher: module.IntegratedSeedSearcher,
         BWGenerationConfig: module.BWGenerationConfig,
         PokemonGenerator: module.PokemonGenerator,
         SeedEnumerator: module.SeedEnumerator,
@@ -149,7 +134,15 @@ export async function initWasm(): Promise<WasmModule> {
         // 孵化乱数起動時間検索API
         EggBootTimingSearchResult: module.EggBootTimingSearchResult,
         EggBootTimingSearchIterator: module.EggBootTimingSearchIterator,
-        generate_egg_key_codes: module.generate_egg_key_codes,
+        // 検索共通パラメータ型
+        DSConfigJs: module.DSConfigJs,
+        SegmentParamsJs: module.SegmentParamsJs,
+        TimeRangeParamsJs: module.TimeRangeParamsJs,
+        SearchRangeParamsJs: module.SearchRangeParamsJs,
+        // IV起動時間検索API
+        IVBootTimingSearchIterator: module.IVBootTimingSearchIterator,
+        IVBootTimingSearchResult: module.IVBootTimingSearchResult,
+        IVBootTimingSearchResults: module.IVBootTimingSearchResults,
         calculate_game_offset: module.calculate_game_offset,
         sha1_hash_batch: module.sha1_hash_batch,
       } as unknown as WasmModule;
@@ -183,10 +176,18 @@ export function isWasmReady(): boolean {
   return wasmModule !== null;
 }
 
-// Export alias type for consumers without importing wasm_pkg directly
-export type { WasmSearchResult };
-
 // 再利用しやすいよう wasm ctor/instance 型を公開
 export type BWGenerationConfigCtor = typeof WasmBWGenerationConfig;
 export type SeedEnumeratorCtor = typeof WasmSeedEnumerator;
 export type SeedEnumeratorInstance = InstanceType<SeedEnumeratorCtor>;
+
+// Boot Timing Search 用パラメータ型を公開
+export type DSConfigJs = WasmDSConfigJs;
+export type SegmentParamsJs = WasmSegmentParamsJs;
+export type TimeRangeParamsJs = WasmTimeRangeParamsJs;
+export type SearchRangeParamsJs = WasmSearchRangeParamsJs;
+
+// IV Boot Timing Search 型を公開
+export type IVBootTimingSearchIterator = WasmIVBootTimingSearchIterator;
+export type IVBootTimingSearchResult = WasmIVBootTimingSearchResult;
+export type IVBootTimingSearchResults = WasmIVBootTimingSearchResults;

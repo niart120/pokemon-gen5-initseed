@@ -692,8 +692,7 @@ mod tests {
                 );
                 assert_eq!(
                     bw_result, bw2_result,
-                    "Mismatch for type {:?}, rand_val {}",
-                    encounter_type, rand_val
+                    "Mismatch for type {encounter_type:?}, rand_val {rand_val}"
                 );
             }
         }
@@ -712,8 +711,8 @@ mod tests {
 
             // 計算式が異なるため、結果が異なる場合がある
             // ただし、両方とも有効な範囲内であることを確認
-            assert!(bw_slot <= 100, "BW slot value {} out of range", bw_slot);
-            assert!(bw2_slot <= 100, "BW2 slot value {} out of range", bw2_slot);
+            assert!(bw_slot <= 100, "BW slot value {bw_slot} out of range");
+            assert!(bw2_slot <= 100, "BW2 slot value {bw2_slot} out of range");
         }
     }
 
@@ -811,11 +810,7 @@ mod tests {
 
                     assert!(
                         slot <= max_slot,
-                        "Slot {} exceeds max {} for {:?} in {:?}",
-                        slot,
-                        max_slot,
-                        encounter_type,
-                        version
+                        "Slot {slot} exceeds max {max_slot} for {encounter_type:?} in {version:?}"
                     );
 
                     // テーブルインデックス変換のテスト
@@ -823,11 +818,7 @@ mod tests {
                         EncounterCalculator::slot_to_table_index(encounter_type, slot);
                     assert!(
                         table_index <= max_slot as usize,
-                        "Table index {} exceeds max {} for slot {} in {:?}",
-                        table_index,
-                        max_slot,
-                        slot,
-                        encounter_type
+                        "Table index {table_index} exceeds max {max_slot} for slot {slot} in {encounter_type:?}"
                     );
                 }
             }

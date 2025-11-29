@@ -307,12 +307,11 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
             const canContinue = get()._addPendingResult(result);
             if (!canContinue) {
               // MAX_RESULTS到達: 検索を停止
-              console.log(`[EggSearch] MAX_RESULTS (${MAX_RESULTS}) reached, stopping search`);
+              console.warn(`[EggSearch] MAX_RESULTS (${MAX_RESULTS}) reached, stopping search`);
               get().stopSearch();
             }
           },
-          onComplete: (message) => {
-            console.log('[EggSearch]', message);
+          onComplete: (_message) => {
             get()._onComplete({
               reason: 'completed',
               processedCombinations: get().progress?.processedCombinations ?? 0,

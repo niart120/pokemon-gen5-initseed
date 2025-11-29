@@ -1,5 +1,5 @@
 import romParameters from '@/data/rom-parameters';
-import { hasImpossibleKeyCombination, KEY_CODE_BASE } from '@/lib/utils/key-input';
+import { generateValidKeyCodes } from '@/lib/utils/key-input';
 import type { Hardware } from '@/types/rom';
 import type { SearchConditions } from '@/types/search';
 import { resolveTimePlan, type ResolvedTimePlan } from '@/lib/search/time/time-plan';
@@ -190,7 +190,7 @@ function buildKernelContext(
   startDate: Date
 ): KernelContext {
   const params = resolveRomParameters(conditions);
-  const keyCodes = generateKeyCodes(conditions.keyInput);
+  const keyCodes = generateValidKeyCodes(conditions.keyInput);
   if (keyCodes.length === 0) {
     throw new Error('入力されたキー条件から生成できる組み合わせがありません');
   }
@@ -315,32 +315,6 @@ function resolveRomParameters(conditions: SearchConditions) {
     nazo: [...regionData.nazo] as [number, number, number, number, number],
     vcountTimerRanges: regionData.vcountTimerRanges.map((entry) => [...entry] as [number, number, number]),
   };
-}
-
-function generateKeyCodes(keyInputMask: number): number[] {
-  const enabledBits: number[] = [];
-  for (let bit = 0; bit < 12; bit += 1) {
-    if ((keyInputMask & (1 << bit)) !== 0) {
-      enabledBits.push(bit);
-    }
-  }
-
-  const keyCodes: number[] = [];
-  const totalCombinations = 1 << enabledBits.length;
-  for (let combo = 0; combo < totalCombinations; combo += 1) {
-    let pressedMask = 0;
-    for (let bitIndex = 0; bitIndex < enabledBits.length; bitIndex += 1) {
-      if ((combo & (1 << bitIndex)) !== 0) {
-        pressedMask |= 1 << enabledBits[bitIndex];
-      }
-    }
-    if (hasImpossibleKeyCombination(pressedMask)) {
-      continue;
-    }
-    keyCodes.push((pressedMask ^ KEY_CODE_BASE) >>> 0);
-  }
-
-  return keyCodes;
 }
 
 function resolveTimer0Segments(

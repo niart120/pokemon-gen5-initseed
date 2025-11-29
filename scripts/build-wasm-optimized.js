@@ -13,16 +13,8 @@ console.log('🚀 WebAssembly高性能ビルド開始...');
 
 const wasmPkgDir = 'wasm-pkg';
 
-// RUSTFLAGS環境変数での追加最適化
-const optimizedRustFlags = [
-  '-C target-cpu=generic',           // Generic WASM target optimization
-  '-C target-feature=+simd128',      // Enable SIMD128 for vectorized operations
-  '-C embed-bitcode=yes',            // Embed LLVM bitcode for LTO
-  '-C overflow-checks=no',           // Disable overflow checks in release
-  '-C debug-assertions=no'           // Disable debug assertions
-].join(' ');
-
 // wasm-packでの基本オプション
+// 注: RUSTFLAGS は wasm-pkg/.cargo/config.toml で設定済み
 const wasmPackArgs = [
   '--target web',
   '--out-dir pkg',
@@ -30,10 +22,6 @@ const wasmPackArgs = [
 ];
 
 try {
-  console.log('📦 Rustコンパイラ最適化フラグ設定...');
-  console.log(`📋 RUSTFLAGS: ${optimizedRustFlags}`);
-  process.env.RUSTFLAGS = optimizedRustFlags;
-  
   console.log('🔧 wasm-packによる最適化ビルド実行...');
   const buildCommand = `cd ${wasmPkgDir} && wasm-pack build ${wasmPackArgs.join(' ')}`;
   console.log(`実行コマンド: ${buildCommand}`);

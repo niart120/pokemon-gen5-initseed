@@ -7,21 +7,127 @@
 import type { SearchConditions, InitialSeedResult } from '../../types/search';
 import type { AggregatedProgress } from '../../types/parallel';
 import type { WorkerRequest, WorkerResponse } from '@/types/worker';
-import { MultiWorkerSearchManager } from './multi-worker-manager';
+import {
+  IVBootTimingMultiWorkerManager,
+  type AggregatedIVBootTimingProgress,
+} from '../iv/iv-boot-timing-multi-worker-manager';
+import type {
+  IVBootTimingSearchParams,
+  IVBootTimingSearchResult,
+} from '@/types/iv-boot-timing-search';
 import type { SingleWorkerSearchCallbacks } from '../../types/callbacks';
-import { shouldUseWebGpuSearch } from './search-mode';
 import { useAppStore } from '@/store/app-store';
 import type { SearchExecutionMode } from '@/store/app-store';
+import { getVCountFromTimer0 } from '@/lib/utils/rom-parameter-helpers';
+
+/**
+ * Auto設定時にTimer0範囲から対応するVCount範囲を計算
+ * @param romVersion ROM version
+ * @param romRegion ROM region
+ * @param timer0Min Timer0 minimum
+ * @param timer0Max Timer0 maximum
+ * @returns VCount範囲 (min/max)
+ */
+function computeVCountRangeFromTimer0(
+  romVersion: string,
+  romRegion: string,
+  timer0Min: number,
+  timer0Max: number
+): { min: number; max: number } {
+  const vcountSet = new Set<number>();
+
+  // Timer0範囲内の全値についてVCountを取得
+  for (let timer0 = timer0Min; timer0 <= timer0Max; timer0++) {
+    const vcount = getVCountFromTimer0(romVersion, romRegion, timer0);
+    if (vcount !== null) {
+      vcountSet.add(vcount);
+    }
+  }
+
+  if (vcountSet.size === 0) {
+    // フォールバック: デフォルト値 0x60
+    return { min: 0x60, max: 0x60 };
+  }
+
+  const vcounts = Array.from(vcountSet);
+  return {
+    min: Math.min(...vcounts),
+    max: Math.max(...vcounts),
+  };
+}
+
+/**
+ * SearchConditions を IVBootTimingSearchParams に変換
+ */
+function convertToIVBootTimingSearchParams(
+  conditions: SearchConditions,
+  targetSeeds: number[]
+): IVBootTimingSearchParams {
+  // MACアドレスを6要素のタプルに正規化
+  const macAddress: readonly [number, number, number, number, number, number] = [
+    conditions.macAddress[0] ?? 0,
+    conditions.macAddress[1] ?? 0,
+    conditions.macAddress[2] ?? 0,
+    conditions.macAddress[3] ?? 0,
+    conditions.macAddress[4] ?? 0,
+    conditions.macAddress[5] ?? 0,
+  ];
+
+  // Auto設定時はROMパラメータからVCount範囲を計算
+  // GPU検索と同様の動作を保証する
+  const vcountRange = conditions.timer0VCountConfig.useAutoConfiguration
+    ? computeVCountRangeFromTimer0(
+        conditions.romVersion,
+        conditions.romRegion,
+        conditions.timer0VCountConfig.timer0Range.min,
+        conditions.timer0VCountConfig.timer0Range.max
+      )
+    : {
+        min: conditions.timer0VCountConfig.vcountRange.min,
+        max: conditions.timer0VCountConfig.vcountRange.max,
+      };
+
+  return {
+    dateRange: {
+      startYear: conditions.dateRange.startYear,
+      startMonth: conditions.dateRange.startMonth,
+      startDay: conditions.dateRange.startDay,
+      endYear: conditions.dateRange.endYear,
+      endMonth: conditions.dateRange.endMonth,
+      endDay: conditions.dateRange.endDay,
+    },
+    timer0Range: {
+      min: conditions.timer0VCountConfig.timer0Range.min,
+      max: conditions.timer0VCountConfig.timer0Range.max,
+    },
+    vcountRange,
+    keyInputMask: conditions.keyInput,
+    macAddress,
+    hardware: conditions.hardware,
+    romVersion: conditions.romVersion,
+    romRegion: conditions.romRegion,
+    timeRange: conditions.timeRange,
+    targetSeeds,
+    maxResults: 10000, // デフォルト上限
+  };
+}
 
 export type SearchCallbacks = SingleWorkerSearchCallbacks<InitialSeedResult> & {
   onParallelProgress?: (progress: AggregatedProgress | null) => void;
 };
 
+/**
+ * IV Boot Timing検索用コールバック
+ */
+export type IVBootTimingSearchCallbacks = SingleWorkerSearchCallbacks<IVBootTimingSearchResult> & {
+  onParallelProgress?: (progress: AggregatedIVBootTimingProgress | null) => void;
+};
+
 export class SearchWorkerManager {
   private gpuWorker: Worker | null = null;
   private callbacks: SearchCallbacks | null = null;
-  private multiWorkerManager: MultiWorkerSearchManager | null = null;
-  private activeMode: 'cpu-parallel' | 'gpu' = 'cpu-parallel';
+  private ivBootTimingManager: IVBootTimingMultiWorkerManager | null = null;
+  private activeMode: 'cpu-parallel' | 'gpu' | 'iv-boot-timing' = 'cpu-parallel';
   private lastRequest: { conditions: SearchConditions; targetSeeds: number[] } | null = null;
 
   constructor() {
@@ -146,6 +252,9 @@ export class SearchWorkerManager {
     console.warn('CPU search fallback activated after WebGPU failure.');
   }
 
+  /**
+   * CPU並列検索（IVBootTimingMultiWorkerManager使用）
+   */
   private startCpuSearchInternal(
     conditions: SearchConditions,
     targetSeeds: number[],
@@ -156,7 +265,58 @@ export class SearchWorkerManager {
       return false;
     }
 
-    return this.startParallelSearch(conditions, targetSeeds, callbacks);
+    const ivParams = convertToIVBootTimingSearchParams(conditions, targetSeeds);
+
+    // IVBootTimingSearchResult を InitialSeedResult に変換するコールバック
+    const ivCallbacks: IVBootTimingSearchCallbacks = {
+      onProgress: callbacks.onProgress,
+      onResult: (result: IVBootTimingSearchResult) => {
+        // IVBootTimingSearchResult を InitialSeedResult に変換
+        const converted: InitialSeedResult = {
+          seed: result.mtSeed,
+          datetime: result.boot.datetime,
+          timer0: result.boot.timer0,
+          vcount: result.boot.vcount,
+          keyCode: result.boot.keyCode,
+          keyInputNames: result.boot.keyInputNames,
+          conditions,
+          message: [], // WASMからは取得していない
+          sha1Hash: '', // WASMからは取得していない
+          lcgSeed: BigInt('0x' + result.lcgSeedHex),
+          isMatch: true,
+        };
+        callbacks.onResult(converted);
+      },
+      onComplete: callbacks.onComplete,
+      onError: callbacks.onError,
+      onPaused: callbacks.onPaused,
+      onResumed: callbacks.onResumed,
+      onStopped: callbacks.onStopped,
+      onParallelProgress: callbacks.onParallelProgress 
+        ? (progress) => {
+            // AggregatedIVBootTimingProgress を AggregatedProgress に変換
+            if (progress) {
+              const converted: AggregatedProgress = {
+                totalCurrentStep: progress.totalCurrentStep,
+                totalSteps: progress.totalSteps,
+                totalElapsedTime: progress.totalElapsedTime,
+                totalEstimatedTimeRemaining: progress.totalEstimatedTimeRemaining,
+                totalMatchesFound: progress.totalMatchesFound,
+                activeWorkers: progress.activeWorkers,
+                completedWorkers: progress.completedWorkers,
+                workerProgresses: progress.workerProgresses,
+                progressPercent: progress.progressPercent,
+                totalProcessedSeconds: progress.totalProcessedSeconds,
+              };
+              callbacks.onParallelProgress!(converted);
+            } else {
+              callbacks.onParallelProgress!(null);
+            }
+          }
+        : undefined,
+    };
+
+    return this.startIVBootTimingSearch(ivParams, ivCallbacks);
   }
 
   private tryStartGpuSearch(
@@ -205,7 +365,11 @@ export class SearchWorkerManager {
       targetSeeds: [...normalizedTargetSeeds],
     };
 
-    if (shouldUseWebGpuSearch()) {
+    // モード判定
+    const executionMode = this.getCurrentExecutionMode();
+
+    // WebGPU モード
+    if (executionMode === 'gpu') {
       const gpuStarted = this.tryStartGpuSearch(conditions, normalizedTargetSeeds);
       if (gpuStarted) {
         return true;
@@ -213,34 +377,39 @@ export class SearchWorkerManager {
       console.warn('WebGPU search could not be started. Falling back to CPU mode.');
     }
 
+    // CPU並列検索モード
     return this.startCpuSearchInternal(conditions, normalizedTargetSeeds, callbacks);
   }
 
   /**
-   * 並列検索開始
+   * 現在の実行モードを取得
    */
-  private startParallelSearch(
-    conditions: SearchConditions,
-    targetSeeds: number[],
-    callbacks: SearchCallbacks
+  private getCurrentExecutionMode(): SearchExecutionMode {
+    try {
+      return useAppStore.getState().searchExecutionMode;
+    } catch {
+      return 'cpu-parallel';
+    }
+  }
+
+  /**
+   * IV Boot Timing検索開始
+   * 指定されたMT Seedに対応する起動時間を検索
+   */
+  public startIVBootTimingSearch(
+    params: IVBootTimingSearchParams,
+    callbacks: IVBootTimingSearchCallbacks
   ): boolean {
     try {
-      if (!this.multiWorkerManager) {
-        this.multiWorkerManager = new MultiWorkerSearchManager();
+      if (!this.ivBootTimingManager) {
+        this.ivBootTimingManager = new IVBootTimingMultiWorkerManager();
       }
 
-      // アプリストアから現在のワーカー数設定を取得
-      // 注意: ここでは直接importを避けて、公開APIを使用
       const currentMaxWorkers = this.getMaxWorkers();
-      this.multiWorkerManager.setMaxWorkers(currentMaxWorkers);
+      this.ivBootTimingManager.setMaxWorkers(currentMaxWorkers);
 
-      // 📝 Note: MultiWorkerSearchManager.startParallelSearch()内で
-      // safeCleanup()が自動実行されるため、ここでの明示的な呼び出しは不要
-
-      // 並列検索用のコールバック変換
-      const parallelCallbacks = {
-        onProgress: (aggregatedProgress: AggregatedProgress) => {
-          // 既存の進捗フォーマットに変換
+      const ivCallbacks = {
+        onProgress: (aggregatedProgress: AggregatedIVBootTimingProgress) => {
           callbacks.onProgress({
             currentStep: aggregatedProgress.totalCurrentStep,
             totalSteps: aggregatedProgress.totalSteps,
@@ -249,21 +418,13 @@ export class SearchWorkerManager {
             matchesFound: aggregatedProgress.totalMatchesFound
           });
 
-          // 並列進捗情報も送信（利用可能な場合）
           if (callbacks.onParallelProgress) {
             callbacks.onParallelProgress(aggregatedProgress);
           }
         },
         onResult: callbacks.onResult,
-        onComplete: (message: string) => {
-          // 並列進捗は保持（統計表示のため）
-          // if (callbacks.onParallelProgress) {
-          //   callbacks.onParallelProgress(null);
-          // }
-          callbacks.onComplete(message);
-        },
+        onComplete: callbacks.onComplete,
         onError: (error: string) => {
-          // エラー時は進捗をクリア（不正な状態を避けるため）
           if (callbacks.onParallelProgress) {
             callbacks.onParallelProgress(null);
           }
@@ -274,13 +435,13 @@ export class SearchWorkerManager {
         onStopped: callbacks.onStopped
       };
 
-      this.multiWorkerManager.startParallelSearch(conditions, targetSeeds, parallelCallbacks);
-      this.activeMode = 'cpu-parallel';
+      this.ivBootTimingManager.startParallelSearch(params, ivCallbacks);
+      this.activeMode = 'iv-boot-timing';
       return true;
 
     } catch (error) {
-      console.error('Failed to start parallel search:', error);
-      callbacks.onError('Failed to start parallel search.');
+      console.error('Failed to start IV boot timing search:', error);
+      callbacks.onError('Failed to start IV boot timing search.');
       return false;
     }
   }
@@ -292,8 +453,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (this.multiWorkerManager) {
-      this.multiWorkerManager.pauseAll();
+    if (this.ivBootTimingManager) {
+      this.ivBootTimingManager.pauseAll();
     }
   }
 
@@ -304,8 +465,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (this.multiWorkerManager) {
-      this.multiWorkerManager.resumeAll();
+    if (this.ivBootTimingManager) {
+      this.ivBootTimingManager.resumeAll();
     }
   }
 
@@ -316,8 +477,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (this.multiWorkerManager) {
-      this.multiWorkerManager.terminateAll();
+    if (this.ivBootTimingManager) {
+      this.ivBootTimingManager.terminateAll();
     }
   }
 
@@ -325,20 +486,20 @@ export class SearchWorkerManager {
    * ワーカー数設定
    */
   public setMaxWorkers(count: number): void {
-    if (!this.multiWorkerManager) {
-      this.multiWorkerManager = new MultiWorkerSearchManager();
+    if (!this.ivBootTimingManager) {
+      this.ivBootTimingManager = new IVBootTimingMultiWorkerManager();
     }
-    this.multiWorkerManager.setMaxWorkers(count);
+    this.ivBootTimingManager.setMaxWorkers(count);
   }
 
   /**
    * 現在のワーカー数設定を取得
    */
   public getMaxWorkers(): number {
-    if (!this.multiWorkerManager) {
+    if (!this.ivBootTimingManager) {
       return navigator.hardwareConcurrency || 4;
     }
-    return this.multiWorkerManager.getMaxWorkers();
+    return this.ivBootTimingManager.getMaxWorkers();
   }
 
   /**
@@ -349,9 +510,9 @@ export class SearchWorkerManager {
   }
 
   public terminate() {
-    if (this.multiWorkerManager) {
-      this.multiWorkerManager.terminateAll();
-      this.multiWorkerManager = null;
+    if (this.ivBootTimingManager) {
+      this.ivBootTimingManager.terminateAll();
+      this.ivBootTimingManager = null;
     }
     
     if (this.gpuWorker) {

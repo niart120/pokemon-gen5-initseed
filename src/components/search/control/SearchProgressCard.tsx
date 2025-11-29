@@ -53,6 +53,10 @@ export function SearchProgressCard() {
   const baseEstimatedTimeRemaining = isParallelMode
     ? parallelData?.totalEstimatedTimeRemaining ?? 0
     : searchProgress.estimatedTimeRemaining;
+  // 進捗バー用：秒数ベースの進捗パーセントを使用
+  const progressPercentForBar = isParallelMode ? parallelData?.progressPercent ?? 0 : 0;
+  // 処理速度計算用：処理済み秒数を使用
+  const processedSecondsForSpeed = isParallelMode ? parallelData?.totalProcessedSeconds : undefined;
 
   const hasParallelProgress = isParallelMode && parallelData !== null;
   const hasNonParallelProgress = !isParallelMode
@@ -61,9 +65,12 @@ export function SearchProgressCard() {
   const showBaseProgress = isRunning || hasAnyProgress;
   const showReadyState = !isRunning && !hasAnyProgress;
 
-  const progressPercent = baseTotalSteps > 0 ? Math.min(100, (baseCurrentStep / baseTotalSteps) * 100) : 0;
+  // 進捗バー：並列モードは秒数ベースのprogressPercent、それ以外はステップベース
+  const progressPercent = isParallelMode
+    ? progressPercentForBar
+    : (baseTotalSteps > 0 ? Math.min(100, (baseCurrentStep / baseTotalSteps) * 100) : 0);
   
-  // 起動したワーカー総数を基準にする（停止・完了含む）
+  // 起動したWorker総数を基準にする（停止・完了含む）
   const totalWorkerCount = parallelData?.workerProgresses?.size || 0;
 
   // ワーカー数に応じたレイアウト決定（モバイル考慮）
@@ -122,6 +129,7 @@ export function SearchProgressCard() {
               estimatedTimeRemaining={baseEstimatedTimeRemaining}
               currentStep={baseCurrentStep}
               totalSteps={baseTotalSteps}
+              processedSeconds={processedSecondsForSpeed}
             />
             
             {/* 進捗・マッチ情報 - 直列時のみ表示 */}
@@ -201,7 +209,8 @@ export function SearchProgressCard() {
                               'grid-cols-4'
                         }`}>
                           {Array.from(parallelData.workerProgresses.entries()).map(([workerId, progress]) => {
-                            const workerPercent = progress.totalSteps > 0 ? (progress.currentStep / progress.totalSteps) * 100 : 0;
+                            // progressPercentを使用（秒数ベース）、なければcurrentStep/totalStepsにフォールバック
+                            const workerPercent = progress.progressPercent ?? (progress.totalSteps > 0 ? (progress.currentStep / progress.totalSteps) * 100 : 0);
                             const clampedPercent = progress.status === 'completed' ? 100 : Math.min(100, workerPercent);
                             return (
                               <div
@@ -240,7 +249,7 @@ export function SearchProgressCard() {
                                     {formatSearchProgressPercent(clampedPercent, locale, 0)}
                                   </span>
                                   <span className="font-mono">
-                                    {formatProcessingRate(progress.currentStep, progress.elapsedTime)}
+                                    {formatProcessingRate(progress.processedSeconds ?? progress.currentStep, progress.elapsedTime)}
                                   </span>
                                 </div>
                               </div>

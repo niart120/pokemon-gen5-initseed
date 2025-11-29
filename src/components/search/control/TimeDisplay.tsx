@@ -13,6 +13,8 @@ interface TimeDisplayProps {
   estimatedTimeRemaining: number;
   currentStep: number;
   totalSteps?: number;
+  /** 処理速度計算用の処理済み秒数（指定時はcurrentStepの代わりに使用） */
+  processedSeconds?: number;
 }
 
 /**
@@ -23,9 +25,12 @@ export function TimeDisplay({
   elapsedTime, 
   estimatedTimeRemaining, 
   currentStep, 
-  totalSteps: _
+  totalSteps: _,
+  processedSeconds,
 }: TimeDisplayProps) {
-  const processingRate = formatProcessingRate(currentStep, elapsedTime);
+  // 処理速度計算：processedSeconds があれば使用、なければ currentStep
+  const progressForRate = processedSeconds ?? currentStep;
+  const processingRate = formatProcessingRate(progressForRate, elapsedTime);
   const locale = useLocale();
   const elapsedLabel = resolveLocaleValue(searchProgressTimeElapsedLabel, locale);
   const remainingLabel = resolveLocaleValue(searchProgressTimeRemainingLabel, locale);

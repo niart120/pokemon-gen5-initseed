@@ -25,6 +25,10 @@ export interface AggregatedProgress {
   activeWorkers: number;
   completedWorkers: number;
   workerProgresses: Map<number, WorkerProgress>;
+  /** 全体の進捗パーセント（0-100、秒数ベース） */
+  progressPercent?: number;
+  /** 全Worker合計の処理済み秒数（処理速度計算用） */
+  totalProcessedSeconds?: number;
 }
 
 export interface WorkerProgress {
@@ -36,6 +40,10 @@ export interface WorkerProgress {
   matchesFound: number;
   currentDateTime?: Date;
   status: 'initializing' | 'running' | 'paused' | 'completed' | 'error';
+  /** 進捗パーセント（0-100） */
+  progressPercent?: number;
+  /** 処理済み秒数（処理速度計算用） */
+  processedSeconds?: number;
 }
 
 export interface ParallelWorkerRequest {
