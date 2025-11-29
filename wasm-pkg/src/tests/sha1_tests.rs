@@ -1,7 +1,7 @@
 /// SHA-1実装のテストコード
 use crate::sha1::{
     calculate_pokemon_seed_from_hash, calculate_pokemon_sha1, choice, left_rotate, majority,
-    parity, swap_bytes_32,
+    parity, swap_bytes_32, HashValues,
 };
 
 // WASM環境でのテスト設定
@@ -25,17 +25,17 @@ mod wasm_tests {
             0x00000000, 0x00000000,
         ];
 
-        let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(&message);
+        let hash = calculate_pokemon_sha1(&message);
 
         // 結果が0でないことを確認（具体的な値はTypeScript版と比較）
-        assert_ne!(h0, 0);
-        assert_ne!(h1, 0);
-        assert_ne!(h2, 0);
-        assert_ne!(h3, 0);
-        assert_ne!(h4, 0);
+        assert_ne!(hash.h0, 0);
+        assert_ne!(hash.h1, 0);
+        assert_ne!(hash.h2, 0);
+        assert_ne!(hash.h3, 0);
+        assert_ne!(hash.h4, 0);
 
         // LCG計算のテスト
-        let seed = calculate_pokemon_seed_from_hash(h0, h1);
+        let seed = hash.to_mt_seed();
         assert_ne!(seed, 0);
     }
 
@@ -110,17 +110,17 @@ mod wasm_tests {
         ];
 
         for (i, message) in test_messages.iter().enumerate() {
-            let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(message);
+            let hash = calculate_pokemon_sha1(message);
 
             // 各メッセージで異なる結果が得られることを確認
-            assert_ne!(h0, 0, "Message {} resulted in h0=0", i);
-            assert_ne!(h1, 0, "Message {} resulted in h1=0", i);
-            assert_ne!(h2, 0, "Message {} resulted in h2=0", i);
-            assert_ne!(h3, 0, "Message {} resulted in h3=0", i);
-            assert_ne!(h4, 0, "Message {} resulted in h4=0", i);
+            assert_ne!(hash.h0, 0, "Message {} resulted in h0=0", i);
+            assert_ne!(hash.h1, 0, "Message {} resulted in h1=0", i);
+            assert_ne!(hash.h2, 0, "Message {} resulted in h2=0", i);
+            assert_ne!(hash.h3, 0, "Message {} resulted in h3=0", i);
+            assert_ne!(hash.h4, 0, "Message {} resulted in h4=0", i);
 
             // Seed計算も正常に動作することを確認
-            let seed = calculate_pokemon_seed_from_hash(h0, h1);
+            let seed = hash.to_mt_seed();
             assert_ne!(seed, 0, "Message {} resulted in seed=0", i);
         }
     }
@@ -134,19 +134,17 @@ mod wasm_tests {
             0x00000000, 0x00000000,
         ];
 
-        let (h0_1, h1_1, h2_1, h3_1, h4_1) = calculate_pokemon_sha1(&message);
-        let (h0_2, h1_2, h2_2, h3_2, h4_2) = calculate_pokemon_sha1(&message);
+        let hash1 = calculate_pokemon_sha1(&message);
+        let hash2 = calculate_pokemon_sha1(&message);
 
-        assert_eq!(h0_1, h0_2);
-        assert_eq!(h1_1, h1_2);
-        assert_eq!(h2_1, h2_2);
-        assert_eq!(h3_1, h3_2);
-        assert_eq!(h4_1, h4_2);
+        assert_eq!(hash1.h0, hash2.h0);
+        assert_eq!(hash1.h1, hash2.h1);
+        assert_eq!(hash1.h2, hash2.h2);
+        assert_eq!(hash1.h3, hash2.h3);
+        assert_eq!(hash1.h4, hash2.h4);
 
         // Seed計算も一致することを確認
-        let seed_1 = calculate_pokemon_seed_from_hash(h0_1, h1_1);
-        let seed_2 = calculate_pokemon_seed_from_hash(h0_2, h1_2);
-        assert_eq!(seed_1, seed_2);
+        assert_eq!(hash1.to_mt_seed(), hash2.to_mt_seed());
     }
 }
 
@@ -164,17 +162,17 @@ mod native_tests {
             0x00000000, 0x00000000,
         ];
 
-        let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(&message);
+        let hash = calculate_pokemon_sha1(&message);
 
         // 結果が0でないことを確認（具体的な値はTypeScript版と比較）
-        assert_ne!(h0, 0);
-        assert_ne!(h1, 0);
-        assert_ne!(h2, 0);
-        assert_ne!(h3, 0);
-        assert_ne!(h4, 0);
+        assert_ne!(hash.h0, 0);
+        assert_ne!(hash.h1, 0);
+        assert_ne!(hash.h2, 0);
+        assert_ne!(hash.h3, 0);
+        assert_ne!(hash.h4, 0);
 
         // LCG計算のテスト
-        let seed = calculate_pokemon_seed_from_hash(h0, h1);
+        let seed = hash.to_mt_seed();
         assert_ne!(seed, 0);
     }
 
@@ -231,15 +229,15 @@ mod native_tests {
         ];
 
         for message in test_messages.iter() {
-            let (h0, h1, h2, h3, h4) = calculate_pokemon_sha1(message);
+            let hash = calculate_pokemon_sha1(message);
 
-            assert_ne!(h0, 0);
-            assert_ne!(h1, 0);
-            assert_ne!(h2, 0);
-            assert_ne!(h3, 0);
-            assert_ne!(h4, 0);
+            assert_ne!(hash.h0, 0);
+            assert_ne!(hash.h1, 0);
+            assert_ne!(hash.h2, 0);
+            assert_ne!(hash.h3, 0);
+            assert_ne!(hash.h4, 0);
 
-            let seed = calculate_pokemon_seed_from_hash(h0, h1);
+            let seed = hash.to_mt_seed();
             assert_ne!(seed, 0);
         }
     }
@@ -252,17 +250,54 @@ mod native_tests {
             0x00000000, 0x00000000,
         ];
 
-        let (h0_1, h1_1, h2_1, h3_1, h4_1) = calculate_pokemon_sha1(&message);
-        let (h0_2, h1_2, h2_2, h3_2, h4_2) = calculate_pokemon_sha1(&message);
+        let hash1 = calculate_pokemon_sha1(&message);
+        let hash2 = calculate_pokemon_sha1(&message);
 
-        assert_eq!(h0_1, h0_2);
-        assert_eq!(h1_1, h1_2);
-        assert_eq!(h2_1, h2_2);
-        assert_eq!(h3_1, h3_2);
-        assert_eq!(h4_1, h4_2);
+        assert_eq!(hash1.h0, hash2.h0);
+        assert_eq!(hash1.h1, hash2.h1);
+        assert_eq!(hash1.h2, hash2.h2);
+        assert_eq!(hash1.h3, hash2.h3);
+        assert_eq!(hash1.h4, hash2.h4);
 
-        let seed_1 = calculate_pokemon_seed_from_hash(h0_1, h1_1);
-        let seed_2 = calculate_pokemon_seed_from_hash(h0_2, h1_2);
-        assert_eq!(seed_1, seed_2);
+        assert_eq!(hash1.to_mt_seed(), hash2.to_mt_seed());
+    }
+
+    #[test]
+    fn test_hash_values_creation() {
+        let hash = HashValues::new(0x11111111, 0x22222222, 0x33333333, 0x44444444, 0x55555555);
+        assert_eq!(hash.h0, 0x11111111);
+        assert_eq!(hash.h1, 0x22222222);
+        assert_eq!(hash.h2, 0x33333333);
+        assert_eq!(hash.h3, 0x44444444);
+        assert_eq!(hash.h4, 0x55555555);
+    }
+
+    #[test]
+    fn test_hash_values_to_hex_string() {
+        let hash = HashValues::new(0xABCDEF01, 0x23456789, 0xFEDCBA98, 0x76543210, 0x00000000);
+        assert_eq!(
+            hash.to_hex_string(),
+            "abcdef0123456789fedcba987654321000000000"
+        );
+    }
+
+    #[test]
+    fn test_hash_values_to_lcg_seed() {
+        let hash = HashValues::new(0x12345678, 0xABCDEF00, 0, 0, 0);
+        let seed = hash.to_lcg_seed();
+        // swap_bytes_32(0x12345678) = 0x78563412
+        // swap_bytes_32(0xABCDEF00) = 0x00EFCDAB
+        // (0x00EFCDAB << 32) | 0x78563412
+        let expected = (0x00EFCDAB_u64 << 32) | 0x78563412_u64;
+        assert_eq!(seed, expected);
+    }
+
+    #[test]
+    fn test_hash_values_to_mt_seed() {
+        let hash = HashValues::new(0x12345678, 0xABCDEF00, 0, 0, 0);
+        let mt_seed = hash.to_mt_seed();
+        // calculate_pokemon_seed_from_hash と同じ結果
+        let expected = calculate_pokemon_seed_from_hash(0x12345678, 0xABCDEF00);
+        assert_eq!(mt_seed, expected);
     }
 }

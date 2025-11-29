@@ -1,9 +1,8 @@
 //! メッセージ構築モジュール
 //!
-//! SHA-1計算用のメッセージ構築とハッシュ値処理を担当する。
+//! SHA-1計算用のメッセージ構築を担当する。
 
 use super::params::{DSConfig, SegmentParams};
-use crate::sha1::calculate_pokemon_seed_from_hash;
 use crate::utils::EndianUtils;
 
 /// ローカルヘルパー関数（EndianUtils経由）
@@ -163,49 +162,6 @@ impl BaseMessageBuilder {
 }
 
 // =============================================================================
-// SHA-1 ハッシュ値構造体
-// =============================================================================
-
-/// SHA-1ハッシュ値（5ワード）
-#[derive(Debug, Clone, Copy)]
-pub struct HashValues {
-    pub h0: u32,
-    pub h1: u32,
-    pub h2: u32,
-    pub h3: u32,
-    pub h4: u32,
-}
-
-impl HashValues {
-    #[inline]
-    pub fn new(h0: u32, h1: u32, h2: u32, h3: u32, h4: u32) -> Self {
-        Self { h0, h1, h2, h3, h4 }
-    }
-
-    /// 16進数文字列に変換
-    pub fn to_hex_string(&self) -> String {
-        format!(
-            "{:08x}{:08x}{:08x}{:08x}{:08x}",
-            self.h0, self.h1, self.h2, self.h3, self.h4
-        )
-    }
-
-    /// 64bit LCG Seedを計算
-    #[inline]
-    pub fn to_lcg_seed(&self) -> u64 {
-        let h0_le = swap_bytes_32(self.h0) as u64;
-        let h1_le = swap_bytes_32(self.h1) as u64;
-        (h1_le << 32) | h0_le
-    }
-
-    /// 32bit MT Seedを計算（ポケモンBW/BW2用）
-    #[inline]
-    pub fn to_mt_seed(&self) -> u32 {
-        calculate_pokemon_seed_from_hash(self.h0, self.h1)
-    }
-}
-
-// =============================================================================
 // テスト
 // =============================================================================
 
@@ -255,35 +211,5 @@ mod tests {
         let message = builder.build_message(0x12345678, 0xABCDEF00);
         assert_eq!(message[8], 0x12345678);
         assert_eq!(message[9], 0xABCDEF00);
-    }
-
-    #[test]
-    fn test_hash_values_creation() {
-        let hash = HashValues::new(0x11111111, 0x22222222, 0x33333333, 0x44444444, 0x55555555);
-        assert_eq!(hash.h0, 0x11111111);
-        assert_eq!(hash.h1, 0x22222222);
-        assert_eq!(hash.h2, 0x33333333);
-        assert_eq!(hash.h3, 0x44444444);
-        assert_eq!(hash.h4, 0x55555555);
-    }
-
-    #[test]
-    fn test_hash_values_to_hex_string() {
-        let hash = HashValues::new(0xABCDEF01, 0x23456789, 0xFEDCBA98, 0x76543210, 0x00000000);
-        assert_eq!(
-            hash.to_hex_string(),
-            "abcdef0123456789fedcba987654321000000000"
-        );
-    }
-
-    #[test]
-    fn test_hash_values_to_lcg_seed() {
-        let hash = HashValues::new(0x12345678, 0xABCDEF00, 0, 0, 0);
-        let seed = hash.to_lcg_seed();
-        // swap_bytes_32(0x12345678) = 0x78563412
-        // swap_bytes_32(0xABCDEF00) = 0x00EFCDAB
-        // (0x00EFCDAB << 32) | 0x78563412
-        let expected = (0x00EFCDAB_u64 << 32) | 0x78563412_u64;
-        assert_eq!(seed, expected);
     }
 }

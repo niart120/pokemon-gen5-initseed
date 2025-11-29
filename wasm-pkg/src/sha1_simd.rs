@@ -1,13 +1,24 @@
 /// ポケモンBW/BW2特化SHA-1のSIMD実装
 /// WebAssembly SIMD命令を使用して4つのメッセージを並列処理
 
+use crate::sha1::HashValues;
+
 #[cfg(target_arch = "wasm32")]
 use core::arch::wasm32::*;
 
+/// ダミーのHashValues（初期化用）
+const DUMMY_HASH: HashValues = HashValues {
+    h0: 0,
+    h1: 0,
+    h2: 0,
+    h3: 0,
+    h4: 0,
+};
+
 /// 非WASM環境用のフォールバック実装
 #[cfg(not(target_arch = "wasm32"))]
-pub fn calculate_pokemon_sha1_simd(messages: &[u32; 64]) -> [u32; 20] {
-    let mut results = [0u32; 20];
+pub fn calculate_pokemon_sha1_simd(messages: &[u32; 64]) -> [HashValues; 4] {
+    let mut results = [DUMMY_HASH; 4];
 
     // 4組のメッセージを通常のSHA-1で処理
     for i in 0..4 {
@@ -15,23 +26,17 @@ pub fn calculate_pokemon_sha1_simd(messages: &[u32; 64]) -> [u32; 20] {
         let mut message = [0u32; 16];
         message.copy_from_slice(&messages[start_idx..start_idx + 16]);
 
-        let (h0, h1, h2, h3, h4) = crate::sha1::calculate_pokemon_sha1(&message);
-
-        let base_idx = i * 5;
-        results[base_idx] = h0;
-        results[base_idx + 1] = h1;
-        results[base_idx + 2] = h2;
-        results[base_idx + 3] = h3;
-        results[base_idx + 4] = h4;
+        results[i] = crate::sha1::calculate_pokemon_sha1(&message);
     }
 
     results
 }
 
 /// WASM環境用の本格的SIMD実装
-/// 4組の16ワードメッセージを並列処理し、4組のハッシュ値を返す
+/// 4組の16ワードメッセージを並列処理し、4組のHashValuesを返す
 #[cfg(target_arch = "wasm32")]
-pub fn calculate_pokemon_sha1_simd(messages: &[u32; 64]) -> [u32; 20] {
+#[inline]
+pub fn calculate_pokemon_sha1_simd(messages: &[u32; 64]) -> [HashValues; 4] {
     // SHA-1初期値をSIMDベクトルとして準備
     let h0_init = u32x4_splat(0x67452301);
     let h1_init = u32x4_splat(0xEFCDAB89);
@@ -107,46 +112,37 @@ pub fn calculate_pokemon_sha1_simd(messages: &[u32; 64]) -> [u32; 20] {
     let h3_final = u32x4_add(h3_init, d);
     let h4_final = u32x4_add(h4_init, e);
 
-    // 結果を配列に展開
-    let mut results = [0u32; 20];
-
-    // 各レーンから値を抽出
-    for lane in 0..4 {
-        let base_idx = lane * 5;
-        match lane {
-            0 => {
-                results[base_idx] = u32x4_extract_lane::<0>(h0_final);
-                results[base_idx + 1] = u32x4_extract_lane::<0>(h1_final);
-                results[base_idx + 2] = u32x4_extract_lane::<0>(h2_final);
-                results[base_idx + 3] = u32x4_extract_lane::<0>(h3_final);
-                results[base_idx + 4] = u32x4_extract_lane::<0>(h4_final);
-            }
-            1 => {
-                results[base_idx] = u32x4_extract_lane::<1>(h0_final);
-                results[base_idx + 1] = u32x4_extract_lane::<1>(h1_final);
-                results[base_idx + 2] = u32x4_extract_lane::<1>(h2_final);
-                results[base_idx + 3] = u32x4_extract_lane::<1>(h3_final);
-                results[base_idx + 4] = u32x4_extract_lane::<1>(h4_final);
-            }
-            2 => {
-                results[base_idx] = u32x4_extract_lane::<2>(h0_final);
-                results[base_idx + 1] = u32x4_extract_lane::<2>(h1_final);
-                results[base_idx + 2] = u32x4_extract_lane::<2>(h2_final);
-                results[base_idx + 3] = u32x4_extract_lane::<2>(h3_final);
-                results[base_idx + 4] = u32x4_extract_lane::<2>(h4_final);
-            }
-            3 => {
-                results[base_idx] = u32x4_extract_lane::<3>(h0_final);
-                results[base_idx + 1] = u32x4_extract_lane::<3>(h1_final);
-                results[base_idx + 2] = u32x4_extract_lane::<3>(h2_final);
-                results[base_idx + 3] = u32x4_extract_lane::<3>(h3_final);
-                results[base_idx + 4] = u32x4_extract_lane::<3>(h4_final);
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    results
+    // 結果をHashValues配列に展開
+    [
+        HashValues::new(
+            u32x4_extract_lane::<0>(h0_final),
+            u32x4_extract_lane::<0>(h1_final),
+            u32x4_extract_lane::<0>(h2_final),
+            u32x4_extract_lane::<0>(h3_final),
+            u32x4_extract_lane::<0>(h4_final),
+        ),
+        HashValues::new(
+            u32x4_extract_lane::<1>(h0_final),
+            u32x4_extract_lane::<1>(h1_final),
+            u32x4_extract_lane::<1>(h2_final),
+            u32x4_extract_lane::<1>(h3_final),
+            u32x4_extract_lane::<1>(h4_final),
+        ),
+        HashValues::new(
+            u32x4_extract_lane::<2>(h0_final),
+            u32x4_extract_lane::<2>(h1_final),
+            u32x4_extract_lane::<2>(h2_final),
+            u32x4_extract_lane::<2>(h3_final),
+            u32x4_extract_lane::<2>(h4_final),
+        ),
+        HashValues::new(
+            u32x4_extract_lane::<3>(h0_final),
+            u32x4_extract_lane::<3>(h1_final),
+            u32x4_extract_lane::<3>(h2_final),
+            u32x4_extract_lane::<3>(h3_final),
+            u32x4_extract_lane::<3>(h4_final),
+        ),
+    ]
 }
 
 /// SIMD版choice関数: (x & y) | (!x & z)

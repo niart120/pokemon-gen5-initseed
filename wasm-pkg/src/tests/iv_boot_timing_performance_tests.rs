@@ -199,8 +199,8 @@ mod wasm_tests {
             for i in 0..scalar_iterations {
                 let mut msg = test_message;
                 msg[8] = msg[8].wrapping_add(i);
-                let (h0, h1, _, _, _) = calculate_pokemon_sha1(&msg);
-                checksum = checksum.wrapping_add(h0 as u64).wrapping_add(h1 as u64);
+                let hash = calculate_pokemon_sha1(&msg);
+                checksum = checksum.wrapping_add(hash.h0 as u64).wrapping_add(hash.h1 as u64);
             }
             let duration = Date::now() - start;
             log_performance("SHA-1 scalar", scalar_iterations as u64, duration);
@@ -220,8 +220,8 @@ mod wasm_tests {
                 let results = calculate_pokemon_sha1_simd(&messages);
                 for lane in 0..4 {
                     checksum = checksum
-                        .wrapping_add(results[lane * 5] as u64)
-                        .wrapping_add(results[lane * 5 + 1] as u64);
+                        .wrapping_add(results[lane].h0 as u64)
+                        .wrapping_add(results[lane].h1 as u64);
                 }
             }
             let duration = Date::now() - start;

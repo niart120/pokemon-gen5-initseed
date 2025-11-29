@@ -5,7 +5,8 @@
 //! ハッシュ値を効率的に列挙する（段階的所有権移譲パターン）。
 
 use super::datetime::{DateTimeCode, DateTimeCodeEnumerator, RangedTimeCodeTable};
-use super::message::{BaseMessageBuilder, HashValues};
+use super::message::BaseMessageBuilder;
+use crate::sha1::HashValues;
 use crate::sha1_simd::calculate_pokemon_sha1_simd;
 
 // =============================================================================
@@ -114,14 +115,7 @@ impl HashValuesEnumerator {
         // 常にSIMD処理（端数でも4件分計算し、必要な分だけ使用）
         let hashes = calculate_pokemon_sha1_simd(&message_buffer);
         for i in 0..len as usize {
-            let hash = HashValues::new(
-                hashes[i * 5],
-                hashes[i * 5 + 1],
-                hashes[i * 5 + 2],
-                hashes[i * 5 + 3],
-                hashes[i * 5 + 4],
-            );
-            entries[i] = HashEntry::new(hash, datetime_entries[i]);
+            entries[i] = HashEntry::new(hashes[i], datetime_entries[i]);
         }
 
         (entries, len)

@@ -23,15 +23,15 @@ mod tests {
         let simd_results = calculate_pokemon_sha1_simd(&messages);
 
         // 通常版の結果と比較
-        let (h0, h1, h2, h3, h4) = crate::sha1::calculate_pokemon_sha1(&message);
+        let expected = crate::sha1::calculate_pokemon_sha1(&message);
 
         // 4組とも同じ結果になるはず
         for i in 0..4 {
-            assert_eq!(simd_results[i * 5], h0);
-            assert_eq!(simd_results[i * 5 + 1], h1);
-            assert_eq!(simd_results[i * 5 + 2], h2);
-            assert_eq!(simd_results[i * 5 + 3], h3);
-            assert_eq!(simd_results[i * 5 + 4], h4);
+            assert_eq!(simd_results[i].h0, expected.h0);
+            assert_eq!(simd_results[i].h1, expected.h1);
+            assert_eq!(simd_results[i].h2, expected.h2);
+            assert_eq!(simd_results[i].h3, expected.h3);
+            assert_eq!(simd_results[i].h4, expected.h4);
         }
     }
 
@@ -62,33 +62,13 @@ mod tests {
             let mut message = [0u32; 16];
             message.copy_from_slice(&messages[start_idx..start_idx + 16]);
 
-            let (h0, h1, h2, h3, h4) = crate::sha1::calculate_pokemon_sha1(&message);
+            let expected = crate::sha1::calculate_pokemon_sha1(&message);
 
-            let result_base = i * 5;
-            assert_eq!(
-                simd_results[result_base], h0,
-                "h0 mismatch for message {i}"
-            );
-            assert_eq!(
-                simd_results[result_base + 1],
-                h1,
-                "h1 mismatch for message {i}"
-            );
-            assert_eq!(
-                simd_results[result_base + 2],
-                h2,
-                "h2 mismatch for message {i}"
-            );
-            assert_eq!(
-                simd_results[result_base + 3],
-                h3,
-                "h3 mismatch for message {i}"
-            );
-            assert_eq!(
-                simd_results[result_base + 4],
-                h4,
-                "h4 mismatch for message {i}"
-            );
+            assert_eq!(simd_results[i].h0, expected.h0, "h0 mismatch for message {i}");
+            assert_eq!(simd_results[i].h1, expected.h1, "h1 mismatch for message {i}");
+            assert_eq!(simd_results[i].h2, expected.h2, "h2 mismatch for message {i}");
+            assert_eq!(simd_results[i].h3, expected.h3, "h3 mismatch for message {i}");
+            assert_eq!(simd_results[i].h4, expected.h4, "h4 mismatch for message {i}");
         }
     }
 
@@ -118,8 +98,7 @@ mod tests {
         for _ in 0..iterations {
             let simd_results = calculate_pokemon_sha1_simd(&messages);
             for i in 0..4 {
-                let base_idx = i * 5;
-                simd_checksum = simd_checksum.wrapping_add(simd_results[base_idx] as u64);
+                simd_checksum = simd_checksum.wrapping_add(simd_results[i].h0 as u64);
             }
         }
 
@@ -135,8 +114,8 @@ mod tests {
                 let mut message = [0u32; 16];
                 message.copy_from_slice(&messages[start_idx..start_idx + 16]);
 
-                let (h0, _h1, _h2, _h3, _h4) = crate::sha1::calculate_pokemon_sha1(&message);
-                normal_checksum = normal_checksum.wrapping_add(h0 as u64);
+                let hash = crate::sha1::calculate_pokemon_sha1(&message);
+                normal_checksum = normal_checksum.wrapping_add(hash.h0 as u64);
             }
         }
 
@@ -181,12 +160,12 @@ mod tests {
         let results_2 = calculate_pokemon_sha1_simd(&messages);
 
         // 全ての結果が同じことを確認
-        for i in 0..20 {
-            // 4 messages × 5 hash values
-            assert_eq!(
-                results_1[i], results_2[i],
-                "Deterministic test failed at index {i}"
-            );
+        for i in 0..4 {
+            assert_eq!(results_1[i].h0, results_2[i].h0, "h0 mismatch at {i}");
+            assert_eq!(results_1[i].h1, results_2[i].h1, "h1 mismatch at {i}");
+            assert_eq!(results_1[i].h2, results_2[i].h2, "h2 mismatch at {i}");
+            assert_eq!(results_1[i].h3, results_2[i].h3, "h3 mismatch at {i}");
+            assert_eq!(results_1[i].h4, results_2[i].h4, "h4 mismatch at {i}");
         }
     }
 
@@ -208,17 +187,16 @@ mod tests {
 
         let results = calculate_pokemon_sha1_simd(&messages);
 
-        // 結果配列の長さが正しいことを確認 (4 messages × 5 hash values = 20)
-        assert_eq!(results.len(), 20);
+        // 結果配列の長さが正しいことを確認 (4 HashValues)
+        assert_eq!(results.len(), 4);
 
         // 各ハッシュ値が0でないことを確認
         for i in 0..4 {
-            let base_idx = i * 5;
-            assert_ne!(results[base_idx], 0, "h0 is 0 for message {i}");
-            assert_ne!(results[base_idx + 1], 0, "h1 is 0 for message {i}");
-            assert_ne!(results[base_idx + 2], 0, "h2 is 0 for message {i}");
-            assert_ne!(results[base_idx + 3], 0, "h3 is 0 for message {i}");
-            assert_ne!(results[base_idx + 4], 0, "h4 is 0 for message {i}");
+            assert_ne!(results[i].h0, 0, "h0 is 0 for message {i}");
+            assert_ne!(results[i].h1, 0, "h1 is 0 for message {i}");
+            assert_ne!(results[i].h2, 0, "h2 is 0 for message {i}");
+            assert_ne!(results[i].h3, 0, "h3 is 0 for message {i}");
+            assert_ne!(results[i].h4, 0, "h4 is 0 for message {i}");
         }
     }
 }
