@@ -557,28 +557,6 @@ mod native_tests {
             println!("Iterator API: {:?} ({} entries, {:.0} iter/sec)", duration, count, rate);
             println!("  checksum: 0x{:016X}", checksum);
         }
-
-        // Batch APIテスト
-        {
-            let builder = BaseMessageBuilder::from_params(&ds_config, &segment);
-            let table = build_ranged_time_code_table(&time_range, HardwareType::DS);
-            let enumerator = HashValuesEnumerator::new(builder, table, 0, iterations);
-
-            let start = std::time::Instant::now();
-            let mut count = 0u64;
-            let mut checksum = 0u64;
-            for batch in enumerator.batches() {
-                for entry in batch.entries() {
-                    count += 1;
-                    checksum = checksum.wrapping_add(entry.hash.h0 as u64);
-                }
-            }
-            let duration = start.elapsed();
-            let rate = count as f64 / duration.as_secs_f64();
-            
-            println!("Batch API:    {:?} ({} entries, {:.0} iter/sec)", duration, count, rate);
-            println!("  checksum: 0x{:016X}", checksum);
-        }
     }
 
     #[test]
@@ -618,33 +596,6 @@ mod native_tests {
             let rate = range_seconds as f64 / duration.as_secs_f64();
             
             println!("Iterator API (with lookup): {:?} ({:.0} iter/sec, {} found)", duration, rate, found);
-        }
-
-        // 2. Batch API (シード検索込み)
-        {
-            let ds_config = DSConfig::new(mac, nazo, HardwareType::DS);
-            let segment = SegmentParams::new(0x1000, 0x60, 0x2FFF);
-            let time_range = TimeRangeParams::new(0, 23, 0, 59, 0, 59).unwrap();
-            let target_set: HashSet<u32> = target_seeds.iter().copied().collect();
-
-            let builder = BaseMessageBuilder::from_params(&ds_config, &segment);
-            let table = build_ranged_time_code_table(&time_range, HardwareType::DS);
-            let enumerator = HashValuesEnumerator::new(builder, table, 0, range_seconds);
-
-            let start = std::time::Instant::now();
-            let mut found = 0u32;
-            for batch in enumerator.batches() {
-                for entry in batch.entries() {
-                    let mt_seed = entry.hash.to_mt_seed();
-                    if target_set.contains(&mt_seed) {
-                        found += 1;
-                    }
-                }
-            }
-            let duration = start.elapsed();
-            let rate = range_seconds as f64 / duration.as_secs_f64();
-            
-            println!("Batch API (with lookup):    {:?} ({:.0} iter/sec, {} found)", duration, rate, found);
         }
 
         println!("=== 比較完了 ===\n");

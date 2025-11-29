@@ -54,5 +54,4 @@ pub use datetime::{
 };
 
 // hash モジュール
-#[allow(unused_imports)]
-pub use hash::{HashBatch, HashBatchIterator, HashEntry, HashValuesEnumerator};
+pub use hash::{HashEntry, HashValuesEnumerator};

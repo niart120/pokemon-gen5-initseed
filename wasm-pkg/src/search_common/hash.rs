@@ -27,39 +27,6 @@ impl HashEntry {
 }
 
 // =============================================================================
-// ハッシュバッチ（Option排除版）
-// =============================================================================
-
-/// ハッシュ値バッチ（固定長配列 + 長さカウンタ）
-///
-/// Option を使用しない設計でパフォーマンスを最適化。
-#[derive(Debug)]
-pub struct HashBatch {
-    entries: [HashEntry; 4],
-    len: u8,
-}
-
-impl HashBatch {
-    /// バッチ内の有効エントリ数を取得
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.len as usize
-    }
-
-    /// バッチが空かどうかを確認
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-
-    /// 有効エントリのスライスを取得
-    #[inline]
-    pub fn entries(&self) -> &[HashEntry] {
-        &self.entries[..self.len as usize]
-    }
-}
-
-// =============================================================================
 // ハッシュ値列挙器
 // =============================================================================
 
@@ -187,52 +154,6 @@ impl HashValuesEnumerator {
         } else {
             false
         }
-    }
-
-    /// バッチイテレータを取得（for文での利用向け）
-    ///
-    /// `for batch in enumerator.batches() { ... }` の形式で使用可能。
-    /// 各バッチは最大4エントリを含む。
-    pub fn batches(self) -> HashBatchIterator {
-        HashBatchIterator { inner: self }
-    }
-
-    /// 次のバッチを取得（内部用）
-    fn next_batch(&mut self) -> Option<HashBatch> {
-        // 新しいバッチを収集
-        self.buffer_len = 0;
-        while self.buffer_len < 4 {
-            if !self.buffer_next() {
-                break;
-            }
-        }
-
-        if self.buffer_len == 0 {
-            return None;
-        }
-
-        // バッチ処理実行
-        self.process_simd_batch();
-
-        // HashBatchを構築
-        Some(HashBatch {
-            entries: self.output_buffer,
-            len: self.output_len,
-        })
-    }
-}
-
-/// バッチイテレータ（for文での利用向け）
-pub struct HashBatchIterator {
-    inner: HashValuesEnumerator,
-}
-
-impl Iterator for HashBatchIterator {
-    type Item = HashBatch;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next_batch()
     }
 }
 
@@ -365,25 +286,5 @@ mod tests {
         let mt_seed = entry.hash.to_mt_seed();
         // u32は常に0以上なので、値が取得できていることを確認
         let _seed = mt_seed; // 値が取得できることを確認
-    }
-
-    #[test]
-    fn test_batch_iterator() {
-        let builder = create_test_builder();
-        let time_range = TimeRangeParams::new(0, 23, 0, 59, 0, 59).unwrap();
-        let table = build_ranged_time_code_table(&time_range, HardwareType::DS);
-
-        let enumerator = HashValuesEnumerator::new(builder, table, 0, 10);
-        
-        let mut total_entries = 0;
-        for batch in enumerator.batches() {
-            assert!(!batch.is_empty());
-            assert!(batch.len() <= 4);
-            for _entry in batch.entries() {
-                total_entries += 1;
-            }
-        }
-        
-        assert_eq!(total_entries, 10);
     }
 }
