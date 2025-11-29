@@ -365,14 +365,6 @@ interface SearchResult {
 }
 
 /**
- * イベントループに制御を戻すためのユーティリティ
- * これにより onmessage で STOP メッセージを受け取れる
- */
-function yieldToEventLoop(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0));
-}
-
-/**
  * dateRange全体を一括検索（セグメントベースパターン）
  *
  * WebGPU検索と同様のセグメント分割パターンを採用:

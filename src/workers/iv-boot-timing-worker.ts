@@ -229,13 +229,6 @@ interface SearchResult {
 }
 
 /**
- * イベントループに制御を戻すためのユーティリティ
- */
-function yieldToEventLoop(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
-/**
  * 検索実行（セグメントベースパターン）
  *
  * timer0 × vcount × keyCode のセグメントループを実装し、
