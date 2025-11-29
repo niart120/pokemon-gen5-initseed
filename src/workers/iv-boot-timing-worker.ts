@@ -300,7 +300,7 @@ async function executeSearch(
 
   // イテレータパラメータ
   const RESULT_LIMIT = 4;
-  const CHUNK_SECONDS = 3600 * 24 * 5; // 5日ずつ取得
+  const CHUNK_SECONDS = 3600 * 24 * 5 * totalSegments; // 1チャンクあたりの秒数（5日分×セグメント数）
   const PROGRESS_INTERVAL_MS = 500;
 
   let resultsCount = 0;
