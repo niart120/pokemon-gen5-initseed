@@ -118,7 +118,7 @@
         "cheerio": "^1.0.0-rc.12",
         "copyfiles": "^2.4.1",
         "cross-env": "^10.1.0",
-        "eslint": "^9.28.0",
+        "eslint": "^9.39.1",
         "eslint-plugin-react-hooks": "^5.2.0",
         "eslint-plugin-react-refresh": "^0.4.19",
         "globals": "^16.0.0",
