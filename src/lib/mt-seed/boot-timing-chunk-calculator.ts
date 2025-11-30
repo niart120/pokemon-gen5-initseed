@@ -1,9 +1,9 @@
 /**
- * IV boot timing search chunk calculator
+ * MT Seed boot timing search chunk calculator
  * Worker に割り当てるチャンク分割を計算
  */
 
-import type { IVBootTimingSearchParams } from '@/types/iv-boot-timing-search';
+import type { MtSeedBootTimingSearchParams } from '@/types/mt-seed-boot-timing-search';
 import { countValidKeyCombinations } from '@/lib/utils/key-input';
 
 /**
@@ -18,7 +18,7 @@ export function getDefaultWorkerCount(): number {
 /**
  * Worker に割り当てるチャンク情報
  */
-export interface IVBootTimingWorkerChunk {
+export interface MtSeedBootTimingWorkerChunk {
   workerId: number;
   startDatetime: Date;
   endDatetime: Date;
@@ -29,23 +29,23 @@ export interface IVBootTimingWorkerChunk {
 /**
  * 秒あたりの処理数を計算
  */
-function getOperationsPerSecond(params: IVBootTimingSearchParams): number {
+function getOperationsPerSecond(params: MtSeedBootTimingSearchParams): number {
   const timer0Count = params.timer0Range.max - params.timer0Range.min + 1;
   const vcountCount = params.vcountRange.max - params.vcountRange.min + 1;
   const keyCombinationCount = countValidKeyCombinations(params.keyInputMask);
 
   // 各秒に対して timer0 × vcount × keyCode の組み合わせを検索
-  // IV検索はadvanceCountがないため、純粋な組み合わせ数
+  // MT Seed検索はadvanceCountがないため、純粋な組み合わせ数
   return Math.max(1, timer0Count * vcountCount * keyCombinationCount);
 }
 
 /**
  * 最適なチャンク分割を計算
  */
-export function calculateIVBootTimingChunks(
-  params: IVBootTimingSearchParams,
+export function calculateMtSeedBootTimingChunks(
+  params: MtSeedBootTimingSearchParams,
   maxWorkers: number = getDefaultWorkerCount()
-): IVBootTimingWorkerChunk[] {
+): MtSeedBootTimingWorkerChunk[] {
   const operationsPerSecond = getOperationsPerSecond(params);
 
   // dateRangeから開始日と日数を計算
@@ -70,7 +70,7 @@ export function calculateIVBootTimingChunks(
   const totalSeconds = daysDiff * 24 * 60 * 60;
   const secondsPerWorker = Math.ceil(totalSeconds / maxWorkers);
 
-  const chunks: IVBootTimingWorkerChunk[] = [];
+  const chunks: MtSeedBootTimingWorkerChunk[] = [];
 
   for (let i = 0; i < maxWorkers; i++) {
     const chunkStartOffset = i * secondsPerWorker;

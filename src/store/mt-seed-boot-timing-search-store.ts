@@ -1,30 +1,30 @@
 /**
- * iv-boot-timing-search-store.ts
- * IV起動時間検索パネル向けのZustand Store
+ * mt-seed-boot-timing-search-store.ts
+ * MT Seed 起動時間検索パネル向けのZustand Store
  * EggBootTimingSearchStoreのパターンを流用
  */
 
 import { create } from 'zustand';
 import type {
-  IVBootTimingSearchParams,
-  IVBootTimingSearchResult,
+  MtSeedBootTimingSearchParams,
+  MtSeedBootTimingSearchResult,
   DateRange,
-} from '@/types/iv-boot-timing-search';
+} from '@/types/mt-seed-boot-timing-search';
 import {
-  createDefaultIVBootTimingSearchParams,
-  validateIVBootTimingSearchParams,
-} from '@/types/iv-boot-timing-search';
+  createDefaultMtSeedBootTimingSearchParams,
+  validateMtSeedBootTimingSearchParams,
+} from '@/types/mt-seed-boot-timing-search';
 import type { DeviceProfile } from '@/types/profile';
 import type { DailyTimeRange } from '@/types/search';
 import {
   getSearchWorkerManager,
-  type IVBootTimingSearchCallbacks,
+  type MtSeedBootTimingSearchCallbacks,
 } from '@/lib/search/search-worker-manager';
 
 /**
  * 検索実行状態
  */
-export type IVBootTimingSearchStatus =
+export type MtSeedBootTimingSearchStatus =
   | 'idle' // 初期状態・完了後
   | 'starting' // 検索開始中
   | 'running' // 検索実行中
@@ -36,7 +36,7 @@ export type IVBootTimingSearchStatus =
 /**
  * 進捗情報
  */
-export interface IVBootTimingSearchProgress {
+export interface MtSeedBootTimingSearchProgress {
   /** 処理済み組み合わせ数 */
   processedCombinations: number;
   /** 総組み合わせ数 */
@@ -54,7 +54,7 @@ export interface IVBootTimingSearchProgress {
 /**
  * 結果フィルター条件
  */
-export interface IVBootTimingResultFilters {
+export interface MtSeedBootTimingResultFilters {
   // Timer0フィルター (hex文字列)
   timer0Filter?: string;
   // VCountフィルター (hex文字列)
@@ -64,7 +64,7 @@ export interface IVBootTimingResultFilters {
 /**
  * 完了情報
  */
-export interface IVBootTimingCompletion {
+export interface MtSeedBootTimingCompletion {
   reason: 'completed' | 'stopped' | 'max_results' | 'error';
   processedCombinations: number;
   totalCombinations: number;
@@ -74,30 +74,30 @@ export interface IVBootTimingCompletion {
 
 const MAX_RESULTS = 1000;
 
-interface IVBootTimingSearchState {
+interface MtSeedBootTimingSearchState {
   // --- パラメータ ---
   /** UI入力用ドラフトパラメータ */
-  draftParams: IVBootTimingSearchParams;
+  draftParams: MtSeedBootTimingSearchParams;
   /** バリデーション済みパラメータ */
-  params: IVBootTimingSearchParams | null;
+  params: MtSeedBootTimingSearchParams | null;
   /** バリデーションエラー */
   validationErrors: string[];
 
   // --- 実行状態 ---
   /** 検索状態 */
-  status: IVBootTimingSearchStatus;
+  status: MtSeedBootTimingSearchStatus;
 
   // --- 進捗 ---
   /** 進捗情報 */
-  progress: IVBootTimingSearchProgress | null;
+  progress: MtSeedBootTimingSearchProgress | null;
 
   // --- 結果 ---
   /** 検索中の内部バッファ（UIには反映しない） */
-  _pendingResults: IVBootTimingSearchResult[];
+  _pendingResults: MtSeedBootTimingSearchResult[];
   /** 検索結果配列（完了/停止時に一括反映） */
-  results: IVBootTimingSearchResult[];
+  results: MtSeedBootTimingSearchResult[];
   /** 結果フィルター条件 */
-  resultFilters: IVBootTimingResultFilters;
+  resultFilters: MtSeedBootTimingResultFilters;
 
   // --- エラー ---
   /** 最終エラーメッセージ */
@@ -107,12 +107,12 @@ interface IVBootTimingSearchState {
   /** 最終実行時間 (ms) */
   lastElapsedMs: number | null;
   /** 完了情報 */
-  lastCompletion: IVBootTimingCompletion | null;
+  lastCompletion: MtSeedBootTimingCompletion | null;
 }
 
-interface IVBootTimingSearchActions {
+interface MtSeedBootTimingSearchActions {
   // --- パラメータ更新 ---
-  updateDraftParams: (updates: Partial<IVBootTimingSearchParams>) => void;
+  updateDraftParams: (updates: Partial<MtSeedBootTimingSearchParams>) => void;
   updateDateRange: (updates: Partial<DateRange>) => void;
   updateTimeRange: (updates: Partial<DailyTimeRange>) => void;
   updateTargetSeeds: (seeds: number[]) => void;
@@ -128,31 +128,31 @@ interface IVBootTimingSearchActions {
   stopSearch: () => void;
 
   // --- 進捗更新（Worker Manager からの呼び出し用） ---
-  _updateProgress: (progress: IVBootTimingSearchProgress) => void;
-  _addPendingResult: (result: IVBootTimingSearchResult) => boolean;
-  _onComplete: (completion: IVBootTimingCompletion) => void;
+  _updateProgress: (progress: MtSeedBootTimingSearchProgress) => void;
+  _addPendingResult: (result: MtSeedBootTimingSearchResult) => boolean;
+  _onComplete: (completion: MtSeedBootTimingCompletion) => void;
   _onError: (error: string) => void;
   _onPaused: () => void;
   _onResumed: () => void;
   _onStopped: () => void;
 
   // --- 結果操作 ---
-  updateResultFilters: (filters: Partial<IVBootTimingResultFilters>) => void;
-  getFilteredResults: () => IVBootTimingSearchResult[];
+  updateResultFilters: (filters: Partial<MtSeedBootTimingResultFilters>) => void;
+  getFilteredResults: () => MtSeedBootTimingSearchResult[];
   clearResults: () => void;
 
   // --- リセット ---
   reset: () => void;
 }
 
-export interface IVBootTimingSearchStore
-  extends IVBootTimingSearchState,
-    IVBootTimingSearchActions {}
+export interface MtSeedBootTimingSearchStore
+  extends MtSeedBootTimingSearchState,
+    MtSeedBootTimingSearchActions {}
 
-export const useIVBootTimingSearchStore = create<IVBootTimingSearchStore>(
+export const useMtSeedBootTimingSearchStore = create<MtSeedBootTimingSearchStore>(
   (set, get) => ({
     // === Initial State ===
-    draftParams: createDefaultIVBootTimingSearchParams(),
+    draftParams: createDefaultMtSeedBootTimingSearchParams(),
     params: null,
     validationErrors: [],
     status: 'idle',
@@ -223,7 +223,7 @@ export const useIVBootTimingSearchStore = create<IVBootTimingSearchStore>(
     // === バリデーション ===
     validateDraft: () => {
       const { draftParams } = get();
-      const errors = validateIVBootTimingSearchParams(draftParams);
+      const errors = validateMtSeedBootTimingSearchParams(draftParams);
       set({
         validationErrors: errors,
         params: errors.length === 0 ? draftParams : null,
@@ -252,7 +252,7 @@ export const useIVBootTimingSearchStore = create<IVBootTimingSearchStore>(
 
       const manager = getSearchWorkerManager();
 
-      const callbacks: IVBootTimingSearchCallbacks = {
+      const callbacks: MtSeedBootTimingSearchCallbacks = {
         onProgress: (progress) => {
           const progressPercent =
             progress.totalSteps > 0
@@ -271,7 +271,7 @@ export const useIVBootTimingSearchStore = create<IVBootTimingSearchStore>(
           const canContinue = get()._addPendingResult(result);
           if (!canContinue) {
             console.warn(
-              `[IVSearch] MAX_RESULTS (${MAX_RESULTS}) reached, stopping search`
+              `[MtSeedSearch] MAX_RESULTS (${MAX_RESULTS}) reached, stopping search`
             );
             get().stopSearch();
           }
@@ -301,7 +301,7 @@ export const useIVBootTimingSearchStore = create<IVBootTimingSearchStore>(
 
       try {
         set({ status: 'running' });
-        manager.startIVBootTimingSearch(draftParams, callbacks);
+        manager.startMtSeedBootTimingSearch(draftParams, callbacks);
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
         set({ status: 'error', errorMessage: message });
@@ -420,7 +420,7 @@ export const useIVBootTimingSearchStore = create<IVBootTimingSearchStore>(
       manager.stopSearch();
 
       set({
-        draftParams: createDefaultIVBootTimingSearchParams(),
+        draftParams: createDefaultMtSeedBootTimingSearchParams(),
         params: null,
         validationErrors: [],
         status: 'idle',

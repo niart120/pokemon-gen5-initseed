@@ -1,4 +1,4 @@
-//! IVBootTimingSearchIterator パフォーマンステスト
+//! MtSeedBootTimingSearchIterator パフォーマンステスト
 //!
 //! 起動時間検索のスループットを測定する。
 
@@ -11,7 +11,7 @@ wasm_bindgen_test_configure!(run_in_browser);
 #[cfg(all(test, target_arch = "wasm32"))]
 mod wasm_tests {
     use super::*;
-    use crate::iv_boot_timing_search::IVBootTimingSearchIterator;
+    use crate::mt_seed_boot_timing_search::MtSeedBootTimingSearchIterator;
     use crate::search_common::{DSConfigJs, SearchRangeParamsJs, SegmentParamsJs, TimeRangeParamsJs};
     use js_sys::Date;
     use std::collections::HashSet;
@@ -38,12 +38,12 @@ mod wasm_tests {
     }
 
     // =========================================================================
-    // IVBootTimingSearchIterator のパフォーマンス測定
+    // MtSeedBootTimingSearchIterator のパフォーマンス測定
     // =========================================================================
 
     #[wasm_bindgen_test]
-    fn test_iv_boot_timing_iterator_performance() {
-        log("=== IVBootTimingSearchIterator パフォーマンステスト ===");
+    fn test_mt_seed_boot_timing_iterator_performance() {
+        log("=== MtSeedBootTimingSearchIterator パフォーマンステスト ===");
 
         let range_seconds = 86400u32; // 1日分
         let target_seeds: Vec<u32> = vec![0x12345678, 0xABCDEF00];
@@ -60,7 +60,7 @@ mod wasm_tests {
         // ウォームアップ
         {
             let warmup_range = SearchRangeParamsJs::new(2024, 1, 1, 1000).unwrap();
-            let mut warmup_iter = IVBootTimingSearchIterator::new(
+            let mut warmup_iter = MtSeedBootTimingSearchIterator::new(
                 &ds_config,
                 &segment,
                 &time_range,
@@ -77,14 +77,14 @@ mod wasm_tests {
         // 計測
         let start = Date::now();
 
-        let mut iterator = IVBootTimingSearchIterator::new(
+        let mut iterator = MtSeedBootTimingSearchIterator::new(
             &ds_config,
             &segment,
             &time_range,
             &search_range,
             &target_seeds,
         )
-        .expect("Failed to create IVBootTimingSearchIterator");
+        .expect("Failed to create MtSeedBootTimingSearchIterator");
 
         let mut total_processed = 0u32;
         while !iterator.is_finished() {
@@ -95,7 +95,7 @@ mod wasm_tests {
 
         let duration = Date::now() - start;
 
-        log_performance("IVBootTimingIterator (1 segment)", total_processed as u64, duration);
+        log_performance("MtSeedBootTimingIterator (1 segment)", total_processed as u64, duration);
 
         // 複数セグメントテスト（セグメントループをシミュレート）
         let timer0_count = 3u32;
@@ -113,7 +113,7 @@ mod wasm_tests {
                     TEST_KEY_CODE,
                 );
 
-                let mut iterator = IVBootTimingSearchIterator::new(
+                let mut iterator = MtSeedBootTimingSearchIterator::new(
                     &ds_config,
                     &segment,
                     &time_range,
@@ -133,12 +133,12 @@ mod wasm_tests {
         let duration = Date::now() - start;
 
         log_performance(
-            &format!("IVBootTimingIterator ({segment_count} segments)"),
+            &format!("MtSeedBootTimingIterator ({segment_count} segments)"),
             total_iterations,
             duration,
         );
 
-        log("=== IVBootTimingSearchIterator パフォーマンステスト完了 ===");
+        log("=== MtSeedBootTimingSearchIterator パフォーマンステスト完了 ===");
     }
 
     // =========================================================================
@@ -158,13 +158,13 @@ mod wasm_tests {
             let time_range = TimeRangeParamsJs::new(0, 23, 0, 59, 0, 59).unwrap();
             let search_range = SearchRangeParamsJs::new(2024, 1, 1, iterations).unwrap();
 
-            // NOTE: IVBootTimingSearchIteratorは空のtarget_seedsを拒否するため、
+            // NOTE: MtSeedBootTimingSearchIteratorは空のtarget_seedsを拒否するため、
             // ダミーseedを使う
             let dummy_seeds: Vec<u32> = vec![0xFFFFFFFF];
 
             let start = Date::now();
 
-            let mut iterator = IVBootTimingSearchIterator::new(
+            let mut iterator = MtSeedBootTimingSearchIterator::new(
                 &ds_config,
                 &segment,
                 &time_range,

@@ -1,23 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type {
-  IVBootTimingSearchParams,
-  IVBootTimingWorkerRequest,
-  IVBootTimingWorkerResponse,
-  IVBootTimingProgress,
-  IVBootTimingCompletion,
-  IVBootTimingResultsPayload,
-} from '@/types/iv-boot-timing-search';
+  MtSeedBootTimingSearchParams,
+  MtSeedBootTimingWorkerRequest,
+  MtSeedBootTimingWorkerResponse,
+  MtSeedBootTimingProgress,
+  MtSeedBootTimingCompletion,
+  MtSeedBootTimingResultsPayload,
+} from '@/types/mt-seed-boot-timing-search';
 import {
-  createDefaultIVBootTimingSearchParams,
-  validateIVBootTimingSearchParams,
-  isIVBootTimingWorkerResponse,
+  createDefaultMtSeedBootTimingSearchParams,
+  validateMtSeedBootTimingSearchParams,
+  isMtSeedBootTimingWorkerResponse,
   estimateSearchCombinations,
-} from '@/types/iv-boot-timing-search';
+} from '@/types/mt-seed-boot-timing-search';
 
-describe('IV Boot Timing Worker Types', () => {
-  describe('createDefaultIVBootTimingSearchParams', () => {
+describe('MT Seed Boot Timing Worker Types', () => {
+  describe('createDefaultMtSeedBootTimingSearchParams', () => {
     it('should create default params with valid structure', () => {
-      const params = createDefaultIVBootTimingSearchParams();
+      const params = createDefaultMtSeedBootTimingSearchParams();
 
       expect(params).toBeDefined();
       expect(params.dateRange).toBeDefined();
@@ -37,23 +37,23 @@ describe('IV Boot Timing Worker Types', () => {
 
     it('should create params with current date', () => {
       const now = new Date();
-      const params = createDefaultIVBootTimingSearchParams();
+      const params = createDefaultMtSeedBootTimingSearchParams();
 
       expect(params.dateRange.startYear).toBe(now.getFullYear());
       expect(params.dateRange.startMonth).toBe(now.getMonth() + 1);
     });
   });
 
-  describe('validateIVBootTimingSearchParams', () => {
-    function createValidParams(): IVBootTimingSearchParams {
-      const params = createDefaultIVBootTimingSearchParams();
+  describe('validateMtSeedBootTimingSearchParams', () => {
+    function createValidParams(): MtSeedBootTimingSearchParams {
+      const params = createDefaultMtSeedBootTimingSearchParams();
       params.targetSeeds = [0x12345678]; // Required
       return params;
     }
 
     it('should pass validation for valid params', () => {
       const params = createValidParams();
-      const errors = validateIVBootTimingSearchParams(params);
+      const errors = validateMtSeedBootTimingSearchParams(params);
 
       expect(errors).toHaveLength(0);
     });
@@ -61,7 +61,7 @@ describe('IV Boot Timing Worker Types', () => {
     it('should fail when targetSeeds is empty', () => {
       const params = createValidParams();
       params.targetSeeds = [];
-      const errors = validateIVBootTimingSearchParams(params);
+      const errors = validateMtSeedBootTimingSearchParams(params);
 
       expect(errors).toContain('検索対象のSeedを1つ以上指定してください');
     });
@@ -76,7 +76,7 @@ describe('IV Boot Timing Worker Types', () => {
         endMonth: 1,
         endDay: 1,
       };
-      const errors = validateIVBootTimingSearchParams(params);
+      const errors = validateMtSeedBootTimingSearchParams(params);
 
       expect(errors).toContain('開始日は終了日以前である必要があります');
     });
@@ -84,7 +84,7 @@ describe('IV Boot Timing Worker Types', () => {
     it('should fail when timer0Range min > max', () => {
       const params = createValidParams();
       params.timer0Range = { min: 0x1000, max: 0x0fff };
-      const errors = validateIVBootTimingSearchParams(params);
+      const errors = validateMtSeedBootTimingSearchParams(params);
 
       expect(errors).toContain('Timer0の最小値は最大値以下である必要があります');
     });
@@ -92,7 +92,7 @@ describe('IV Boot Timing Worker Types', () => {
     it('should fail when timer0Range is out of bounds', () => {
       const params = createValidParams();
       params.timer0Range = { min: 0, max: 0x10000 }; // Exceeds 0xFFFF
-      const errors = validateIVBootTimingSearchParams(params);
+      const errors = validateMtSeedBootTimingSearchParams(params);
 
       expect(errors).toContain('Timer0は0x0000-0xFFFFの範囲である必要があります');
     });
@@ -100,7 +100,7 @@ describe('IV Boot Timing Worker Types', () => {
     it('should fail when vcountRange min > max', () => {
       const params = createValidParams();
       params.vcountRange = { min: 0x80, max: 0x60 };
-      const errors = validateIVBootTimingSearchParams(params);
+      const errors = validateMtSeedBootTimingSearchParams(params);
 
       expect(errors).toContain('VCountの最小値は最大値以下である必要があります');
     });
@@ -108,7 +108,7 @@ describe('IV Boot Timing Worker Types', () => {
     it('should fail when vcountRange is out of bounds', () => {
       const params = createValidParams();
       params.vcountRange = { min: 0, max: 0x100 }; // Exceeds 0xFF
-      const errors = validateIVBootTimingSearchParams(params);
+      const errors = validateMtSeedBootTimingSearchParams(params);
 
       expect(errors).toContain('VCountは0x00-0xFFの範囲である必要があります');
     });
@@ -123,7 +123,7 @@ describe('IV Boot Timing Worker Types', () => {
         number,
         number,
       ];
-      const errors = validateIVBootTimingSearchParams(params);
+      const errors = validateMtSeedBootTimingSearchParams(params);
 
       expect(errors).toContain('MACアドレスは6バイトの配列である必要があります');
     });
@@ -131,7 +131,7 @@ describe('IV Boot Timing Worker Types', () => {
     it('should fail when hour range is invalid', () => {
       const params = createValidParams();
       params.timeRange.hour = { start: 20, end: 10 };
-      const errors = validateIVBootTimingSearchParams(params);
+      const errors = validateMtSeedBootTimingSearchParams(params);
 
       expect(errors).toContain('時の範囲が無効です');
     });
@@ -139,23 +139,23 @@ describe('IV Boot Timing Worker Types', () => {
     it('should fail when maxResults is out of bounds', () => {
       const params = createValidParams();
       params.maxResults = 0;
-      const errors = validateIVBootTimingSearchParams(params);
+      const errors = validateMtSeedBootTimingSearchParams(params);
 
       expect(errors).toContain('結果上限は1-100000の範囲である必要があります');
     });
   });
 
-  describe('isIVBootTimingWorkerResponse', () => {
+  describe('isMtSeedBootTimingWorkerResponse', () => {
     it('should return true for valid READY response', () => {
-      const response: IVBootTimingWorkerResponse = {
+      const response: MtSeedBootTimingWorkerResponse = {
         type: 'READY',
         version: '1',
       };
-      expect(isIVBootTimingWorkerResponse(response)).toBe(true);
+      expect(isMtSeedBootTimingWorkerResponse(response)).toBe(true);
     });
 
     it('should return true for valid PROGRESS response', () => {
-      const response: IVBootTimingWorkerResponse = {
+      const response: MtSeedBootTimingWorkerResponse = {
         type: 'PROGRESS',
         payload: {
           processedCombinations: 100,
@@ -166,22 +166,22 @@ describe('IV Boot Timing Worker Types', () => {
           estimatedRemainingMs: 45000,
         },
       };
-      expect(isIVBootTimingWorkerResponse(response)).toBe(true);
+      expect(isMtSeedBootTimingWorkerResponse(response)).toBe(true);
     });
 
     it('should return true for valid RESULTS response', () => {
-      const response: IVBootTimingWorkerResponse = {
+      const response: MtSeedBootTimingWorkerResponse = {
         type: 'RESULTS',
         payload: {
           results: [],
           batchIndex: 0,
         },
       };
-      expect(isIVBootTimingWorkerResponse(response)).toBe(true);
+      expect(isMtSeedBootTimingWorkerResponse(response)).toBe(true);
     });
 
     it('should return true for valid COMPLETE response', () => {
-      const response: IVBootTimingWorkerResponse = {
+      const response: MtSeedBootTimingWorkerResponse = {
         type: 'COMPLETE',
         payload: {
           reason: 'completed',
@@ -191,39 +191,39 @@ describe('IV Boot Timing Worker Types', () => {
           elapsedMs: 60000,
         },
       };
-      expect(isIVBootTimingWorkerResponse(response)).toBe(true);
+      expect(isMtSeedBootTimingWorkerResponse(response)).toBe(true);
     });
 
     it('should return true for valid ERROR response', () => {
-      const response: IVBootTimingWorkerResponse = {
+      const response: MtSeedBootTimingWorkerResponse = {
         type: 'ERROR',
         message: 'Test error',
         category: 'RUNTIME',
         fatal: false,
       };
-      expect(isIVBootTimingWorkerResponse(response)).toBe(true);
+      expect(isMtSeedBootTimingWorkerResponse(response)).toBe(true);
     });
 
     it('should return false for null', () => {
-      expect(isIVBootTimingWorkerResponse(null)).toBe(false);
+      expect(isMtSeedBootTimingWorkerResponse(null)).toBe(false);
     });
 
     it('should return false for non-object', () => {
-      expect(isIVBootTimingWorkerResponse('string')).toBe(false);
+      expect(isMtSeedBootTimingWorkerResponse('string')).toBe(false);
     });
 
     it('should return false for object without type', () => {
-      expect(isIVBootTimingWorkerResponse({ payload: {} })).toBe(false);
+      expect(isMtSeedBootTimingWorkerResponse({ payload: {} })).toBe(false);
     });
 
     it('should return false for invalid type', () => {
-      expect(isIVBootTimingWorkerResponse({ type: 'INVALID' })).toBe(false);
+      expect(isMtSeedBootTimingWorkerResponse({ type: 'INVALID' })).toBe(false);
     });
   });
 
   describe('estimateSearchCombinations', () => {
     it('should calculate combinations correctly for minimal range', () => {
-      const params = createDefaultIVBootTimingSearchParams();
+      const params = createDefaultMtSeedBootTimingSearchParams();
       params.targetSeeds = [0x12345678];
       params.timer0Range = { min: 0x0c79, max: 0x0c79 }; // 1 value
       params.vcountRange = { min: 0x60, max: 0x60 }; // 1 value
@@ -242,7 +242,7 @@ describe('IV Boot Timing Worker Types', () => {
     });
 
     it('should scale with timer0 range', () => {
-      const params = createDefaultIVBootTimingSearchParams();
+      const params = createDefaultMtSeedBootTimingSearchParams();
       params.targetSeeds = [0x12345678];
       params.timer0Range = { min: 0x0c79, max: 0x0c7b }; // 3 values
       params.vcountRange = { min: 0x60, max: 0x60 }; // 1 value
@@ -260,7 +260,7 @@ describe('IV Boot Timing Worker Types', () => {
     });
 
     it('should scale with key input mask bits', () => {
-      const params = createDefaultIVBootTimingSearchParams();
+      const params = createDefaultMtSeedBootTimingSearchParams();
       params.targetSeeds = [0x12345678];
       params.timer0Range = { min: 0x0c79, max: 0x0c79 }; // 1 value
       params.vcountRange = { min: 0x60, max: 0x60 }; // 1 value
@@ -279,7 +279,7 @@ describe('IV Boot Timing Worker Types', () => {
   });
 });
 
-describe('IV Boot Timing Worker Mock Integration', () => {
+describe('MT Seed Boot Timing Worker Mock Integration', () => {
   let mockPostMessage: ReturnType<typeof vi.fn>;
   let mockTerminate: ReturnType<typeof vi.fn>;
   let mockOnMessage: ((ev: MessageEvent) => void) | null;
@@ -309,7 +309,7 @@ describe('IV Boot Timing Worker Mock Integration', () => {
     } as unknown as Worker;
   }
 
-  function simulateWorkerMessage(msg: IVBootTimingWorkerResponse) {
+  function simulateWorkerMessage(msg: MtSeedBootTimingWorkerResponse) {
     if (mockOnMessage) {
       mockOnMessage({ data: msg } as MessageEvent);
     }
@@ -336,10 +336,10 @@ describe('IV Boot Timing Worker Mock Integration', () => {
 
   it('should send START_SEARCH request with valid params', () => {
     const worker = createMockWorker();
-    const params = createDefaultIVBootTimingSearchParams();
+    const params = createDefaultMtSeedBootTimingSearchParams();
     params.targetSeeds = [0x12345678];
 
-    const request: IVBootTimingWorkerRequest = {
+    const request: MtSeedBootTimingWorkerRequest = {
       type: 'START_SEARCH',
       params,
     };
@@ -353,7 +353,7 @@ describe('IV Boot Timing Worker Mock Integration', () => {
   it('should send STOP request', () => {
     const worker = createMockWorker();
 
-    const request: IVBootTimingWorkerRequest = {
+    const request: MtSeedBootTimingWorkerRequest = {
       type: 'STOP',
     };
     worker.postMessage(request);
@@ -367,7 +367,7 @@ describe('IV Boot Timing Worker Mock Integration', () => {
     createMockWorker();
     const _readyHandler = vi.fn();
 
-    const response: IVBootTimingWorkerResponse = {
+    const response: MtSeedBootTimingWorkerResponse = {
       type: 'READY',
       version: '1',
     };
@@ -380,14 +380,14 @@ describe('IV Boot Timing Worker Mock Integration', () => {
     }
 
     // Since we're testing the type validation directly
-    expect(isIVBootTimingWorkerResponse(response)).toBe(true);
+    expect(isMtSeedBootTimingWorkerResponse(response)).toBe(true);
   });
 
   it('should handle PROGRESS response', () => {
     createMockWorker();
     const _progressHandler = vi.fn();
 
-    const progress: IVBootTimingProgress = {
+    const progress: MtSeedBootTimingProgress = {
       processedCombinations: 500,
       totalCombinations: 1000,
       foundCount: 3,
@@ -396,7 +396,7 @@ describe('IV Boot Timing Worker Mock Integration', () => {
       estimatedRemainingMs: 30000,
     };
 
-    const response: IVBootTimingWorkerResponse = {
+    const response: MtSeedBootTimingWorkerResponse = {
       type: 'PROGRESS',
       payload: progress,
     };
@@ -408,7 +408,7 @@ describe('IV Boot Timing Worker Mock Integration', () => {
   it('should handle RESULTS response', () => {
     createMockWorker();
 
-    const resultsPayload: IVBootTimingResultsPayload = {
+    const resultsPayload: MtSeedBootTimingResultsPayload = {
       results: [
         {
           boot: {
@@ -427,7 +427,7 @@ describe('IV Boot Timing Worker Mock Integration', () => {
       batchIndex: 0,
     };
 
-    const response: IVBootTimingWorkerResponse = {
+    const response: MtSeedBootTimingWorkerResponse = {
       type: 'RESULTS',
       payload: resultsPayload,
     };
@@ -440,7 +440,7 @@ describe('IV Boot Timing Worker Mock Integration', () => {
   it('should handle COMPLETE response', () => {
     createMockWorker();
 
-    const completion: IVBootTimingCompletion = {
+    const completion: MtSeedBootTimingCompletion = {
       reason: 'completed',
       processedCombinations: 1000,
       totalCombinations: 1000,
@@ -448,7 +448,7 @@ describe('IV Boot Timing Worker Mock Integration', () => {
       elapsedMs: 60000,
     };
 
-    const response: IVBootTimingWorkerResponse = {
+    const response: MtSeedBootTimingWorkerResponse = {
       type: 'COMPLETE',
       payload: completion,
     };
@@ -461,7 +461,7 @@ describe('IV Boot Timing Worker Mock Integration', () => {
   it('should handle ERROR response', () => {
     createMockWorker();
 
-    const response: IVBootTimingWorkerResponse = {
+    const response: MtSeedBootTimingWorkerResponse = {
       type: 'ERROR',
       message: 'WASM initialization failed',
       category: 'WASM_INIT',
@@ -475,17 +475,17 @@ describe('IV Boot Timing Worker Mock Integration', () => {
 
   it('should simulate complete search workflow', async () => {
     const worker = createMockWorker();
-    const params = createDefaultIVBootTimingSearchParams();
+    const params = createDefaultMtSeedBootTimingSearchParams();
     params.targetSeeds = [0x12345678];
 
     // Track received messages
-    const receivedMessages: IVBootTimingWorkerResponse[] = [];
-    worker.onmessage = (ev: MessageEvent<IVBootTimingWorkerResponse>) => {
+    const receivedMessages: MtSeedBootTimingWorkerResponse[] = [];
+    worker.onmessage = (ev: MessageEvent<MtSeedBootTimingWorkerResponse>) => {
       receivedMessages.push(ev.data);
     };
 
     // 1. Send START_SEARCH
-    const request: IVBootTimingWorkerRequest = {
+    const request: MtSeedBootTimingWorkerRequest = {
       type: 'START_SEARCH',
       params,
     };
@@ -554,12 +554,12 @@ describe('IV Boot Timing Worker Mock Integration', () => {
 
   it('should handle stop request during search', () => {
     const worker = createMockWorker();
-    const params = createDefaultIVBootTimingSearchParams();
+    const params = createDefaultMtSeedBootTimingSearchParams();
     params.targetSeeds = [0x12345678];
 
     // Track received messages
-    const receivedMessages: IVBootTimingWorkerResponse[] = [];
-    worker.onmessage = (ev: MessageEvent<IVBootTimingWorkerResponse>) => {
+    const receivedMessages: MtSeedBootTimingWorkerResponse[] = [];
+    worker.onmessage = (ev: MessageEvent<MtSeedBootTimingWorkerResponse>) => {
       receivedMessages.push(ev.data);
     };
 
@@ -588,7 +588,7 @@ describe('IV Boot Timing Worker Mock Integration', () => {
     );
     expect(receivedMessages[0].type).toBe('COMPLETE');
     expect(
-      (receivedMessages[0] as { type: 'COMPLETE'; payload: IVBootTimingCompletion })
+      (receivedMessages[0] as { type: 'COMPLETE'; payload: MtSeedBootTimingCompletion })
         .payload.reason
     ).toBe('stopped');
   });
