@@ -203,6 +203,13 @@ export function formatGenerationResultsTableTitle(filteredCount: number, totalCo
   return `${filteredLabel}`;
 }
 
+export function formatGenerationResultsCount(filteredCount: number, totalCount: number, locale: SupportedLocale): string {
+  const formatter = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]);
+  const filteredText = formatter.format(filteredCount);
+  const totalText = formatter.format(totalCount);
+  return `${filteredText} / ${totalText}`;
+}
+
 export function formatGenerationResultsTableAnnouncement(filteredCount: number, totalCount: number, locale: SupportedLocale): string {
   const formatter = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]);
   const filteredText = formatter.format(filteredCount);
