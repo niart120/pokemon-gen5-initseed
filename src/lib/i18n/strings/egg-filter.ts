@@ -7,8 +7,8 @@ export const eggFilterPanelTitle: LocaleText = {
 };
 
 export const eggFilterResetLabel: LocaleText = {
-  ja: 'リセット',
-  en: 'Reset',
+  ja: 'Reset Filters',
+  en: 'Reset Filters',
 };
 
 export const eggFilterDisabledLabel: LocaleText = {

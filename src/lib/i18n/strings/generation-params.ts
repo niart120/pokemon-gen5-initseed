@@ -41,11 +41,11 @@ export const generationParamsSeedSourceLabel: LocaleText = {
 export const generationParamsSeedSourceOptionLabels: LocaleMap<Record<SeedSourceMode, string>> = {
   ja: {
     lcg: 'LCG Seed',
-    'boot-timing': '起動タイミング',
+    'boot-timing': 'Boot-Timing',
   },
   en: {
     lcg: 'LCG Seed',
-    'boot-timing': 'Boot Timing',
+    'boot-timing': 'Boot-Timing',
   },
 };
 

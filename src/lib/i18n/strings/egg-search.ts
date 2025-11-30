@@ -247,8 +247,8 @@ export const eggSearchFilterCardTitle: LocaleText = {
 };
 
 export const eggSearchFilterResetLabel: LocaleText = {
-  ja: 'リセット',
-  en: 'Reset',
+  ja: 'Reset Filters',
+  en: 'Reset Filters',
 };
 
 export const eggSearchFilterLabels = {

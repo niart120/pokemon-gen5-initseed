@@ -149,8 +149,8 @@ export const eggSeedSourceModeLabel: LocaleText = {
 
 export const eggSeedSourceModeOptions = {
   lcg: {
-    ja: 'LCG (直接入力)',
-    en: 'LCG (Direct)',
+    ja: 'LCG Seed',
+    en: 'LCG Seed',
   } satisfies LocaleText,
   'boot-timing': {
     ja: 'Boot-Timing',
