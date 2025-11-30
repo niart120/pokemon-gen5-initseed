@@ -5,22 +5,12 @@
  */
 
 import type { Hardware, ROMRegion, ROMVersion } from '@/types/rom';
-import type { DailyTimeRange } from '@/types/search';
-import type { KeyName } from '@/lib/utils/key-input';
+import type { DailyTimeRange, DateRange, BootCondition } from '@/types/search';
+
+// Re-export shared types for convenience
+export type { DateRange, BootCondition };
 
 // === 検索パラメータ ===
-
-/**
- * 日付範囲
- */
-export interface DateRange {
-  startYear: number;
-  startMonth: number;
-  startDay: number;
-  endYear: number;
-  endMonth: number;
-  endDay: number;
-}
 
 /**
  * MT Seed 起動時間検索パラメータ
@@ -80,29 +70,6 @@ export interface MtSeedBootTimingSearchParams {
 }
 
 // === 検索結果 ===
-
-/**
- * 起動条件情報
- */
-export interface BootCondition {
-  /** 起動日時 */
-  datetime: Date;
-
-  /** Timer0値 */
-  timer0: number;
-
-  /** VCount値 */
-  vcount: number;
-
-  /** キーコード (XOR 0x2FFF後) */
-  keyCode: number;
-
-  /** キー入力名リスト */
-  keyInputNames: KeyName[];
-
-  /** MACアドレス */
-  macAddress: readonly [number, number, number, number, number, number];
-}
 
 /**
  * MT Seed 起動時間検索結果1件
