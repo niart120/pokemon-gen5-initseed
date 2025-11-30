@@ -231,21 +231,21 @@ const GenerationConditionsJsFinalization = (typeof FinalizationRegistry === 'und
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_generationconditionsjs_free(ptr >>> 0, 1));
 
-const IVBootTimingSearchIteratorFinalization = (typeof FinalizationRegistry === 'undefined')
-    ? { register: () => {}, unregister: () => {} }
-    : new FinalizationRegistry(ptr => wasm.__wbg_ivboottimingsearchiterator_free(ptr >>> 0, 1));
-
-const IVBootTimingSearchResultFinalization = (typeof FinalizationRegistry === 'undefined')
-    ? { register: () => {}, unregister: () => {} }
-    : new FinalizationRegistry(ptr => wasm.__wbg_ivboottimingsearchresult_free(ptr >>> 0, 1));
-
-const IVBootTimingSearchResultsFinalization = (typeof FinalizationRegistry === 'undefined')
-    ? { register: () => {}, unregister: () => {} }
-    : new FinalizationRegistry(ptr => wasm.__wbg_ivboottimingsearchresults_free(ptr >>> 0, 1));
-
 const IndividualFilterJsFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_individualfilterjs_free(ptr >>> 0, 1));
+
+const MtSeedBootTimingSearchIteratorFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_mtseedboottimingsearchiterator_free(ptr >>> 0, 1));
+
+const MtSeedBootTimingSearchResultFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_mtseedboottimingsearchresult_free(ptr >>> 0, 1));
+
+const MtSeedBootTimingSearchResultsFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_mtseedboottimingsearchresults_free(ptr >>> 0, 1));
 
 const NumberUtilsFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
@@ -1873,312 +1873,6 @@ export class GenerationConditionsJs {
 if (Symbol.dispose) GenerationConditionsJs.prototype[Symbol.dispose] = GenerationConditionsJs.prototype.free;
 
 /**
- * IV起動時間検索イテレータ
- *
- * 単一セグメント（固定 timer0/vcount/keyCode）に対して seconds 方向の検索を行う。
- * TypeScript側で timer0 × vcount × keyCode のセグメントループを実装し、
- * 各セグメントに対してこのイテレータを作成する。
- */
-export class IVBootTimingSearchIterator {
-    __destroy_into_raw() {
-        const ptr = this.__wbg_ptr;
-        this.__wbg_ptr = 0;
-        IVBootTimingSearchIteratorFinalization.unregister(this);
-        return ptr;
-    }
-    free() {
-        const ptr = this.__destroy_into_raw();
-        wasm.__wbg_ivboottimingsearchiterator_free(ptr, 0);
-    }
-    /**
-     * コンストラクタ
-     *
-     * # Arguments
-     * - `ds_config`: DS設定パラメータ (MAC/Nazo/Hardware)
-     * - `segment`: セグメントパラメータ (Timer0/VCount/KeyCode)
-     * - `time_range`: 時刻範囲パラメータ
-     * - `search_range`: 検索範囲パラメータ
-     * - `target_seeds`: 検索対象のSeed値（複数可）
-     * @param {DSConfigJs} ds_config
-     * @param {SegmentParamsJs} segment
-     * @param {TimeRangeParamsJs} time_range
-     * @param {SearchRangeParamsJs} search_range
-     * @param {Uint32Array} target_seeds
-     */
-    constructor(ds_config, segment, time_range, search_range, target_seeds) {
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            _assertClass(ds_config, DSConfigJs);
-            _assertClass(segment, SegmentParamsJs);
-            _assertClass(time_range, TimeRangeParamsJs);
-            _assertClass(search_range, SearchRangeParamsJs);
-            const ptr0 = passArray32ToWasm0(target_seeds, wasm.__wbindgen_export3);
-            const len0 = WASM_VECTOR_LEN;
-            wasm.ivboottimingsearchiterator_new(retptr, ds_config.__wbg_ptr, segment.__wbg_ptr, time_range.__wbg_ptr, search_range.__wbg_ptr, ptr0, len0);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            if (r2) {
-                throw takeObject(r1);
-            }
-            this.__wbg_ptr = r0 >>> 0;
-            IVBootTimingSearchIteratorFinalization.register(this, this.__wbg_ptr, this);
-            return this;
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-        }
-    }
-    /**
-     * 検索が完了したかどうか
-     * @returns {boolean}
-     */
-    get isFinished() {
-        const ret = wasm.ivboottimingsearchiterator_is_finished(this.__wbg_ptr);
-        return ret !== 0;
-    }
-    /**
-     * 処理済み秒数
-     * @returns {number}
-     */
-    get processedSeconds() {
-        const ret = wasm.ivboottimingsearchiterator_processed_seconds(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * 総秒数
-     * @returns {number}
-     */
-    get totalSeconds() {
-        const ret = wasm.ivboottimingsearchiterator_total_seconds(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * 進捗率 (0.0 - 1.0)
-     * @returns {number}
-     */
-    get progress() {
-        const ret = wasm.ivboottimingsearchiterator_progress(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * 次のバッチを取得
-     *
-     * - max_results件見つかったら即return
-     * - chunk_seconds秒分処理したら結果がなくても一旦return
-     * - 検索範囲を全て処理したらfinished=trueになる
-     * @param {number} max_results
-     * @param {number} chunk_seconds
-     * @returns {IVBootTimingSearchResults}
-     */
-    next_batch(max_results, chunk_seconds) {
-        const ret = wasm.ivboottimingsearchiterator_next_batch(this.__wbg_ptr, max_results, chunk_seconds);
-        return IVBootTimingSearchResults.__wrap(ret);
-    }
-}
-if (Symbol.dispose) IVBootTimingSearchIterator.prototype[Symbol.dispose] = IVBootTimingSearchIterator.prototype.free;
-
-/**
- * IV起動時間検索結果1件
- */
-export class IVBootTimingSearchResult {
-    static __wrap(ptr) {
-        ptr = ptr >>> 0;
-        const obj = Object.create(IVBootTimingSearchResult.prototype);
-        obj.__wbg_ptr = ptr;
-        IVBootTimingSearchResultFinalization.register(obj, obj.__wbg_ptr, obj);
-        return obj;
-    }
-    __destroy_into_raw() {
-        const ptr = this.__wbg_ptr;
-        this.__wbg_ptr = 0;
-        IVBootTimingSearchResultFinalization.unregister(this);
-        return ptr;
-    }
-    free() {
-        const ptr = this.__destroy_into_raw();
-        wasm.__wbg_ivboottimingsearchresult_free(ptr, 0);
-    }
-    /**
-     * @returns {number}
-     */
-    get mtSeed() {
-        const ret = wasm.extraresult_get_advances(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {string}
-     */
-    get mtSeedHex() {
-        let deferred1_0;
-        let deferred1_1;
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.ivboottimingsearchresult_mt_seed_hex(retptr, this.__wbg_ptr);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            deferred1_0 = r0;
-            deferred1_1 = r1;
-            return getStringFromWasm0(r0, r1);
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export2(deferred1_0, deferred1_1, 1);
-        }
-    }
-    /**
-     * @returns {number}
-     */
-    get lcgSeedHigh() {
-        const ret = wasm.extraresult_get_value1(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get lcgSeedLow() {
-        const ret = wasm.extraresult_get_value2(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {string}
-     */
-    get lcgSeedHex() {
-        let deferred1_0;
-        let deferred1_1;
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.ivboottimingsearchresult_lcg_seed_hex(retptr, this.__wbg_ptr);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            deferred1_0 = r0;
-            deferred1_1 = r1;
-            return getStringFromWasm0(r0, r1);
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export2(deferred1_0, deferred1_1, 1);
-        }
-    }
-    /**
-     * @returns {number}
-     */
-    get year() {
-        const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get month() {
-        const ret = wasm.eggboottimingsearchresult_month(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get day() {
-        const ret = wasm.ivboottimingsearchresult_day(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get hour() {
-        const ret = wasm.eggboottimingsearchresult_hour(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get minute() {
-        const ret = wasm.ivboottimingsearchresult_minute(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get second() {
-        const ret = wasm.eggboottimingsearchresult_second(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get timer0() {
-        const ret = wasm.ivboottimingsearchresult_timer0(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get vcount() {
-        const ret = wasm.eggboottimingsearchresult_vcount(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get keyCode() {
-        const ret = wasm.ivboottimingsearchresult_key_code(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-}
-if (Symbol.dispose) IVBootTimingSearchResult.prototype[Symbol.dispose] = IVBootTimingSearchResult.prototype.free;
-
-/**
- * バッチ検索結果
- */
-export class IVBootTimingSearchResults {
-    static __wrap(ptr) {
-        ptr = ptr >>> 0;
-        const obj = Object.create(IVBootTimingSearchResults.prototype);
-        obj.__wbg_ptr = ptr;
-        IVBootTimingSearchResultsFinalization.register(obj, obj.__wbg_ptr, obj);
-        return obj;
-    }
-    __destroy_into_raw() {
-        const ptr = this.__wbg_ptr;
-        this.__wbg_ptr = 0;
-        IVBootTimingSearchResultsFinalization.unregister(this);
-        return ptr;
-    }
-    free() {
-        const ptr = this.__destroy_into_raw();
-        wasm.__wbg_ivboottimingsearchresults_free(ptr, 0);
-    }
-    /**
-     * @returns {number}
-     */
-    get length() {
-        const ret = wasm.ivboottimingsearchresults_length(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get processedInChunk() {
-        const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * 結果をJavaScript配列として取得
-     * @returns {Array<any>}
-     */
-    to_array() {
-        const ret = wasm.ivboottimingsearchresults_to_array(this.__wbg_ptr);
-        return takeObject(ret);
-    }
-    /**
-     * 指定インデックスの結果を取得
-     * @param {number} index
-     * @returns {IVBootTimingSearchResult | undefined}
-     */
-    get(index) {
-        const ret = wasm.ivboottimingsearchresults_get(this.__wbg_ptr, index);
-        return ret === 0 ? undefined : IVBootTimingSearchResult.__wrap(ret);
-    }
-}
-if (Symbol.dispose) IVBootTimingSearchResults.prototype[Symbol.dispose] = IVBootTimingSearchResults.prototype.free;
-
-/**
  * WASM wrapper for IndividualFilter
  */
 export class IndividualFilterJs {
@@ -2244,6 +1938,312 @@ export class IndividualFilterJs {
     }
 }
 if (Symbol.dispose) IndividualFilterJs.prototype[Symbol.dispose] = IndividualFilterJs.prototype.free;
+
+/**
+ * MT Seed 起動時間検索イテレータ
+ *
+ * 単一セグメント（固定 timer0/vcount/keyCode）に対して seconds 方向の検索を行う。
+ * TypeScript側で timer0 × vcount × keyCode のセグメントループを実装し、
+ * 各セグメントに対してこのイテレータを作成する。
+ */
+export class MtSeedBootTimingSearchIterator {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        MtSeedBootTimingSearchIteratorFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_mtseedboottimingsearchiterator_free(ptr, 0);
+    }
+    /**
+     * コンストラクタ
+     *
+     * # Arguments
+     * - `ds_config`: DS設定パラメータ (MAC/Nazo/Hardware)
+     * - `segment`: セグメントパラメータ (Timer0/VCount/KeyCode)
+     * - `time_range`: 時刻範囲パラメータ
+     * - `search_range`: 検索範囲パラメータ
+     * - `target_seeds`: 検索対象のMT Seed値（複数可）
+     * @param {DSConfigJs} ds_config
+     * @param {SegmentParamsJs} segment
+     * @param {TimeRangeParamsJs} time_range
+     * @param {SearchRangeParamsJs} search_range
+     * @param {Uint32Array} target_seeds
+     */
+    constructor(ds_config, segment, time_range, search_range, target_seeds) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            _assertClass(ds_config, DSConfigJs);
+            _assertClass(segment, SegmentParamsJs);
+            _assertClass(time_range, TimeRangeParamsJs);
+            _assertClass(search_range, SearchRangeParamsJs);
+            const ptr0 = passArray32ToWasm0(target_seeds, wasm.__wbindgen_export3);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.mtseedboottimingsearchiterator_new(retptr, ds_config.__wbg_ptr, segment.__wbg_ptr, time_range.__wbg_ptr, search_range.__wbg_ptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            this.__wbg_ptr = r0 >>> 0;
+            MtSeedBootTimingSearchIteratorFinalization.register(this, this.__wbg_ptr, this);
+            return this;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * 検索が完了したかどうか
+     * @returns {boolean}
+     */
+    get isFinished() {
+        const ret = wasm.mtseedboottimingsearchiterator_is_finished(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * 処理済み秒数
+     * @returns {number}
+     */
+    get processedSeconds() {
+        const ret = wasm.mtseedboottimingsearchiterator_processed_seconds(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * 総秒数
+     * @returns {number}
+     */
+    get totalSeconds() {
+        const ret = wasm.mtseedboottimingsearchiterator_total_seconds(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * 進捗率 (0.0 - 1.0)
+     * @returns {number}
+     */
+    get progress() {
+        const ret = wasm.mtseedboottimingsearchiterator_progress(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * 次のバッチを取得
+     *
+     * - max_results件見つかったら即return
+     * - chunk_seconds秒分処理したら結果がなくても一旦return
+     * - 検索範囲を全て処理したらfinished=trueになる
+     * @param {number} max_results
+     * @param {number} chunk_seconds
+     * @returns {MtSeedBootTimingSearchResults}
+     */
+    next_batch(max_results, chunk_seconds) {
+        const ret = wasm.mtseedboottimingsearchiterator_next_batch(this.__wbg_ptr, max_results, chunk_seconds);
+        return MtSeedBootTimingSearchResults.__wrap(ret);
+    }
+}
+if (Symbol.dispose) MtSeedBootTimingSearchIterator.prototype[Symbol.dispose] = MtSeedBootTimingSearchIterator.prototype.free;
+
+/**
+ * MT Seed 起動時間検索結果1件
+ */
+export class MtSeedBootTimingSearchResult {
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(MtSeedBootTimingSearchResult.prototype);
+        obj.__wbg_ptr = ptr;
+        MtSeedBootTimingSearchResultFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        MtSeedBootTimingSearchResultFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_mtseedboottimingsearchresult_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get mtSeed() {
+        const ret = wasm.extraresult_get_advances(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {string}
+     */
+    get mtSeedHex() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.mtseedboottimingsearchresult_mt_seed_hex(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export2(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {number}
+     */
+    get lcgSeedHigh() {
+        const ret = wasm.extraresult_get_value1(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get lcgSeedLow() {
+        const ret = wasm.extraresult_get_value2(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {string}
+     */
+    get lcgSeedHex() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.mtseedboottimingsearchresult_lcg_seed_hex(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export2(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {number}
+     */
+    get year() {
+        const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get month() {
+        const ret = wasm.eggboottimingsearchresult_month(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get day() {
+        const ret = wasm.mtseedboottimingsearchresult_day(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get hour() {
+        const ret = wasm.eggboottimingsearchresult_hour(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get minute() {
+        const ret = wasm.mtseedboottimingsearchresult_minute(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get second() {
+        const ret = wasm.eggboottimingsearchresult_second(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get timer0() {
+        const ret = wasm.mtseedboottimingsearchresult_timer0(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get vcount() {
+        const ret = wasm.eggboottimingsearchresult_vcount(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get keyCode() {
+        const ret = wasm.mtseedboottimingsearchresult_key_code(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+}
+if (Symbol.dispose) MtSeedBootTimingSearchResult.prototype[Symbol.dispose] = MtSeedBootTimingSearchResult.prototype.free;
+
+/**
+ * バッチ検索結果
+ */
+export class MtSeedBootTimingSearchResults {
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(MtSeedBootTimingSearchResults.prototype);
+        obj.__wbg_ptr = ptr;
+        MtSeedBootTimingSearchResultsFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        MtSeedBootTimingSearchResultsFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_mtseedboottimingsearchresults_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get length() {
+        const ret = wasm.mtseedboottimingsearchresults_length(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get processedInChunk() {
+        const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * 結果をJavaScript配列として取得
+     * @returns {Array<any>}
+     */
+    to_array() {
+        const ret = wasm.mtseedboottimingsearchresults_to_array(this.__wbg_ptr);
+        return takeObject(ret);
+    }
+    /**
+     * 指定インデックスの結果を取得
+     * @param {number} index
+     * @returns {MtSeedBootTimingSearchResult | undefined}
+     */
+    get(index) {
+        const ret = wasm.mtseedboottimingsearchresults_get(this.__wbg_ptr, index);
+        return ret === 0 ? undefined : MtSeedBootTimingSearchResult.__wrap(ret);
+    }
+}
+if (Symbol.dispose) MtSeedBootTimingSearchResults.prototype[Symbol.dispose] = MtSeedBootTimingSearchResults.prototype.free;
 
 /**
  * 数値変換ユーティリティ
@@ -3587,7 +3587,7 @@ export class TimeRangeParamsJs {
      * @returns {number}
      */
     get second_end() {
-        const ret = wasm.ivboottimingsearchresult_day(this.__wbg_ptr);
+        const ret = wasm.mtseedboottimingsearchresult_day(this.__wbg_ptr);
         return ret >>> 0;
     }
 }
@@ -3851,8 +3851,8 @@ function __wbg_get_imports() {
         const ret = EggBootTimingSearchResult.__wrap(arg0);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbg_ivboottimingsearchresult_new = function(arg0) {
-        const ret = IVBootTimingSearchResult.__wrap(arg0);
+    imports.wbg.__wbg_mtseedboottimingsearchresult_new = function(arg0) {
+        const ret = MtSeedBootTimingSearchResult.__wrap(arg0);
         return addHeapObject(ret);
     };
     imports.wbg.__wbg_new_1ba21ce319a06297 = function() {

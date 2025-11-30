@@ -544,7 +544,20 @@ export class GenerationConditionsJs {
   reroll_count: number;
 }
 
-export class IVBootTimingSearchIterator {
+export class IndividualFilterJs {
+  free(): void;
+  [Symbol.dispose](): void;
+  constructor();
+  set_iv_range(stat_index: number, min: number, max: number): void;
+  set_nature(nature_index: number): void;
+  set_gender(gender: number): void;
+  set_ability(ability: number): void;
+  set_shiny(shiny: number): void;
+  set_hidden_power_type(hp_type: number): void;
+  set_hidden_power_power(power: number): void;
+}
+
+export class MtSeedBootTimingSearchIterator {
   free(): void;
   [Symbol.dispose](): void;
   /**
@@ -555,7 +568,7 @@ export class IVBootTimingSearchIterator {
    * - `segment`: セグメントパラメータ (Timer0/VCount/KeyCode)
    * - `time_range`: 時刻範囲パラメータ
    * - `search_range`: 検索範囲パラメータ
-   * - `target_seeds`: 検索対象のSeed値（複数可）
+   * - `target_seeds`: 検索対象のMT Seed値（複数可）
    */
   constructor(ds_config: DSConfigJs, segment: SegmentParamsJs, time_range: TimeRangeParamsJs, search_range: SearchRangeParamsJs, target_seeds: Uint32Array);
   /**
@@ -565,7 +578,7 @@ export class IVBootTimingSearchIterator {
    * - chunk_seconds秒分処理したら結果がなくても一旦return
    * - 検索範囲を全て処理したらfinished=trueになる
    */
-  next_batch(max_results: number, chunk_seconds: number): IVBootTimingSearchResults;
+  next_batch(max_results: number, chunk_seconds: number): MtSeedBootTimingSearchResults;
   /**
    * 検索が完了したかどうか
    */
@@ -584,7 +597,7 @@ export class IVBootTimingSearchIterator {
   readonly progress: number;
 }
 
-export class IVBootTimingSearchResult {
+export class MtSeedBootTimingSearchResult {
   private constructor();
   free(): void;
   [Symbol.dispose](): void;
@@ -604,7 +617,7 @@ export class IVBootTimingSearchResult {
   readonly keyCode: number;
 }
 
-export class IVBootTimingSearchResults {
+export class MtSeedBootTimingSearchResults {
   private constructor();
   free(): void;
   [Symbol.dispose](): void;
@@ -615,22 +628,9 @@ export class IVBootTimingSearchResults {
   /**
    * 指定インデックスの結果を取得
    */
-  get(index: number): IVBootTimingSearchResult | undefined;
+  get(index: number): MtSeedBootTimingSearchResult | undefined;
   readonly length: number;
   readonly processedInChunk: number;
-}
-
-export class IndividualFilterJs {
-  free(): void;
-  [Symbol.dispose](): void;
-  constructor();
-  set_iv_range(stat_index: number, min: number, max: number): void;
-  set_nature(nature_index: number): void;
-  set_gender(gender: number): void;
-  set_ability(ability: number): void;
-  set_shiny(shiny: number): void;
-  set_hidden_power_type(hp_type: number): void;
-  set_hidden_power_power(power: number): void;
 }
 
 export class NumberUtils {
@@ -1395,24 +1395,24 @@ export interface InitOutput {
   readonly encountercalculator_calculate_encounter_slot: (a: number, b: number, c: number) => number;
   readonly encountercalculator_slot_to_table_index: (a: number, b: number) => number;
   readonly encountercalculator_get_dust_cloud_content: (a: number) => number;
-  readonly __wbg_ivboottimingsearchresult_free: (a: number, b: number) => void;
-  readonly ivboottimingsearchresult_mt_seed_hex: (a: number, b: number) => void;
-  readonly ivboottimingsearchresult_lcg_seed_hex: (a: number, b: number) => void;
-  readonly ivboottimingsearchresult_day: (a: number) => number;
-  readonly ivboottimingsearchresult_minute: (a: number) => number;
-  readonly ivboottimingsearchresult_timer0: (a: number) => number;
-  readonly ivboottimingsearchresult_key_code: (a: number) => number;
-  readonly __wbg_ivboottimingsearchresults_free: (a: number, b: number) => void;
-  readonly ivboottimingsearchresults_length: (a: number) => number;
-  readonly ivboottimingsearchresults_to_array: (a: number) => number;
-  readonly ivboottimingsearchresults_get: (a: number, b: number) => number;
-  readonly __wbg_ivboottimingsearchiterator_free: (a: number, b: number) => void;
-  readonly ivboottimingsearchiterator_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-  readonly ivboottimingsearchiterator_is_finished: (a: number) => number;
-  readonly ivboottimingsearchiterator_processed_seconds: (a: number) => number;
-  readonly ivboottimingsearchiterator_total_seconds: (a: number) => number;
-  readonly ivboottimingsearchiterator_progress: (a: number) => number;
-  readonly ivboottimingsearchiterator_next_batch: (a: number, b: number, c: number) => number;
+  readonly __wbg_mtseedboottimingsearchresult_free: (a: number, b: number) => void;
+  readonly mtseedboottimingsearchresult_mt_seed_hex: (a: number, b: number) => void;
+  readonly mtseedboottimingsearchresult_lcg_seed_hex: (a: number, b: number) => void;
+  readonly mtseedboottimingsearchresult_day: (a: number) => number;
+  readonly mtseedboottimingsearchresult_minute: (a: number) => number;
+  readonly mtseedboottimingsearchresult_timer0: (a: number) => number;
+  readonly mtseedboottimingsearchresult_key_code: (a: number) => number;
+  readonly __wbg_mtseedboottimingsearchresults_free: (a: number, b: number) => void;
+  readonly mtseedboottimingsearchresults_length: (a: number) => number;
+  readonly mtseedboottimingsearchresults_to_array: (a: number) => number;
+  readonly mtseedboottimingsearchresults_get: (a: number, b: number) => number;
+  readonly __wbg_mtseedboottimingsearchiterator_free: (a: number, b: number) => void;
+  readonly mtseedboottimingsearchiterator_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+  readonly mtseedboottimingsearchiterator_is_finished: (a: number) => number;
+  readonly mtseedboottimingsearchiterator_processed_seconds: (a: number) => number;
+  readonly mtseedboottimingsearchiterator_total_seconds: (a: number) => number;
+  readonly mtseedboottimingsearchiterator_progress: (a: number) => number;
+  readonly mtseedboottimingsearchiterator_next_batch: (a: number, b: number, c: number) => number;
   readonly __wbg_tidsidresult_free: (a: number, b: number) => void;
   readonly __wbg_get_tidsidresult_tid: (a: number) => number;
   readonly __wbg_set_tidsidresult_tid: (a: number, b: number) => void;
@@ -1552,16 +1552,16 @@ export interface InitOutput {
   readonly pidcalculator_generate_wild_pid: (a: number, b: number, c: number) => number;
   readonly pidcalculator_generate_static_pid: (a: number, b: number, c: number) => number;
   readonly __wbg_get_tidsidresult_advances_used: (a: number) => number;
-  readonly ivboottimingsearchresult_month: (a: number) => number;
-  readonly ivboottimingsearchresult_hour: (a: number) => number;
-  readonly ivboottimingsearchresult_second: (a: number) => number;
-  readonly ivboottimingsearchresult_vcount: (a: number) => number;
-  readonly ivboottimingsearchresults_processed_in_chunk: (a: number) => number;
+  readonly mtseedboottimingsearchresult_month: (a: number) => number;
+  readonly mtseedboottimingsearchresult_hour: (a: number) => number;
+  readonly mtseedboottimingsearchresult_second: (a: number) => number;
+  readonly mtseedboottimingsearchresult_vcount: (a: number) => number;
+  readonly mtseedboottimingsearchresults_processed_in_chunk: (a: number) => number;
   readonly tidsidresult_get_advances_used: (a: number) => number;
-  readonly ivboottimingsearchresult_mt_seed: (a: number) => number;
-  readonly ivboottimingsearchresult_lcg_seed_high: (a: number) => number;
-  readonly ivboottimingsearchresult_lcg_seed_low: (a: number) => number;
-  readonly ivboottimingsearchresult_year: (a: number) => number;
+  readonly mtseedboottimingsearchresult_mt_seed: (a: number) => number;
+  readonly mtseedboottimingsearchresult_lcg_seed_high: (a: number) => number;
+  readonly mtseedboottimingsearchresult_lcg_seed_low: (a: number) => number;
+  readonly mtseedboottimingsearchresult_year: (a: number) => number;
   readonly offsetcalculator_get_advances: (a: number) => number;
   readonly offsetcalculator_get_current_seed: (a: number) => bigint;
   readonly personalityrng_current_seed: (a: number) => bigint;
