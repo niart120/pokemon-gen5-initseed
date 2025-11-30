@@ -1,22 +1,21 @@
 /**
  * Egg boot timing search chunk calculator
  * Worker に割り当てるチャンク分割を計算
+ * 
+ * 統一されたチャンク計算APIを使用
  */
 
 import type { EggBootTimingSearchParams } from '@/types/egg-boot-timing-search';
+import type { TimeChunk } from '@/types/parallel';
 import { countValidKeyCombinations } from '@/lib/utils/key-input';
+import {
+  calculateTimeChunks,
+  calculateOperationsPerSecond,
+  getDefaultWorkerCount,
+} from '@/lib/search/chunk-calculator';
 
 /**
- * デフォルトのWorker数を取得（環境に応じて調整）
- */
-export function getDefaultWorkerCount(): number {
-  return typeof navigator !== 'undefined'
-    ? navigator.hardwareConcurrency || 4
-    : 4;
-}
-
-/**
- * Worker に割り当てるチャンク情報
+ * @deprecated TimeChunk を使用してください
  */
 export interface EggBootTimingWorkerChunk {
   workerId: number;
@@ -27,75 +26,71 @@ export interface EggBootTimingWorkerChunk {
 }
 
 /**
- * 秒あたりの処理数を計算
+ * EggBootTimingSearchParams から operationsPerSecond を計算
  */
-function getOperationsPerSecond(params: EggBootTimingSearchParams): number {
+export function calculateEggOperationsPerSecond(params: EggBootTimingSearchParams): number {
   const timer0Count = params.timer0Range.max - params.timer0Range.min + 1;
   const vcountCount = params.vcountRange.max - params.vcountRange.min + 1;
   const keyCombinationCount = countValidKeyCombinations(params.keyInputMask);
 
-  // 各秒に対して advanceCount 分の個体を検索
-  return Math.max(
-    1,
-    timer0Count * vcountCount * keyCombinationCount * params.advanceCount
-  );
+  return calculateOperationsPerSecond({
+    timer0Count,
+    vcountCount,
+    keyCombinationCount,
+    advanceCount: params.advanceCount,
+  });
 }
 
 /**
- * 最適なチャンク分割を計算
+ * EggBootTimingSearchParams から TimeChunk[] を計算
+ */
+export function calculateEggBootTimingTimeChunks(
+  params: EggBootTimingSearchParams,
+  maxWorkers: number = getDefaultWorkerCount()
+): TimeChunk[] {
+  const { dateRange } = params;
+  const startDateTime = new Date(
+    dateRange.startYear,
+    dateRange.startMonth - 1,
+    dateRange.startDay
+  );
+  const endDateTime = new Date(
+    dateRange.endYear,
+    dateRange.endMonth - 1,
+    dateRange.endDay,
+    23, 59, 59
+  );
+
+  const operationsPerSecond = calculateEggOperationsPerSecond(params);
+
+  return calculateTimeChunks(
+    { startDateTime, endDateTime, operationsPerSecond },
+    maxWorkers
+  );
+}
+
+// ============================================
+// 以下は後方互換性のための旧API（deprecated）
+// ============================================
+
+/**
+ * @deprecated calculateEggBootTimingTimeChunks を使用してください
  */
 export function calculateEggBootTimingChunks(
   params: EggBootTimingSearchParams,
   maxWorkers: number = getDefaultWorkerCount()
 ): EggBootTimingWorkerChunk[] {
-  const operationsPerSecond = getOperationsPerSecond(params);
+  const timeChunks = calculateEggBootTimingTimeChunks(params, maxWorkers);
 
-  // dateRangeから開始日と日数を計算
-  const { dateRange } = params;
-  const startDatetime = new Date(
-    dateRange.startYear,
-    dateRange.startMonth - 1,
-    dateRange.startDay
-  );
-  const endDatetime = new Date(
-    dateRange.endYear,
-    dateRange.endMonth - 1,
-    dateRange.endDay
-  );
-  // 日数計算: Math.floorを使用して日数を正確に計算（両端含む）
-  const daysDiff = Math.max(1, Math.floor((endDatetime.getTime() - startDatetime.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-  const totalSeconds = daysDiff * 24 * 60 * 60;
-  const secondsPerWorker = Math.ceil(totalSeconds / maxWorkers);
-
-  const chunks: EggBootTimingWorkerChunk[] = [];
-
-  for (let i = 0; i < maxWorkers; i++) {
-    const chunkStartOffset = i * secondsPerWorker;
-    if (chunkStartOffset >= totalSeconds) break;
-
-    const chunkEndOffset = Math.min(
-      chunkStartOffset + secondsPerWorker,
-      totalSeconds
-    );
-    const chunkRangeSeconds = chunkEndOffset - chunkStartOffset;
-
-    const chunkStartDatetime = new Date(
-      startDatetime.getTime() + chunkStartOffset * 1000
-    );
-    const chunkEndDatetime = new Date(
-      startDatetime.getTime() + chunkEndOffset * 1000
-    );
-
-    const estimatedOperations = chunkRangeSeconds * operationsPerSecond;
-
-    chunks.push({
-      workerId: i,
-      startDatetime: chunkStartDatetime,
-      endDatetime: chunkEndDatetime,
-      rangeSeconds: chunkRangeSeconds,
-      estimatedOperations,
-    });
-  }
-
-  return chunks;
+  // TimeChunk → EggBootTimingWorkerChunk への変換
+  return timeChunks.map((chunk) => ({
+    workerId: chunk.workerId,
+    startDatetime: chunk.startDateTime,
+    endDatetime: chunk.endDateTime,
+    rangeSeconds: chunk.rangeSeconds,
+    estimatedOperations: chunk.estimatedOperations,
+  }));
 }
+
+// Re-export for convenience
+export { getDefaultWorkerCount } from '@/lib/search/chunk-calculator';

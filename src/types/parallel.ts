@@ -2,6 +2,21 @@
  * Parallel worker related types
  */
 
+/**
+ * 統一されたWorker用時間チャンク型
+ * 時間範囲に基づくチャンク分割の共通インターフェース
+ */
+export interface TimeChunk {
+  workerId: number;
+  startDateTime: Date;
+  endDateTime: Date;
+  rangeSeconds: number;
+  estimatedOperations: number;
+}
+
+/**
+ * @deprecated TimeChunk を使用してください
+ */
 export interface WorkerChunk {
   workerId: number;
   startDateTime: Date;
