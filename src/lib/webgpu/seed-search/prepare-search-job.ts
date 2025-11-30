@@ -321,7 +321,6 @@ function resolveTimer0Segments(
   conditions: SearchConditions,
   params: { vcountTimerRanges: readonly [number, number, number][] }
 ): Timer0SegmentDescriptor[] {
-  const segments: Timer0SegmentDescriptor[] = [];
   const {
     timer0VCountConfig: {
       useAutoConfiguration,
@@ -331,40 +330,45 @@ function resolveTimer0Segments(
   } = conditions;
 
   if (!useAutoConfiguration) {
+    // Manual mode: Timer0範囲 × VCount範囲の全組み合わせ
+    const segments: Timer0SegmentDescriptor[] = [];
     for (let vcount = vcountMin; vcount <= vcountMax; vcount += 1) {
       segments.push({ timer0Min, timer0Max, vcount });
     }
     return segments;
   }
 
-  let current: Timer0SegmentDescriptor | null = null;
+  // Auto mode: vcountTimerRangesを順方向で使用（逆引き不要）
+  // vcountTimerRanges = [[vcount, rangeMin, rangeMax], ...] の形式
+  return resolveTimer0SegmentsFromRomParams(params, timer0Min, timer0Max);
+}
 
-  for (let timer0 = timer0Min; timer0 <= timer0Max; timer0 += 1) {
-    const vcount = getVCountForTimer0(params, timer0);
-    if (current && current.vcount === vcount && timer0 === current.timer0Max + 1) {
-      current.timer0Max = timer0;
-    } else {
-      if (current) {
-        segments.push(current);
-      }
-      current = { timer0Min: timer0, timer0Max: timer0, vcount };
+/**
+ * vcountTimerRangesから指定Timer0範囲と交差するセグメントを生成
+ * VCountをループの外側に置くことで、Timer0からVCountへの逆引きが不要
+ */
+function resolveTimer0SegmentsFromRomParams(
+  params: { vcountTimerRanges: readonly [number, number, number][] },
+  timer0Min: number,
+  timer0Max: number
+): Timer0SegmentDescriptor[] {
+  const segments: Timer0SegmentDescriptor[] = [];
+
+  for (const [vcount, rangeMin, rangeMax] of params.vcountTimerRanges) {
+    // 指定されたTimer0範囲との交差部分を計算
+    const effectiveMin = Math.max(timer0Min, rangeMin);
+    const effectiveMax = Math.min(timer0Max, rangeMax);
+
+    if (effectiveMin <= effectiveMax) {
+      segments.push({
+        timer0Min: effectiveMin,
+        timer0Max: effectiveMax,
+        vcount,
+      });
     }
-  }
-
-  if (current) {
-    segments.push(current);
   }
 
   return segments;
-}
-
-function getVCountForTimer0(params: { vcountTimerRanges: readonly [number, number, number][] }, timer0: number): number {
-  for (const [vcount, min, max] of params.vcountTimerRanges) {
-    if (timer0 >= min && timer0 <= max) {
-      return vcount;
-    }
-  }
-  return params.vcountTimerRanges.length > 0 ? params.vcountTimerRanges[0][0] : 0x60;
 }
 
 function computeMacWords(mac: number[], frame: number): { macLower: number; data7Swapped: number } {

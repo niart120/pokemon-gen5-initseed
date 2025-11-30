@@ -7,6 +7,27 @@ import romParameters from '@/data/rom-parameters';
 import type { ROMVersion, ROMRegion } from '@/types/rom';
 
 /**
+ * ROMParametersを取得（型安全）
+ * @param version ROM version
+ * @param region ROM region
+ * @returns ROMParameters or null if not found
+ */
+export function getROMParameters(version: string, region: string): ROMParameters | null {
+  // romParameters の型を構築
+  type ROMParamsTree = Record<ROMVersion, Record<ROMRegion, ROMParameters>>;
+  const tree = romParameters as unknown as ROMParamsTree;
+  const versionKey = version as ROMVersion;
+  const regionKey = region as ROMRegion;
+  const versionData = tree[versionKey];
+  if (!versionData) return null;
+
+  const regionData = versionData[regionKey];
+  if (!regionData) return null;
+
+  return regionData;
+}
+
+/**
  * 指定されたVCOUNT値に対応するTimer0範囲を取得
  * @param version ROM version
  * @param region ROM region  
@@ -76,24 +97,47 @@ export function getVCountFromTimer0(version: string, region: string, timer0: num
 }
 
 /**
- * ROMParametersを取得（型安全）
+ * Timer0範囲から対応するVCount範囲を計算（Auto mode用）
+ * vcountTimerRangesを順方向で使用し、Timer0からVCountへの逆引きを回避
+ * 
  * @param version ROM version
  * @param region ROM region
- * @returns ROMParameters or null if not found
+ * @param timer0Min Timer0 minimum
+ * @param timer0Max Timer0 maximum
+ * @returns VCount範囲 (min/max)
  */
-function getROMParameters(version: string, region: string): ROMParameters | null {
-  // romParameters の型を構築
-  type ROMParamsTree = Record<ROMVersion, Record<ROMRegion, ROMParameters>>;
-  const tree = romParameters as unknown as ROMParamsTree;
-  const versionKey = version as ROMVersion;
-  const regionKey = region as ROMRegion;
-  const versionData = tree[versionKey];
-  if (!versionData) return null;
+export function computeVCountRangeFromTimer0Range(
+  version: string,
+  region: string,
+  timer0Min: number,
+  timer0Max: number
+): { min: number; max: number } {
+  const params = getROMParameters(version, region);
+  if (!params || params.vcountTimerRanges.length === 0) {
+    return { min: 0x60, max: 0x60 };
+  }
 
-  const regionData = versionData[regionKey];
-  if (!regionData) return null;
+  const vcounts: number[] = [];
 
-  return regionData;
+  // vcountTimerRangesを順方向で走査（逆引き不要）
+  for (const [vcount, rangeMin, rangeMax] of params.vcountTimerRanges) {
+    // 指定されたTimer0範囲との交差があるかチェック
+    const effectiveMin = Math.max(timer0Min, rangeMin);
+    const effectiveMax = Math.min(timer0Max, rangeMax);
+
+    if (effectiveMin <= effectiveMax) {
+      vcounts.push(vcount);
+    }
+  }
+
+  if (vcounts.length === 0) {
+    return { min: 0x60, max: 0x60 };
+  }
+
+  return {
+    min: Math.min(...vcounts),
+    max: Math.max(...vcounts),
+  };
 }
 
 /**
