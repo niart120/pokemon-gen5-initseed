@@ -170,26 +170,28 @@ export const EggParamsCard: React.FC = () => {
       role="form"
     >
       {/* 基本設定セクション */}
-      <section className="space-y-3" role="group">
-        <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggParamsSectionTitles.basic[locale]}</h4>
+      <section aria-labelledby="egg-basic" className="space-y-2" role="group">
+        <h4 id="egg-basic" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggParamsSectionTitles.basic[locale]}</h4>
 
         <div className="space-y-3">
           {/* Seed入力モード切り替え */}
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">{eggSeedSourceModeLabel[locale]}</Label>
+            <Label className="text-xs" id="lbl-egg-seed-source" htmlFor="egg-seed-source">{eggSeedSourceModeLabel[locale]}</Label>
             <ToggleGroup
+              id="egg-seed-source"
               type="single"
               value={draftParams.seedSourceMode}
               onValueChange={(value) => {
                 if (value) updateDraftParams({ seedSourceMode: value as EggSeedSourceMode });
               }}
               disabled={disabled}
-              className="justify-start"
+              className="flex flex-wrap gap-2"
+              aria-labelledby="lbl-egg-seed-source"
             >
-              <ToggleGroupItem value="lcg" aria-label="LCG mode" className="text-xs px-4 py-2">
+              <ToggleGroupItem value="lcg" className="px-4 py-2 text-xs">
                 {eggSeedSourceModeOptions.lcg[locale]}
               </ToggleGroupItem>
-              <ToggleGroupItem value="boot-timing" aria-label="Boot-Timing mode" className="text-xs px-4 py-2">
+              <ToggleGroupItem value="boot-timing" className="px-4 py-2 text-xs">
                 {eggSeedSourceModeOptions['boot-timing'][locale]}
               </ToggleGroupItem>
             </ToggleGroup>
@@ -197,8 +199,8 @@ export const EggParamsCard: React.FC = () => {
 
           {/* LCGモード: 初期Seed入力 */}
           {draftParams.seedSourceMode === 'lcg' && (
-            <div className="grid grid-cols-3 gap-1">
-              <div className="flex flex-col gap-1">
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex flex-col gap-1 min-w-0">
                 <Label className="text-xs" htmlFor="egg-base-seed">{eggParamsBaseSeedLabel[locale]}</Label>
                 <Input
                   id="egg-base-seed"
@@ -207,15 +209,16 @@ export const EggParamsCard: React.FC = () => {
                   onChange={(e) => updateDraftParams({ baseSeedHex: normalizeHexInput(e.target.value) })}
                   disabled={disabled}
                   placeholder={eggParamsBaseSeedPlaceholder[locale]}
-                  className="font-mono text-xs"
+                  className="font-mono h-9"
                 />
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1 min-w-0">
                 <Label className="text-xs" htmlFor="egg-user-offset">{eggParamsUserOffsetLabel[locale]}</Label>
                 <Input
                   id="egg-user-offset"
                   data-testid="egg-user-offset"
                   type="number"
+                  inputMode="numeric"
                   min={0}
                   value={parseInt(draftParams.userOffsetHex, 16) || 0}
                   onChange={(e) => {
@@ -226,15 +229,16 @@ export const EggParamsCard: React.FC = () => {
                     updateDraftParams({ userOffsetHex: num.toString(16).toUpperCase() });
                   }}
                   disabled={disabled}
-                  className="text-xs"
+                  className="h-9"
                 />
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1 min-w-0">
                 <Label className="text-xs" htmlFor="egg-count">{eggParamsCountLabel[locale]}</Label>
                 <Input
                   id="egg-count"
                   data-testid="egg-count"
                   type="number"
+                  inputMode="numeric"
                   min={1}
                   max={100000}
                   value={draftParams.count}
@@ -247,7 +251,7 @@ export const EggParamsCard: React.FC = () => {
                     updateDraftParams({ count: num });
                   }}
                   disabled={disabled}
-                  className="text-xs"
+                  className="h-9"
                 />
               </div>
             </div>
@@ -255,53 +259,53 @@ export const EggParamsCard: React.FC = () => {
 
           {/* Boot-Timingモード: 起動時間パラメータ入力 */}
           {draftParams.seedSourceMode === 'boot-timing' && (
-            <div className="space-y-3">
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               <EggBootTimingControls
                 disabled={disabled}
                 isActive={draftParams.seedSourceMode === 'boot-timing'}
                 labels={bootTimingLabelsResolved}
               />
-              <div className="grid grid-cols-2 gap-1">
-                <div className="flex flex-col gap-1">
-                  <Label className="text-xs" htmlFor="egg-user-offset-bt">{eggParamsUserOffsetLabel[locale]}</Label>
-                  <Input
-                    id="egg-user-offset-bt"
-                    data-testid="egg-user-offset-bt"
-                    type="number"
-                    min={0}
-                    value={parseInt(draftParams.userOffsetHex, 16) || 0}
-                    onChange={(e) => {
-                      updateDraftParams({ userOffsetHex: e.target.value });
-                    }}
-                    onBlur={(e) => {
-                      const num = Math.max(0, parseInt(e.target.value) || 0);
-                      updateDraftParams({ userOffsetHex: num.toString(16).toUpperCase() });
-                    }}
-                    disabled={disabled}
-                    className="text-xs"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <Label className="text-xs" htmlFor="egg-count-bt">{eggParamsCountLabel[locale]}</Label>
-                  <Input
-                    id="egg-count-bt"
-                    data-testid="egg-count-bt"
-                    type="number"
-                    min={1}
-                    max={100000}
-                    value={draftParams.count}
-                    onChange={(e) => {
-                      const v = parseInt(e.target.value, 10);
-                      updateDraftParams({ count: Number.isNaN(v) ? 0 : v });
-                    }}
-                    onBlur={() => {
-                      const num = Math.max(1, Math.min(100000, draftParams.count || 1));
-                      updateDraftParams({ count: num });
-                    }}
-                    disabled={disabled}
-                    className="text-xs"
-                  />
-                </div>
+              <div className="flex flex-col gap-1 min-w-0">
+                <Label className="text-xs" htmlFor="egg-user-offset-bt">{eggParamsUserOffsetLabel[locale]}</Label>
+                <Input
+                  id="egg-user-offset-bt"
+                  data-testid="egg-user-offset-bt"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={parseInt(draftParams.userOffsetHex, 16) || 0}
+                  onChange={(e) => {
+                    updateDraftParams({ userOffsetHex: e.target.value });
+                  }}
+                  onBlur={(e) => {
+                    const num = Math.max(0, parseInt(e.target.value) || 0);
+                    updateDraftParams({ userOffsetHex: num.toString(16).toUpperCase() });
+                  }}
+                  disabled={disabled}
+                  className="h-9"
+                />
+              </div>
+              <div className="flex flex-col gap-1 min-w-0">
+                <Label className="text-xs" htmlFor="egg-count-bt">{eggParamsCountLabel[locale]}</Label>
+                <Input
+                  id="egg-count-bt"
+                  data-testid="egg-count-bt"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={100000}
+                  value={draftParams.count}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    updateDraftParams({ count: Number.isNaN(v) ? 0 : v });
+                  }}
+                  onBlur={() => {
+                    const num = Math.max(1, Math.min(100000, draftParams.count || 1));
+                    updateDraftParams({ count: num });
+                  }}
+                  disabled={disabled}
+                  className="h-9"
+                />
               </div>
             </div>
           )}
@@ -311,8 +315,8 @@ export const EggParamsCard: React.FC = () => {
       <Separator className="my-3" />
 
       {/* 親個体情報セクション */}
-      <section className="space-y-3" role="group">
-        <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggParamsSectionTitles.parents[locale]}</h4>
+      <section aria-labelledby="egg-parents" className="space-y-2" role="group">
+        <h4 id="egg-parents" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggParamsSectionTitles.parents[locale]}</h4>
 
         {/* ♂親IV */}
         <div className="space-y-1">
@@ -396,8 +400,8 @@ export const EggParamsCard: React.FC = () => {
       <Separator className="my-3" />
 
       {/* 生成条件セクション */}
-      <section className="space-y-3" role="group">
-        <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggParamsSectionTitles.conditions[locale]}</h4>
+      <section aria-labelledby="egg-conditions" className="space-y-2" role="group">
+        <h4 id="egg-conditions" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{eggParamsSectionTitles.conditions[locale]}</h4>
 
         {/* セレクト系: 横2列 */}
         <div className="grid grid-cols-3 gap-2">

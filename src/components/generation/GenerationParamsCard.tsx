@@ -21,7 +21,7 @@ import {
   generationParamsEncounterFieldLabel,
   generationParamsEncounterSpeciesLabel,
   generationParamsEncounterTypeLabel,
-  generationParamsMaxAdvancesLabel,
+  generationParamsMaxAdvanceLabel,
   generationParamsMinAdvanceLabel,
   generationParamsNoTypesAvailableLabel,
   generationParamsNotApplicablePlaceholder,
@@ -120,7 +120,7 @@ export const GenerationParamsCard: React.FC = () => {
         bootKeyInput: resolveLocaleValue(generationParamsBootTimingKeyInputLabel, locale),
         bootProfile: resolveLocaleValue(generationParamsBootTimingProfileLabel, locale),
         minAdvance: resolveLocaleValue(generationParamsMinAdvanceLabel, locale),
-        maxAdvances: resolveLocaleValue(generationParamsMaxAdvancesLabel, locale),
+        maxAdvance: resolveLocaleValue(generationParamsMaxAdvanceLabel, locale),
         encounterCategory: resolveLocaleValue(generationParamsEncounterCategoryLabel, locale),
         encounterType: resolveLocaleValue(generationParamsEncounterTypeLabel, locale),
         encounterField: resolveLocaleValue(generationParamsEncounterFieldLabel, locale),
@@ -291,7 +291,7 @@ export const GenerationParamsCard: React.FC = () => {
             </div>
             {/* Max Advances */}
             <div className="flex flex-col gap-1">
-              <Label className="text-xs" htmlFor="max-adv">{localized.labels.maxAdvances}</Label>
+              <Label className="text-xs" htmlFor="max-adv">{localized.labels.maxAdvance}</Label>
               <Input
                 id="max-adv"
                 type="number"

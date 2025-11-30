@@ -35,13 +35,13 @@ export const eggParamsBaseSeedPlaceholder: LocaleText = {
 };
 
 export const eggParamsUserOffsetLabel: LocaleText = {
-  ja: '開始消費',
-  en: 'Start Frame',
+  ja: '最小消費数',
+  en: 'Min Advance',
 };
 
 export const eggParamsCountLabel: LocaleText = {
   ja: '最大消費数',
-  en: 'Max Frames',
+  en: 'Max Advance',
 };
 
 export const eggParentsMaleLabel: LocaleText = {

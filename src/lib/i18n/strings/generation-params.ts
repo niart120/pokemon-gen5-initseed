@@ -54,9 +54,9 @@ export const generationParamsMinAdvanceLabel: LocaleText = {
   en: 'Min Advance',
 };
 
-export const generationParamsMaxAdvancesLabel: LocaleText = {
+export const generationParamsMaxAdvanceLabel: LocaleText = {
   ja: '最大消費数',
-  en: 'Max Advances',
+  en: 'Max Advance',
 };
 
 export const generationParamsEncounterCategoryLabel: LocaleText = {
