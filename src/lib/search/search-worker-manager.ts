@@ -19,6 +19,7 @@ import type { SingleWorkerSearchCallbacks } from '../../types/callbacks';
 import { useAppStore } from '@/store/app-store';
 import type { SearchExecutionMode } from '@/store/app-store';
 import { getROMParameters } from '@/lib/utils/rom-parameter-helpers';
+import { SeedCalculator } from '@/lib/core/seed-calculator';
 
 /**
  * SearchConditions を MtSeedBootTimingSearchParams に変換
@@ -242,10 +243,21 @@ export class SearchWorkerManager {
     const mtSeedParams = convertToMtSeedBootTimingSearchParams(conditions, targetSeeds);
 
     // MtSeedBootTimingSearchResult を InitialSeedResult に変換するコールバック
+    const seedCalculator = new SeedCalculator();
     const mtSeedCallbacks: MtSeedBootTimingSearchCallbacks = {
       onProgress: callbacks.onProgress,
       onResult: (result: MtSeedBootTimingSearchResult) => {
         // MtSeedBootTimingSearchResult を InitialSeedResult に変換
+        // GPU経路と同様に SeedCalculator で message と sha1Hash を再計算
+        const message = seedCalculator.generateMessage(
+          conditions,
+          result.boot.timer0,
+          result.boot.vcount,
+          result.boot.datetime,
+          result.boot.keyCode
+        );
+        const { hash } = seedCalculator.calculateSeed(message);
+        
         const converted: InitialSeedResult = {
           seed: result.mtSeed,
           datetime: result.boot.datetime,
@@ -254,8 +266,8 @@ export class SearchWorkerManager {
           keyCode: result.boot.keyCode,
           keyInputNames: result.boot.keyInputNames,
           conditions,
-          message: [], // WASMからは取得していない
-          sha1Hash: '', // WASMからは取得していない
+          message,
+          sha1Hash: hash,
           lcgSeed: BigInt('0x' + result.lcgSeedHex),
           isMatch: true,
         };
