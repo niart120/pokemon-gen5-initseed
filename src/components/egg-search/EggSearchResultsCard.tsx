@@ -28,6 +28,7 @@ import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useTableVirtualization } from '@/hooks/use-table-virtualization';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { natureName } from '@/lib/utils/format-display';
+import { formatKeyInputForDisplay } from '@/lib/utils/key-input';
 import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
 import {
   eggSearchResultsCardTitle,
@@ -108,11 +109,6 @@ export function EggSearchResultsCard() {
     const hpInfo = result.egg.egg.hiddenPower;
     if (hpInfo.type === 'unknown') return '-';
     return `${hpTypeNames[hpInfo.hpType]} ${hpInfo.power}`;
-  };
-
-  const getKeysDisplay = (keyInputNames: string[]): string => {
-    if (keyInputNames.length === 0) return '-';
-    return keyInputNames.join('+');
   };
 
   return (
@@ -249,7 +245,7 @@ export function EggSearchResultsCard() {
                         {getHiddenPowerDisplay(result)}
                       </TableCell>
                       <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
-                        {getKeysDisplay(result.boot.keyInputNames)}
+                        {formatKeyInputForDisplay(result.boot.keyCode, result.boot.keyInputNames)}
                       </TableCell>
                     </TableRow>
                   );
@@ -330,7 +326,7 @@ export function EggSearchResultsCard() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">{eggSearchResultsTableHeaders.keys[locale]}:</span>
-                  <span className="ml-2">{getKeysDisplay(selectedResult.boot.keyInputNames)}</span>
+                  <span className="ml-2">{formatKeyInputForDisplay(selectedResult.boot.keyCode, selectedResult.boot.keyInputNames)}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">{eggSearchResultsTableHeaders.stable[locale]}:</span>

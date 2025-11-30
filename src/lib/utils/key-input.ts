@@ -190,7 +190,7 @@ export function countValidKeyCombinations(mask: number): number {
 export const KEY_INPUT_DISPLAY_FALLBACK = '-';
 
 /** キー入力表示のセパレータ */
-const KEY_INPUT_DISPLAY_JOINER = '-';
+const KEY_INPUT_DISPLAY_JOINER = '+';
 
 /**
  * キー入力を表示用文字列にフォーマットする
