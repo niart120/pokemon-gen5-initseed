@@ -27,7 +27,7 @@ import {
   templateSelectionDialogTitle,
   type TemplateCategoryFilter,
 } from '@/lib/i18n/strings/search-template-selection';
-import type { RomVersion } from '@/types/pokemon';
+import type { ROMVersion } from '@/types/rom';
 
 interface TemplateSelectionDialogProps {
   isOpen: boolean;
@@ -35,8 +35,8 @@ interface TemplateSelectionDialogProps {
   onApplyTemplate: (seeds: number[]) => void;
 }
 
-/** RomVersion から TemplateVersion へ変換 */
-function toTemplateVersion(romVersion: RomVersion): TemplateVersion {
+/** ROMVersion から TemplateVersion へ変換 */
+function toTemplateVersion(romVersion: ROMVersion): TemplateVersion {
   return romVersion === 'B' || romVersion === 'W' ? 'BW' : 'BW2';
 }
 
