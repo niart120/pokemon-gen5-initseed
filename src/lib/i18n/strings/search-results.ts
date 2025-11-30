@@ -41,6 +41,10 @@ export const searchResultsHeaders = {
     ja: 'VCount',
     en: 'VCount',
   } satisfies LocaleText,
+  keyInput: {
+    ja: 'キー入力',
+    en: 'Key Input',
+  } satisfies LocaleText,
 };
 
 export const viewDetailsLabel: LocaleText = {

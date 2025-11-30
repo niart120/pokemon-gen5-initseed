@@ -26,6 +26,7 @@ import {
   formatTimer0Hex,
   formatVCountHex,
 } from '@/lib/generation/result-formatters';
+import { formatKeyInputForDisplay } from '@/lib/utils/key-input';
 import type { InitialSeedResult, SearchResult } from '../../../types/search';
 
 interface ResultsCardProps {
@@ -34,7 +35,7 @@ interface ResultsCardProps {
   onShowDetails: (result: InitialSeedResult) => void;
 }
 
-const SEARCH_RESULTS_COLUMN_COUNT = 6;
+const SEARCH_RESULTS_COLUMN_COUNT = 7;
 const SEARCH_RESULTS_ROW_HEIGHT = 34;
 
 export function ResultsCard({
@@ -108,6 +109,9 @@ export function ResultsCard({
                   </TableHead>
                   <TableHead scope="col" className="px-2 py-1 font-medium select-none">
                     {resolveLocaleValue(searchResultsHeaders.vcount, locale)}
+                  </TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                    {resolveLocaleValue(searchResultsHeaders.keyInput, locale)}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -190,6 +194,9 @@ export function ResultsCard({
                       </TableCell>
                       <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                         {formatVCountHex(result.vcount)}
+                      </TableCell>
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
+                        {formatKeyInputForDisplay(result.keyCode, result.keyInputNames)}
                       </TableCell>
                     </TableRow>
                   );
