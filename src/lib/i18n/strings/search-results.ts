@@ -12,8 +12,8 @@ export const searchResultsTitle: LocaleText = {
 };
 
 export const searchResultsEmptyMessage: LocaleText = {
-  ja: '検索結果はまだありません。検索を実行するとここに表示されます。',
-  en: 'No results yet. Run a search to see results here.',
+  ja: '結果がありません',
+  en: 'No results',
 };
 
 export const searchResultsHeaders = {

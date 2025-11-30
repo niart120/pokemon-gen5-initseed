@@ -183,8 +183,8 @@ export const generationResultsTableEmptyMessage: LocaleText = {
 };
 
 export const generationResultsTableInitialMessage: LocaleText = {
-  ja: '生成を実行すると結果が表示されます',
-  en: 'Run generation to see results',
+  ja: '結果がありません',
+  en: 'No results',
 };
 
 export const generationResultsTableFilteredLabel: LocaleText = {
