@@ -43,7 +43,7 @@ export const BootTimingControls: React.FC<BootTimingControlsProps> = ({ disabled
         />
       </div>
       <div className="flex flex-col gap-1 min-w-0 lg:col-span-3">
-        <Label className="text-xs" id="lbl-boot-keys" htmlFor="boot-keys-display">{labels.keyInput}</Label>
+        <Label className="text-xs text-muted-foreground" id="lbl-boot-keys" htmlFor="boot-keys-display">{labels.keyInput}</Label>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div
             id="boot-keys-display"

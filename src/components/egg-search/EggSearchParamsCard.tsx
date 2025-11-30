@@ -385,18 +385,18 @@ export function EggSearchParamsCard() {
 
             {/* キー入力 */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">{eggSearchParamsLabels.keyInput[locale]}</Label>
-                <Button variant="outline" size="sm" onClick={openKeyDialog} className="gap-1 h-7 text-xs" disabled={isRunning}>
+              <div className="text-xs font-medium text-muted-foreground">
+                {eggSearchParamsLabels.keyInput[locale]}
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="flex-1 min-h-[2.25rem] rounded-md border bg-muted/40 px-3 py-2 text-xs font-mono">
+                  {availableKeys.length > 0 ? availableKeys.join(keyJoiner) : '—'}
+                </div>
+                <Button variant="outline" size="sm" onClick={openKeyDialog} className="gap-2" disabled={isRunning}>
                   <GameController size={14} />
                   {eggSearchParamsLabels.keyInputConfigure[locale]}
                 </Button>
               </div>
-              {availableKeys.length > 0 && (
-                <div className="text-xs text-muted-foreground">
-                  {availableKeys.join(keyJoiner)}
-                </div>
-              )}
             </div>
           </section>
 

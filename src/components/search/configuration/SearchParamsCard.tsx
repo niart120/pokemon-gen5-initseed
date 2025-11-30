@@ -270,21 +270,19 @@ export function SearchParamsCard() {
             </div>
           </div>
           <Separator />
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">
-                {resolveLocaleValue(searchParamsKeyInputLabel, locale)}
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-muted-foreground">
+              {resolveLocaleValue(searchParamsKeyInputLabel, locale)}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex-1 min-h-[2.25rem] rounded-md border bg-muted/40 px-3 py-2 text-xs font-mono">
+                {availableKeys.length > 0 ? availableKeys.join(keyJoiner) : '—'}
               </div>
               <Button variant="outline" size="sm" onClick={openKeyDialog} className="gap-2">
                 <GameController size={16} />
                 {resolveLocaleValue(searchParamsConfigureButtonLabel, locale)}
               </Button>
             </div>
-            {availableKeys.length > 0 && (
-              <div className="text-xs text-muted-foreground">
-                {availableKeys.join(keyJoiner)}
-              </div>
-            )}
           </div>
         </div>
       </PanelCard>
