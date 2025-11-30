@@ -1,7 +1,7 @@
 import React from 'react';
 import { TableRow, TableCell } from '@/components/ui/table';
 import type { UiReadyPokemonData } from '@/types/pokemon-resolved';
-import { shinyLabel, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
+import { shinyLabel, genderLabel, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
 import {
   formatTimer0Hex,
   formatVCountHex,
@@ -50,10 +50,10 @@ export const GenerationResultRow: React.FC<GenerationResultRowProps> = ({
       <TableCell className="px-2 py-1 text-xs truncate max-w-[100px]" title={row.abilityName || unknownLabel}>
         {row.abilityName || unknownLabel}
       </TableCell>
-      <TableCell className="px-2 py-1 text-xs text-center">{row.gender || '?'}</TableCell>
+      <TableCell className="px-2 py-1 text-xs text-center">{genderLabel(row.gender, locale)}</TableCell>
       <TableCell className="px-2 py-1 text-xs whitespace-nowrap">{natureDisplay}</TableCell>
       <TableCell className="px-2 py-1 text-xs text-center">{shinyLabel(row.shinyType, locale)}</TableCell>
-      <TableCell className="px-2 py-1 text-xs tabular-nums text-right">{row.level ?? ''}</TableCell>
+      <TableCell className="px-2 py-1 text-xs font-mono tabular-nums text-right">{row.level ?? ''}</TableCell>
       <TableCell className="px-2 py-1 text-xs font-mono tabular-nums text-right">{hpDisplay}</TableCell>
       <TableCell className="px-2 py-1 text-xs font-mono tabular-nums text-right">{atkDisplay}</TableCell>
       <TableCell className="px-2 py-1 text-xs font-mono tabular-nums text-right">{defDisplay}</TableCell>
