@@ -120,6 +120,14 @@ export type MtSeedBootTimingWorkerRequest =
       requestId?: string;
     }
   | {
+      type: 'PAUSE';
+      requestId?: string;
+    }
+  | {
+      type: 'RESUME';
+      requestId?: string;
+    }
+  | {
       type: 'STOP';
       requestId?: string;
     };

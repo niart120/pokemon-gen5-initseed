@@ -157,13 +157,9 @@ describe('MtSeedBootTimingMultiWorkerManager', () => {
     });
 
     it('resumeAll() でコールバックを呼び出す', () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       manager.resumeAll();
 
       expect(mockCallbacks.onResumed).toHaveBeenCalled();
-      // MT Seed workerはRESUMEをサポートしないため警告が出る
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
     });
 
     it('terminateAll() で全Workerを終了', () => {
