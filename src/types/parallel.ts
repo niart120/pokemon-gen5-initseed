@@ -14,18 +14,6 @@ export interface TimeChunk {
   estimatedOperations: number;
 }
 
-/**
- * @deprecated TimeChunk を使用してください
- */
-export interface WorkerChunk {
-  workerId: number;
-  startDateTime: Date;
-  endDateTime: Date;
-  timer0Range: { min: number; max: number };
-  vcountRange: { min: number; max: number };
-  estimatedOperations: number;
-}
-
 export interface ParallelSearchSettings {
   maxWorkers: number;
   chunkStrategy: 'time-based' | 'hybrid' | 'auto';
@@ -66,7 +54,7 @@ export interface ParallelWorkerRequest {
   workerId: number;
   conditions?: import('./search').SearchConditions;
   targetSeeds?: number[];
-  chunk?: WorkerChunk;
+  chunk?: TimeChunk;
 }
 
 export interface ParallelWorkerResponse {

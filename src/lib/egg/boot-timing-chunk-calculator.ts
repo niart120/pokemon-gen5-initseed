@@ -15,17 +15,6 @@ import {
 } from '@/lib/search/chunk-calculator';
 
 /**
- * @deprecated TimeChunk を使用してください
- */
-export interface EggBootTimingWorkerChunk {
-  workerId: number;
-  startDatetime: Date;
-  endDatetime: Date;
-  rangeSeconds: number;
-  estimatedOperations: number;
-}
-
-/**
  * EggBootTimingSearchParams から operationsPerSecond を計算
  */
 export function calculateEggOperationsPerSecond(params: EggBootTimingSearchParams): number {
@@ -67,29 +56,6 @@ export function calculateEggBootTimingTimeChunks(
     { startDateTime, endDateTime, operationsPerSecond },
     maxWorkers
   );
-}
-
-// ============================================
-// 以下は後方互換性のための旧API（deprecated）
-// ============================================
-
-/**
- * @deprecated calculateEggBootTimingTimeChunks を使用してください
- */
-export function calculateEggBootTimingChunks(
-  params: EggBootTimingSearchParams,
-  maxWorkers: number = getDefaultWorkerCount()
-): EggBootTimingWorkerChunk[] {
-  const timeChunks = calculateEggBootTimingTimeChunks(params, maxWorkers);
-
-  // TimeChunk → EggBootTimingWorkerChunk への変換
-  return timeChunks.map((chunk) => ({
-    workerId: chunk.workerId,
-    startDatetime: chunk.startDateTime,
-    endDatetime: chunk.endDateTime,
-    rangeSeconds: chunk.rangeSeconds,
-    estimatedOperations: chunk.estimatedOperations,
-  }));
 }
 
 // Re-export for convenience

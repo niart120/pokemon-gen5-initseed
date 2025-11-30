@@ -11,10 +11,10 @@ import type {
 } from '@/types/mt-seed-boot-timing-search';
 import { isMtSeedBootTimingWorkerResponse } from '@/types/mt-seed-boot-timing-search';
 import {
-  calculateMtSeedBootTimingChunks,
+  calculateMtSeedBootTimingTimeChunks,
   getDefaultWorkerCount,
-  type MtSeedBootTimingWorkerChunk,
 } from './boot-timing-chunk-calculator';
+import type { TimeChunk } from '@/types/parallel';
 
 /**
  * Worker ごとの進捗状態
@@ -79,7 +79,7 @@ interface TimerState {
 export class MtSeedBootTimingMultiWorkerManager {
   private workers: Map<number, Worker> = new Map();
   private workerProgresses: Map<number, WorkerProgress> = new Map();
-  private activeChunks: Map<number, MtSeedBootTimingWorkerChunk> = new Map();
+  private activeChunks: Map<number, TimeChunk> = new Map();
   private resultsCount = 0; // 結果はストリーミングのみ、配列保持しない
   private completedWorkers = 0;
   private callbacks: MtSeedBootTimingMultiWorkerCallbacks | null = null;
@@ -129,7 +129,7 @@ export class MtSeedBootTimingMultiWorkerManager {
 
     try {
       // チャンク分割
-      const chunks = calculateMtSeedBootTimingChunks(params, this.maxWorkers);
+      const chunks = calculateMtSeedBootTimingTimeChunks(params, this.maxWorkers);
 
       if (chunks.length === 0) {
         throw new Error('No valid chunks created for search');
@@ -155,7 +155,7 @@ export class MtSeedBootTimingMultiWorkerManager {
    * Worker初期化
    */
   private async initializeWorker(
-    chunk: MtSeedBootTimingWorkerChunk,
+    chunk: TimeChunk,
     params: MtSeedBootTimingSearchParams
   ): Promise<void> {
     const worker = new Worker(
@@ -192,18 +192,18 @@ export class MtSeedBootTimingMultiWorkerManager {
     });
 
     // チャンク用パラメータを構築
-    const chunkStartDatetime = chunk.startDatetime;
-    const chunkEndDatetime = chunk.endDatetime;
+    const chunkStartDateTime = chunk.startDateTime;
+    const chunkEndDateTime = chunk.endDateTime;
 
     const chunkParams: MtSeedBootTimingSearchParams = {
       ...params,
       dateRange: {
-        startYear: chunkStartDatetime.getFullYear(),
-        startMonth: chunkStartDatetime.getMonth() + 1,
-        startDay: chunkStartDatetime.getDate(),
-        endYear: chunkEndDatetime.getFullYear(),
-        endMonth: chunkEndDatetime.getMonth() + 1,
-        endDay: chunkEndDatetime.getDate(),
+        startYear: chunkStartDateTime.getFullYear(),
+        startMonth: chunkStartDateTime.getMonth() + 1,
+        startDay: chunkStartDateTime.getDate(),
+        endYear: chunkEndDateTime.getFullYear(),
+        endMonth: chunkEndDateTime.getMonth() + 1,
+        endDay: chunkEndDateTime.getDate(),
       },
       // チャンク分割時はrangeSecondsを明示的に指定（Worker側での再計算を防止）
       rangeSeconds: chunk.rangeSeconds,
