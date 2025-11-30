@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Download, Copy, Check } from '@phosphor-icons/react';
 import { exportGenerationResults } from '@/lib/export/generation-exporter';
+import { downloadFile, copyToClipboard, generateFilename, MIME_TYPES } from '@/lib/export/file-utils';
 import type { EncounterTable } from '@/data/encounter-tables';
 import type { GenderRatio } from '@/types/pokemon-raw';
 import type { GenerationParams, GenerationResult } from '@/types/generation';
@@ -77,17 +78,14 @@ export function GenerationExportButton({
         baseSeed,
       });
       if (download) {
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `generation-results.${format}`;
-        link.click();
-        URL.revokeObjectURL(url);
-      } else if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(content);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        const filename = generateFilename(format, 'generation-results');
+        downloadFile(content, filename, MIME_TYPES[format]);
+      } else {
+        const success = await copyToClipboard(content);
+        if (success) {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }
       }
       setIsOpen(false);
     } catch (error) {

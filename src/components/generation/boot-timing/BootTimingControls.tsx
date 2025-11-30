@@ -39,14 +39,13 @@ export interface BootTimingLabels {
 }
 
 interface BootTimingControlsProps {
-  locale: 'ja' | 'en';
   disabled: boolean;
   isActive: boolean;
   labels: BootTimingLabels;
 }
 
-export const BootTimingControls: React.FC<BootTimingControlsProps> = ({ locale, disabled, isActive, labels }) => {
-  const controller = useBootTimingDraft({ locale, disabled, isActive });
+export const BootTimingControls: React.FC<BootTimingControlsProps> = ({ disabled, isActive, labels }) => {
+  const controller = useBootTimingDraft({ disabled, isActive });
   const { snapshot, dialog, handleTimestampInput } = controller;
 
   const renderKeyToggle = React.useCallback((key: KeyName, options?: { elementKey?: string; className?: string }) => {

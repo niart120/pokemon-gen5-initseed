@@ -7,6 +7,7 @@ import React from 'react';
 import { Table as TableIcon, MagnifyingGlass } from '@phosphor-icons/react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Badge } from '@/components/ui/badge';
+import { EggSearchExportButton } from '@/components/egg-search/EggSearchExportButton';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -129,6 +130,7 @@ export function EggSearchResultsCard() {
                 {formatEggSearchElapsed(lastElapsedMs, locale)}
               </Badge>
             )}
+            <EggSearchExportButton results={filteredResults} />
           </div>
         }
         className={isStack ? 'max-h-96' : 'min-h-96'}

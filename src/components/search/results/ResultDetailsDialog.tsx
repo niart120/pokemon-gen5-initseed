@@ -6,7 +6,7 @@ import { Label } from '../../ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import { toast } from 'sonner';
 import { lcgSeedToHex, lcgSeedToMtSeed } from '@/lib/utils/lcg-seed';
-import { keyCodeToNames } from '@/lib/utils/key-input';
+import { formatKeyInputForDisplay } from '@/lib/utils/key-input';
 import { getIvTooltipEntries } from '@/lib/utils/individual-values-display';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
@@ -20,7 +20,6 @@ import {
   generatedMessageLabel,
   hardwareLabel,
   keyInputLabel,
-  keyInputUnavailableLabel,
   lcgSeedLabel,
   mtSeedCopyFailure,
   mtSeedCopySuccess,
@@ -35,7 +34,6 @@ import {
   formatBootTimestampDisplay,
   formatTimer0Hex,
   formatVCountHex,
-  resolveKeyInputDisplay,
 } from '@/lib/generation/result-formatters';
 import type { InitialSeedResult } from '../../../types/search';
 import { useResultDetailsClipboard } from '@/hooks/search/useResultDetailsClipboard';
@@ -91,15 +89,7 @@ export function ResultDetailsDialog({
 
   if (!result) return null;
 
-  const keyNames = result.keyInputNames && result.keyInputNames.length
-    ? result.keyInputNames
-    : result.keyCode != null
-      ? keyCodeToNames(result.keyCode)
-      : [];
-  const resolvedKeyDisplay = resolveKeyInputDisplay(keyNames, locale);
-  const keyInputDisplay = resolvedKeyDisplay && resolvedKeyDisplay.length > 0
-    ? resolvedKeyDisplay
-    : resolveLocaleValue(keyInputUnavailableLabel, locale);
+  const keyInputDisplay = formatKeyInputForDisplay(result.keyCode, result.keyInputNames);
   const timer0Display = formatTimer0Hex(result?.timer0);
   const vcountDisplay = formatVCountHex(result?.vcount);
   const formattedDateTime = formatBootTimestampDisplay(result.datetime, locale);

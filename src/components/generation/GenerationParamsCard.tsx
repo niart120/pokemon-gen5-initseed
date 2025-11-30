@@ -220,7 +220,6 @@ export const GenerationParamsCard: React.FC = () => {
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {isBootTimingMode ? (
               <BootTimingControls
-                locale={locale}
                 disabled={disabled}
                 isActive={isBootTimingMode}
                 labels={bootTimingLabels}

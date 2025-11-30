@@ -2,11 +2,9 @@ import React from 'react';
 import { useAppStore } from '@/store/app-store';
 import { DEFAULT_GENERATION_DRAFT_PARAMS } from '@/store/generation-store';
 import type { BootTimingDraft } from '@/types/generation';
-import { keyMaskToNames, keyNamesToMask, KEY_INPUT_DEFAULT, type KeyName } from '@/lib/utils/key-input';
-import { formatKeyInputDisplay } from '@/lib/i18n/strings/search-results';
+import { keyMaskToNames, keyNamesToMask, KEY_INPUT_DEFAULT, formatKeyInputForDisplay, type KeyName } from '@/lib/utils/key-input';
 
 interface UseBootTimingDraftOptions {
-  locale: 'ja' | 'en';
   disabled: boolean;
   isActive: boolean;
 }
@@ -41,7 +39,7 @@ export interface BootTimingDraftController {
   handleTimestampInput: (value: string) => void;
 }
 
-export function useBootTimingDraft({ locale, disabled, isActive }: UseBootTimingDraftOptions): BootTimingDraftController {
+export function useBootTimingDraft({ disabled, isActive }: UseBootTimingDraftOptions): BootTimingDraftController {
   const bootTiming = useAppStore((state) => state.draftParams.bootTiming ?? DEFAULT_GENERATION_DRAFT_PARAMS.bootTiming);
   const version = useAppStore((state) => state.draftParams.version ?? 'B');
   const setDraftParams = useAppStore((state) => state.setDraftParams);
@@ -78,8 +76,8 @@ export function useBootTimingDraft({ locale, disabled, isActive }: UseBootTiming
 
   const bootKeyDisplay = React.useMemo(() => {
     const names = keyMaskToNames(bootTiming.keyMask);
-    return formatKeyInputDisplay(names, locale);
-  }, [bootTiming.keyMask, locale]);
+    return formatKeyInputForDisplay(null, names);
+  }, [bootTiming.keyMask]);
 
   const tempAvailableKeys = React.useMemo(() => keyMaskToNames(tempKeyMask), [tempKeyMask]);
 

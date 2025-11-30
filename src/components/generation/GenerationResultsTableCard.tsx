@@ -1,14 +1,17 @@
 import React from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
+import { Badge } from '@/components/ui/badge';
 import { Table as TableIcon } from '@phosphor-icons/react';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { GenerationExportButton } from './GenerationExportButton';
 import { useAppStore } from '@/store/app-store';
-import { selectFilteredDisplayRows } from '@/store/generation-store';
+import { selectFilteredDisplayRows, selectFilteredSortedResults } from '@/store/generation-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useTableVirtualization } from '@/hooks/use-table-virtualization';
 import { useLocale } from '@/lib/i18n/locale-context';
 import {
   formatGenerationResultsTableTitle,
+  formatGenerationResultsCount,
   generationResultsTableCaption,
   generationResultsTableUnknownLabel,
   resolveGenerationResultsTableHeaders,
@@ -24,10 +27,31 @@ const GENERATION_TABLE_ROW_HEIGHT = 34;
 export const GenerationResultsTableCard: React.FC = () => {
   const locale = useLocale();
   const rows = useAppStore((state: AppStoreState) => selectFilteredDisplayRows(state, locale));
+  const filteredRawRows = useAppStore((state: AppStoreState) => selectFilteredSortedResults(state, locale));
   const total = useAppStore(s => s.results.length);
+  const encounterTable = useAppStore((state) => state.encounterTable);
+  const genderRatios = useAppStore((state) => state.genderRatios);
+  const abilityCatalog = useAppStore((state) => state.abilityCatalog);
+  const version = useAppStore((state) => (state.params?.version ?? state.draftParams.version ?? 'B') as 'B' | 'W' | 'B2' | 'W2');
+  const baseSeed = useAppStore((state) => {
+    if (state.params?.baseSeed !== undefined) return state.params.baseSeed;
+    const hex = state.draftParams.baseSeedHex;
+    if (typeof hex === 'string') {
+      const normalized = hex.trim();
+      if (normalized !== '') {
+        try {
+          return BigInt('0x' + normalized.replace(/^0x/i, ''));
+        } catch {
+          return undefined;
+        }
+      }
+    }
+    return undefined;
+  });
   const { isStack } = useResponsiveLayout();
   const headers = React.useMemo(() => resolveGenerationResultsTableHeaders(locale), [locale]);
   const panelTitle = formatGenerationResultsTableTitle(rows.length, total, locale);
+  const resultsCount = formatGenerationResultsCount(rows.length, total, locale);
   const caption = resolveLocaleValue(generationResultsTableCaption, locale);
   const unknownLabel = resolveLocaleValue(generationResultsTableUnknownLabel, locale);
   const virtualization = useTableVirtualization({
@@ -43,6 +67,22 @@ export const GenerationResultsTableCard: React.FC = () => {
     <PanelCard
       icon={<TableIcon size={20} className="opacity-80" />}
       title={<span id="gen-results-table-title">{panelTitle}</span>}
+      headerActions={
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className="flex-shrink-0">
+            {resultsCount}
+          </Badge>
+          <GenerationExportButton
+            rows={filteredRawRows}
+            encounterTable={encounterTable}
+            genderRatios={genderRatios}
+            abilityCatalog={abilityCatalog}
+            version={version}
+            baseSeed={baseSeed}
+            disabled={filteredRawRows.length === 0}
+          />
+        </div>
+      }
       className={isStack ? 'max-h-96' : 'min-h-96'}
       fullHeight={!isStack}
       scrollMode={isStack ? 'parent' : 'content'}

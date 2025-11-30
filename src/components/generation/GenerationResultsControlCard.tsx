@@ -4,12 +4,11 @@ import { useAppStore } from '@/store/app-store';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ArrowCounterClockwise, CaretDown, Check, FunnelSimple, Trash } from '@phosphor-icons/react';
-import { GenerationExportButton } from './GenerationExportButton';
 import { cn } from '@/lib/utils/cn';
 import { natureName } from '@/lib/utils/format-display';
 import { Input } from '@/components/ui/input';
 import type { ShinyFilterMode, StatRangeFilters } from '@/store/generation-store';
-import { selectFilteredSortedResults, selectResolvedResults } from '@/store/generation-store';
+import { selectResolvedResults } from '@/store/generation-store';
 import { getGeneratedSpeciesById } from '@/data/species/generated';
 import type { StatKey } from '@/lib/utils/pokemon-stats';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -212,28 +211,9 @@ export const GenerationResultsControlCard: React.FC = () => {
   const results = useAppStore((state) => state.results);
   const clearResults = useAppStore((state) => state.clearResults);
   const encounterTable = useAppStore((state) => state.encounterTable);
-  const genderRatios = useAppStore((state) => state.genderRatios);
-  const abilityCatalog = useAppStore((state) => state.abilityCatalog);
-  const version = useAppStore((state) => (state.params?.version ?? state.draftParams.version ?? 'B') as 'B' | 'W' | 'B2' | 'W2');
-  const baseSeed = useAppStore((state) => {
-    if (state.params?.baseSeed !== undefined) return state.params.baseSeed;
-    const hex = state.draftParams.baseSeedHex;
-    if (typeof hex === 'string') {
-      const normalized = hex.trim();
-      if (normalized !== '') {
-        try {
-          return BigInt('0x' + normalized.replace(/^0x/i, ''));
-        } catch {
-          return undefined;
-        }
-      }
-    }
-    return undefined;
-  });
   const statsAvailable = useAppStore((state) => Boolean(state.params?.baseSeed));
 
   const resolvedResults = useAppStore((state: AppStoreState) => selectResolvedResults(state));
-  const filteredRawRows = useAppStore((state: AppStoreState) => selectFilteredSortedResults(state, locale));
 
   const natureOptions = React.useMemo(
     () => Array.from({ length: 25 }, (_, id) => ({ id, label: natureName(id, optionLocale) })),
@@ -633,15 +613,6 @@ export const GenerationResultsControlCard: React.FC = () => {
             <ArrowCounterClockwise size={14} />
             {resetFiltersLabel}
           </Button>
-          <GenerationExportButton
-            rows={filteredRawRows}
-            encounterTable={encounterTable}
-            genderRatios={genderRatios}
-            abilityCatalog={abilityCatalog}
-            version={version}
-            baseSeed={baseSeed}
-            disabled={filteredRawRows.length === 0}
-          />
           <Button
             size="sm"
             variant="destructive"

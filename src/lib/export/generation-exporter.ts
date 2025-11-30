@@ -14,8 +14,8 @@ import {
   formatBootTimestampDisplay,
   formatTimer0Hex,
   formatVCountHex,
-  resolveKeyInputDisplay,
 } from '@/lib/generation/result-formatters';
+import { formatKeyInputForDisplay } from '@/lib/utils/key-input';
 import type { SupportedLocale } from '@/types/i18n';
 
 export interface GenerationExportOptions {
@@ -141,7 +141,7 @@ export function adaptGenerationResults(results: GenerationResult[], opts?: {
       ? formatVCountHex(vcountValue, { fallback: '' })
       : undefined;
     const bootTimestampDisplay = formatBootTimestampDisplay(r.bootTimestampIso, locale) || undefined;
-    const keyInputDisplay = resolveKeyInputDisplay(r.keyInputNames, locale) || undefined;
+    const keyInputDisplay = formatKeyInputForDisplay(null, r.keyInputNames) || undefined;
     const macAddressDisplay = formatMacAddress(r.macAddress);
     return {
     advance: r.advance,

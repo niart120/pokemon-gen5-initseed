@@ -123,7 +123,6 @@ export interface SearchResult {
   romRegion: ROMRegion;
   hardware: Hardware;
   macAddress?: number[];
-  keyInput?: number;
   keyCode?: number | null;
   message?: number[];
   hash?: string;

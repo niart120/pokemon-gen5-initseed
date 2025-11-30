@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { Table as TableIcon } from '@phosphor-icons/react';
 import { useEggStore } from '@/store/egg-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
@@ -27,6 +28,7 @@ import {
   eggResultUnknownHp,
 } from '@/lib/i18n/strings/egg-results';
 import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
+import { EggExportButton } from './EggExportButton';
 
 const EGG_RESULTS_TABLE_ROW_HEIGHT = 34;
 
@@ -110,6 +112,16 @@ export const EggResultsCard: React.FC = () => {
     <PanelCard
       icon={<TableIcon size={20} className="opacity-80" />}
       title={<span id="egg-results-title">{eggResultsPanelTitle[locale]}</span>}
+      headerActions={
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">{sortedResults.length}</Badge>
+          <EggExportButton
+            results={sortedResults}
+            isBootTimingMode={isBootTimingMode}
+            disabled={sortedResults.length === 0}
+          />
+        </div>
+      }
       className={isStack ? 'max-h-96' : undefined}
       fullHeight={!isStack}
       scrollMode={isStack ? 'parent' : 'content'}

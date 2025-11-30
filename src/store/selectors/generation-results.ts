@@ -5,7 +5,7 @@ import type { GenderRatio } from '@/types/pokemon-raw';
 import type { ResolvedPokemonData, UiReadyPokemonData } from '@/types/pokemon-resolved';
 import { resolveBatch, toUiReadyPokemon } from '@/lib/generation/pokemon-resolver';
 import { buildResolutionContextFromSources } from '@/lib/initialization/build-resolution-context';
-import { resolveKeyInputDisplay } from '@/lib/generation/result-formatters';
+import { formatKeyInputForDisplay, KEY_INPUT_DISPLAY_FALLBACK } from '@/lib/utils/key-input';
 import { DomainShinyType } from '@/types/domain';
 import { parseHexFilterValue } from '@/lib/utils/hex-filter';
 
@@ -168,8 +168,8 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
     uiData.timer0 = raw.timer0;
     uiData.vcount = raw.vcount;
     uiData.bootTimestampIso = raw.bootTimestampIso;
-    const keyDisplay = resolveKeyInputDisplay(raw.keyInputNames, locale);
-    if (keyDisplay) {
+    const keyDisplay = formatKeyInputForDisplay(null, raw.keyInputNames);
+    if (keyDisplay !== KEY_INPUT_DISPLAY_FALLBACK) {
       uiData.keyInputNames = raw.keyInputNames;
       uiData.keyInputDisplay = keyDisplay;
     } else {

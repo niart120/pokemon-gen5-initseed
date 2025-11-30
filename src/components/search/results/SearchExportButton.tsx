@@ -21,7 +21,14 @@ import {
   searchExportIncludeHashLabel,
   searchExportIncludeMessageLabel,
 } from '@/lib/i18n/strings/search-export';
-import { ResultExporter, type ExportOptions } from '@/lib/export/result-exporter';
+import {
+  exportSearchResults,
+  downloadFile,
+  copyToClipboard,
+  generateFilename,
+  type SearchExportOptions,
+} from '@/lib/export/search-exporter';
+import { MIME_TYPES } from '@/lib/export/file-utils';
 import type { SearchResult } from '@/types/search';
 
 interface SearchExportButtonProps {
@@ -32,7 +39,7 @@ interface SearchExportButtonProps {
 export function SearchExportButton({ results, disabled = false }: SearchExportButtonProps) {
   const locale = useLocale();
   const [isOpen, setIsOpen] = useState(false);
-  const [exportOptions, setExportOptions] = useState<ExportOptions>({
+  const [exportOptions, setExportOptions] = useState<SearchExportOptions>({
     format: 'csv',
     includeDetails: false,
     includeMessage: false,
@@ -42,19 +49,13 @@ export function SearchExportButton({ results, disabled = false }: SearchExportBu
 
   const handleExport = async (download: boolean = true) => {
     try {
-      const content = ResultExporter.exportResults(results, exportOptions, locale);
+      const content = exportSearchResults(results, exportOptions, locale);
 
       if (download) {
-        const filename = ResultExporter.generateFilename(exportOptions.format);
-        const mimeTypes = {
-          csv: 'text/csv',
-          json: 'application/json',
-          txt: 'text/plain',
-        } as const;
-
-        ResultExporter.downloadFile(content, filename, mimeTypes[exportOptions.format]);
+        const filename = generateFilename(exportOptions.format, 'pokemon-seeds');
+        downloadFile(content, filename, MIME_TYPES[exportOptions.format]);
       } else {
-        const success = await ResultExporter.copyToClipboard(content);
+        const success = await copyToClipboard(content);
         if (success) {
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
@@ -67,7 +68,7 @@ export function SearchExportButton({ results, disabled = false }: SearchExportBu
     }
   };
 
-  const updateOption = <K extends keyof ExportOptions>(key: K, value: ExportOptions[K]) => {
+  const updateOption = <K extends keyof SearchExportOptions>(key: K, value: SearchExportOptions[K]) => {
     setExportOptions((prev) => ({ ...prev, [key]: value }));
   };
 

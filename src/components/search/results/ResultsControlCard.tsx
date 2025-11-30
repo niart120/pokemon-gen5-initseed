@@ -4,7 +4,6 @@ import { PanelCard } from '@/components/ui/panel-card';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
-import { SearchExportButton } from './SearchExportButton';
 import { useAppStore } from '../../../store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -19,13 +18,10 @@ import {
   searchResultsControlTitle,
   type SearchResultsSortKey,
 } from '@/lib/i18n/strings/search-results-control';
-import type { SearchResult } from '../../../types/search';
 
 export type SortField = SearchResultsSortKey;
 
 interface ResultsControlCardProps {
-  filteredResultsCount: number;
-  convertedResults: SearchResult[];
   filterSeed: string;
   setFilterSeed: (value: string) => void;
   sortField: SortField;
@@ -33,8 +29,6 @@ interface ResultsControlCardProps {
 }
 
 export function ResultsControlCard({
-  filteredResultsCount,
-  convertedResults,
   filterSeed,
   setFilterSeed,
   sortField,
@@ -56,10 +50,6 @@ export function ResultsControlCard({
       title={title}
       headerActions={
         <div className="flex gap-2">
-          <SearchExportButton 
-            results={convertedResults}
-            disabled={filteredResultsCount === 0}
-          />
           <Button 
             variant="destructive" 
             size="sm" 

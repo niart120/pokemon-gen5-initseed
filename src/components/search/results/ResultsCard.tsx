@@ -4,6 +4,7 @@ import { Button } from '../../ui/button';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { LazyTooltip } from '@/components/ui/lazy-tooltip';
+import { SearchExportButton } from './SearchExportButton';
 import { useAppStore } from '../../../store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
 import { useTableVirtualization } from '@/hooks/use-table-virtualization';
@@ -26,11 +27,12 @@ import {
   formatTimer0Hex,
   formatVCountHex,
 } from '@/lib/generation/result-formatters';
-import type { InitialSeedResult } from '../../../types/search';
+import type { InitialSeedResult, SearchResult } from '../../../types/search';
 import type { SortField } from './ResultsControlCard';
 
 interface ResultsCardProps {
   filteredAndSortedResults: InitialSeedResult[];
+  convertedResults: SearchResult[];
   searchResultsLength: number;
   sortField: SortField;
   sortOrder: 'asc' | 'desc';
@@ -43,6 +45,7 @@ const SEARCH_RESULTS_ROW_HEIGHT = 34;
 
 export function ResultsCard({
   filteredAndSortedResults,
+  convertedResults,
   searchResultsLength,
   sortField,
   sortOrder,
@@ -84,6 +87,10 @@ export function ResultsCard({
               {formatSearchDuration(lastSearchDuration, locale)}
             </Badge>
           )}
+          <SearchExportButton
+            results={convertedResults}
+            disabled={filteredResultsCount === 0}
+          />
         </div>
       }
       className={isStack ? 'max-h-96' : 'min-h-96'}
