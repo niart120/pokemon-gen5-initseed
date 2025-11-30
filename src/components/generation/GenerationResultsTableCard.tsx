@@ -12,6 +12,7 @@ import { useLocale } from '@/lib/i18n/locale-context';
 import {
   formatGenerationResultsTableTitle,
   formatGenerationResultsCount,
+  formatGenerationProcessingDuration,
   generationResultsTableCaption,
   generationResultsTableUnknownLabel,
   resolveGenerationResultsTableHeaders,
@@ -29,6 +30,7 @@ export const GenerationResultsTableCard: React.FC = () => {
   const rows = useAppStore((state: AppStoreState) => selectFilteredDisplayRows(state, locale));
   const filteredRawRows = useAppStore((state: AppStoreState) => selectFilteredSortedResults(state, locale));
   const total = useAppStore(s => s.results.length);
+  const lastCompletion = useAppStore(s => s.lastCompletion);
   const encounterTable = useAppStore((state) => state.encounterTable);
   const genderRatios = useAppStore((state) => state.genderRatios);
   const abilityCatalog = useAppStore((state) => state.abilityCatalog);
@@ -51,7 +53,7 @@ export const GenerationResultsTableCard: React.FC = () => {
   const { isStack } = useResponsiveLayout();
   const headers = React.useMemo(() => resolveGenerationResultsTableHeaders(locale), [locale]);
   const panelTitle = formatGenerationResultsTableTitle(rows.length, total, locale);
-  const resultsCount = formatGenerationResultsCount(rows.length, total, locale);
+  const resultsCount = formatGenerationResultsCount(rows.length, locale);
   const caption = resolveLocaleValue(generationResultsTableCaption, locale);
   const unknownLabel = resolveLocaleValue(generationResultsTableUnknownLabel, locale);
   const virtualization = useTableVirtualization({
@@ -72,6 +74,11 @@ export const GenerationResultsTableCard: React.FC = () => {
           <Badge variant="secondary" className="flex-shrink-0">
             {resultsCount}
           </Badge>
+          {lastCompletion !== null && (
+            <Badge variant="outline" className="flex-shrink-0 text-xs">
+              {formatGenerationProcessingDuration(lastCompletion.elapsedMs)}
+            </Badge>
+          )}
           <GenerationExportButton
             rows={filteredRawRows}
             encounterTable={encounterTable}

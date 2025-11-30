@@ -435,28 +435,24 @@ export function getEggSearchStatusLabel(
   return labels[status] ?? status;
 }
 
-export function formatEggSearchElapsed(ms: number, locale: SupportedLocale): string {
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) {
-    return locale === 'ja' ? `${seconds}秒` : `${seconds}s`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return locale === 'ja'
-    ? `${minutes}分${remainingSeconds}秒`
-    : `${minutes}m ${remainingSeconds}s`;
+/**
+ * Format processing duration: "Search completed in X.Xs"
+ */
+export function formatEggSearchElapsed(ms: number, _locale: SupportedLocale): string {
+  const seconds = ms / 1000;
+  return `Search completed in ${seconds.toFixed(1)}s`;
 }
 
+/**
+ * Format result count in unified format: "x result(s)"
+ */
 export function formatEggSearchResultsCount(
   count: number,
   locale: SupportedLocale
 ): string {
   const formatter = getNumberFormatter(locale);
-  const countStr = formatter.format(count);
-  const suffix = eggSearchResultsCountLabel[locale];
-  // Japanese doesn't use space before counters (e.g., '100件' not '100 件')
-  const separator = locale === 'ja' ? '' : ' ';
-  return `${countStr}${separator}${suffix}`;
+  const value = formatter.format(count);
+  return `${value} result${count === 1 ? '' : 's'}`;
 }
 
 export function formatEggSearchPercentDisplay(pct: number, locale: SupportedLocale): string {

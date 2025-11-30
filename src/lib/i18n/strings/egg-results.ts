@@ -1,4 +1,10 @@
+import type { SupportedLocale } from '@/types/i18n';
 import type { LocaleText, LocaleMap } from './types';
+
+const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
+  ja: 'ja-JP',
+  en: 'en-US',
+};
 
 export const eggResultsPanelTitle: LocaleText = {
   ja: 'Results',
@@ -9,6 +15,23 @@ export const eggResultsEmptyMessage: LocaleText = {
   ja: '結果がありません',
   en: 'No results',
 };
+
+/**
+ * Format result count in unified format: "x result(s)"
+ */
+export function formatEggResultCount(count: number, locale: SupportedLocale): string {
+  const formatter = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]);
+  const value = formatter.format(count);
+  return `${value} result${count === 1 ? '' : 's'}`;
+}
+
+/**
+ * Format processing duration: "Generation completed in X.Xs"
+ */
+export function formatEggProcessingDuration(durationMs: number): string {
+  const seconds = durationMs / 1000;
+  return `Generation completed in ${seconds.toFixed(1)}s`;
+}
 
 type EggResultHeaderKey =
   | 'advance'

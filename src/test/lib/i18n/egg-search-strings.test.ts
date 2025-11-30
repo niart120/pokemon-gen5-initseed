@@ -184,40 +184,38 @@ describe('egg-search i18n strings', () => {
   });
 
   describe('formatEggSearchElapsed', () => {
-    it('should format seconds for ja', () => {
-      expect(formatEggSearchElapsed(5000, 'ja')).toBe('5秒');
-      expect(formatEggSearchElapsed(30000, 'ja')).toBe('30秒');
+    it('should format duration as Search completed in X.Xs for ja', () => {
+      expect(formatEggSearchElapsed(5000, 'ja')).toBe('Search completed in 5.0s');
+      expect(formatEggSearchElapsed(30000, 'ja')).toBe('Search completed in 30.0s');
     });
 
-    it('should format seconds for en', () => {
-      expect(formatEggSearchElapsed(5000, 'en')).toBe('5s');
-      expect(formatEggSearchElapsed(30000, 'en')).toBe('30s');
+    it('should format duration as Search completed in X.Xs for en', () => {
+      expect(formatEggSearchElapsed(5000, 'en')).toBe('Search completed in 5.0s');
+      expect(formatEggSearchElapsed(30000, 'en')).toBe('Search completed in 30.0s');
     });
 
-    it('should format minutes and seconds for ja', () => {
-      expect(formatEggSearchElapsed(90000, 'ja')).toBe('1分30秒');
-      expect(formatEggSearchElapsed(125000, 'ja')).toBe('2分5秒');
-    });
-
-    it('should format minutes and seconds for en', () => {
-      expect(formatEggSearchElapsed(90000, 'en')).toBe('1m 30s');
-      expect(formatEggSearchElapsed(125000, 'en')).toBe('2m 5s');
+    it('should format fractional seconds correctly', () => {
+      expect(formatEggSearchElapsed(1500, 'ja')).toBe('Search completed in 1.5s');
+      expect(formatEggSearchElapsed(90000, 'en')).toBe('Search completed in 90.0s');
+      expect(formatEggSearchElapsed(125000, 'en')).toBe('Search completed in 125.0s');
     });
   });
 
   describe('formatEggSearchResultsCount', () => {
-    it('should format count for ja without space before counter', () => {
-      expect(formatEggSearchResultsCount(100, 'ja')).toBe('100件');
-      expect(formatEggSearchResultsCount(1000, 'ja')).toBe('1,000件');
+    it('should format count in unified x result(s) format for ja', () => {
+      expect(formatEggSearchResultsCount(1, 'ja')).toBe('1 result');
+      expect(formatEggSearchResultsCount(100, 'ja')).toBe('100 results');
+      expect(formatEggSearchResultsCount(1000, 'ja')).toBe('1,000 results');
     });
 
-    it('should format count for en with space before word', () => {
+    it('should format count in unified x result(s) format for en', () => {
+      expect(formatEggSearchResultsCount(1, 'en')).toBe('1 result');
       expect(formatEggSearchResultsCount(100, 'en')).toBe('100 results');
       expect(formatEggSearchResultsCount(1000, 'en')).toBe('1,000 results');
     });
 
     it('should handle zero', () => {
-      expect(formatEggSearchResultsCount(0, 'ja')).toBe('0件');
+      expect(formatEggSearchResultsCount(0, 'ja')).toBe('0 results');
       expect(formatEggSearchResultsCount(0, 'en')).toBe('0 results');
     });
   });

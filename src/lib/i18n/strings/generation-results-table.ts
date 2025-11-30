@@ -203,11 +203,21 @@ export function formatGenerationResultsTableTitle(filteredCount: number, totalCo
   return `${filteredLabel}`;
 }
 
-export function formatGenerationResultsCount(filteredCount: number, totalCount: number, locale: SupportedLocale): string {
+/**
+ * Format filtered result count in unified format: "x result(s)"
+ */
+export function formatGenerationResultsCount(filteredCount: number, locale: SupportedLocale): string {
   const formatter = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]);
-  const filteredText = formatter.format(filteredCount);
-  const totalText = formatter.format(totalCount);
-  return `${filteredText} / ${totalText}`;
+  const value = formatter.format(filteredCount);
+  return `${value} result${filteredCount === 1 ? '' : 's'}`;
+}
+
+/**
+ * Format processing duration: "Generation completed in X.Xs"
+ */
+export function formatGenerationProcessingDuration(durationMs: number): string {
+  const seconds = durationMs / 1000;
+  return `Generation completed in ${seconds.toFixed(1)}s`;
 }
 
 export function formatGenerationResultsTableAnnouncement(filteredCount: number, totalCount: number, locale: SupportedLocale): string {

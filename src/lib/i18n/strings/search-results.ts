@@ -164,10 +164,20 @@ export function formatResultCount(count: number, locale: SupportedLocale): strin
   return `${value} result${count === 1 ? '' : 's'}`;
 }
 
-export function formatSearchDuration(durationMs: number, _locale: SupportedLocale): string {
+/**
+ * Format processing duration: "Search completed in X.Xs"
+ * Used for Seed search results.
+ */
+export function formatProcessingDuration(durationMs: number): string {
   const seconds = durationMs / 1000;
-  const formatted = seconds.toFixed(1);
-  return `Search completed in ${formatted}s`;
+  return `Search completed in ${seconds.toFixed(1)}s`;
+}
+
+/**
+ * @deprecated Use formatProcessingDuration instead for unified format
+ */
+export function formatSearchDuration(durationMs: number, _locale: SupportedLocale): string {
+  return formatProcessingDuration(durationMs);
 }
 
 export function formatResultDateTime(date: Date, locale: SupportedLocale): string {

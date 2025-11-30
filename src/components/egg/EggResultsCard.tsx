@@ -26,6 +26,8 @@ import {
   eggResultAbilityLabels,
   eggResultStableLabels,
   eggResultUnknownHp,
+  formatEggResultCount,
+  formatEggProcessingDuration,
 } from '@/lib/i18n/strings/egg-results';
 import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
 import { EggExportButton } from './EggExportButton';
@@ -37,7 +39,7 @@ const EGG_RESULTS_TABLE_ROW_HEIGHT = 34;
  * タマゴ生成結果表示カード
  */
 export const EggResultsCard: React.FC = () => {
-  const { draftParams, getFilteredResults } = useEggStore();
+  const { draftParams, getFilteredResults, lastCompletion } = useEggStore();
   const { isStack } = useResponsiveLayout();
   const locale = useLocale();
 
@@ -114,7 +116,12 @@ export const EggResultsCard: React.FC = () => {
       title={<span id="egg-results-title">{eggResultsPanelTitle[locale]}</span>}
       headerActions={
         <div className="flex items-center gap-2">
-          <Badge variant="secondary">{sortedResults.length}</Badge>
+          <Badge variant="secondary">{formatEggResultCount(sortedResults.length, locale)}</Badge>
+          {lastCompletion !== null && (
+            <Badge variant="outline" className="text-xs">
+              {formatEggProcessingDuration(lastCompletion.elapsedMs)}
+            </Badge>
+          )}
           <EggExportButton
             results={sortedResults}
             isBootTimingMode={isBootTimingMode}

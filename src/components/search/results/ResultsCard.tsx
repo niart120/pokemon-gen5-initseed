@@ -14,7 +14,7 @@ import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import {
   formatResultCount,
-  formatSearchDuration,
+  formatProcessingDuration,
   searchResultsFilteredEmptyMessage,
   searchResultsHeaders,
   searchResultsInitialMessage,
@@ -84,7 +84,7 @@ export function ResultsCard({
           </Badge>
           {lastSearchDuration !== null && (
             <Badge variant="outline" className="flex-shrink-0 text-xs">
-              {formatSearchDuration(lastSearchDuration, locale)}
+              {formatProcessingDuration(lastSearchDuration)}
             </Badge>
           )}
           <SearchExportButton
