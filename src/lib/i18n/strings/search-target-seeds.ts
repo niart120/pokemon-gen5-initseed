@@ -21,16 +21,6 @@ export const targetSeedsTemplateButtonLabel: LocaleText = {
   en: 'Template',
 };
 
-export const targetSeedsImportButtonLabel: LocaleText = {
-  ja: 'Import',
-  en: 'Import',
-};
-
-export const targetSeedsExportButtonLabel: LocaleText = {
-  ja: 'Export',
-  en: 'Export',
-};
-
 export const targetSeedsClearButtonLabel: LocaleText = {
   ja: 'Clear',
   en: 'Clear',
