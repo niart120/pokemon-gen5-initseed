@@ -186,10 +186,10 @@ export const EggParamsCard: React.FC = () => {
               disabled={disabled}
               className="justify-start"
             >
-              <ToggleGroupItem value="lcg" aria-label="LCG mode" className="text-xs px-3 h-8">
+              <ToggleGroupItem value="lcg" aria-label="LCG mode" className="text-xs px-4 py-2">
                 {eggSeedSourceModeOptions.lcg[locale]}
               </ToggleGroupItem>
-              <ToggleGroupItem value="boot-timing" aria-label="Boot-Timing mode" className="text-xs px-3 h-8">
+              <ToggleGroupItem value="boot-timing" aria-label="Boot-Timing mode" className="text-xs px-4 py-2">
                 {eggSeedSourceModeOptions['boot-timing'][locale]}
               </ToggleGroupItem>
             </ToggleGroup>

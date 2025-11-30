@@ -191,7 +191,7 @@ export const GenerationParamsCard: React.FC = () => {
       <section aria-labelledby="gen-target" className="space-y-2" role="group">
         <h4 id="gen-target" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{localized.sectionTitles.target}</h4>
         <div className="space-y-3">
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             <Label className="text-xs" id="lbl-seed-source" htmlFor="seed-source">{localized.labels.seedSource}</Label>
             <ToggleGroup
               id="seed-source"
