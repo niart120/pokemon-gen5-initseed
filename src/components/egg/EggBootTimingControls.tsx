@@ -46,13 +46,12 @@ export interface EggBootTimingLabels {
 }
 
 interface EggBootTimingControlsProps {
-  locale: 'ja' | 'en';
   disabled: boolean;
   isActive: boolean;
   labels: EggBootTimingLabels;
 }
 
-export const EggBootTimingControls: React.FC<EggBootTimingControlsProps> = ({ locale: _locale, disabled, isActive, labels }) => {
+export const EggBootTimingControls: React.FC<EggBootTimingControlsProps> = ({ disabled, isActive, labels }) => {
   const controller = useEggBootTimingDraft({ disabled, isActive });
   const { snapshot, dialog, handleTimestampInput } = controller;
 

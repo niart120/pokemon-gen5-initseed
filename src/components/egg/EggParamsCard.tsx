@@ -257,7 +257,6 @@ export const EggParamsCard: React.FC = () => {
           {draftParams.seedSourceMode === 'boot-timing' && (
             <div className="space-y-3">
               <EggBootTimingControls
-                locale={locale}
                 disabled={disabled}
                 isActive={draftParams.seedSourceMode === 'boot-timing'}
                 labels={bootTimingLabelsResolved}
