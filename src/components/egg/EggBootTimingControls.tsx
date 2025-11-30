@@ -52,8 +52,8 @@ interface EggBootTimingControlsProps {
   labels: EggBootTimingLabels;
 }
 
-export const EggBootTimingControls: React.FC<EggBootTimingControlsProps> = ({ locale, disabled, isActive, labels }) => {
-  const controller = useEggBootTimingDraft({ locale, disabled, isActive });
+export const EggBootTimingControls: React.FC<EggBootTimingControlsProps> = ({ locale: _locale, disabled, isActive, labels }) => {
+  const controller = useEggBootTimingDraft({ disabled, isActive });
   const { snapshot, dialog, handleTimestampInput } = controller;
 
   const renderKeyToggle = React.useCallback((key: KeyName, options?: { elementKey?: string; className?: string }) => {

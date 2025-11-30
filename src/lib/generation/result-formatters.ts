@@ -1,5 +1,4 @@
-import { formatResultDateTime, formatKeyInputDisplay } from '@/lib/i18n/strings/search-results';
-import type { KeyName } from '@/lib/utils/key-input';
+import { formatResultDateTime } from '@/lib/i18n/strings/search-results';
 
 const DEFAULT_TIMER0_FALLBACK = '--';
 const DEFAULT_VCOUNT_FALLBACK = '--';
@@ -40,20 +39,6 @@ export function formatBootTimestampDisplay(
     return '';
   }
   return formatResultDateTime(dt, locale);
-}
-
-export function resolveKeyInputDisplay(
-  keyNames: KeyName[] | undefined,
-  locale: 'ja' | 'en',
-  preformatted?: string,
-): string {
-  if (preformatted && preformatted.length > 0) {
-    return preformatted;
-  }
-  if (!keyNames || keyNames.length === 0) {
-    return '';
-  }
-  return formatKeyInputDisplay(keyNames, locale);
 }
 
 export function buildGenerationResultRowKey(

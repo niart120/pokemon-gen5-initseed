@@ -1,3 +1,7 @@
+/**
+ * キー定義（ビット位置マッピング用）
+ * ゲームの内部表現に対応
+ */
 const KEY_DEFINITIONS = [
   ['A', 0],
   ['B', 1],
@@ -11,6 +15,15 @@ const KEY_DEFINITIONS = [
   ['L', 9],
   ['X', 10],
   ['Y', 11],
+] as const;
+
+/**
+ * 表示用キー順序
+ * A,B,X,Y,Start,Select,L,R,[↑],[↓],[←],[→] の順で表示
+ */
+const KEY_DISPLAY_ORDER: readonly KeyName[] = [
+  'A', 'B', 'X', 'Y', 'Start', 'Select', 'L', 'R',
+  '[↑]', '[↓]', '[←]', '[→]',
 ] as const;
 
 export type KeyName = (typeof KEY_DEFINITIONS)[number][0];
@@ -60,6 +73,20 @@ function collectKeyNames(mask: number): KeyName[] {
     }
   }
   return names;
+}
+
+/**
+ * マスクからキー名配列を取得（表示順序でソート済み）
+ */
+function collectKeyNamesForDisplay(mask: number): KeyName[] {
+  const presentKeys = new Set<KeyName>();
+  for (const [key, bit] of KEY_DEFINITIONS) {
+    if ((mask & (1 << bit)) !== 0) {
+      presentKeys.add(key);
+    }
+  }
+  // 表示順序に従ってソート
+  return KEY_DISPLAY_ORDER.filter(key => presentKeys.has(key));
 }
 
 export function normalizeKeyMask(mask: number): number {
@@ -157,4 +184,51 @@ export function generateValidKeyCodes(keyInputMask: number): number[] {
 export function countValidKeyCombinations(mask: number): number {
   const count = generateValidKeyCodes(mask).length;
   return count > 0 ? count : 1;
+}
+
+/** キー入力表示の既定フォールバック値 */
+export const KEY_INPUT_DISPLAY_FALLBACK = '-';
+
+/** キー入力表示のセパレータ */
+const KEY_INPUT_DISPLAY_JOINER = '-';
+
+/**
+ * キー入力を表示用文字列にフォーマットする
+ * 
+ * UI表示・Export両方で使用する統一関数。
+ * 
+ * @param keyCode - keyCode値（0x2FFF XOR mask形式）
+ * @param keyInputNames - 事前解決済みのキー名配列（あれば優先）
+ * @param fallback - キー入力がない場合のフォールバック値
+ * @returns 表示用文字列（例: "A-B-Start"）
+ */
+export function formatKeyInputForDisplay(
+  keyCode: number | null | undefined,
+  keyInputNames: KeyName[] | undefined,
+  fallback: string = KEY_INPUT_DISPLAY_FALLBACK
+): string {
+  // keyInputNamesがあればそれを使用（表示順序でソート）
+  if (keyInputNames && keyInputNames.length > 0) {
+    const sortedNames = sortKeyNamesForDisplay(keyInputNames);
+    return sortedNames.join(KEY_INPUT_DISPLAY_JOINER);
+  }
+  
+  // keyCodeがあれば変換
+  if (keyCode != null) {
+    const mask = toMask(keyCode, 'code');
+    const names = collectKeyNamesForDisplay(mask);
+    if (names.length > 0) {
+      return names.join(KEY_INPUT_DISPLAY_JOINER);
+    }
+  }
+  
+  return fallback;
+}
+
+/**
+ * キー名配列を表示順序でソートする
+ */
+function sortKeyNamesForDisplay(names: KeyName[]): KeyName[] {
+  const nameSet = new Set(names);
+  return KEY_DISPLAY_ORDER.filter(key => nameSet.has(key));
 }

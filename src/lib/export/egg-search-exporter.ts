@@ -6,8 +6,7 @@
 import type { EggBootTimingSearchResult } from '@/types/egg-boot-timing-search';
 import type { IvSet, HiddenPowerInfo } from '@/types/egg';
 import { natureName } from '@/lib/utils/format-display';
-import { keyCodeToNames } from '@/lib/utils/key-input';
-import { resolveKeyInputDisplay } from '@/lib/generation/result-formatters';
+import { formatKeyInputForDisplay } from '@/lib/utils/key-input';
 import type { ExportFormat } from './file-utils';
 import type { SupportedLocale } from '@/types/i18n';
 import {
@@ -91,9 +90,8 @@ function adaptEggSearchResults(
   return results.map((result) => {
     const egg = result.egg.egg;
 
-    // Format key input
-    const keyNames = keyCodeToNames(result.boot.keyCode);
-    const keyInputDisplay = resolveKeyInputDisplay(keyNames, locale) || '-';
+    // Format key input using shared utility
+    const keyInputDisplay = formatKeyInputForDisplay(result.boot.keyCode, result.boot.keyInputNames);
 
     return {
       bootTimestamp: formatDatetime(result.boot.datetime),

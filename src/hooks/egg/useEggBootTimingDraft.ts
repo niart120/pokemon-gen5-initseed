@@ -8,11 +8,9 @@
 import React from 'react';
 import { useEggStore } from '@/store/egg-store';
 import { createDefaultEggBootTimingDraft, type EggBootTimingDraft } from '@/types/egg';
-import { keyMaskToNames, keyNamesToMask, KEY_INPUT_DEFAULT, type KeyName } from '@/lib/utils/key-input';
-import { formatKeyInputDisplay } from '@/lib/i18n/strings/search-results';
+import { keyMaskToNames, keyNamesToMask, KEY_INPUT_DEFAULT, formatKeyInputForDisplay, type KeyName } from '@/lib/utils/key-input';
 
 interface UseEggBootTimingDraftOptions {
-  locale: 'ja' | 'en';
   disabled: boolean;
   isActive: boolean;
 }
@@ -46,7 +44,7 @@ export interface EggBootTimingDraftController {
   handleTimestampInput: (value: string) => void;
 }
 
-export function useEggBootTimingDraft({ locale, disabled, isActive }: UseEggBootTimingDraftOptions): EggBootTimingDraftController {
+export function useEggBootTimingDraft({ disabled, isActive }: UseEggBootTimingDraftOptions): EggBootTimingDraftController {
   const bootTiming = useEggStore((state) => state.draftParams.bootTiming ?? createDefaultEggBootTimingDraft());
   const gameMode = useEggStore((state) => state.draftParams.gameMode);
   const updateDraftBootTiming = useEggStore((state) => state.updateDraftBootTiming);
@@ -81,8 +79,8 @@ export function useEggBootTimingDraft({ locale, disabled, isActive }: UseEggBoot
 
   const bootKeyDisplay = React.useMemo(() => {
     const names = keyMaskToNames(bootTiming.keyMask);
-    return formatKeyInputDisplay(names, locale);
-  }, [bootTiming.keyMask, locale]);
+    return formatKeyInputForDisplay(null, names);
+  }, [bootTiming.keyMask]);
 
   const tempAvailableKeys = React.useMemo(() => keyMaskToNames(tempKeyMask), [tempKeyMask]);
 

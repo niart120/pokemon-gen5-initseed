@@ -4,12 +4,11 @@
  */
 
 import type { SearchResult } from '@/types/search';
-import { keyCodeToNames } from '@/lib/utils/key-input';
+import { formatKeyInputForDisplay, KEY_INPUT_DISPLAY_FALLBACK } from '@/lib/utils/key-input';
 import {
   formatBootTimestampDisplay,
   formatTimer0Hex,
   formatVCountHex,
-  resolveKeyInputDisplay,
 } from '@/lib/generation/result-formatters';
 import {
   downloadFile,
@@ -94,7 +93,7 @@ function exportToCSV(
     if (options.includeDetails) {
       const macAddress =
         result.macAddress?.map((b) => b.toString(16).padStart(2, '0')).join(':') || '';
-      const keyInput = formatKeyInput(result, locale);
+      const keyInput = formatKeyInputForDisplay(result.keyCode, undefined);
       row.push(macAddress, keyInput);
     }
 
@@ -163,8 +162,8 @@ function exportToJSON(
         exportResult.macAddress = result.macAddress?.map(
           (b) => `0x${b.toString(16).padStart(2, '0')}`
         );
-        const formattedKey = formatKeyInput(result, locale);
-        exportResult.keyInput = formattedKey ? formattedKey : null;
+        const formattedKey = formatKeyInputForDisplay(result.keyCode, undefined);
+        exportResult.keyInput = formattedKey !== KEY_INPUT_DISPLAY_FALLBACK ? formattedKey : null;
       }
 
       if (options.includeMessage) {
@@ -208,19 +207,19 @@ function exportToText(
 
     if (options.includeDetails) {
       const macAddress =
-        result.macAddress?.map((b) => b.toString(16).padStart(2, '0')).join(':') || 'N/A';
-      const keyInput = formatKeyInput(result, locale) || 'N/A';
+        result.macAddress?.map((b) => b.toString(16).padStart(2, '0')).join(':') || KEY_INPUT_DISPLAY_FALLBACK;
+      const keyInput = formatKeyInputForDisplay(result.keyCode, undefined);
       lines.push(`  MAC Address: ${macAddress}`);
       lines.push(`  Key Input: ${keyInput}`);
     }
 
     if (options.includeHash) {
-      lines.push(`  SHA1 Hash: ${result.hash || 'N/A'}`);
+      lines.push(`  SHA1 Hash: ${result.hash || KEY_INPUT_DISPLAY_FALLBACK}`);
     }
 
     if (options.includeMessage) {
       const message =
-        result.message?.map((m) => `0x${m.toString(16).padStart(8, '0')}`).join(' ') || 'N/A';
+        result.message?.map((m) => `0x${m.toString(16).padStart(8, '0')}`).join(' ') || KEY_INPUT_DISPLAY_FALLBACK;
       lines.push(`  Message: ${message}`);
     }
 
@@ -228,22 +227,6 @@ function exportToText(
   });
 
   return lines.join('\n');
-}
-
-function formatKeyInput(result: SearchResult, locale: 'ja' | 'en'): string {
-  if (result.keyCode != null) {
-    const names = keyCodeToNames(result.keyCode);
-    const formatted = resolveKeyInputDisplay(names, locale);
-    if (formatted) {
-      return formatted;
-    }
-  }
-
-  if (result.keyInput != null) {
-    return `mask: 0x${result.keyInput.toString(16).toUpperCase().padStart(4, '0')}`;
-  }
-
-  return '';
 }
 
 // Re-export file utilities for backward compatibility

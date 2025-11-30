@@ -6,8 +6,8 @@ import {
   formatBootTimestampDisplay,
   formatTimer0Hex,
   formatVCountHex,
-  resolveKeyInputDisplay,
 } from '@/lib/generation/result-formatters';
+import { formatKeyInputForDisplay } from '@/lib/utils/key-input';
 
 interface GenerationResultRowProps {
   row: UiReadyPokemonData;
@@ -40,7 +40,7 @@ export const GenerationResultRow: React.FC<GenerationResultRowProps> = ({
     ? formatBootTimestampDisplay(row.bootTimestampIso, locale)
     : '';
   const keyInputDisplay = showBootTimingMeta
-    ? resolveKeyInputDisplay(row.keyInputNames, locale, row.keyInputDisplay)
+    ? formatKeyInputForDisplay(null, row.keyInputNames)
     : '';
   return (
     <TableRow

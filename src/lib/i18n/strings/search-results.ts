@@ -1,5 +1,5 @@
 import type { SupportedLocale } from '@/types/i18n';
-import { resolveLocaleValue, type LocaleText } from './types';
+import type { LocaleText } from './types';
 
 const BCP47_BY_LOCALE: Record<SupportedLocale, string> = {
   ja: 'ja-JP',
@@ -158,21 +158,6 @@ export const clipboardUnavailable: LocaleText = {
   en: 'Clipboard is not available',
 };
 
-export const keyInputUnavailableLabel: LocaleText = {
-  ja: '利用不可',
-  en: 'Unavailable',
-};
-
-export const keyInputNoneLabel: LocaleText = {
-  ja: '-',
-  en: '-',
-};
-
-export const keyInputJoiner: LocaleText = {
-  ja: '、',
-  en: ', ',
-};
-
 export function formatResultCount(count: number, locale: SupportedLocale): string {
   const formatter = new Intl.NumberFormat(BCP47_BY_LOCALE[locale]);
   const value = formatter.format(count);
@@ -196,12 +181,4 @@ export function formatResultDateTime(date: Date, locale: SupportedLocale): strin
     hour12: false,
   });
   return formatter.format(date);
-}
-
-export function formatKeyInputDisplay(keyNames: string[], locale: SupportedLocale): string {
-  if (keyNames.length === 0) {
-    return resolveLocaleValue(keyInputNoneLabel, locale);
-  }
-  const joiner = resolveLocaleValue(keyInputJoiner, locale);
-  return keyNames.join(joiner);
 }
