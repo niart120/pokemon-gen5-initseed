@@ -2,12 +2,15 @@
  * Parallel worker related types
  */
 
-export interface WorkerChunk {
+/**
+ * 統一されたWorker用時間チャンク型
+ * 時間範囲に基づくチャンク分割の共通インターフェース
+ */
+export interface TimeChunk {
   workerId: number;
   startDateTime: Date;
   endDateTime: Date;
-  timer0Range: { min: number; max: number };
-  vcountRange: { min: number; max: number };
+  rangeSeconds: number;
   estimatedOperations: number;
 }
 
@@ -51,7 +54,7 @@ export interface ParallelWorkerRequest {
   workerId: number;
   conditions?: import('./search').SearchConditions;
   targetSeeds?: number[];
-  chunk?: WorkerChunk;
+  chunk?: TimeChunk;
 }
 
 export interface ParallelWorkerResponse {

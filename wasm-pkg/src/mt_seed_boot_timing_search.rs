@@ -1,19 +1,19 @@
-//! IV起動時間検索器
+//! MT Seed 起動時間検索器
 //!
-//! BW/BW2におけるIV確定のための起動時間検索機能を提供する。
+//! BW/BW2におけるMT Seed（個体値決定用Seed）に対応する起動時間を検索する機能を提供する。
 //! 複数のtarget_seedsに対してマッチする起動条件を列挙する。
 //!
 //! ## セグメントパターン設計
 //!
 //! TypeScript側で timer0 × vcount × keyCode のセグメントループを実装:
-//! 1. `IVBootTimingSearchIterator::new()` で単一セグメント（固定timer0/vcount/keyCode）のイテレータを作成
-//! 2. `IVBootTimingSearchIterator::next_batch()` で seconds 方向の結果をバッチ取得
+//! 1. `MtSeedBootTimingSearchIterator::new()` で単一セグメント（固定timer0/vcount/keyCode）のイテレータを作成
+//! 2. `MtSeedBootTimingSearchIterator::next_batch()` で seconds 方向の結果をバッチ取得
 //! 3. `is_finished` で完了判定
 //!
 //! ## 公開API
-//! - `IVBootTimingSearchIterator`: 単一セグメントの検索イテレータ
-//! - `IVBootTimingSearchResult`: 検索結果1件
-//! - `IVBootTimingSearchResults`: バッチ結果
+//! - `MtSeedBootTimingSearchIterator`: 単一セグメントの検索イテレータ
+//! - `MtSeedBootTimingSearchResult`: 検索結果1件
+//! - `MtSeedBootTimingSearchResults`: バッチ結果
 
 use crate::search_common::{
     build_ranged_time_code_table, BaseMessageBuilder, DSConfigJs, HashEntry, HashValuesEnumerator,
@@ -26,11 +26,11 @@ use wasm_bindgen::prelude::*;
 // 検索結果
 // =============================================================================
 
-/// IV起動時間検索結果1件
+/// MT Seed 起動時間検索結果1件
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
-pub struct IVBootTimingSearchResult {
-    // MT Seed (IV用)
+pub struct MtSeedBootTimingSearchResult {
+    // MT Seed
     mt_seed: u32,
 
     // LCG Seed
@@ -50,8 +50,8 @@ pub struct IVBootTimingSearchResult {
 }
 
 #[wasm_bindgen]
-impl IVBootTimingSearchResult {
-    // MT Seed (IV用)
+impl MtSeedBootTimingSearchResult {
+    // MT Seed
     #[wasm_bindgen(getter = mtSeed)]
     pub fn mt_seed(&self) -> u32 {
         self.mt_seed
@@ -129,13 +129,13 @@ impl IVBootTimingSearchResult {
 
 /// バッチ検索結果
 #[wasm_bindgen]
-pub struct IVBootTimingSearchResults {
-    results: Vec<IVBootTimingSearchResult>,
+pub struct MtSeedBootTimingSearchResults {
+    results: Vec<MtSeedBootTimingSearchResult>,
     processed_in_chunk: u32,
 }
 
 #[wasm_bindgen]
-impl IVBootTimingSearchResults {
+impl MtSeedBootTimingSearchResults {
     #[wasm_bindgen(getter)]
     pub fn length(&self) -> usize {
         self.results.len()
@@ -158,7 +158,7 @@ impl IVBootTimingSearchResults {
 
     /// 指定インデックスの結果を取得
     #[wasm_bindgen]
-    pub fn get(&self, index: usize) -> Option<IVBootTimingSearchResult> {
+    pub fn get(&self, index: usize) -> Option<MtSeedBootTimingSearchResult> {
         self.results.get(index).cloned()
     }
 }
@@ -167,13 +167,13 @@ impl IVBootTimingSearchResults {
 // 検索イテレータ
 // =============================================================================
 
-/// IV起動時間検索イテレータ
+/// MT Seed 起動時間検索イテレータ
 ///
 /// 単一セグメント（固定 timer0/vcount/keyCode）に対して seconds 方向の検索を行う。
 /// TypeScript側で timer0 × vcount × keyCode のセグメントループを実装し、
 /// 各セグメントに対してこのイテレータを作成する。
 #[wasm_bindgen]
-pub struct IVBootTimingSearchIterator {
+pub struct MtSeedBootTimingSearchIterator {
     // ハッシュ値列挙器（所有）
     hash_enumerator: HashValuesEnumerator,
 
@@ -194,7 +194,7 @@ pub struct IVBootTimingSearchIterator {
 }
 
 #[wasm_bindgen]
-impl IVBootTimingSearchIterator {
+impl MtSeedBootTimingSearchIterator {
     /// コンストラクタ
     ///
     /// # Arguments
@@ -202,7 +202,7 @@ impl IVBootTimingSearchIterator {
     /// - `segment`: セグメントパラメータ (Timer0/VCount/KeyCode)
     /// - `time_range`: 時刻範囲パラメータ
     /// - `search_range`: 検索範囲パラメータ
-    /// - `target_seeds`: 検索対象のSeed値（複数可）
+    /// - `target_seeds`: 検索対象のMT Seed値（複数可）
     #[wasm_bindgen(constructor)]
     pub fn new(
         ds_config: &DSConfigJs,
@@ -210,7 +210,7 @@ impl IVBootTimingSearchIterator {
         time_range: &TimeRangeParamsJs,
         search_range: &SearchRangeParamsJs,
         target_seeds: &[u32],
-    ) -> Result<IVBootTimingSearchIterator, String> {
+    ) -> Result<MtSeedBootTimingSearchIterator, String> {
         if target_seeds.is_empty() {
             return Err("target_seeds must not be empty".to_string());
         }
@@ -239,7 +239,7 @@ impl IVBootTimingSearchIterator {
         let hash_enumerator =
             HashValuesEnumerator::new(base_message_builder, time_code_table, start_seconds, range_seconds);
 
-        Ok(IVBootTimingSearchIterator {
+        Ok(MtSeedBootTimingSearchIterator {
             hash_enumerator,
             timer0: segment_internal.timer0,
             vcount: segment_internal.vcount,
@@ -284,15 +284,15 @@ impl IVBootTimingSearchIterator {
     /// - chunk_seconds秒分処理したら結果がなくても一旦return
     /// - 検索範囲を全て処理したらfinished=trueになる
     #[wasm_bindgen]
-    pub fn next_batch(&mut self, max_results: u32, chunk_seconds: u32) -> IVBootTimingSearchResults {
+    pub fn next_batch(&mut self, max_results: u32, chunk_seconds: u32) -> MtSeedBootTimingSearchResults {
         if self.finished {
-            return IVBootTimingSearchResults {
+            return MtSeedBootTimingSearchResults {
                 results: Vec::new(),
                 processed_in_chunk: 0,
             };
         }
 
-        let mut results: Vec<IVBootTimingSearchResult> = Vec::new();
+        let mut results: Vec<MtSeedBootTimingSearchResult> = Vec::new();
         let initial_processed = self.hash_enumerator.processed_seconds();
         let target_processed = initial_processed + chunk_seconds;
 
@@ -335,18 +335,18 @@ impl IVBootTimingSearchIterator {
             self.finished = true;
         }
 
-        IVBootTimingSearchResults {
+        MtSeedBootTimingSearchResults {
             results,
             processed_in_chunk: seconds_processed,
         }
     }
 
     /// HashEntryから検索結果を生成
-    fn create_result(&self, entry: &HashEntry) -> IVBootTimingSearchResult {
+    fn create_result(&self, entry: &HashEntry) -> MtSeedBootTimingSearchResult {
         let display = entry.datetime_code.to_display_datetime();
         let lcg_seed = entry.hash.to_lcg_seed();
 
-        IVBootTimingSearchResult {
+        MtSeedBootTimingSearchResult {
             mt_seed: entry.hash.to_mt_seed(),
             lcg_seed_high: (lcg_seed >> 32) as u32,
             lcg_seed_low: lcg_seed as u32,
@@ -398,7 +398,7 @@ mod tests {
         let search_range = create_test_search_range();
         let target_seeds = [0x12345678u32];
 
-        let iterator = IVBootTimingSearchIterator::new(
+        let iterator = MtSeedBootTimingSearchIterator::new(
             &ds_config,
             &segment,
             &time_range,
@@ -421,7 +421,7 @@ mod tests {
         let search_range = create_test_search_range();
         let target_seeds: [u32; 0] = [];
 
-        let result = IVBootTimingSearchIterator::new(
+        let result = MtSeedBootTimingSearchIterator::new(
             &ds_config,
             &segment,
             &time_range,
@@ -440,7 +440,7 @@ mod tests {
         let search_range = create_test_search_range();
         let target_seeds = [0x12345678u32];
 
-        let mut iterator = IVBootTimingSearchIterator::new(
+        let mut iterator = MtSeedBootTimingSearchIterator::new(
             &ds_config,
             &segment,
             &time_range,
@@ -469,7 +469,7 @@ mod tests {
         let search_range = SearchRangeParamsJs::new(2024, 1, 1, 10).unwrap();
         let target_seeds = [0x12345678u32];
 
-        let mut iterator = IVBootTimingSearchIterator::new(
+        let mut iterator = MtSeedBootTimingSearchIterator::new(
             &ds_config,
             &segment,
             &time_range,
@@ -494,10 +494,10 @@ mod tests {
         let segment = create_test_segment();
         let time_range = create_test_time_range();
         let search_range = create_test_search_range();
-        // 複数のSeedを検索
+        // 複数のMT Seedを検索
         let target_seeds = [0x12345678u32, 0xABCDEF00u32, 0x11111111u32];
 
-        let iterator = IVBootTimingSearchIterator::new(
+        let iterator = MtSeedBootTimingSearchIterator::new(
             &ds_config,
             &segment,
             &time_range,

@@ -28,10 +28,10 @@ import type {
   SegmentParamsJs as WasmSegmentParamsJs,
   TimeRangeParamsJs as WasmTimeRangeParamsJs,
   SearchRangeParamsJs as WasmSearchRangeParamsJs,
-  // IV boot timing search types
-  IVBootTimingSearchIterator as WasmIVBootTimingSearchIterator,
-  IVBootTimingSearchResult as WasmIVBootTimingSearchResult,
-  IVBootTimingSearchResults as WasmIVBootTimingSearchResults,
+  // MT Seed boot timing search types
+  MtSeedBootTimingSearchIterator as WasmMtSeedBootTimingSearchIterator,
+  MtSeedBootTimingSearchResult as WasmMtSeedBootTimingSearchResult,
+  MtSeedBootTimingSearchResults as WasmMtSeedBootTimingSearchResults,
 } from '../../wasm/wasm_pkg';
 
 // Init arg for wasm-bindgen init function
@@ -69,10 +69,10 @@ export interface WasmModule {
   TimeRangeParamsJs: typeof WasmTimeRangeParamsJs;
   SearchRangeParamsJs: typeof WasmSearchRangeParamsJs;
 
-  // 追加: IV起動時間検索API
-  IVBootTimingSearchIterator: typeof WasmIVBootTimingSearchIterator;
-  IVBootTimingSearchResult: typeof WasmIVBootTimingSearchResult;
-  IVBootTimingSearchResults: typeof WasmIVBootTimingSearchResults;
+  // 追加: MT Seed起動時間検索API
+  MtSeedBootTimingSearchIterator: typeof WasmMtSeedBootTimingSearchIterator;
+  MtSeedBootTimingSearchResult: typeof WasmMtSeedBootTimingSearchResult;
+  MtSeedBootTimingSearchResults: typeof WasmMtSeedBootTimingSearchResults;
 
   calculate_game_offset(initial_seed: bigint, mode: number): number;
   sha1_hash_batch(messages: Uint32Array): Uint32Array;
@@ -139,10 +139,10 @@ export async function initWasm(): Promise<WasmModule> {
         SegmentParamsJs: module.SegmentParamsJs,
         TimeRangeParamsJs: module.TimeRangeParamsJs,
         SearchRangeParamsJs: module.SearchRangeParamsJs,
-        // IV起動時間検索API
-        IVBootTimingSearchIterator: module.IVBootTimingSearchIterator,
-        IVBootTimingSearchResult: module.IVBootTimingSearchResult,
-        IVBootTimingSearchResults: module.IVBootTimingSearchResults,
+        // MT Seed起動時間検索API
+        MtSeedBootTimingSearchIterator: module.MtSeedBootTimingSearchIterator,
+        MtSeedBootTimingSearchResult: module.MtSeedBootTimingSearchResult,
+        MtSeedBootTimingSearchResults: module.MtSeedBootTimingSearchResults,
         calculate_game_offset: module.calculate_game_offset,
         sha1_hash_batch: module.sha1_hash_batch,
       } as unknown as WasmModule;
@@ -187,7 +187,7 @@ export type SegmentParamsJs = WasmSegmentParamsJs;
 export type TimeRangeParamsJs = WasmTimeRangeParamsJs;
 export type SearchRangeParamsJs = WasmSearchRangeParamsJs;
 
-// IV Boot Timing Search 型を公開
-export type IVBootTimingSearchIterator = WasmIVBootTimingSearchIterator;
-export type IVBootTimingSearchResult = WasmIVBootTimingSearchResult;
-export type IVBootTimingSearchResults = WasmIVBootTimingSearchResults;
+// MT Seed Boot Timing Search 型を公開
+export type MtSeedBootTimingSearchIterator = WasmMtSeedBootTimingSearchIterator;
+export type MtSeedBootTimingSearchResult = WasmMtSeedBootTimingSearchResult;
+export type MtSeedBootTimingSearchResults = WasmMtSeedBootTimingSearchResults;

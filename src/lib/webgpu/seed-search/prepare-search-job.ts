@@ -1,7 +1,7 @@
 import romParameters from '@/data/rom-parameters';
 import { generateValidKeyCodes } from '@/lib/utils/key-input';
 import type { Hardware } from '@/types/rom';
-import type { SearchConditions } from '@/types/search';
+import type { SearchConditions, Timer0VCountSegment } from '@/types/search';
 import { resolveTimePlan, type ResolvedTimePlan } from '@/lib/search/time/time-plan';
 import type {
   SeedSearchJob,
@@ -13,15 +13,9 @@ import type {
 const GX_STAT = 0x06000000;
 const MAX_U32 = 0xffffffff;
 
-interface Timer0SegmentDescriptor {
-  timer0Min: number;
-  timer0Max: number;
-  vcount: number;
-}
-
 interface KernelContext {
   rangeSeconds: number;
-  timer0Segments: Timer0SegmentDescriptor[];
+  timer0Segments: Timer0VCountSegment[];
   keyCodes: number[];
   nazoSwapped: Uint32Array;
   macLower: number;
@@ -313,15 +307,14 @@ function resolveRomParameters(conditions: SearchConditions) {
 
   return {
     nazo: [...regionData.nazo] as [number, number, number, number, number],
-    vcountTimerRanges: regionData.vcountTimerRanges.map((entry) => [...entry] as [number, number, number]),
+    vcountTimerRanges: regionData.vcountTimerRanges.map((segment) => ({ ...segment })),
   };
 }
 
 function resolveTimer0Segments(
   conditions: SearchConditions,
-  params: { vcountTimerRanges: readonly [number, number, number][] }
-): Timer0SegmentDescriptor[] {
-  const segments: Timer0SegmentDescriptor[] = [];
+  params: { vcountTimerRanges: readonly Timer0VCountSegment[] }
+): Timer0VCountSegment[] {
   const {
     timer0VCountConfig: {
       useAutoConfiguration,
@@ -331,40 +324,20 @@ function resolveTimer0Segments(
   } = conditions;
 
   if (!useAutoConfiguration) {
+    // Manual mode: Timer0範囲 × VCount範囲の全組み合わせ
+    const segments: Timer0VCountSegment[] = [];
     for (let vcount = vcountMin; vcount <= vcountMax; vcount += 1) {
       segments.push({ timer0Min, timer0Max, vcount });
     }
     return segments;
   }
 
-  let current: Timer0SegmentDescriptor | null = null;
-
-  for (let timer0 = timer0Min; timer0 <= timer0Max; timer0 += 1) {
-    const vcount = getVCountForTimer0(params, timer0);
-    if (current && current.vcount === vcount && timer0 === current.timer0Max + 1) {
-      current.timer0Max = timer0;
-    } else {
-      if (current) {
-        segments.push(current);
-      }
-      current = { timer0Min: timer0, timer0Max: timer0, vcount };
-    }
-  }
-
-  if (current) {
-    segments.push(current);
-  }
-
-  return segments;
-}
-
-function getVCountForTimer0(params: { vcountTimerRanges: readonly [number, number, number][] }, timer0: number): number {
-  for (const [vcount, min, max] of params.vcountTimerRanges) {
-    if (timer0 >= min && timer0 <= max) {
-      return vcount;
-    }
-  }
-  return params.vcountTimerRanges.length > 0 ? params.vcountTimerRanges[0][0] : 0x60;
+  // Auto mode: ROMのvcountTimerRangesをそのまま使用
+  return params.vcountTimerRanges.map((s) => ({
+    vcount: s.vcount,
+    timer0Min: s.timer0Min,
+    timer0Max: s.timer0Max,
+  }));
 }
 
 function computeMacWords(mac: number[], frame: number): { macLower: number; data7Swapped: number } {

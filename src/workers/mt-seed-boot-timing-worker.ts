@@ -1,21 +1,21 @@
 /**
- * IV Boot Timing Worker - IV起動時間検索用Worker
+ * MT Seed Boot Timing Worker - MT Seed起動時間検索用Worker
  *
  * 複数のMT Seedに対応する起動時間条件を検索する。
  * セグメントベースのパターンを採用:
  * - TypeScript側で timer0 × vcount × keyCode のセグメントループを実装
- * - 各セグメントに対して IVBootTimingSearchIterator を作成
+ * - 各セグメントに対して MtSeedBootTimingSearchIterator を作成
  * - 結果はストリーミングで送信
  */
 import type {
-  IVBootTimingWorkerRequest,
-  IVBootTimingWorkerResponse,
-  IVBootTimingSearchParams,
-  IVBootTimingSearchResult,
-  IVBootTimingCompletion,
-  IVBootTimingProgress,
-  WasmIVBootTimingSearchResult,
-} from '@/types/iv-boot-timing-search';
+  MtSeedBootTimingWorkerRequest,
+  MtSeedBootTimingWorkerResponse,
+  MtSeedBootTimingSearchParams,
+  MtSeedBootTimingSearchResult,
+  MtSeedBootTimingCompletion,
+  MtSeedBootTimingProgress,
+  WasmMtSeedBootTimingSearchResult,
+} from '@/types/mt-seed-boot-timing-search';
 import { generateValidKeyCodes } from '@/lib/utils/key-input';
 import {
   initWasm,
@@ -30,7 +30,7 @@ import { keyCodeToNames } from '@/lib/utils/key-input';
 import romParameters from '@/data/rom-parameters';
 
 interface InternalState {
-  params: IVBootTimingSearchParams | null;
+  params: MtSeedBootTimingSearchParams | null;
   running: boolean;
   stopRequested: boolean;
 }
@@ -49,7 +49,7 @@ type WasmAny = any;
  */
 function buildDSConfig(
   wasmAny: WasmAny,
-  params: IVBootTimingSearchParams,
+  params: MtSeedBootTimingSearchParams,
   nazo: readonly number[]
 ): DSConfigJs {
   return new wasmAny.DSConfigJs(
@@ -76,7 +76,7 @@ function buildSegmentParams(
  */
 function buildTimeRangeParams(
   wasmAny: WasmAny,
-  timeRange: IVBootTimingSearchParams['timeRange']
+  timeRange: MtSeedBootTimingSearchParams['timeRange']
 ): TimeRangeParamsJs {
   return new wasmAny.TimeRangeParamsJs(
     timeRange.hour.start,
@@ -105,11 +105,11 @@ function buildSearchRangeParams(
 }
 
 const ctx = self as typeof self & { onclose?: () => void };
-const post = (message: IVBootTimingWorkerResponse) => ctx.postMessage(message);
+const post = (message: MtSeedBootTimingWorkerResponse) => ctx.postMessage(message);
 
 post({ type: 'READY', version: '1' });
 
-ctx.onmessage = (ev: MessageEvent<IVBootTimingWorkerRequest>) => {
+ctx.onmessage = (ev: MessageEvent<MtSeedBootTimingWorkerRequest>) => {
   const msg = ev.data;
   (async () => {
     try {
@@ -130,7 +130,7 @@ ctx.onmessage = (ev: MessageEvent<IVBootTimingWorkerRequest>) => {
   })();
 };
 
-async function handleStart(params: IVBootTimingSearchParams) {
+async function handleStart(params: MtSeedBootTimingSearchParams) {
   if (state.running) {
     return;
   }
@@ -148,7 +148,7 @@ async function handleStart(params: IVBootTimingSearchParams) {
     const result = await executeSearch(params, startTime);
 
     // 完了通知
-    const completion: IVBootTimingCompletion = {
+    const completion: MtSeedBootTimingCompletion = {
       reason: state.stopRequested ? 'stopped' : 'completed',
       processedCombinations: result.processedSegments,
       totalCombinations: result.totalSegments,
@@ -174,8 +174,8 @@ async function ensureWasm() {
  * Nazo値を解決
  */
 function resolveNazoValue(
-  romVersion: IVBootTimingSearchParams['romVersion'],
-  romRegion: IVBootTimingSearchParams['romRegion']
+  romVersion: MtSeedBootTimingSearchParams['romVersion'],
+  romRegion: MtSeedBootTimingSearchParams['romRegion']
 ): readonly number[] {
   const romData = romParameters[romVersion];
   if (!romData) {
@@ -192,9 +192,9 @@ function resolveNazoValue(
  * WASM結果をドメイン型に変換
  */
 function convertWasmResult(
-  wasmResult: WasmIVBootTimingSearchResult,
+  wasmResult: WasmMtSeedBootTimingSearchResult,
   macAddress: readonly [number, number, number, number, number, number]
-): IVBootTimingSearchResult {
+): MtSeedBootTimingSearchResult {
   return {
     boot: {
       datetime: new Date(
@@ -232,18 +232,18 @@ interface SearchResult {
  * 検索実行（セグメントベースパターン）
  *
  * timer0 × vcount × keyCode のセグメントループを実装し、
- * 各セグメントに対して IVBootTimingSearchIterator を作成する。
+ * 各セグメントに対して MtSeedBootTimingSearchIterator を作成する。
  */
 async function executeSearch(
-  params: IVBootTimingSearchParams,
+  params: MtSeedBootTimingSearchParams,
   startTime: number
 ): Promise<SearchResult> {
   const wasm = getWasm();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const wasmAny = wasm as any;
 
-  if (!wasmAny.IVBootTimingSearchIterator) {
-    throw new Error('IVBootTimingSearchIterator not exposed in WASM');
+  if (!wasmAny.MtSeedBootTimingSearchIterator) {
+    throw new Error('MtSeedBootTimingSearchIterator not exposed in WASM');
   }
 
   // nazo値を解決
@@ -338,7 +338,7 @@ async function executeSearch(
         };
 
         try {
-          iterator = new wasmAny.IVBootTimingSearchIterator(
+          iterator = new wasmAny.MtSeedBootTimingSearchIterator(
             dsConfig,
             segmentParams,
             timeRangeParams,
@@ -347,7 +347,7 @@ async function executeSearch(
           );
         } catch (e) {
           // エラーが発生した場合はスキップ
-          console.error('Failed to create IVBootTimingSearchIterator:', e);
+          console.error('Failed to create MtSeedBootTimingSearchIterator:', e);
           processedSegments++;
           continue;
         }
@@ -366,13 +366,13 @@ async function executeSearch(
 
             // 結果をストリーミング送信
             if (resultsArray.length > 0) {
-              const convertedResults: IVBootTimingSearchResult[] = [];
+              const convertedResults: MtSeedBootTimingSearchResult[] = [];
               for (
                 let i = 0;
                 i < resultsArray.length && resultsCount < params.maxResults;
                 i++
               ) {
-                const wasmResult = resultsArray[i] as WasmIVBootTimingSearchResult;
+                const wasmResult = resultsArray[i] as WasmMtSeedBootTimingSearchResult;
                 convertedResults.push(
                   convertWasmResult(wasmResult, params.macAddress)
                 );
@@ -401,7 +401,7 @@ async function executeSearch(
                     (totalSecondsToProcess - currentProcessedSeconds)
                   : 0;
 
-              const progress: IVBootTimingProgress = {
+              const progress: MtSeedBootTimingProgress = {
                 processedCombinations: processedSegments,
                 totalCombinations: totalSegments,
                 foundCount: resultsCount,
@@ -427,7 +427,7 @@ async function executeSearch(
 
   // 最終進捗報告
   const elapsedMs = performance.now() - startTime;
-  const progress: IVBootTimingProgress = {
+  const progress: MtSeedBootTimingProgress = {
     processedCombinations: processedSegments,
     totalCombinations: totalSegments,
     foundCount: resultsCount,

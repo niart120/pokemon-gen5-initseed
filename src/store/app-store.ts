@@ -23,7 +23,7 @@ import { DomainShinyType } from '@/types/domain';
 /**
  * 検索実行モード
  * - 'gpu': WebGPU による並列検索
- * - 'cpu-parallel': IVBootTimingMultiWorkerManager による CPU 並列検索
+ * - 'cpu-parallel': MtSeedBootTimingMultiWorkerManager による CPU 並列検索
  */
 export type SearchExecutionMode = 'gpu' | 'cpu-parallel';
 

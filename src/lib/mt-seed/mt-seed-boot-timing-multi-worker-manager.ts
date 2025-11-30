@@ -1,20 +1,20 @@
 /**
- * IV Boot Timing Multi Worker Manager - 並列Worker版
- * IV起動時間検索の並列Worker管理
+ * MT Seed Boot Timing Multi Worker Manager - 並列Worker版
+ * MT Seed 起動時間検索の並列Worker管理
  */
 
 import type {
-  IVBootTimingSearchParams,
-  IVBootTimingSearchResult,
-  IVBootTimingWorkerResponse,
-  IVBootTimingProgress,
-} from '@/types/iv-boot-timing-search';
-import { isIVBootTimingWorkerResponse } from '@/types/iv-boot-timing-search';
+  MtSeedBootTimingSearchParams,
+  MtSeedBootTimingSearchResult,
+  MtSeedBootTimingWorkerResponse,
+  MtSeedBootTimingProgress,
+} from '@/types/mt-seed-boot-timing-search';
+import { isMtSeedBootTimingWorkerResponse } from '@/types/mt-seed-boot-timing-search';
 import {
-  calculateIVBootTimingChunks,
+  calculateMtSeedBootTimingTimeChunks,
   getDefaultWorkerCount,
-  type IVBootTimingWorkerChunk,
 } from './boot-timing-chunk-calculator';
+import type { TimeChunk } from '@/types/parallel';
 
 /**
  * Worker ごとの進捗状態
@@ -36,7 +36,7 @@ interface WorkerProgress {
 /**
  * 集約された進捗状態
  */
-export interface AggregatedIVBootTimingProgress {
+export interface AggregatedMtSeedBootTimingProgress {
   totalCurrentStep: number;
   totalSteps: number;
   totalElapsedTime: number;
@@ -54,9 +54,9 @@ export interface AggregatedIVBootTimingProgress {
 /**
  * コールバック定義
  */
-export interface IVBootTimingMultiWorkerCallbacks {
-  onProgress: (progress: AggregatedIVBootTimingProgress) => void;
-  onResult: (result: IVBootTimingSearchResult) => void;
+export interface MtSeedBootTimingMultiWorkerCallbacks {
+  onProgress: (progress: AggregatedMtSeedBootTimingProgress) => void;
+  onResult: (result: MtSeedBootTimingSearchResult) => void;
   onComplete: (message: string) => void;
   onError: (error: string) => void;
   onPaused?: () => void;
@@ -76,13 +76,13 @@ interface TimerState {
 /**
  * 並列 Worker 管理システム
  */
-export class IVBootTimingMultiWorkerManager {
+export class MtSeedBootTimingMultiWorkerManager {
   private workers: Map<number, Worker> = new Map();
   private workerProgresses: Map<number, WorkerProgress> = new Map();
-  private activeChunks: Map<number, IVBootTimingWorkerChunk> = new Map();
+  private activeChunks: Map<number, TimeChunk> = new Map();
   private resultsCount = 0; // 結果はストリーミングのみ、配列保持しない
   private completedWorkers = 0;
-  private callbacks: IVBootTimingMultiWorkerCallbacks | null = null;
+  private callbacks: MtSeedBootTimingMultiWorkerCallbacks | null = null;
   private searchRunning = false;
   private progressUpdateTimer: ReturnType<typeof setInterval> | null = null;
   private lastProgressCheck: Map<number, number> = new Map();
@@ -115,8 +115,8 @@ export class IVBootTimingMultiWorkerManager {
    * 並列検索開始
    */
   async startParallelSearch(
-    params: IVBootTimingSearchParams,
-    callbacks: IVBootTimingMultiWorkerCallbacks
+    params: MtSeedBootTimingSearchParams,
+    callbacks: MtSeedBootTimingMultiWorkerCallbacks
   ): Promise<void> {
     if (this.searchRunning) {
       throw new Error('Search is already running');
@@ -129,7 +129,7 @@ export class IVBootTimingMultiWorkerManager {
 
     try {
       // チャンク分割
-      const chunks = calculateIVBootTimingChunks(params, this.maxWorkers);
+      const chunks = calculateMtSeedBootTimingTimeChunks(params, this.maxWorkers);
 
       if (chunks.length === 0) {
         throw new Error('No valid chunks created for search');
@@ -155,15 +155,15 @@ export class IVBootTimingMultiWorkerManager {
    * Worker初期化
    */
   private async initializeWorker(
-    chunk: IVBootTimingWorkerChunk,
-    params: IVBootTimingSearchParams
+    chunk: TimeChunk,
+    params: MtSeedBootTimingSearchParams
   ): Promise<void> {
     const worker = new Worker(
-      new URL('../../workers/iv-boot-timing-worker.ts', import.meta.url),
+      new URL('../../workers/mt-seed-boot-timing-worker.ts', import.meta.url),
       { type: 'module' }
     );
 
-    worker.onmessage = (event: MessageEvent<IVBootTimingWorkerResponse>) => {
+    worker.onmessage = (event: MessageEvent<MtSeedBootTimingWorkerResponse>) => {
       this.handleWorkerMessage(chunk.workerId, event.data);
     };
 
@@ -192,18 +192,18 @@ export class IVBootTimingMultiWorkerManager {
     });
 
     // チャンク用パラメータを構築
-    const chunkStartDatetime = chunk.startDatetime;
-    const chunkEndDatetime = chunk.endDatetime;
+    const chunkStartDateTime = chunk.startDateTime;
+    const chunkEndDateTime = chunk.endDateTime;
 
-    const chunkParams: IVBootTimingSearchParams = {
+    const chunkParams: MtSeedBootTimingSearchParams = {
       ...params,
       dateRange: {
-        startYear: chunkStartDatetime.getFullYear(),
-        startMonth: chunkStartDatetime.getMonth() + 1,
-        startDay: chunkStartDatetime.getDate(),
-        endYear: chunkEndDatetime.getFullYear(),
-        endMonth: chunkEndDatetime.getMonth() + 1,
-        endDay: chunkEndDatetime.getDate(),
+        startYear: chunkStartDateTime.getFullYear(),
+        startMonth: chunkStartDateTime.getMonth() + 1,
+        startDay: chunkStartDateTime.getDate(),
+        endYear: chunkEndDateTime.getFullYear(),
+        endMonth: chunkEndDateTime.getMonth() + 1,
+        endDay: chunkEndDateTime.getDate(),
       },
       // チャンク分割時はrangeSecondsを明示的に指定（Worker側での再計算を防止）
       rangeSeconds: chunk.rangeSeconds,
@@ -224,7 +224,7 @@ export class IVBootTimingMultiWorkerManager {
    */
   private handleWorkerMessage(workerId: number, data: unknown): void {
     if (!this.callbacks) return;
-    if (!isIVBootTimingWorkerResponse(data)) return;
+    if (!isMtSeedBootTimingWorkerResponse(data)) return;
 
     const response = data;
 
@@ -269,7 +269,7 @@ export class IVBootTimingMultiWorkerManager {
    */
   private updateWorkerProgress(
     workerId: number,
-    progressData: IVBootTimingProgress
+    progressData: MtSeedBootTimingProgress
   ): void {
     const current = this.workerProgresses.get(workerId);
     if (!current) return;
@@ -327,7 +327,7 @@ export class IVBootTimingMultiWorkerManager {
     const totalEstimatedTimeRemaining =
       this.calculateAggregatedTimeRemaining(progresses);
 
-    const aggregatedProgress: AggregatedIVBootTimingProgress = {
+    const aggregatedProgress: AggregatedMtSeedBootTimingProgress = {
       totalCurrentStep,
       totalSteps,
       totalElapsedTime,
@@ -442,10 +442,10 @@ export class IVBootTimingMultiWorkerManager {
    */
   resumeAll(): void {
     this.resumeManagerTimer();
-    // IV workerはRESUMEをサポートしていないため、再開は新規検索が必要
+    // MT Seed workerはRESUMEをサポートしていないため、再開は新規検索が必要
     // 現状では警告のみ
     console.warn(
-      'IV boot timing worker does not support resume. Please restart search.'
+      'MT Seed boot timing worker does not support resume. Please restart search.'
     );
     this.callbacks?.onResumed?.();
   }

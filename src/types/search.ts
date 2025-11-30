@@ -16,6 +16,52 @@ export interface DailyTimeRange {
   second: TimeFieldRange;
 }
 
+/**
+ * 日付範囲（Boot Timing検索共通）
+ */
+export interface DateRange {
+  startYear: number;
+  startMonth: number;
+  startDay: number;
+  endYear: number;
+  endMonth: number;
+  endDay: number;
+}
+
+/**
+ * 起動条件情報（Boot Timing検索結果共通）
+ */
+export interface BootCondition {
+  /** 起動日時 */
+  datetime: Date;
+
+  /** Timer0値 */
+  timer0: number;
+
+  /** VCount値 */
+  vcount: number;
+
+  /** キーコード (XOR 0x2FFF後) */
+  keyCode: number;
+
+  /** キー入力名リスト */
+  keyInputNames: KeyName[];
+
+  /** MACアドレス */
+  macAddress: readonly [number, number, number, number, number, number];
+}
+
+/**
+ * Timer0/VCount セグメント（統一形式）
+ * Auto mode: ROMのvcountTimerRangesから直接取得
+ * Manual mode: ユーザー入力から変換
+ */
+export interface Timer0VCountSegment {
+  readonly vcount: number;
+  readonly timer0Min: number;
+  readonly timer0Max: number;
+}
+
 export interface SearchConditions {
   romVersion: ROMVersion;
   romRegion: ROMRegion;

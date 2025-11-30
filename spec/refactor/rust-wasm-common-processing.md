@@ -35,8 +35,8 @@
 
 | 旧名称 | 新名称 | 説明 |
 |--------|--------|------|
-| `IntegratedSeedSearcher` | `IVBootTimingSearchIterator` | IV確定のための起動時間検索 |
-| `IntegratedSearchResult` | `IVBootTimingSearchResult` | IV検索結果 |
+| `IntegratedSeedSearcher` | `MtSeedBootTimingSearchIterator` | MT Seedから起動時間を検索 |
+| `IntegratedSearchResult` | `MtSeedBootTimingSearchResult` | MT Seed検索結果 |
 | - | `DSConfigJs` | DS設定パラメータ (MAC/Nazo/Hardware) |
 | - | `SegmentParamsJs` | セグメントパラメータ (Timer0/VCount/KeyCode) |
 | - | `TimeRangeParamsJs` | 時刻範囲パラメータ |
@@ -67,10 +67,10 @@ pub struct SearchRangeParamsJs { start_year/month/day, range_seconds }
 
 // 検索イテレータ・結果
 #[wasm_bindgen]
-pub struct IVBootTimingSearchIterator { ... }
+pub struct MtSeedBootTimingSearchIterator { ... }
 
 #[wasm_bindgen]
-pub struct IVBootTimingSearchResult { ... }
+pub struct MtSeedBootTimingSearchResult { ... }
 ```
 
 #### 2. 内部型（Rust内部のみ）
@@ -233,7 +233,7 @@ loop {
 
 ---
 
-## IVBootTimingSearchIterator 仕様
+## MtSeedBootTimingSearchIterator 仕様
 
 ### 概要
 
@@ -243,7 +243,7 @@ loop {
 
 ```rust
 #[wasm_bindgen]
-pub struct IVBootTimingSearchIterator {
+pub struct MtSeedBootTimingSearchIterator {
     // 内部状態
     base_message_builder: BaseMessageBuilder,
     time_code_table: RangedTimeCodeTable,
@@ -261,7 +261,7 @@ pub struct IVBootTimingSearchIterator {
 }
 
 #[wasm_bindgen]
-impl IVBootTimingSearchIterator {
+impl MtSeedBootTimingSearchIterator {
     #[wasm_bindgen(constructor)]
     pub fn new(
         ds_config: &DSConfigJs,
@@ -269,7 +269,7 @@ impl IVBootTimingSearchIterator {
         time_range: &TimeRangeParamsJs,
         search_range: &SearchRangeParamsJs,
         target_seeds: &[u32],  // 複数Seed対応
-    ) -> Result<IVBootTimingSearchIterator, String>;
+    ) -> Result<MtSeedBootTimingSearchIterator, String>;
 
     /// バッチ処理で検索を進める
     /// 
@@ -283,7 +283,7 @@ impl IVBootTimingSearchIterator {
         &mut self, 
         max_results: u32, 
         chunk_seconds: u32
-    ) -> IVBootTimingSearchResults;
+    ) -> MtSeedBootTimingSearchResults;
     
     #[wasm_bindgen(getter)]
     pub fn is_finished(&self) -> bool;
@@ -299,7 +299,7 @@ impl IVBootTimingSearchIterator {
 }
 
 #[wasm_bindgen]
-pub struct IVBootTimingSearchResult {
+pub struct MtSeedBootTimingSearchResult {
     pub seed: u32,
     pub year: u32,
     pub month: u32,
@@ -310,8 +310,8 @@ pub struct IVBootTimingSearchResult {
 }
 
 #[wasm_bindgen]
-pub struct IVBootTimingSearchResults {
-    results: Vec<IVBootTimingSearchResult>,
+pub struct MtSeedBootTimingSearchResults {
+    results: Vec<MtSeedBootTimingSearchResult>,
     processed_in_chunk: u32,
 }
 ```
@@ -319,7 +319,7 @@ pub struct IVBootTimingSearchResults {
 ### 使用例（TS側）
 
 ```typescript
-const iterator = new IVBootTimingSearchIterator(
+const iterator = new MtSeedBootTimingSearchIterator(
     dsConfig,
     segment,
     timeRange,
@@ -364,22 +364,22 @@ wasm-pkg/src/search_common/
 - 37テスト通過
 - 175テスト（全体）通過
 
-### Phase 2: IVBootTimingSearchIterator 実装 ⬜ 進行中
+### Phase 2: MtSeedBootTimingSearchIterator 実装 ✅ 完了
 
 #### 目標
-`EggBootTimingSearchIterator` と同様のIteratorパターンでIV検索を実装。
+`EggBootTimingSearchIterator` と同様のIteratorパターンでMT Seed検索を実装。
 
 #### タスク
-1. `iv_boot_timing_search.rs` 新規作成
-2. `IVBootTimingSearchIterator` 実装
-3. `IVBootTimingSearchResult` / `IVBootTimingSearchResults` 実装
+1. `mt_seed_boot_timing_search.rs` 新規作成
+2. `MtSeedBootTimingSearchIterator` 実装
+3. `MtSeedBootTimingSearchResult` / `MtSeedBootTimingSearchResults` 実装
 4. SIMD最適化
 5. テスト追加
 
 ### Phase 3: 既存コード移行
 
 1. `integrated_search.rs` は非推奨化（`#[deprecated]`）
-2. 新規開発は `IVBootTimingSearchIterator` を使用
+2. 新規開発は `MtSeedBootTimingSearchIterator` を使用
 3. 段階的に既存呼び出しを移行
 
 ---
@@ -394,7 +394,7 @@ wasm-pkg/src/
 │   ├── params.rs
 │   ├── message.rs
 │   └── datetime.rs
-├── iv_boot_timing_search.rs   # IV起動時間検索 (NEW) ⬜
+├── mt_seed_boot_timing_search.rs   # MT Seed起動時間検索 ✅
 ├── egg_boot_timing_search.rs  # 孵化乱数検索 (既存)
 ├── integrated_search.rs       # 旧IV検索 (deprecated予定)
 ├── datetime_codes.rs          # 日時コード生成 (既存)
@@ -413,7 +413,7 @@ wasm-pkg/src/
 | 4 | `DateTimeCodeEnumerator` 実装 | ✅ 完了 |
 | 5 | `RangedTimeCodeTable` 実装 | ✅ 完了 |
 | 6 | テスト (37件) | ✅ 通過 |
-| 7 | `IVBootTimingSearchIterator` 実装 | ⬜ 進行中 |
+| 7 | `MtSeedBootTimingSearchIterator` 実装 | ✅ 完了 |
 | 8 | 既存コード移行 | ⬜ 未着手 |
 
 ---

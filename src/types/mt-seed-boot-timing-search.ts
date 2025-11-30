@@ -1,31 +1,21 @@
 /**
- * IV boot timing search feature types
+ * MT Seed boot timing search feature types
  *
- * IVから逆算した初期Seedに対応する起動時間を検索する機能の型定義
+ * MT Seed（個体値決定用Seed）に対応する起動時間を検索する機能の型定義
  */
 
 import type { Hardware, ROMRegion, ROMVersion } from '@/types/rom';
-import type { DailyTimeRange } from '@/types/search';
-import type { KeyName } from '@/lib/utils/key-input';
+import type { DailyTimeRange, DateRange, BootCondition } from '@/types/search';
+
+// Re-export shared types for convenience
+export type { DateRange, BootCondition };
 
 // === 検索パラメータ ===
 
 /**
- * 日付範囲
+ * MT Seed 起動時間検索パラメータ
  */
-export interface DateRange {
-  startYear: number;
-  startMonth: number;
-  startDay: number;
-  endYear: number;
-  endMonth: number;
-  endDay: number;
-}
-
-/**
- * IV起動時間検索パラメータ
- */
-export interface IVBootTimingSearchParams {
+export interface MtSeedBootTimingSearchParams {
   // === 起動時間パラメータ ===
 
   /** 日付範囲 */
@@ -70,7 +60,7 @@ export interface IVBootTimingSearchParams {
 
   // === 検索対象 ===
 
-  /** 検索対象のMT Seed (IV用、複数可) */
+  /** 検索対象のMT Seed (複数可) */
   targetSeeds: number[];
 
   // === 制限 ===
@@ -82,39 +72,16 @@ export interface IVBootTimingSearchParams {
 // === 検索結果 ===
 
 /**
- * 起動条件情報
+ * MT Seed 起動時間検索結果1件
  */
-export interface BootCondition {
-  /** 起動日時 */
-  datetime: Date;
-
-  /** Timer0値 */
-  timer0: number;
-
-  /** VCount値 */
-  vcount: number;
-
-  /** キーコード (XOR 0x2FFF後) */
-  keyCode: number;
-
-  /** キー入力名リスト */
-  keyInputNames: KeyName[];
-
-  /** MACアドレス */
-  macAddress: readonly [number, number, number, number, number, number];
-}
-
-/**
- * IV起動時間検索結果1件
- */
-export interface IVBootTimingSearchResult {
+export interface MtSeedBootTimingSearchResult {
   /** 起動条件 */
   boot: BootCondition;
 
-  /** MT Seed (IV用、16進文字列) */
+  /** MT Seed (16進文字列) */
   mtSeedHex: string;
 
-  /** MT Seed (IV用、数値) */
+  /** MT Seed (数値) */
   mtSeed: number;
 
   /** LCG Seed (16進文字列) */
@@ -124,7 +91,7 @@ export interface IVBootTimingSearchResult {
 /**
  * WASM結果の型定義
  */
-export interface WasmIVBootTimingSearchResult {
+export interface WasmMtSeedBootTimingSearchResult {
   year: number;
   month: number;
   day: number;
@@ -146,10 +113,10 @@ export interface WasmIVBootTimingSearchResult {
 /**
  * Worker リクエスト
  */
-export type IVBootTimingWorkerRequest =
+export type MtSeedBootTimingWorkerRequest =
   | {
       type: 'START_SEARCH';
-      params: IVBootTimingSearchParams;
+      params: MtSeedBootTimingSearchParams;
       requestId?: string;
     }
   | {
@@ -160,22 +127,22 @@ export type IVBootTimingWorkerRequest =
 /**
  * Worker レスポンス
  */
-export type IVBootTimingWorkerResponse =
+export type MtSeedBootTimingWorkerResponse =
   | { type: 'READY'; version: string }
-  | { type: 'PROGRESS'; payload: IVBootTimingProgress }
-  | { type: 'RESULTS'; payload: IVBootTimingResultsPayload }
-  | { type: 'COMPLETE'; payload: IVBootTimingCompletion }
+  | { type: 'PROGRESS'; payload: MtSeedBootTimingProgress }
+  | { type: 'RESULTS'; payload: MtSeedBootTimingResultsPayload }
+  | { type: 'COMPLETE'; payload: MtSeedBootTimingCompletion }
   | {
       type: 'ERROR';
       message: string;
-      category: IVBootTimingErrorCategory;
+      category: MtSeedBootTimingErrorCategory;
       fatal: boolean;
     };
 
 /**
  * 進捗情報
  */
-export interface IVBootTimingProgress {
+export interface MtSeedBootTimingProgress {
   /** 処理済み起動条件の組み合わせ数（完了セグメント数） */
   processedCombinations: number;
 
@@ -204,15 +171,15 @@ export interface IVBootTimingProgress {
 /**
  * 結果ペイロード（バッチ送信用）
  */
-export interface IVBootTimingResultsPayload {
-  results: IVBootTimingSearchResult[];
+export interface MtSeedBootTimingResultsPayload {
+  results: MtSeedBootTimingSearchResult[];
   batchIndex: number;
 }
 
 /**
  * 完了情報
  */
-export interface IVBootTimingCompletion {
+export interface MtSeedBootTimingCompletion {
   /** 完了理由 */
   reason: 'completed' | 'stopped' | 'max-results' | 'error';
 
@@ -232,7 +199,7 @@ export interface IVBootTimingCompletion {
 /**
  * エラーカテゴリ
  */
-export type IVBootTimingErrorCategory =
+export type MtSeedBootTimingErrorCategory =
   | 'VALIDATION' // パラメータ検証エラー
   | 'WASM_INIT' // WASM初期化エラー
   | 'RUNTIME' // 実行時エラー
@@ -242,7 +209,7 @@ export type IVBootTimingErrorCategory =
  * 完了理由ラベル
  */
 export const COMPLETION_REASON_LABELS: Record<
-  IVBootTimingCompletion['reason'],
+  MtSeedBootTimingCompletion['reason'],
   string
 > = {
   completed: '検索完了',
@@ -256,9 +223,9 @@ export const COMPLETION_REASON_LABELS: Record<
 /**
  * 型ガード
  */
-export function isIVBootTimingWorkerResponse(
+export function isMtSeedBootTimingWorkerResponse(
   data: unknown
-): data is IVBootTimingWorkerResponse {
+): data is MtSeedBootTimingWorkerResponse {
   if (!data || typeof data !== 'object') return false;
   const obj = data as { type?: unknown };
   if (typeof obj.type !== 'string') return false;
@@ -272,8 +239,8 @@ export function isIVBootTimingWorkerResponse(
 /**
  * パラメータバリデーション
  */
-export function validateIVBootTimingSearchParams(
-  params: IVBootTimingSearchParams
+export function validateMtSeedBootTimingSearchParams(
+  params: MtSeedBootTimingSearchParams
 ): string[] {
   const errors: string[] = [];
 
@@ -349,7 +316,7 @@ export function validateIVBootTimingSearchParams(
  * 計算量見積もり
  */
 export function estimateSearchCombinations(
-  params: IVBootTimingSearchParams
+  params: MtSeedBootTimingSearchParams
 ): number {
   const timer0Count = params.timer0Range.max - params.timer0Range.min + 1;
   const vcountCount = params.vcountRange.max - params.vcountRange.min + 1;
@@ -401,7 +368,7 @@ function countBits(n: number): number {
 /**
  * デフォルトパラメータ生成
  */
-export function createDefaultIVBootTimingSearchParams(): IVBootTimingSearchParams {
+export function createDefaultMtSeedBootTimingSearchParams(): MtSeedBootTimingSearchParams {
   const now = new Date();
 
   return {

@@ -8,61 +8,26 @@ import type { SearchConditions, InitialSeedResult } from '../../types/search';
 import type { AggregatedProgress } from '../../types/parallel';
 import type { WorkerRequest, WorkerResponse } from '@/types/worker';
 import {
-  IVBootTimingMultiWorkerManager,
-  type AggregatedIVBootTimingProgress,
-} from '../iv/iv-boot-timing-multi-worker-manager';
+  MtSeedBootTimingMultiWorkerManager,
+  type AggregatedMtSeedBootTimingProgress,
+} from '../mt-seed/mt-seed-boot-timing-multi-worker-manager';
 import type {
-  IVBootTimingSearchParams,
-  IVBootTimingSearchResult,
-} from '@/types/iv-boot-timing-search';
+  MtSeedBootTimingSearchParams,
+  MtSeedBootTimingSearchResult,
+} from '@/types/mt-seed-boot-timing-search';
 import type { SingleWorkerSearchCallbacks } from '../../types/callbacks';
 import { useAppStore } from '@/store/app-store';
 import type { SearchExecutionMode } from '@/store/app-store';
-import { getVCountFromTimer0 } from '@/lib/utils/rom-parameter-helpers';
+import { getROMParameters } from '@/lib/utils/rom-parameter-helpers';
+import { SeedCalculator } from '@/lib/core/seed-calculator';
 
 /**
- * Auto設定時にTimer0範囲から対応するVCount範囲を計算
- * @param romVersion ROM version
- * @param romRegion ROM region
- * @param timer0Min Timer0 minimum
- * @param timer0Max Timer0 maximum
- * @returns VCount範囲 (min/max)
+ * SearchConditions を MtSeedBootTimingSearchParams に変換
  */
-function computeVCountRangeFromTimer0(
-  romVersion: string,
-  romRegion: string,
-  timer0Min: number,
-  timer0Max: number
-): { min: number; max: number } {
-  const vcountSet = new Set<number>();
-
-  // Timer0範囲内の全値についてVCountを取得
-  for (let timer0 = timer0Min; timer0 <= timer0Max; timer0++) {
-    const vcount = getVCountFromTimer0(romVersion, romRegion, timer0);
-    if (vcount !== null) {
-      vcountSet.add(vcount);
-    }
-  }
-
-  if (vcountSet.size === 0) {
-    // フォールバック: デフォルト値 0x60
-    return { min: 0x60, max: 0x60 };
-  }
-
-  const vcounts = Array.from(vcountSet);
-  return {
-    min: Math.min(...vcounts),
-    max: Math.max(...vcounts),
-  };
-}
-
-/**
- * SearchConditions を IVBootTimingSearchParams に変換
- */
-function convertToIVBootTimingSearchParams(
+function convertToMtSeedBootTimingSearchParams(
   conditions: SearchConditions,
   targetSeeds: number[]
-): IVBootTimingSearchParams {
+): MtSeedBootTimingSearchParams {
   // MACアドレスを6要素のタプルに正規化
   const macAddress: readonly [number, number, number, number, number, number] = [
     conditions.macAddress[0] ?? 0,
@@ -73,19 +38,32 @@ function convertToIVBootTimingSearchParams(
     conditions.macAddress[5] ?? 0,
   ];
 
-  // Auto設定時はROMパラメータからVCount範囲を計算
-  // GPU検索と同様の動作を保証する
-  const vcountRange = conditions.timer0VCountConfig.useAutoConfiguration
-    ? computeVCountRangeFromTimer0(
-        conditions.romVersion,
-        conditions.romRegion,
-        conditions.timer0VCountConfig.timer0Range.min,
-        conditions.timer0VCountConfig.timer0Range.max
-      )
-    : {
-        min: conditions.timer0VCountConfig.vcountRange.min,
-        max: conditions.timer0VCountConfig.vcountRange.max,
+  // Auto設定時はROMパラメータからセグメントを取得し、VCount範囲を導出
+  // Manual設定時はユーザー入力をそのまま使用
+  let timer0Range: { min: number; max: number };
+  let vcountRange: { min: number; max: number };
+
+  if (conditions.timer0VCountConfig.useAutoConfiguration) {
+    const params = getROMParameters(conditions.romVersion, conditions.romRegion);
+    if (params && params.vcountTimerRanges.length > 0) {
+      const segments = params.vcountTimerRanges;
+      timer0Range = {
+        min: Math.min(...segments.map(s => s.timer0Min)),
+        max: Math.max(...segments.map(s => s.timer0Max)),
       };
+      vcountRange = {
+        min: Math.min(...segments.map(s => s.vcount)),
+        max: Math.max(...segments.map(s => s.vcount)),
+      };
+    } else {
+      // フォールバック
+      timer0Range = { ...conditions.timer0VCountConfig.timer0Range };
+      vcountRange = { ...conditions.timer0VCountConfig.vcountRange };
+    }
+  } else {
+    timer0Range = { ...conditions.timer0VCountConfig.timer0Range };
+    vcountRange = { ...conditions.timer0VCountConfig.vcountRange };
+  }
 
   return {
     dateRange: {
@@ -96,10 +74,7 @@ function convertToIVBootTimingSearchParams(
       endMonth: conditions.dateRange.endMonth,
       endDay: conditions.dateRange.endDay,
     },
-    timer0Range: {
-      min: conditions.timer0VCountConfig.timer0Range.min,
-      max: conditions.timer0VCountConfig.timer0Range.max,
-    },
+    timer0Range,
     vcountRange,
     keyInputMask: conditions.keyInput,
     macAddress,
@@ -117,17 +92,17 @@ export type SearchCallbacks = SingleWorkerSearchCallbacks<InitialSeedResult> & {
 };
 
 /**
- * IV Boot Timing検索用コールバック
+ * MT Seed Boot Timing検索用コールバック
  */
-export type IVBootTimingSearchCallbacks = SingleWorkerSearchCallbacks<IVBootTimingSearchResult> & {
-  onParallelProgress?: (progress: AggregatedIVBootTimingProgress | null) => void;
+export type MtSeedBootTimingSearchCallbacks = SingleWorkerSearchCallbacks<MtSeedBootTimingSearchResult> & {
+  onParallelProgress?: (progress: AggregatedMtSeedBootTimingProgress | null) => void;
 };
 
 export class SearchWorkerManager {
   private gpuWorker: Worker | null = null;
   private callbacks: SearchCallbacks | null = null;
-  private ivBootTimingManager: IVBootTimingMultiWorkerManager | null = null;
-  private activeMode: 'cpu-parallel' | 'gpu' | 'iv-boot-timing' = 'cpu-parallel';
+  private mtSeedBootTimingManager: MtSeedBootTimingMultiWorkerManager | null = null;
+  private activeMode: 'cpu-parallel' | 'gpu' | 'mt-seed-boot-timing' = 'cpu-parallel';
   private lastRequest: { conditions: SearchConditions; targetSeeds: number[] } | null = null;
 
   constructor() {
@@ -253,7 +228,7 @@ export class SearchWorkerManager {
   }
 
   /**
-   * CPU並列検索（IVBootTimingMultiWorkerManager使用）
+   * CPU並列検索（MtSeedBootTimingMultiWorkerManager使用）
    */
   private startCpuSearchInternal(
     conditions: SearchConditions,
@@ -265,13 +240,24 @@ export class SearchWorkerManager {
       return false;
     }
 
-    const ivParams = convertToIVBootTimingSearchParams(conditions, targetSeeds);
+    const mtSeedParams = convertToMtSeedBootTimingSearchParams(conditions, targetSeeds);
 
-    // IVBootTimingSearchResult を InitialSeedResult に変換するコールバック
-    const ivCallbacks: IVBootTimingSearchCallbacks = {
+    // MtSeedBootTimingSearchResult を InitialSeedResult に変換するコールバック
+    const seedCalculator = new SeedCalculator();
+    const mtSeedCallbacks: MtSeedBootTimingSearchCallbacks = {
       onProgress: callbacks.onProgress,
-      onResult: (result: IVBootTimingSearchResult) => {
-        // IVBootTimingSearchResult を InitialSeedResult に変換
+      onResult: (result: MtSeedBootTimingSearchResult) => {
+        // MtSeedBootTimingSearchResult を InitialSeedResult に変換
+        // GPU経路と同様に SeedCalculator で message と sha1Hash を再計算
+        const message = seedCalculator.generateMessage(
+          conditions,
+          result.boot.timer0,
+          result.boot.vcount,
+          result.boot.datetime,
+          result.boot.keyCode
+        );
+        const { hash } = seedCalculator.calculateSeed(message);
+        
         const converted: InitialSeedResult = {
           seed: result.mtSeed,
           datetime: result.boot.datetime,
@@ -280,8 +266,8 @@ export class SearchWorkerManager {
           keyCode: result.boot.keyCode,
           keyInputNames: result.boot.keyInputNames,
           conditions,
-          message: [], // WASMからは取得していない
-          sha1Hash: '', // WASMからは取得していない
+          message,
+          sha1Hash: hash,
           lcgSeed: BigInt('0x' + result.lcgSeedHex),
           isMatch: true,
         };
@@ -294,7 +280,7 @@ export class SearchWorkerManager {
       onStopped: callbacks.onStopped,
       onParallelProgress: callbacks.onParallelProgress 
         ? (progress) => {
-            // AggregatedIVBootTimingProgress を AggregatedProgress に変換
+            // AggregatedMtSeedBootTimingProgress を AggregatedProgress に変換
             if (progress) {
               const converted: AggregatedProgress = {
                 totalCurrentStep: progress.totalCurrentStep,
@@ -316,7 +302,7 @@ export class SearchWorkerManager {
         : undefined,
     };
 
-    return this.startIVBootTimingSearch(ivParams, ivCallbacks);
+    return this.startMtSeedBootTimingSearch(mtSeedParams, mtSeedCallbacks);
   }
 
   private tryStartGpuSearch(
@@ -393,23 +379,23 @@ export class SearchWorkerManager {
   }
 
   /**
-   * IV Boot Timing検索開始
+   * MT Seed Boot Timing検索開始
    * 指定されたMT Seedに対応する起動時間を検索
    */
-  public startIVBootTimingSearch(
-    params: IVBootTimingSearchParams,
-    callbacks: IVBootTimingSearchCallbacks
+  public startMtSeedBootTimingSearch(
+    params: MtSeedBootTimingSearchParams,
+    callbacks: MtSeedBootTimingSearchCallbacks
   ): boolean {
     try {
-      if (!this.ivBootTimingManager) {
-        this.ivBootTimingManager = new IVBootTimingMultiWorkerManager();
+      if (!this.mtSeedBootTimingManager) {
+        this.mtSeedBootTimingManager = new MtSeedBootTimingMultiWorkerManager();
       }
 
       const currentMaxWorkers = this.getMaxWorkers();
-      this.ivBootTimingManager.setMaxWorkers(currentMaxWorkers);
+      this.mtSeedBootTimingManager.setMaxWorkers(currentMaxWorkers);
 
-      const ivCallbacks = {
-        onProgress: (aggregatedProgress: AggregatedIVBootTimingProgress) => {
+      const mtSeedCallbacks = {
+        onProgress: (aggregatedProgress: AggregatedMtSeedBootTimingProgress) => {
           callbacks.onProgress({
             currentStep: aggregatedProgress.totalCurrentStep,
             totalSteps: aggregatedProgress.totalSteps,
@@ -435,13 +421,13 @@ export class SearchWorkerManager {
         onStopped: callbacks.onStopped
       };
 
-      this.ivBootTimingManager.startParallelSearch(params, ivCallbacks);
-      this.activeMode = 'iv-boot-timing';
+      this.mtSeedBootTimingManager.startParallelSearch(params, mtSeedCallbacks);
+      this.activeMode = 'mt-seed-boot-timing';
       return true;
 
     } catch (error) {
-      console.error('Failed to start IV boot timing search:', error);
-      callbacks.onError('Failed to start IV boot timing search.');
+      console.error('Failed to start MT Seed boot timing search:', error);
+      callbacks.onError('Failed to start MT Seed boot timing search.');
       return false;
     }
   }
@@ -453,8 +439,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (this.ivBootTimingManager) {
-      this.ivBootTimingManager.pauseAll();
+    if (this.mtSeedBootTimingManager) {
+      this.mtSeedBootTimingManager.pauseAll();
     }
   }
 
@@ -465,8 +451,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (this.ivBootTimingManager) {
-      this.ivBootTimingManager.resumeAll();
+    if (this.mtSeedBootTimingManager) {
+      this.mtSeedBootTimingManager.resumeAll();
     }
   }
 
@@ -477,8 +463,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (this.ivBootTimingManager) {
-      this.ivBootTimingManager.terminateAll();
+    if (this.mtSeedBootTimingManager) {
+      this.mtSeedBootTimingManager.terminateAll();
     }
   }
 
@@ -486,20 +472,20 @@ export class SearchWorkerManager {
    * ワーカー数設定
    */
   public setMaxWorkers(count: number): void {
-    if (!this.ivBootTimingManager) {
-      this.ivBootTimingManager = new IVBootTimingMultiWorkerManager();
+    if (!this.mtSeedBootTimingManager) {
+      this.mtSeedBootTimingManager = new MtSeedBootTimingMultiWorkerManager();
     }
-    this.ivBootTimingManager.setMaxWorkers(count);
+    this.mtSeedBootTimingManager.setMaxWorkers(count);
   }
 
   /**
    * 現在のワーカー数設定を取得
    */
   public getMaxWorkers(): number {
-    if (!this.ivBootTimingManager) {
+    if (!this.mtSeedBootTimingManager) {
       return navigator.hardwareConcurrency || 4;
     }
-    return this.ivBootTimingManager.getMaxWorkers();
+    return this.mtSeedBootTimingManager.getMaxWorkers();
   }
 
   /**
@@ -510,9 +496,9 @@ export class SearchWorkerManager {
   }
 
   public terminate() {
-    if (this.ivBootTimingManager) {
-      this.ivBootTimingManager.terminateAll();
-      this.ivBootTimingManager = null;
+    if (this.mtSeedBootTimingManager) {
+      this.mtSeedBootTimingManager.terminateAll();
+      this.mtSeedBootTimingManager = null;
     }
     
     if (this.gpuWorker) {

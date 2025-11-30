@@ -1,16 +1,16 @@
 /**
- * IVBootTimingMultiWorkerManager テスト
+ * MtSeedBootTimingMultiWorkerManager テスト
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-  IVBootTimingMultiWorkerManager,
-  type IVBootTimingMultiWorkerCallbacks,
-} from '@/lib/iv/iv-boot-timing-multi-worker-manager';
+  MtSeedBootTimingMultiWorkerManager,
+  type MtSeedBootTimingMultiWorkerCallbacks,
+} from '@/lib/mt-seed/mt-seed-boot-timing-multi-worker-manager';
 import {
-  createDefaultIVBootTimingSearchParams,
-  type IVBootTimingSearchParams,
-} from '@/types/iv-boot-timing-search';
+  createDefaultMtSeedBootTimingSearchParams,
+  type MtSeedBootTimingSearchParams,
+} from '@/types/mt-seed-boot-timing-search';
 
 type MockWorker = {
   postMessage: ReturnType<typeof vi.fn>;
@@ -26,15 +26,15 @@ const createMockWorker = (): MockWorker => ({
   onerror: null,
 });
 
-function createValidParams(): IVBootTimingSearchParams {
-  const params = createDefaultIVBootTimingSearchParams();
+function createValidParams(): MtSeedBootTimingSearchParams {
+  const params = createDefaultMtSeedBootTimingSearchParams();
   params.targetSeeds = [0x12345678];
   return params;
 }
 
-describe('IVBootTimingMultiWorkerManager', () => {
-  let manager: IVBootTimingMultiWorkerManager;
-  let mockCallbacks: IVBootTimingMultiWorkerCallbacks;
+describe('MtSeedBootTimingMultiWorkerManager', () => {
+  let manager: MtSeedBootTimingMultiWorkerManager;
+  let mockCallbacks: MtSeedBootTimingMultiWorkerCallbacks;
   let workerInstances: MockWorker[];
   let workerConstructor: ReturnType<typeof vi.fn>;
 
@@ -50,7 +50,7 @@ describe('IVBootTimingMultiWorkerManager', () => {
 
     vi.stubGlobal('Worker', workerConstructor as unknown as Worker);
 
-    manager = new IVBootTimingMultiWorkerManager(4);
+    manager = new MtSeedBootTimingMultiWorkerManager(4);
     mockCallbacks = {
       onProgress: vi.fn(),
       onResult: vi.fn(),
@@ -75,7 +75,7 @@ describe('IVBootTimingMultiWorkerManager', () => {
     });
 
     it('デフォルト設定で初期化される', () => {
-      const defaultManager = new IVBootTimingMultiWorkerManager();
+      const defaultManager = new MtSeedBootTimingMultiWorkerManager();
       expect(defaultManager.getActiveWorkerCount()).toBe(0);
     });
 
@@ -110,7 +110,7 @@ describe('IVBootTimingMultiWorkerManager', () => {
     });
 
     it('適切なWorker数を作成する', async () => {
-      const manager2 = new IVBootTimingMultiWorkerManager(2);
+      const manager2 = new MtSeedBootTimingMultiWorkerManager(2);
       const params = createValidParams();
 
       vi.clearAllMocks();
@@ -161,7 +161,7 @@ describe('IVBootTimingMultiWorkerManager', () => {
       manager.resumeAll();
 
       expect(mockCallbacks.onResumed).toHaveBeenCalled();
-      // IV workerはRESUMEをサポートしないため警告が出る
+      // MT Seed workerはRESUMEをサポートしないため警告が出る
       expect(consoleSpy).toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
@@ -269,7 +269,7 @@ describe('IVBootTimingMultiWorkerManager', () => {
 
     it('ERROR メッセージでエラー処理される', async () => {
       // 新しいmanagerをWorker数1で作成
-      const singleWorkerManager = new IVBootTimingMultiWorkerManager(1);
+      const singleWorkerManager = new MtSeedBootTimingMultiWorkerManager(1);
       expect(singleWorkerManager.getMaxWorkers()).toBe(1);
 
       const params = createValidParams();
@@ -306,7 +306,7 @@ describe('IVBootTimingMultiWorkerManager', () => {
   describe('エラーハンドリング', () => {
     it('Worker onerror でエラー処理される', async () => {
       // 新しいmanagerをWorker数1で作成
-      const singleWorkerManager = new IVBootTimingMultiWorkerManager(1);
+      const singleWorkerManager = new MtSeedBootTimingMultiWorkerManager(1);
       const params = createValidParams();
       await singleWorkerManager.startParallelSearch(params, mockCallbacks);
 
