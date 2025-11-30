@@ -15,6 +15,8 @@ import {
   formatGenerationProcessingDuration,
   generationResultsTableCaption,
   generationResultsTableUnknownLabel,
+  generationResultsTableEmptyMessage,
+  generationResultsTableInitialMessage,
   resolveGenerationResultsTableHeaders,
 } from '@/lib/i18n/strings/generation-results-table';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
@@ -22,7 +24,7 @@ import { GenerationResultRow } from '@/components/generation/results/GenerationR
 import { buildGenerationResultRowKey } from '@/lib/generation/result-formatters';
 
 type AppStoreState = ReturnType<typeof useAppStore.getState>;
-const GENERATION_RESULTS_COLUMN_COUNT = 21;
+const GENERATION_RESULTS_COLUMN_COUNT = 19;
 const GENERATION_TABLE_ROW_HEIGHT = 34;
 
 export const GenerationResultsTableCard: React.FC = () => {
@@ -101,41 +103,47 @@ export const GenerationResultsTableCard: React.FC = () => {
     >
       <div
         ref={virtualization.containerRef}
-        className="flex-1 min-h-0 overflow-y-auto"
+        className="flex-1 min-h-0 overflow-auto"
       >
-        <Table className="min-w-full text-xs" aria-describedby="gen-results-table-desc">
+        {rows.length === 0 ? (
+          <div className="flex h-full items-center justify-center px-6 text-center text-muted-foreground py-8">
+            {resolveLocaleValue(
+              total === 0 ? generationResultsTableInitialMessage : generationResultsTableEmptyMessage,
+              locale,
+            )}
+          </div>
+        ) : (
+        <Table className="w-max min-w-full text-xs" aria-describedby="gen-results-table-desc">
           <TableCaption id="gen-results-table-desc">
             {caption}
           </TableCaption>
           <TableHeader className="sticky top-0 bg-muted text-xs">
             <TableRow className="text-left border-0">
-              <TableHead scope="col" className="px-2 py-1 font-medium w-14">
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">
                 {headers.advance.label}
                 {headers.advance.sr ? <span className="sr-only">{headers.advance.sr}</span> : null}
               </TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-10">{headers.direction.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-8">{headers.directionValue.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium min-w-[90px] w-32">{headers.species.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium min-w-[90px] w-32">{headers.ability.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-8">
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-center">{headers.direction.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-center">{headers.directionValue.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.species.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.ability.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-center">
                 {headers.gender.label}
                 {headers.gender.sr ? <span className="sr-only">{headers.gender.sr}</span> : null}
               </TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-24">{headers.nature.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-16">{headers.shiny.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-10">{headers.level.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.hp.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.attack.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.defense.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.specialAttack.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.specialDefense.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-right">{headers.speed.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium min-w-[120px] w-36">{headers.seed.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-32">{headers.pid.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-20">{headers.timer0.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium w-20">{headers.vcount.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium min-w-[140px] w-44">{headers.bootTimestamp.label}</TableHead>
-              <TableHead scope="col" className="px-2 py-1 font-medium min-w-[120px] w-40">{headers.keyInput.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.nature.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-center">{headers.shiny.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.level.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.hp.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.attack.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.defense.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.specialAttack.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.specialDefense.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.speed.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.seed.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.pid.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.timer0.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.vcount.label}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -176,6 +184,7 @@ export const GenerationResultsTableCard: React.FC = () => {
             ) : null}
           </TableBody>
         </Table>
+        )}
       </div>
     </PanelCard>
   );

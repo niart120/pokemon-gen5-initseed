@@ -59,31 +59,31 @@ const HEADER_DEFINITIONS: Record<HeaderKey, HeaderDefinition> = {
   },
   species: {
     label: {
-      ja: 'Species',
+      ja: '種族',
       en: 'Species',
     },
   },
   ability: {
     label: {
-      ja: 'Ability',
+      ja: '特性',
       en: 'Ability',
     },
   },
   gender: {
     label: {
-      ja: 'Gender',
+      ja: '性別',
       en: 'Gender',
     },
   },
   nature: {
     label: {
-      ja: 'Nature',
+      ja: '性格',
       en: 'Nature',
     },
   },
   shiny: {
     label: {
-      ja: 'Shiny',
+      ja: '色',
       en: 'Shiny',
     },
   },
@@ -175,6 +175,16 @@ export const generationResultsTableCaption: LocaleText = {
 export const generationResultsTableUnknownLabel: LocaleText = {
   ja: 'Unknown',
   en: 'Unknown',
+};
+
+export const generationResultsTableEmptyMessage: LocaleText = {
+  ja: '結果がありません',
+  en: 'No results',
+};
+
+export const generationResultsTableInitialMessage: LocaleText = {
+  ja: '生成を実行すると結果が表示されます',
+  en: 'Run generation to see results',
 };
 
 export const generationResultsTableFilteredLabel: LocaleText = {

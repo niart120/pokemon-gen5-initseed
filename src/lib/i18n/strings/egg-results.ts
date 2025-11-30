@@ -170,13 +170,13 @@ export function getEggResultSrLabel(key: EggResultHeaderKey, locale: keyof Local
 export const eggResultShinyLabels: LocaleMap<Record<0 | 1 | 2, string>> = {
   ja: {
     0: '-',
-    1: '正方形',
-    2: '星型',
+    1: '◇',
+    2: '☆',
   },
   en: {
     0: '-',
-    1: 'Square',
-    2: 'Star',
+    1: '◇',
+    2: '☆',
   },
 };
 

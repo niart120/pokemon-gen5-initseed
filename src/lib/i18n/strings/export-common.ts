@@ -24,12 +24,12 @@ export const GENDER_LABELS: Record<'male' | 'female' | 'genderless', LocaleText>
 };
 
 /**
- * Shiny label lookup (0: none, 1: shiny, 2: square shiny)
+ * Shiny label lookup (0: none, 1: square shiny, 2: star shiny)
  */
 export const SHINY_LABELS: Record<0 | 1 | 2, LocaleText> = {
   0: { ja: '-', en: '-' },
   1: { ja: '◇', en: '◇' },
-  2: { ja: '★', en: '★' },
+  2: { ja: '☆', en: '☆' },
 };
 
 /**
