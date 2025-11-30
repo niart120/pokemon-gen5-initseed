@@ -85,7 +85,7 @@ export function SearchPanel() {
     );
   }
 
-  // PC: 3カラム配置（設定 | 検索制御・進捗 | 結果）
+  // PC: 3カラム配置（検索制御・設定 | 進捗 | 結果）
   return (
     <>
       <div className={`flex flex-col ${sizes.gap} max-w-full h-full min-h-0 min-w-0 overflow-hidden`}>
@@ -93,20 +93,18 @@ export function SearchPanel() {
           <ProfileCard />
         </div>
         <div className={`flex ${sizes.gap} max-w-full flex-1 min-h-0 min-w-0 overflow-hidden`}>
-          {/* 左カラム: 検索制御・進捗エリア */}
-          <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
+          {/* 左カラム: 検索制御・設定エリア */}
+          <div
+            className={`flex-1 flex flex-col ${sizes.gap} min-w-0 overflow-y-auto`}
+            style={{
+              minHeight: 0,
+              width: LEFT_COLUMN_WIDTH_CLAMP,
+              flex: `0 0 ${LEFT_COLUMN_WIDTH_CLAMP}`,
+            }}
+          >
             <div className="flex-none">
               <SearchControlCard />
             </div>
-            <div className="flex-1 min-h-0">
-              <SearchProgressCard />
-            </div>
-          </div>
-          {/* 中央カラム: 設定エリア */}
-          <div
-            className={`flex-1 flex flex-col ${sizes.gap} min-w-0 overflow-y-auto`}
-            style={{ minHeight: 0, width: LEFT_COLUMN_WIDTH_CLAMP, flex: `0 0 ${LEFT_COLUMN_WIDTH_CLAMP}` }}
-          >
             <div className="flex-none">
               <SearchParamsCard />
             </div>
@@ -115,8 +113,21 @@ export function SearchPanel() {
             </div>
           </div>
 
+          {/* 中央カラム: 進捗エリア */}
+          <div
+            className={`flex flex-col ${sizes.gap} w-80 flex-shrink-0 overflow-y-auto`}
+            style={{ minHeight: 0 }}
+          >
+            <div className="flex-1 min-h-0">
+              <SearchProgressCard />
+            </div>
+          </div>
+
           {/* 右カラム: 結果エリア */}
-          <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
+          <div
+            className={`flex-[2] flex flex-col ${sizes.gap} min-w-0 overflow-y-auto`}
+            style={{ minHeight: 0 }}
+          >
             <div className="flex-1 min-h-0">
               <ResultsCard
                 sortedResults={sortedResults}
