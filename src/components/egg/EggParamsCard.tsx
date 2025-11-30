@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Gear } from '@phosphor-icons/react';
+import { Sliders } from '@phosphor-icons/react';
 import { useEggStore } from '@/store/egg-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -161,7 +161,7 @@ export const EggParamsCard: React.FC = () => {
 
   return (
     <PanelCard
-      icon={<Gear size={20} className="opacity-80" />}
+      icon={<Sliders size={20} className="opacity-80" />}
       title={<span id="egg-params-title">{eggParamsPanelTitle[locale]}</span>}
       className={isStack ? 'max-h-200' : 'min-h-64'}
       fullHeight={!isStack}

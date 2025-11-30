@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Button } from '@/components/ui/button';
-import { Play, Square, ChartBar } from '@phosphor-icons/react';
+import { Play, Square } from '@phosphor-icons/react';
 import { useAppStore } from '@/store/app-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -64,7 +64,7 @@ export const GenerationRunCard: React.FC = () => {
   return (
     <>
       <PanelCard
-        icon={<ChartBar size={20} className="opacity-80" />}
+        icon={<Play size={20} className="opacity-80" />}
         title={<span id="gen-run-title">{title}</span>}
         className={isStack ? 'max-h-96' : undefined}
         fullHeight={!isStack}

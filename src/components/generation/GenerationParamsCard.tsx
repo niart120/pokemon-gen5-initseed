@@ -49,7 +49,7 @@ import {
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import type { GenerationParamsHex, SeedSourceMode } from '@/types/generation';
 import type { DomainEncounterTypeCategoryKey } from '@/types/domain';
-import { Gear } from '@phosphor-icons/react';
+import { Sliders } from '@phosphor-icons/react';
 
 // Simple hex normalization guard
 function isHexLike(v: string) {
@@ -178,7 +178,7 @@ export const GenerationParamsCard: React.FC = () => {
   return (
     <>
       <PanelCard
-        icon={<Gear size={20} className="opacity-80" />}
+        icon={<Sliders size={20} className="opacity-80" />}
         title={<span id="gen-params-title">{localized.panelTitle}</span>}
         className={isStack ? 'max-h-200' : 'min-h-64'}
         fullHeight={!isStack}

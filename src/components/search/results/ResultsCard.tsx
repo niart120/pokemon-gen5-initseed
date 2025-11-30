@@ -1,4 +1,5 @@
 import { Eye } from 'lucide-react';
+import { Table as TableIcon } from '@phosphor-icons/react';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { PanelCard } from '@/components/ui/panel-card';
@@ -57,7 +58,7 @@ export function ResultsCard({
 
   return (
     <PanelCard
-      icon={<Eye size={20} className="flex-shrink-0 opacity-80" />}
+      icon={<TableIcon size={20} className="opacity-80" />}
       title={resolveLocaleValue(searchResultsTitle, locale)}
       headerActions={
         <div className="flex items-center gap-2 flex-wrap">

@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Play, Square, ChartBar, Warning } from '@phosphor-icons/react';
+import { Play, Square, Warning } from '@phosphor-icons/react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Button } from '@/components/ui/button';
 import { useEggBootTimingSearchStore } from '@/store/egg-boot-timing-search-store';
@@ -59,7 +59,7 @@ export function EggSearchRunCard() {
 
   return (
     <PanelCard
-      icon={<ChartBar size={20} className="opacity-80" />}
+      icon={<Play size={20} className="opacity-80" />}
       title={<span id="egg-search-run-title">{eggSearchRunCardTitle[locale]}</span>}
       role="region"
       aria-labelledby="egg-search-run-title"

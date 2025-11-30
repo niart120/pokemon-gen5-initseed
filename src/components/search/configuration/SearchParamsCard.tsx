@@ -1,14 +1,13 @@
 import React from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Separator } from '@/components/ui/separator';
-import { Gear } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Toggle } from '@/components/ui/toggle';
 import { useAppStore } from '@/store/app-store';
-import { GameController } from '@phosphor-icons/react';
+import { Sliders, GameController } from '@phosphor-icons/react';
 import { KEY_INPUT_DEFAULT, keyMaskToNames, keyNamesToMask, type KeyName } from '@/lib/utils/key-input';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
@@ -198,7 +197,7 @@ export function SearchParamsCard() {
   return (
     <>
       <PanelCard
-        icon={<Gear size={20} className="opacity-80" />}
+        icon={<Sliders size={20} className="opacity-80" />}
         title={resolveLocaleValue(searchParamsPanelTitle, locale)}
       >
         <div className="space-y-3">
