@@ -144,7 +144,7 @@ export const eggSearchParamsLabels = {
     en: 'Key Input',
   } satisfies LocaleText,
   keyInputConfigure: {
-    ja: '設定',
+    ja: 'Configure',
     en: 'Configure',
   } satisfies LocaleText,
   maleParentIv: {

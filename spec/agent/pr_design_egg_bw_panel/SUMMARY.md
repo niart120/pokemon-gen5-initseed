@@ -126,7 +126,7 @@ UI (EggResultsCard)
   - 結果テーブルに Timer0/VCount 情報を表示
 
 - **起動時間検索モード**: 条件を満たす個体が得られる起動時間を検索（SearchPanel類似）
-  - 日時範囲・消費範囲内で目標条件を満たす起動時刻を逆算
+  - 日時範囲・消費範囲内で目標条件を満たす起動日時を逆算
   - 別途 `EggSearchPanel` として独立実装予定
   - 専用の `egg-search-worker.ts` と `EggSearchWorkerManager` を使用
 

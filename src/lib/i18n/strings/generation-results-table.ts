@@ -155,7 +155,7 @@ const HEADER_DEFINITIONS: Record<HeaderKey, HeaderDefinition> = {
   },
   bootTimestamp: {
     label: {
-      ja: '起動時刻',
+      ja: '起動日時',
       en: 'Boot Time',
     },
   },

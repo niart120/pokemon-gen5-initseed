@@ -170,11 +170,11 @@ export const eggParamsStatNames: LocaleMap<[string, string, string, string, stri
 
 export const eggBootTimingLabels = {
   timestamp: {
-    ja: '起動時刻',
+    ja: '起動日時',
     en: 'Boot Time',
   } satisfies LocaleText,
   timestampPlaceholder: {
-    ja: '起動時刻を入力',
+    ja: '起動日時を入力',
     en: 'Enter boot time',
   } satisfies LocaleText,
   keyInput: {
@@ -186,7 +186,7 @@ export const eggBootTimingLabels = {
     en: 'Profile Info',
   } satisfies LocaleText,
   configure: {
-    ja: '設定',
+    ja: 'Configure',
     en: 'Configure',
   } satisfies LocaleText,
   dialogTitle: {
