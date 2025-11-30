@@ -9,7 +9,7 @@ Rust WASM側で実装した `search_common` モジュールの新しいパラメ
 - `src/workers/egg-boot-timing-worker.ts` - EggBootTimingSearchIterator の呼び出し改修
 
 ### 新規作成候補
-- `src/workers/iv-boot-timing-worker.ts` - IVBootTimingSearchIterator 用Worker（未実装）
+- `src/workers/mt-seed-boot-timing-worker.ts` - MtSeedBootTimingSearchIterator 用Worker（実装済み）
 
 ## Rust側の新API
 
