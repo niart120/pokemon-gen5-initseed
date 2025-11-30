@@ -26,6 +26,8 @@ import {
   eggResultAbilityLabels,
   eggResultStableLabels,
   eggResultUnknownHp,
+  formatEggResultCount,
+  formatEggProcessingDuration,
 } from '@/lib/i18n/strings/egg-results';
 import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
 import { EggExportButton } from './EggExportButton';
@@ -37,7 +39,7 @@ const EGG_RESULTS_TABLE_ROW_HEIGHT = 34;
  * タマゴ生成結果表示カード
  */
 export const EggResultsCard: React.FC = () => {
-  const { draftParams, getFilteredResults } = useEggStore();
+  const { draftParams, getFilteredResults, lastCompletion } = useEggStore();
   const { isStack } = useResponsiveLayout();
   const locale = useLocale();
 
@@ -113,8 +115,13 @@ export const EggResultsCard: React.FC = () => {
       icon={<TableIcon size={20} className="opacity-80" />}
       title={<span id="egg-results-title">{eggResultsPanelTitle[locale]}</span>}
       headerActions={
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary">{sortedResults.length}</Badge>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className="flex-shrink-0">{formatEggResultCount(sortedResults.length, locale)}</Badge>
+          {lastCompletion !== null && (
+            <Badge variant="outline" className="flex-shrink-0 text-xs">
+              {formatEggProcessingDuration(lastCompletion.elapsedMs)}
+            </Badge>
+          )}
           <EggExportButton
             results={sortedResults}
             isBootTimingMode={isBootTimingMode}
@@ -124,7 +131,7 @@ export const EggResultsCard: React.FC = () => {
       }
       className={isStack ? 'max-h-96' : undefined}
       fullHeight={!isStack}
-      scrollMode={isStack ? 'parent' : 'content'}
+      scrollMode="parent"
       padding="none"
       spacing="none"
       contentClassName="p-0"
@@ -133,7 +140,7 @@ export const EggResultsCard: React.FC = () => {
     >
       <div
         ref={virtualization.containerRef}
-        className="flex-1 min-h-0 overflow-y-auto"
+        className="flex-1 min-h-0 overflow-auto"
         data-testid="egg-results-table"
       >
         {sortedResults.length === 0 ? (
@@ -141,7 +148,7 @@ export const EggResultsCard: React.FC = () => {
             {eggResultsEmptyMessage[locale]}
           </div>
         ) : (
-          <Table className="min-w-full text-xs">
+          <Table className="min-w-max text-xs">
             <TableHeader className="sticky top-0 bg-muted text-xs">
               <TableRow className="text-left border-0">
                 <TableHead scope="col" className="px-2 py-1 font-medium">{getEggResultHeader('advance', locale)}</TableHead>

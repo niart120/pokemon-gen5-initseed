@@ -28,7 +28,7 @@ export const eggSearchRunCardTitle: LocaleText = {
 };
 
 export const eggSearchStatusPrefix: LocaleText = {
-  ja: 'ステータス',
+  ja: 'Status',
   en: 'Status',
 };
 
@@ -74,17 +74,17 @@ export const eggSearchButtonLabels = {
 
 export const eggSearchStatusLabels: LocaleMap<Record<EggBootTimingSearchStatus, string>> = {
   ja: {
-    idle: 'アイドル',
-    starting: '開始中',
-    running: '検索中',
-    stopping: '停止中',
-    completed: '完了',
-    error: 'エラー',
+    idle: 'Idle',
+    starting: 'Starting',
+    running: 'Running',
+    stopping: 'Stopping',
+    completed: 'Completed',
+    error: 'Error',
   },
   en: {
     idle: 'Idle',
     starting: 'Starting',
-    running: 'Searching',
+    running: 'Running',
     stopping: 'Stopping',
     completed: 'Completed',
     error: 'Error',
@@ -380,8 +380,8 @@ export const eggSearchResultsTableHeaders = {
     en: 'LCG Seed',
   } satisfies LocaleText,
   advance: {
-    ja: 'Advance',
-    en: 'Advance',
+    ja: 'Adv',
+    en: 'Adv',
   } satisfies LocaleText,
   ability: {
     ja: '特性',
@@ -408,8 +408,8 @@ export const eggSearchResultsTableHeaders = {
     en: 'HP',
   } satisfies LocaleText,
   keys: {
-    ja: 'キー',
-    en: 'Keys',
+    ja: 'キー入力',
+    en: 'Key Input',
   } satisfies LocaleText,
   stable: {
     ja: '安定',
@@ -435,28 +435,24 @@ export function getEggSearchStatusLabel(
   return labels[status] ?? status;
 }
 
-export function formatEggSearchElapsed(ms: number, locale: SupportedLocale): string {
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) {
-    return locale === 'ja' ? `${seconds}秒` : `${seconds}s`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return locale === 'ja'
-    ? `${minutes}分${remainingSeconds}秒`
-    : `${minutes}m ${remainingSeconds}s`;
+/**
+ * Format processing duration: "Search completed in X.Xs"
+ */
+export function formatEggSearchElapsed(ms: number, _locale: SupportedLocale): string {
+  const seconds = ms / 1000;
+  return `Search completed in ${seconds.toFixed(1)}s`;
 }
 
+/**
+ * Format result count in unified format: "x result(s)"
+ */
 export function formatEggSearchResultsCount(
   count: number,
   locale: SupportedLocale
 ): string {
   const formatter = getNumberFormatter(locale);
-  const countStr = formatter.format(count);
-  const suffix = eggSearchResultsCountLabel[locale];
-  // Japanese doesn't use space before counters (e.g., '100件' not '100 件')
-  const separator = locale === 'ja' ? '' : ' ';
-  return `${countStr}${separator}${suffix}`;
+  const value = formatter.format(count);
+  return `${value} result${count === 1 ? '' : 's'}`;
 }
 
 export function formatEggSearchPercentDisplay(pct: number, locale: SupportedLocale): string {

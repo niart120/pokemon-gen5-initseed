@@ -19,8 +19,8 @@ export const eggRunControlsLabel: LocaleText = {
 };
 
 export const eggRunStatusPrefix: LocaleText = {
-  ja: 'ステータス:',
-  en: 'Status:',
+  ja: 'Status',
+  en: 'Status',
 };
 
 export const eggRunResultsLabel: LocaleText = {
@@ -64,12 +64,12 @@ export const eggRunButtonLabels = {
 
 export const eggRunStatusLabels: LocaleMap<Record<EggStatus, string>> = {
   ja: {
-    idle: 'アイドル',
-    starting: '開始中',
-    running: '実行中',
-    stopping: '停止中',
-    completed: '完了',
-    error: 'エラー',
+    idle: 'Idle',
+    starting: 'Starting',
+    running: 'Running',
+    stopping: 'Stopping',
+    completed: 'Completed',
+    error: 'Error',
   },
   en: {
     idle: 'Idle',

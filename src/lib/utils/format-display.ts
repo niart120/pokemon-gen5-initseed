@@ -89,3 +89,21 @@ export function adaptGenerationResultDisplay(r: GenerationResult, locale: Suppor
     shinyLabel: shinyLabel(r.shiny_type, locale),
   };
 }
+
+/**
+ * Convert gender code to localized display label
+ * M -> ♂, F -> ♀, N/- -> -, undefined/? -> ?
+ */
+export function genderLabel(gender: 'M' | 'F' | '-' | '?' | 'N' | undefined, _locale: SupportedLocale = 'en'): string {
+  switch (gender) {
+    case 'M':
+      return '♂';
+    case 'F':
+      return '♀';
+    case 'N':
+    case '-':
+      return '-';
+    default:
+      return '?';
+  }
+}

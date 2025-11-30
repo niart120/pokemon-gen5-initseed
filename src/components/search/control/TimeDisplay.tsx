@@ -37,7 +37,7 @@ export function TimeDisplay({
   const speedLabel = resolveLocaleValue(searchProgressTimeSpeedLabel, locale);
   
   return (
-    <div className="grid grid-cols-3 gap-3 text-xs">
+    <div className="grid grid-cols-3 gap-0 text-xs">
       <div>
         <div className="text-muted-foreground">{elapsedLabel}</div>
         <div className="font-mono text-sm">

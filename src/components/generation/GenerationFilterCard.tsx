@@ -1,9 +1,14 @@
+/**
+ * GenerationFilterCard
+ * 個体生成結果フィルターカード（EggFilterCardと同様の2×nグリッド + HABCDS縦配置レイアウト）
+ */
+
 import React from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { useAppStore } from '@/store/app-store';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { ArrowCounterClockwise, CaretDown, Check, FunnelSimple, Trash } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, CaretDown, Check, Funnel } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils/cn';
 import { natureName } from '@/lib/utils/format-display';
 import { Input } from '@/components/ui/input';
@@ -12,6 +17,7 @@ import { selectResolvedResults } from '@/store/generation-store';
 import { getGeneratedSpeciesById } from '@/data/species/generated';
 import type { StatKey } from '@/lib/utils/pokemon-stats';
 import { useLocale } from '@/lib/i18n/locale-context';
+import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { anyOptionLabel } from '@/lib/i18n/strings/common';
 import {
   abilityPreviewJoiner,
@@ -24,7 +30,6 @@ import {
 import {
   formatGenerationResultsControlStatAria,
   generationResultsControlAbilityPreviewEllipsis,
-  generationResultsControlClearResultsLabel,
   generationResultsControlFieldLabels,
   generationResultsControlLevelAriaLabel,
   generationResultsControlResetFiltersLabel,
@@ -46,38 +51,8 @@ import {
 type AppStoreState = ReturnType<typeof useAppStore.getState>;
 
 const STAT_KEYS: StatKey[] = ['hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed'];
-const FILTER_FIELD_BASE_CLASS = 'flex flex-col gap-1 grow-0';
-const FILTER_FIELD_WIDTHS = {
-  species: 'basis-[26ch] min-w-[22ch] max-w-[34ch]',
-  ability: 'basis-[20ch] min-w-[14ch] max-w-[24ch]',
-  gender: 'basis-[14ch] min-w-[12ch] max-w-[16ch]',
-  nature: 'basis-[14ch] min-w-[12ch] max-w-[16ch]',
-  shiny: 'basis-[12ch] min-w-[10ch] max-w-[14ch]',
-  level: 'basis-[6ch] min-w-[6ch] max-w-[7ch]',
-  timer0: 'basis-[6ch] min-w-[6ch] max-w-[7ch]',
-  vcount: 'basis-[6ch] min-w-[6ch] max-w-[7ch]',
-} as const;
-const STAT_FIELD_BASE_CLASS = 'flex flex-col gap-1 grow-0';
-const STAT_FIELD_WIDTH = 'basis-[6ch] min-w-[6ch] max-w-[7ch]';
 
 type HexFilterFieldKey = 'timer0Filter' | 'vcountFilter';
-
-const HEX_FILTER_FIELD_CONFIG: Record<HexFilterFieldKey, { id: string; widthClass: string; placeholder: string; maxLength: number; labelKey: 'timer0' | 'vcount'; }> = {
-  timer0Filter: {
-    id: 'timer0-filter',
-    widthClass: FILTER_FIELD_WIDTHS.timer0,
-    placeholder: '0000',
-    maxLength: 6,
-    labelKey: 'timer0',
-  },
-  vcountFilter: {
-    id: 'vcount-filter',
-    widthClass: FILTER_FIELD_WIDTHS.vcount,
-    placeholder: '00',
-    maxLength: 4,
-    labelKey: 'vcount',
-  },
-} as const;
 
 interface AbilityMeta {
   options: Array<{ index: 0 | 1 | 2; label: string }>;
@@ -138,7 +113,7 @@ const FilterPopoverField: React.FC<FilterPopoverFieldProps> = ({
 
   return (
     <div className="flex w-full flex-col gap-1">
-      <Label htmlFor={id} className="text-[11px] font-medium text-muted-foreground">{label}</Label>
+      <Label htmlFor={id} className="text-xs">{label}</Label>
       <Popover open={open} onOpenChange={(next) => { if (!disabled) setOpen(next); }}>
         <PopoverTrigger asChild>
           <Button
@@ -149,20 +124,20 @@ const FilterPopoverField: React.FC<FilterPopoverFieldProps> = ({
             aria-haspopup="listbox"
             aria-expanded={open}
             className={cn(
-              'h-10 w-full justify-between px-3 text-left text-sm font-medium',
+              'h-8 w-full justify-between px-2 text-left text-xs font-medium',
               !isActive && 'text-muted-foreground',
               isActive && 'border-primary text-primary',
             )}
           >
             <span className="truncate">{displayText}</span>
-            <CaretDown size={14} className="shrink-0 opacity-60" />
+            <CaretDown size={12} className="shrink-0 opacity-60" />
           </Button>
         </PopoverTrigger>
         {!disabled && (
-          <PopoverContent className="w-[min(320px,90vw)] p-0" align="start">
+          <PopoverContent className="w-[min(280px,90vw)] p-0" align="start">
             <Command>
               {searchable && (
-                <CommandInput placeholder={searchPlaceholder ?? ''} />
+                <CommandInput placeholder={searchPlaceholder ?? ''} className="text-xs" />
               )}
               <CommandList>
                 <CommandEmpty>{emptyLabel}</CommandEmpty>
@@ -173,10 +148,11 @@ const FilterPopoverField: React.FC<FilterPopoverFieldProps> = ({
                       value={option.label || option.value}
                       disabled={option.disabled}
                       onSelect={() => handleSelect(option.value)}
+                      className="text-xs"
                     >
                       <span className="truncate">{option.label}</span>
                       {selectedValue === option.value && (
-                        <Check size={14} className="ml-2 shrink-0 text-primary" />
+                        <Check size={12} className="ml-2 shrink-0 text-primary" />
                       )}
                     </CommandItem>
                   ))}
@@ -192,15 +168,15 @@ const FilterPopoverField: React.FC<FilterPopoverFieldProps> = ({
 
 const HEX_FILTER_INPUT_PATTERN = /^[0-9A-FX\s]*$/;
 
-export const GenerationResultsControlCard: React.FC = () => {
+export const GenerationFilterCard: React.FC = () => {
   const locale = useLocale();
+  const { isStack } = useResponsiveLayout();
   const optionLocale: SupportedLocale = locale;
   const anyLabel = resolveLocaleValue(anyOptionLabel, optionLocale);
   const noAbilitiesLabel = resolveLocaleValue(noAbilitySelectionLabel, optionLocale);
   const noGendersLabel = resolveLocaleValue(noGenderSelectionLabel, optionLocale);
   const cardTitle = resolveLocaleValue(generationResultsControlTitle, optionLocale);
   const resetFiltersLabel = resolveLocaleValue(generationResultsControlResetFiltersLabel, optionLocale);
-  const clearResultsLabel = resolveLocaleValue(generationResultsControlClearResultsLabel, optionLocale);
   const fieldLabels = resolveLocaleValue(generationResultsControlFieldLabels, optionLocale);
   const statLabels = resolveLocaleValue(generationResultsControlStatLabels, optionLocale);
   const levelAriaLabel = resolveLocaleValue(generationResultsControlLevelAriaLabel, optionLocale);
@@ -208,8 +184,6 @@ export const GenerationResultsControlCard: React.FC = () => {
   const filters = useAppStore((state) => state.filters);
   const applyFilters = useAppStore((state) => state.applyFilters);
   const resetGenerationFilters = useAppStore((state) => state.resetGenerationFilters);
-  const results = useAppStore((state) => state.results);
-  const clearResults = useAppStore((state) => state.clearResults);
   const encounterTable = useAppStore((state) => state.encounterTable);
   const statsAvailable = useAppStore((state) => Boolean(state.params?.baseSeed));
 
@@ -285,25 +259,13 @@ export const GenerationResultsControlCard: React.FC = () => {
 
     return { options, available };
   }, [abilityPreviewEllipsis, optionLocale]);
+
   const abilityMeta = React.useMemo(
     () => computeAbilityMeta(filters.speciesIds),
     [computeAbilityMeta, filters.speciesIds],
   );
+
   const levelValue = filters.levelRange?.min != null ? String(filters.levelRange.min) : '';
-  const hexFilterFields = React.useMemo(() => [
-    {
-      field: 'timer0Filter' as const,
-      ...HEX_FILTER_FIELD_CONFIG.timer0Filter,
-      label: fieldLabels[HEX_FILTER_FIELD_CONFIG.timer0Filter.labelKey],
-      value: filters.timer0Filter ?? '',
-    },
-    {
-      field: 'vcountFilter' as const,
-      ...HEX_FILTER_FIELD_CONFIG.vcountFilter,
-      label: fieldLabels[HEX_FILTER_FIELD_CONFIG.vcountFilter.labelKey],
-      value: filters.vcountFilter ?? '',
-    },
-  ], [fieldLabels, filters.timer0Filter, filters.vcountFilter]);
 
   const computeAvailableGenders = React.useCallback((speciesIds: number[]): Set<'M' | 'F' | 'N'> => {
     const genders = new Set<'M' | 'F' | 'N'>();
@@ -531,6 +493,7 @@ export const GenerationResultsControlCard: React.FC = () => {
     },
     [applyFilters],
   );
+
   const speciesFieldDisabled = pokemonOptions.length === 0;
   const hasPokemonSelection = filters.speciesIds.length > 0;
   const abilityDisabled = !hasPokemonSelection || abilityMeta.options.length === 0;
@@ -584,12 +547,13 @@ export const GenerationResultsControlCard: React.FC = () => {
     ...natureOptions.map((option) => ({ value: String(option.id), label: option.label })),
   ], [anyLabel, natureOptions]);
 
+  // ステータス実数値フィールド（HABCDS縦配置用）
   const statNumericFields = STAT_KEYS.map((stat) => {
     const statLabel = statLabels[stat];
     const range = filters.statRanges[stat];
     const value = range?.min != null ? String(range.min) : '';
     return {
-      id: `stat-${stat}`,
+      id: `gen-filter-stat-${stat}`,
       label: statLabel,
       value,
       onChange: handleStatValueChange(stat),
@@ -599,169 +563,180 @@ export const GenerationResultsControlCard: React.FC = () => {
 
   return (
     <PanelCard
-      icon={<FunnelSimple size={20} className="opacity-80" />}
-      title={<span id="gen-results-control-title">{cardTitle}</span>}
+      icon={<Funnel size={20} className="opacity-80" />}
+      title={<span id="gen-filter-title">{cardTitle}</span>}
       headerActions={
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={resetGenerationFilters}
-            className="gap-1"
-          >
-            <ArrowCounterClockwise size={14} />
-            {resetFiltersLabel}
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            disabled={!results.length}
-            onClick={clearResults}
-            className="gap-1"
-          >
-            <Trash size={14} />
-            {clearResultsLabel}
-          </Button>
-        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={resetGenerationFilters}
+          className="gap-1"
+        >
+          <ArrowCounterClockwise size={14} />
+          {resetFiltersLabel}
+        </Button>
       }
-      className="flex flex-col"
-      fullHeight={false}
-      aria-labelledby="gen-results-control-title"
-      role="region"
+      className={isStack ? 'min-h-[480px]' : undefined}
+      fullHeight={!isStack}
+      scrollMode={isStack ? 'parent' : 'content'}
+      aria-labelledby="gen-filter-title"
+      role="form"
     >
-      <form onSubmit={(event) => event.preventDefault()} className="flex flex-col gap-4">
-        <fieldset className="space-y-3" aria-labelledby="gf-filters" role="group">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap gap-3">
-              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.species)}>
-                <FilterPopoverField
-                  id="species-select"
-                  label={fieldLabels.species}
-                  placeholder={anyLabel}
-                  selectedValue={filters.speciesIds.length ? String(filters.speciesIds[0]) : 'any'}
-                  selectedLabel={speciesSelectedLabel}
-                  options={speciesFieldOptions}
-                  onSelect={handleSpeciesSelect}
-                  disabled={speciesFieldDisabled}
-                  searchable
-                  emptyLabel={commandEmptyLabel}
-                  searchPlaceholder={speciesSearchPlaceholder}
-                />
-              </div>
-              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.ability)}>
-                <FilterPopoverField
-                  id="ability-select"
-                  label={fieldLabels.ability}
-                  placeholder={abilityPlaceholder}
-                  selectedValue={filters.abilityIndices.length ? String(filters.abilityIndices[0]) : 'any'}
-                  selectedLabel={abilitySelectedLabel}
-                  options={abilityFieldOptions}
-                  onSelect={handleAbilitySelect}
-                  disabled={abilityDisabled}
-                  emptyLabel={commandEmptyLabel}
-                />
-              </div>
-              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.gender)}>
-                <FilterPopoverField
-                  id="gender-select"
-                  label={fieldLabels.gender}
-                  placeholder={genderPlaceholder}
-                  selectedValue={filters.genders.length ? filters.genders[0] : 'any'}
-                  selectedLabel={genderSelectedLabel}
-                  options={genderFieldOptions}
-                  onSelect={handleGenderSelect}
-                  disabled={genderDisabled}
-                  emptyLabel={commandEmptyLabel}
-                />
-              </div>
-              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.nature)}>
-                <FilterPopoverField
-                  id="nature-select"
-                  label={fieldLabels.nature}
-                  placeholder={anyLabel}
-                  selectedValue={filters.natureIds.length ? String(filters.natureIds[0]) : 'any'}
-                  selectedLabel={natureSelectedLabel}
-                  options={natureFieldOptions}
-                  onSelect={handleNatureSelect}
-                  searchable
-                  emptyLabel={commandEmptyLabel}
-                  searchPlaceholder={natureSearchPlaceholder}
-                />
-              </div>
-              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.shiny)}>
-                <FilterPopoverField
-                  id="shiny-mode"
-                  label={fieldLabels.shiny}
-                  placeholder={anyLabel}
-                  selectedValue={filters.shinyMode}
-                  selectedLabel={shinySelectedLabel}
-                  options={shinyOptions}
-                  onSelect={handleShinyModeChange}
-                  emptyLabel={commandEmptyLabel}
-                />
-              </div>
-              <div className={cn(FILTER_FIELD_BASE_CLASS, FILTER_FIELD_WIDTHS.level)}>
-                <Label htmlFor="level-filter" className="text-[11px] font-medium text-muted-foreground">
-                  {fieldLabels.level}
-                </Label>
-                <Input
-                  id="level-filter"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={3}
-                  value={levelValue}
-                  onChange={handleLevelValueChange}
-                  className="h-10 w-full px-3 text-right font-mono"
-                  placeholder={anyLabel}
-                  disabled={!statsAvailable}
-                  aria-label={levelAriaLabel}
-                />
-              </div>
-              {hexFilterFields.map((field) => (
-                <div key={field.id} className={cn(FILTER_FIELD_BASE_CLASS, field.widthClass)}>
-                  <Label htmlFor={field.id} className="text-[11px] font-medium text-muted-foreground">
-                    {field.label}
-                  </Label>
-                  <Input
-                    id={field.id}
-                    type="text"
-                    inputMode="text"
-                    value={field.value}
-                    onChange={handleHexFilterChange(field.field)}
-                    className="h-10 w-full px-3 text-right font-mono uppercase"
-                    placeholder={field.placeholder}
-                    maxLength={field.maxLength}
-                    spellCheck={false}
-                    autoComplete="off"
-                  />
-                </div>
-              ))}
+      {/* 2×n グリッド: ポケモン/特性/性別/性格/色違い/レベル/Timer0/VCount */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* ポケモン */}
+        <FilterPopoverField
+          id="gen-filter-species"
+          label={fieldLabels.species}
+          placeholder={anyLabel}
+          selectedValue={filters.speciesIds.length ? String(filters.speciesIds[0]) : 'any'}
+          selectedLabel={speciesSelectedLabel}
+          options={speciesFieldOptions}
+          onSelect={handleSpeciesSelect}
+          disabled={speciesFieldDisabled}
+          searchable
+          emptyLabel={commandEmptyLabel}
+          searchPlaceholder={speciesSearchPlaceholder}
+        />
+
+        {/* 特性 */}
+        <FilterPopoverField
+          id="gen-filter-ability"
+          label={fieldLabels.ability}
+          placeholder={abilityPlaceholder}
+          selectedValue={filters.abilityIndices.length ? String(filters.abilityIndices[0]) : 'any'}
+          selectedLabel={abilitySelectedLabel}
+          options={abilityFieldOptions}
+          onSelect={handleAbilitySelect}
+          disabled={abilityDisabled}
+          emptyLabel={commandEmptyLabel}
+        />
+
+        {/* 性別 */}
+        <FilterPopoverField
+          id="gen-filter-gender"
+          label={fieldLabels.gender}
+          placeholder={genderPlaceholder}
+          selectedValue={filters.genders.length ? filters.genders[0] : 'any'}
+          selectedLabel={genderSelectedLabel}
+          options={genderFieldOptions}
+          onSelect={handleGenderSelect}
+          disabled={genderDisabled}
+          emptyLabel={commandEmptyLabel}
+        />
+
+        {/* 性格 */}
+        <FilterPopoverField
+          id="gen-filter-nature"
+          label={fieldLabels.nature}
+          placeholder={anyLabel}
+          selectedValue={filters.natureIds.length ? String(filters.natureIds[0]) : 'any'}
+          selectedLabel={natureSelectedLabel}
+          options={natureFieldOptions}
+          onSelect={handleNatureSelect}
+          searchable
+          emptyLabel={commandEmptyLabel}
+          searchPlaceholder={natureSearchPlaceholder}
+        />
+
+        {/* 色違い */}
+        <FilterPopoverField
+          id="gen-filter-shiny"
+          label={fieldLabels.shiny}
+          placeholder={anyLabel}
+          selectedValue={filters.shinyMode}
+          selectedLabel={shinySelectedLabel}
+          options={shinyOptions}
+          onSelect={handleShinyModeChange}
+          emptyLabel={commandEmptyLabel}
+        />
+
+        {/* レベル */}
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="gen-filter-level" className="text-xs">
+            {fieldLabels.level}
+          </Label>
+          <Input
+            id="gen-filter-level"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={3}
+            value={levelValue}
+            onChange={handleLevelValueChange}
+            className="h-8 w-full px-2 text-right font-mono text-xs"
+            placeholder={anyLabel}
+            disabled={!statsAvailable}
+            aria-label={levelAriaLabel}
+          />
+        </div>
+
+        {/* Timer0 */}
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="gen-filter-timer0" className="text-xs">
+            {fieldLabels.timer0}
+          </Label>
+          <Input
+            id="gen-filter-timer0"
+            type="text"
+            inputMode="text"
+            value={filters.timer0Filter ?? ''}
+            onChange={handleHexFilterChange('timer0Filter')}
+            className="h-8 w-full px-2 text-right font-mono uppercase text-xs"
+            placeholder="0000"
+            maxLength={6}
+            spellCheck={false}
+            autoComplete="off"
+          />
+        </div>
+
+        {/* VCount */}
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="gen-filter-vcount" className="text-xs">
+            {fieldLabels.vcount}
+          </Label>
+          <Input
+            id="gen-filter-vcount"
+            type="text"
+            inputMode="text"
+            value={filters.vcountFilter ?? ''}
+            onChange={handleHexFilterChange('vcountFilter')}
+            className="h-8 w-full px-2 text-right font-mono uppercase text-xs"
+            placeholder="00"
+            maxLength={4}
+            spellCheck={false}
+            autoComplete="off"
+          />
+        </div>
+      </div>
+
+      {/* ステータス実数値フィルター（HABCDS縦配置） */}
+      <section className="space-y-2 mt-3" role="group">
+        <h4 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
+          {optionLocale === 'ja' ? 'ステータス実数値' : 'Stats'}
+        </h4>
+        <div className="space-y-2">
+          {statNumericFields.map((field) => (
+            <div key={field.id} className="flex items-center gap-2">
+              <span className="text-xs w-8">{field.label}</span>
+              <Input
+                id={field.id}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={3}
+                value={field.value}
+                onChange={field.onChange}
+                className="text-xs h-7 w-20 text-center font-mono"
+                placeholder={anyLabel}
+                disabled={!statsAvailable}
+                aria-label={field.ariaLabel}
+              />
             </div>
-            <div className="flex flex-wrap gap-2">
-              {statNumericFields.map((field) => (
-                <div key={field.id} className={cn(STAT_FIELD_BASE_CLASS, STAT_FIELD_WIDTH)}>
-                  <Label htmlFor={field.id} className="text-xs font-medium text-muted-foreground">{field.label}</Label>
-                  <Input
-                    id={field.id}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={3}
-                    value={field.value}
-                    onChange={field.onChange}
-                    className="h-10 w-full px-3 text-right font-mono"
-                    placeholder={anyLabel}
-                    disabled={!statsAvailable}
-                    aria-label={field.ariaLabel}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </fieldset>
-      </form>
+          ))}
+        </div>
+      </section>
     </PanelCard>
   );
 };

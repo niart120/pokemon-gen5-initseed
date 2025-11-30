@@ -11,14 +11,9 @@ export const searchResultsTitle: LocaleText = {
   en: 'Results',
 };
 
-export const searchResultsInitialMessage: LocaleText = {
+export const searchResultsEmptyMessage: LocaleText = {
   ja: '検索結果はまだありません。検索を実行するとここに表示されます。',
   en: 'No results yet. Run a search to see results here.',
-};
-
-export const searchResultsFilteredEmptyMessage: LocaleText = {
-  ja: '現在のフィルター条件に一致する結果はありません。',
-  en: 'No results match the current filter criteria.',
 };
 
 export const searchResultsHeaders = {
@@ -45,6 +40,10 @@ export const searchResultsHeaders = {
   vcount: {
     ja: 'VCount',
     en: 'VCount',
+  } satisfies LocaleText,
+  keyInput: {
+    ja: 'キー入力',
+    en: 'Key Input',
   } satisfies LocaleText,
 };
 
@@ -164,10 +163,20 @@ export function formatResultCount(count: number, locale: SupportedLocale): strin
   return `${value} result${count === 1 ? '' : 's'}`;
 }
 
-export function formatSearchDuration(durationMs: number, _locale: SupportedLocale): string {
+/**
+ * Format processing duration: "Search completed in X.Xs"
+ * Used for Seed search results.
+ */
+export function formatProcessingDuration(durationMs: number): string {
   const seconds = durationMs / 1000;
-  const formatted = seconds.toFixed(1);
-  return `Search completed in ${formatted}s`;
+  return `Search completed in ${seconds.toFixed(1)}s`;
+}
+
+/**
+ * @deprecated Use formatProcessingDuration instead for unified format
+ */
+export function formatSearchDuration(durationMs: number, _locale: SupportedLocale): string {
+  return formatProcessingDuration(durationMs);
 }
 
 export function formatResultDateTime(date: Date, locale: SupportedLocale): string {

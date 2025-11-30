@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { PanelCard } from '@/components/ui/panel-card';
@@ -14,10 +14,9 @@ import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import {
   formatResultCount,
-  formatSearchDuration,
-  searchResultsFilteredEmptyMessage,
+  formatProcessingDuration,
+  searchResultsEmptyMessage,
   searchResultsHeaders,
-  searchResultsInitialMessage,
   searchResultsTitle,
   viewDetailsAriaLabel,
   viewDetailsLabel,
@@ -27,51 +26,34 @@ import {
   formatTimer0Hex,
   formatVCountHex,
 } from '@/lib/generation/result-formatters';
+import { formatKeyInputForDisplay } from '@/lib/utils/key-input';
 import type { InitialSeedResult, SearchResult } from '../../../types/search';
-import type { SortField } from './ResultsControlCard';
 
 interface ResultsCardProps {
-  filteredAndSortedResults: InitialSeedResult[];
+  sortedResults: InitialSeedResult[];
   convertedResults: SearchResult[];
-  searchResultsLength: number;
-  sortField: SortField;
-  sortOrder: 'asc' | 'desc';
-  onSort: (field: SortField) => void;
   onShowDetails: (result: InitialSeedResult) => void;
 }
 
-const SEARCH_RESULTS_COLUMN_COUNT = 6;
+const SEARCH_RESULTS_COLUMN_COUNT = 7;
 const SEARCH_RESULTS_ROW_HEIGHT = 34;
 
 export function ResultsCard({
-  filteredAndSortedResults,
+  sortedResults,
   convertedResults,
-  searchResultsLength,
-  sortField,
-  sortOrder,
-  onSort,
   onShowDetails,
 }: ResultsCardProps) {
   const { lastSearchDuration } = useAppStore();
   const { isStack } = useResponsiveLayout();
   const locale = useLocale();
   const virtualization = useTableVirtualization({
-    rowCount: filteredAndSortedResults.length,
+    rowCount: sortedResults.length,
     defaultRowHeight: SEARCH_RESULTS_ROW_HEIGHT,
     overscan: 8,
   });
   const virtualRows = virtualization.virtualRows;
 
-  const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return null;
-    return sortOrder === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
-  };
-
-  const handleSort = (field: SortField) => {
-    onSort(field);
-  };
-
-  const filteredResultsCount = filteredAndSortedResults.length;
+  const resultsCount = sortedResults.length;
 
   return (
     <PanelCard
@@ -80,16 +62,16 @@ export function ResultsCard({
       headerActions={
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="secondary" className="flex-shrink-0">
-            {formatResultCount(filteredResultsCount, locale)}
+            {formatResultCount(resultsCount, locale)}
           </Badge>
           {lastSearchDuration !== null && (
             <Badge variant="outline" className="flex-shrink-0 text-xs">
-              {formatSearchDuration(lastSearchDuration, locale)}
+              {formatProcessingDuration(lastSearchDuration)}
             </Badge>
           )}
           <SearchExportButton
             results={convertedResults}
-            disabled={filteredResultsCount === 0}
+            disabled={resultsCount === 0}
           />
         </div>
       }
@@ -100,17 +82,14 @@ export function ResultsCard({
     >
         <div
           ref={virtualization.containerRef}
-          className="flex-1 min-h-0 overflow-y-auto"
+          className="flex-1 min-h-0 overflow-auto"
         >
-          {filteredAndSortedResults.length === 0 ? (
+          {sortedResults.length === 0 ? (
             <div className="flex h-full items-center justify-center px-6 text-center text-muted-foreground">
-              {resolveLocaleValue(
-                searchResultsLength === 0 ? searchResultsInitialMessage : searchResultsFilteredEmptyMessage,
-                locale,
-              )}
+              {resolveLocaleValue(searchResultsEmptyMessage, locale)}
             </div>
           ) : (
-            <Table className="min-w-full text-xs">
+            <Table className="min-w-max text-xs">
               <TableHeader className="sticky top-0 bg-muted text-xs">
                 <TableRow className="text-left border-0">
                   <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-center">
@@ -119,25 +98,20 @@ export function ResultsCard({
                   <TableHead scope="col" className="px-2 py-1 font-medium select-none">
                     {resolveLocaleValue(searchResultsHeaders.lcgSeed, locale)}
                   </TableHead>
-                  <TableHead scope="col" className="px-2 py-1 font-medium cursor-pointer select-none" onClick={() => handleSort('datetime')}>
-                    <div className="flex items-center gap-1">
-                      {resolveLocaleValue(searchResultsHeaders.dateTime, locale)} {getSortIcon('datetime')}
-                    </div>
+                  <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                    {resolveLocaleValue(searchResultsHeaders.dateTime, locale)}
                   </TableHead>
-                  <TableHead scope="col" className="px-2 py-1 font-medium cursor-pointer select-none" onClick={() => handleSort('seed')}>
-                    <div className="flex items-center gap-1">
-                      {resolveLocaleValue(searchResultsHeaders.mtSeed, locale)} {getSortIcon('seed')}
-                    </div>
+                  <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                    {resolveLocaleValue(searchResultsHeaders.mtSeed, locale)}
                   </TableHead>
-                  <TableHead scope="col" className="px-2 py-1 font-medium cursor-pointer select-none" onClick={() => handleSort('timer0')}>
-                    <div className="flex items-center gap-1">
-                      {resolveLocaleValue(searchResultsHeaders.timer0, locale)} {getSortIcon('timer0')}
-                    </div>
+                  <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                    {resolveLocaleValue(searchResultsHeaders.timer0, locale)}
                   </TableHead>
-                  <TableHead scope="col" className="px-2 py-1 font-medium cursor-pointer select-none" onClick={() => handleSort('vcount')}>
-                    <div className="flex items-center gap-1">
-                      {resolveLocaleValue(searchResultsHeaders.vcount, locale)} {getSortIcon('vcount')}
-                    </div>
+                  <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                    {resolveLocaleValue(searchResultsHeaders.vcount, locale)}
+                  </TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                    {resolveLocaleValue(searchResultsHeaders.keyInput, locale)}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -152,7 +126,7 @@ export function ResultsCard({
                   </TableRow>
                 ) : null}
                 {virtualRows.map(virtualRow => {
-                  const result = filteredAndSortedResults[virtualRow.index];
+                  const result = sortedResults[virtualRow.index];
                   if (!result) {
                     return null;
                   }
@@ -220,6 +194,9 @@ export function ResultsCard({
                       </TableCell>
                       <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                         {formatVCountHex(result.vcount)}
+                      </TableCell>
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
+                        {formatKeyInputForDisplay(result.keyCode, result.keyInputNames)}
                       </TableCell>
                     </TableRow>
                   );

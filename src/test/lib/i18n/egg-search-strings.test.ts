@@ -33,8 +33,8 @@ describe('egg-search i18n strings', () => {
       expect(eggSearchRunCardTitle.en).toBe('Search Control');
     });
 
-    it('should have both ja and en for status prefix', () => {
-      expect(eggSearchStatusPrefix.ja).toBe('ステータス');
+    it('should have both ja and en for status prefix (unified to English)', () => {
+      expect(eggSearchStatusPrefix.ja).toBe('Status');
       expect(eggSearchStatusPrefix.en).toBe('Status');
     });
 
@@ -72,19 +72,19 @@ describe('egg-search i18n strings', () => {
   });
 
   describe('status labels', () => {
-    it('should have all status labels for ja', () => {
-      expect(eggSearchStatusLabels.ja.idle).toBe('アイドル');
-      expect(eggSearchStatusLabels.ja.starting).toBe('開始中');
-      expect(eggSearchStatusLabels.ja.running).toBe('検索中');
-      expect(eggSearchStatusLabels.ja.stopping).toBe('停止中');
-      expect(eggSearchStatusLabels.ja.completed).toBe('完了');
-      expect(eggSearchStatusLabels.ja.error).toBe('エラー');
+    it('should have all status labels for ja (English unified)', () => {
+      expect(eggSearchStatusLabels.ja.idle).toBe('Idle');
+      expect(eggSearchStatusLabels.ja.starting).toBe('Starting');
+      expect(eggSearchStatusLabels.ja.running).toBe('Running');
+      expect(eggSearchStatusLabels.ja.stopping).toBe('Stopping');
+      expect(eggSearchStatusLabels.ja.completed).toBe('Completed');
+      expect(eggSearchStatusLabels.ja.error).toBe('Error');
     });
 
     it('should have all status labels for en', () => {
       expect(eggSearchStatusLabels.en.idle).toBe('Idle');
       expect(eggSearchStatusLabels.en.starting).toBe('Starting');
-      expect(eggSearchStatusLabels.en.running).toBe('Searching');
+      expect(eggSearchStatusLabels.en.running).toBe('Running');
       expect(eggSearchStatusLabels.en.stopping).toBe('Stopping');
       expect(eggSearchStatusLabels.en.completed).toBe('Completed');
       expect(eggSearchStatusLabels.en.error).toBe('Error');
@@ -170,54 +170,52 @@ describe('egg-search i18n strings', () => {
   });
 
   describe('getEggSearchStatusLabel', () => {
-    it('should return correct status label for ja', () => {
-      expect(getEggSearchStatusLabel('idle', 'ja')).toBe('アイドル');
-      expect(getEggSearchStatusLabel('running', 'ja')).toBe('検索中');
-      expect(getEggSearchStatusLabel('completed', 'ja')).toBe('完了');
+    it('should return correct status label for ja (English unified)', () => {
+      expect(getEggSearchStatusLabel('idle', 'ja')).toBe('Idle');
+      expect(getEggSearchStatusLabel('running', 'ja')).toBe('Running');
+      expect(getEggSearchStatusLabel('completed', 'ja')).toBe('Completed');
     });
 
     it('should return correct status label for en', () => {
       expect(getEggSearchStatusLabel('idle', 'en')).toBe('Idle');
-      expect(getEggSearchStatusLabel('running', 'en')).toBe('Searching');
+      expect(getEggSearchStatusLabel('running', 'en')).toBe('Running');
       expect(getEggSearchStatusLabel('completed', 'en')).toBe('Completed');
     });
   });
 
   describe('formatEggSearchElapsed', () => {
-    it('should format seconds for ja', () => {
-      expect(formatEggSearchElapsed(5000, 'ja')).toBe('5秒');
-      expect(formatEggSearchElapsed(30000, 'ja')).toBe('30秒');
+    it('should format duration as Search completed in X.Xs for ja', () => {
+      expect(formatEggSearchElapsed(5000, 'ja')).toBe('Search completed in 5.0s');
+      expect(formatEggSearchElapsed(30000, 'ja')).toBe('Search completed in 30.0s');
     });
 
-    it('should format seconds for en', () => {
-      expect(formatEggSearchElapsed(5000, 'en')).toBe('5s');
-      expect(formatEggSearchElapsed(30000, 'en')).toBe('30s');
+    it('should format duration as Search completed in X.Xs for en', () => {
+      expect(formatEggSearchElapsed(5000, 'en')).toBe('Search completed in 5.0s');
+      expect(formatEggSearchElapsed(30000, 'en')).toBe('Search completed in 30.0s');
     });
 
-    it('should format minutes and seconds for ja', () => {
-      expect(formatEggSearchElapsed(90000, 'ja')).toBe('1分30秒');
-      expect(formatEggSearchElapsed(125000, 'ja')).toBe('2分5秒');
-    });
-
-    it('should format minutes and seconds for en', () => {
-      expect(formatEggSearchElapsed(90000, 'en')).toBe('1m 30s');
-      expect(formatEggSearchElapsed(125000, 'en')).toBe('2m 5s');
+    it('should format fractional seconds correctly', () => {
+      expect(formatEggSearchElapsed(1500, 'ja')).toBe('Search completed in 1.5s');
+      expect(formatEggSearchElapsed(90000, 'en')).toBe('Search completed in 90.0s');
+      expect(formatEggSearchElapsed(125000, 'en')).toBe('Search completed in 125.0s');
     });
   });
 
   describe('formatEggSearchResultsCount', () => {
-    it('should format count for ja without space before counter', () => {
-      expect(formatEggSearchResultsCount(100, 'ja')).toBe('100件');
-      expect(formatEggSearchResultsCount(1000, 'ja')).toBe('1,000件');
+    it('should format count in unified x result(s) format for ja', () => {
+      expect(formatEggSearchResultsCount(1, 'ja')).toBe('1 result');
+      expect(formatEggSearchResultsCount(100, 'ja')).toBe('100 results');
+      expect(formatEggSearchResultsCount(1000, 'ja')).toBe('1,000 results');
     });
 
-    it('should format count for en with space before word', () => {
+    it('should format count in unified x result(s) format for en', () => {
+      expect(formatEggSearchResultsCount(1, 'en')).toBe('1 result');
       expect(formatEggSearchResultsCount(100, 'en')).toBe('100 results');
       expect(formatEggSearchResultsCount(1000, 'en')).toBe('1,000 results');
     });
 
     it('should handle zero', () => {
-      expect(formatEggSearchResultsCount(0, 'ja')).toBe('0件');
+      expect(formatEggSearchResultsCount(0, 'ja')).toBe('0 results');
       expect(formatEggSearchResultsCount(0, 'en')).toBe('0 results');
     });
   });

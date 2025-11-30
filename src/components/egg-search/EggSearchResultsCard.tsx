@@ -28,6 +28,7 @@ import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useTableVirtualization } from '@/hooks/use-table-virtualization';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { natureName } from '@/lib/utils/format-display';
+import { formatKeyInputForDisplay } from '@/lib/utils/key-input';
 import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
 import {
   eggSearchResultsCardTitle,
@@ -110,23 +111,18 @@ export function EggSearchResultsCard() {
     return `${hpTypeNames[hpInfo.hpType]} ${hpInfo.power}`;
   };
 
-  const getKeysDisplay = (keyInputNames: string[]): string => {
-    if (keyInputNames.length === 0) return '-';
-    return keyInputNames.join('+');
-  };
-
   return (
     <>
       <PanelCard
         icon={<TableIcon size={20} className="opacity-80" />}
         title={eggSearchResultsCardTitle[locale]}
         headerActions={
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="secondary" className="flex-shrink-0">
               {formatEggSearchResultsCount(filteredResults.length, locale)}
             </Badge>
             {lastElapsedMs !== null && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="flex-shrink-0 text-xs">
                 {formatEggSearchElapsed(lastElapsedMs, locale)}
               </Badge>
             )}
@@ -140,14 +136,14 @@ export function EggSearchResultsCard() {
       >
         <div
           ref={virtualization.containerRef}
-          className="flex-1 min-h-0 overflow-y-auto"
+          className="flex-1 min-h-0 overflow-auto"
         >
           {filteredResults.length === 0 ? (
             <div className="flex h-full items-center justify-center px-6 text-center text-muted-foreground py-8">
               {eggSearchResultsEmpty[locale]}
             </div>
           ) : (
-            <Table className="min-w-full text-xs">
+            <Table className="min-w-max text-xs">
               <TableHeader className="sticky top-0 bg-muted text-xs">
                 <TableRow className="text-left border-0">
                   <TableHead scope="col" className="px-2 py-1 font-medium w-8"></TableHead>
@@ -249,7 +245,7 @@ export function EggSearchResultsCard() {
                         {getHiddenPowerDisplay(result)}
                       </TableCell>
                       <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
-                        {getKeysDisplay(result.boot.keyInputNames)}
+                        {formatKeyInputForDisplay(result.boot.keyCode, result.boot.keyInputNames)}
                       </TableCell>
                     </TableRow>
                   );
@@ -330,7 +326,7 @@ export function EggSearchResultsCard() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">{eggSearchResultsTableHeaders.keys[locale]}:</span>
-                  <span className="ml-2">{getKeysDisplay(selectedResult.boot.keyInputNames)}</span>
+                  <span className="ml-2">{formatKeyInputForDisplay(selectedResult.boot.keyCode, selectedResult.boot.keyInputNames)}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">{eggSearchResultsTableHeaders.stable[locale]}:</span>

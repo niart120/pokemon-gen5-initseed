@@ -194,9 +194,7 @@ interface PersistedGenerationMinimal {
   draftParams: AppStore['draftParams'];
   // NOTE: params には bigint を含むため永続化しない（JSON.stringify 失敗回避）
   validationErrors: string[];
-  status: AppStore['status'];
-  lastCompletion: AppStore['lastCompletion'];
-  error: string | null;
+  // NOTE: status は永続化しない（常に idle で開始、EggStore/EggSearchStoreと一貫性を保つ）
   filters: AppStore['filters'];
   internalFlags: AppStore['internalFlags'];
   staticEncounterId: AppStore['staticEncounterId'];
@@ -205,9 +203,6 @@ function extractGenerationForPersist(state: AppStore): PersistedGenerationMinima
   return {
     draftParams: state.draftParams,
     validationErrors: state.validationErrors,
-    status: state.status,
-    lastCompletion: state.lastCompletion,
-    error: state.error,
     filters: state.filters,
     internalFlags: state.internalFlags,
     staticEncounterId: state.staticEncounterId ?? null,
@@ -294,29 +289,19 @@ function normalizeRestoredFilters(input: unknown): GenerationFilters {
 function reviveGenerationMinimal(obj: unknown): Partial<GenerationSlice> {
   if (!obj || typeof obj !== 'object') return {};
   const o = obj as Partial<PersistedGenerationMinimal>;
-  const normalizedStatus = normalizeRestoredStatus(o.status);
   return {
     draftParams: mergeDraftParams(o.draftParams),
     // params は非永続化（draft から再生成する設計）
     params: null,
     validationErrors: o.validationErrors ?? [],
-    status: normalizedStatus,
-    lastCompletion: o.lastCompletion ?? null,
-    error: o.error ?? null,
+    // status は永続化しない（常に idle で開始）
+    status: 'idle',
+    lastCompletion: null,
+    error: null,
     filters: normalizeRestoredFilters(o.filters),
-    internalFlags: normalizedStatus === 'idle'
-      ? { receivedResults: false }
-      : (o.internalFlags ?? { receivedResults: false }),
+    internalFlags: { receivedResults: false },
     staticEncounterId: o.staticEncounterId ?? null,
   };
-}
-
-function normalizeRestoredStatus(status: AppStore['status'] | undefined): AppStore['status'] {
-  if (!status) return 'idle';
-  if (status === 'running' || status === 'starting' || status === 'stopping') {
-    return 'idle';
-  }
-  return status;
 }
 
 export const useAppStore = create<AppStore>()(

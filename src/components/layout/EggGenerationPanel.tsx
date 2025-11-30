@@ -55,11 +55,11 @@ export function EggGenerationPanel() {
 
   // デスクトップ: 3カラム (EggRunCard + EggParamsCard / EggFilterCard / EggResultsCard)
   return (
-    <div className={`flex flex-col ${sizes.gap} max-w-full h-full min-h-0 min-w-fit overflow-hidden`}>
+    <div className={`flex flex-col ${sizes.gap} max-w-full h-full min-h-0 min-w-0 overflow-hidden`}>
       <div className="flex-none">
         <ProfileCard />
       </div>
-      <div className={`flex ${sizes.gap} max-w-full flex-1 min-h-0 min-w-fit overflow-hidden`}>
+      <div className={`flex ${sizes.gap} max-w-full flex-1 min-h-0 min-w-0 overflow-hidden`}>
         {/* Left Column: EggRunCard + EggParamsCard */}
         <div
           className={`flex-1 flex flex-col ${sizes.gap} min-w-0 overflow-y-auto`}
@@ -87,10 +87,10 @@ export function EggGenerationPanel() {
         </div>
         {/* Right Column: EggResultsCard */}
         <div 
-          className={`flex-[2] flex flex-col ${sizes.gap} min-w-0 overflow-y-auto overflow-x-auto`} 
+          className={`flex-[2] flex flex-col ${sizes.gap} min-w-0 overflow-y-auto`} 
           style={{ minHeight: 0 }}
         >
-          <div className="flex-1 min-h-0 overflow-x-auto">
+          <div className="flex-1 min-h-0">
             <EggResultsCard />
           </div>
         </div>

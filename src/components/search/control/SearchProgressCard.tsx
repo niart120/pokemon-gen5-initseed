@@ -84,12 +84,9 @@ export function SearchProgressCard() {
       return { cols: 2, showProgress: false }; // 32超過は簡略化
     }
     
-    // デスクトップ表示（元の設定）
-    if (count <= 4) return { cols: 2, showProgress: true };
-    if (count <= 8) return { cols: 2, showProgress: true };
-    if (count <= 16) return { cols: 3, showProgress: true };
-    if (count <= 32) return { cols: 4, showProgress: true };
-    return { cols: 4, showProgress: false }; // 32超過は簡略化
+    // デスクトップ表示: 最大2列に制限
+    if (count <= 32) return { cols: 2, showProgress: true };
+    return { cols: 2, showProgress: false }; // 32超過は簡略化
   };
 
   const workerLayout = getWorkerLayout(totalWorkerCount);
@@ -201,13 +198,7 @@ export function SearchProgressCard() {
                     // プログレスバー表示：2-4列可変、残りの高さ全体を使用
                     <div className="flex-1 flex flex-col min-h-0">
                       <div className="flex-1 overflow-y-auto pr-1 min-h-0">
-                        <div className={`grid gap-2 ${
-                          isMobile 
-                            ? 'grid-cols-2' // モバイル: 2列固定
-                            : workerLayout.cols === 2 ? 'grid-cols-2' :
-                              workerLayout.cols === 3 ? 'grid-cols-3' :
-                              'grid-cols-4'
-                        }`}>
+                        <div className="grid gap-2 grid-cols-2">
                           {Array.from(parallelData.workerProgresses.entries()).map(([workerId, progress]) => {
                             // progressPercentを使用（秒数ベース）、なければcurrentStep/totalStepsにフォールバック
                             const workerPercent = progress.progressPercent ?? (progress.totalSteps > 0 ? (progress.currentStep / progress.totalSteps) * 100 : 0);
@@ -244,7 +235,7 @@ export function SearchProgressCard() {
                                   value={progress.status === 'completed' ? 100 : clampedPercent}
                                   className="h-1.5"
                                 />
-                                <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <div className="flex flex-wrap justify-between text-[10px] text-muted-foreground gap-x-1">
                                   <span>
                                     {formatSearchProgressPercent(clampedPercent, locale, 0)}
                                   </span>

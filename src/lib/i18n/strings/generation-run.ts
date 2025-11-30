@@ -24,8 +24,8 @@ export const generationRunResultsLabel: LocaleText = {
 };
 
 export const generationRunStatusPrefix: LocaleText = {
-  ja: 'Status:',
-  en: 'Status:',
+  ja: 'Status',
+  en: 'Status',
 };
 
 export const generationRunAdvanceUnit: LocaleText = {

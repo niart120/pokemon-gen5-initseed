@@ -5,17 +5,12 @@ import { cn } from "@/lib/utils"
 const Table = React.forwardRef<HTMLTableElement, React.ComponentPropsWithoutRef<"table">>(
   ({ className, ...props }, ref) => {
     return (
-      <div
-        data-slot="table-container"
-        className="relative w-full overflow-x-auto"
-      >
-        <table
-          data-slot="table"
-          ref={ref}
-          className={cn("w-full caption-bottom text-sm", className)}
-          {...props}
-        />
-      </div>
+      <table
+        data-slot="table"
+        ref={ref}
+        className={cn("w-full caption-bottom text-sm", className)}
+        {...props}
+      />
     )
   }
 )
@@ -81,7 +76,7 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ComponentPropsWit
       data-slot="table-head"
       ref={ref}
       className={cn(
-        "text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "text-foreground h-10 px-2 text-left align-middle font-medium [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
       {...props}
@@ -96,7 +91,7 @@ const TableCell = React.forwardRef<HTMLTableCellElement, React.ComponentPropsWit
       data-slot="table-cell"
       ref={ref}
       className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
       {...props}
