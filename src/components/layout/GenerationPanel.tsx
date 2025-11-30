@@ -1,7 +1,7 @@
 import React from 'react';
 import { GenerationParamsCard } from '@/components/generation/GenerationParamsCard';
 import { GenerationRunCard } from '@/components/generation/GenerationRunCard';
-import { GenerationResultsControlCard } from '@/components/generation/GenerationResultsControlCard';
+import { GenerationFilterCard } from '@/components/generation/GenerationFilterCard';
 import { GenerationResultsTableCard } from '@/components/generation/GenerationResultsTableCard';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { LEFT_COLUMN_WIDTH_CLAMP } from './constants';
@@ -9,10 +9,9 @@ import { getResponsiveSizes } from '@/lib/utils/responsive-sizes';
 import { ProfileCard } from '@/components/profile/ProfileCard';
 
 /**
- * GenerationPanel (Phase1 / Layout Refactor)
- * 案A: デスクトップ/タブレットは 2カラム (左=設定/制御/進捗, 右=結果)。
- * モバイル幅では従来どおり縦積みにフォールバック (後続PhaseでAccordion化予定)。
- * - SearchPanel と同基準のレイアウトスケールを用い、PCは2カラム構成を維持。
+ * GenerationPanel
+ * デスクトップ: 3カラム (左: 実行/パラメータ, 中央: フィルター, 右: 結果テーブル)
+ * モバイル: 縦積み
  */
 export function GenerationPanel() {
   const { isStack, uiScale } = useResponsiveLayout();
@@ -27,13 +26,13 @@ export function GenerationPanel() {
           <ProfileCard />
         </div>
         <div className="flex-none">
-          <GenerationParamsCard />
-        </div>
-        <div className="flex-none">
           <GenerationRunCard />
         </div>
         <div className="flex-none">
-          <GenerationResultsControlCard />
+          <GenerationParamsCard />
+        </div>
+        <div className="flex-none">
+          <GenerationFilterCard />
         </div>
         <div className="flex-1 min-h-0">
           <GenerationResultsTableCard />
@@ -42,14 +41,14 @@ export function GenerationPanel() {
     );
   }
 
-  // デスクトップ: 2カラム (左: 制御+パラメータ 固定幅clamp / 右: 結果エリア)
+  // デスクトップ: 3カラム (左: 実行+パラメータ / 中央: フィルター / 右: 結果テーブル)
   return (
     <div className={`flex flex-col ${sizes.gap} max-w-full h-full min-h-0 min-w-fit overflow-hidden`}>
       <div className="flex-none">
         <ProfileCard />
       </div>
       <div className={`flex ${sizes.gap} max-w-full flex-1 min-h-0 min-w-fit overflow-hidden`}>
-        {/* Left Column */}
+        {/* Left Column: GenerationRunCard + GenerationParamsCard */}
         <div
           className={`flex-1 flex flex-col ${sizes.gap} min-w-0 overflow-y-auto`}
           style={{
@@ -65,16 +64,25 @@ export function GenerationPanel() {
             <GenerationParamsCard />
           </div>
         </div>
-        {/* Right Column */}
-        <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
-          <div className="flex-none">
-            <GenerationResultsControlCard />
-          </div>
+        {/* Center Column: GenerationFilterCard */}
+        <div
+          className={`flex flex-col ${sizes.gap} min-w-0 max-w-xs overflow-y-auto`}
+          style={{ minHeight: 0 }}
+        >
           <div className="flex-1 min-h-0">
+            <GenerationFilterCard />
+          </div>
+        </div>
+        {/* Right Column: GenerationResultsTableCard */}
+        <div
+          className={`flex-[2] flex flex-col ${sizes.gap} min-w-0 overflow-y-auto overflow-x-auto`}
+          style={{ minHeight: 0 }}
+        >
+          <div className="flex-1 min-h-0 overflow-x-auto">
             <GenerationResultsTableCard />
           </div>
         </div>
       </div>
     </div>
   );
-};
+}

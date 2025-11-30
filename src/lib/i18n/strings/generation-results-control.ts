@@ -29,11 +29,6 @@ export const generationResultsControlResetFiltersLabel: LocaleText = {
   en: 'Reset Filters',
 };
 
-export const generationResultsControlClearResultsLabel: LocaleText = {
-  ja: 'Clear Results',
-  en: 'Clear Results',
-};
-
 export const generationResultsControlFieldLabels: LocaleMap<Record<FieldKey, string>> = {
   ja: {
     species: '種族',

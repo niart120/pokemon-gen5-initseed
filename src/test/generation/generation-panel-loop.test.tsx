@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 import { LocaleProvider } from '@/lib/i18n/locale-context';
-import { GenerationResultsControlCard } from '@/components/generation/GenerationResultsControlCard';
+import { GenerationFilterCard } from '@/components/generation/GenerationFilterCard';
 import { GenerationResultsTableCard } from '@/components/generation/GenerationResultsTableCard';
 import { useAppStore } from '@/store/app-store';
 import { createDefaultGenerationFilters } from '@/store/generation-store';
@@ -63,7 +63,7 @@ describe('GenerationPanel', () => {
       render(
         <LocaleProvider>
           <div>
-            <GenerationResultsControlCard />
+            <GenerationFilterCard />
             <GenerationResultsTableCard />
           </div>
         </LocaleProvider>
