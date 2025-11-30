@@ -13,6 +13,7 @@ import type { EnumeratedEggDataWithBootTiming, ResolvedEgg } from '@/types/egg';
 
 const createMockEgg = (): ResolvedEgg => ({
   lcgSeedHex: '0x0123456789ABCDEF',
+  mtSeedHex: '0xABCDEF01',
   ivs: [31, 31, 31, 31, 31, 31],
   nature: 0,
   gender: 'male',
@@ -30,6 +31,18 @@ const createMockResult = (overrides?: Partial<EnumeratedEggDataWithBootTiming>):
   timer0: 0x10A0,
   vcount: 0x5C,
   ...overrides,
+});
+
+const createMockResultWithShiny = (shiny: 0 | 1 | 2): EnumeratedEggDataWithBootTiming => ({
+  advance: 100,
+  egg: {
+    ...createMockEgg(),
+    shiny,
+  },
+  isStable: true,
+  seedSourceMode: 'boot-timing',
+  timer0: 0x10A0,
+  vcount: 0x5C,
 });
 
 describe('egg-result-filter', () => {
@@ -147,6 +160,84 @@ describe('egg-result-filter', () => {
 
       expect(filteredLower).toHaveLength(1);
       expect(filteredUpper).toHaveLength(1);
+    });
+
+    describe('shinyFilterMode', () => {
+      it('should filter shiny only when shinyFilterMode is shiny', () => {
+        const results = [
+          createMockResultWithShiny(0), // normal
+          createMockResultWithShiny(1), // square
+          createMockResultWithShiny(2), // star
+        ];
+        const filters: EggBootTimingFilters = { shinyFilterMode: 'shiny' };
+
+        const filtered = applyBootTimingFilters(results, filters, 'lcg');
+        expect(filtered).toHaveLength(2);
+        expect(filtered.every(r => r.egg.shiny > 0)).toBe(true);
+      });
+
+      it('should filter star shiny only when shinyFilterMode is star', () => {
+        const results = [
+          createMockResultWithShiny(0),
+          createMockResultWithShiny(1),
+          createMockResultWithShiny(2),
+        ];
+        const filters: EggBootTimingFilters = { shinyFilterMode: 'star' };
+
+        const filtered = applyBootTimingFilters(results, filters, 'lcg');
+        expect(filtered).toHaveLength(1);
+        expect(filtered[0].egg.shiny).toBe(2);
+      });
+
+      it('should filter square shiny only when shinyFilterMode is square', () => {
+        const results = [
+          createMockResultWithShiny(0),
+          createMockResultWithShiny(1),
+          createMockResultWithShiny(2),
+        ];
+        const filters: EggBootTimingFilters = { shinyFilterMode: 'square' };
+
+        const filtered = applyBootTimingFilters(results, filters, 'lcg');
+        expect(filtered).toHaveLength(1);
+        expect(filtered[0].egg.shiny).toBe(1);
+      });
+
+      it('should filter non-shiny only when shinyFilterMode is non-shiny', () => {
+        const results = [
+          createMockResultWithShiny(0),
+          createMockResultWithShiny(1),
+          createMockResultWithShiny(2),
+        ];
+        const filters: EggBootTimingFilters = { shinyFilterMode: 'non-shiny' };
+
+        const filtered = applyBootTimingFilters(results, filters, 'lcg');
+        expect(filtered).toHaveLength(1);
+        expect(filtered[0].egg.shiny).toBe(0);
+      });
+
+      it('should not filter when shinyFilterMode is all', () => {
+        const results = [
+          createMockResultWithShiny(0),
+          createMockResultWithShiny(1),
+          createMockResultWithShiny(2),
+        ];
+        const filters: EggBootTimingFilters = { shinyFilterMode: 'all' };
+
+        const filtered = applyBootTimingFilters(results, filters, 'lcg');
+        expect(filtered).toHaveLength(3);
+      });
+
+      it('should apply shinyFilterMode even in LCG mode', () => {
+        const results = [
+          createMockResultWithShiny(0),
+          createMockResultWithShiny(2),
+        ];
+        const filters: EggBootTimingFilters = { shinyFilterMode: 'star' };
+
+        const filtered = applyBootTimingFilters(results, filters, 'lcg');
+        expect(filtered).toHaveLength(1);
+        expect(filtered[0].egg.shiny).toBe(2);
+      });
     });
   });
 

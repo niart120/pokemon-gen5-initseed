@@ -5,6 +5,7 @@
 
 import type { Hardware, ROMRegion, ROMVersion } from '@/types/rom';
 import type { KeyName } from '@/lib/utils/key-input';
+import type { ShinyFilterMode } from '@/store/generation-store';
 
 // === 基本型 ===
 
@@ -92,7 +93,7 @@ export interface EggIndividualFilter {
   nature?: number;                // 0-24
   gender?: 'male' | 'female' | 'genderless';
   ability?: 0 | 1 | 2;            // 0=特性1, 1=特性2, 2=夢特性
-  shiny?: 0 | 1 | 2;              // 0=通常, 1=正方形色違い, 2=星型色違い
+  shinyFilterMode?: ShinyFilterMode;  // 'all'/'shiny'/'star'/'square'/'non-shiny'
   hiddenPowerType?: number;       // 0-15
   hiddenPowerPower?: number;      // 30-70
 }
@@ -488,16 +489,17 @@ export function createDefaultParentsIVs(): ParentsIVs {
 
 /**
  * デフォルトフィルター
+ * IV範囲はデフォルトで「任意」(0-32) に設定
  */
 export function createDefaultEggFilter(): EggIndividualFilter {
   return {
     ivRanges: [
-      { min: 31, max: 31 },
-      { min: 31, max: 31 },
-      { min: 31, max: 31 },
-      { min: 31, max: 31 },
-      { min: 31, max: 31 },
-      { min: 31, max: 31 },
+      { min: 0, max: 32 },
+      { min: 0, max: 32 },
+      { min: 0, max: 32 },
+      { min: 0, max: 32 },
+      { min: 0, max: 32 },
+      { min: 0, max: 32 },
     ],
   };
 }

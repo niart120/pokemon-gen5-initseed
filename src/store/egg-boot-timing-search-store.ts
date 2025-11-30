@@ -19,6 +19,7 @@ import type { EggGenerationConditions, ParentsIVs, IvSet, EggIndividualFilter } 
 import { createDefaultEggFilter } from '@/types/egg';
 import type { DeviceProfile } from '@/types/profile';
 import type { DailyTimeRange } from '@/types/search';
+import { type CommonEggResultFilters, applyCommonEggFilters } from '@/lib/egg/egg-result-filter';
 import { EggBootTimingMultiWorkerManager } from '@/lib/egg';
 
 /**
@@ -50,17 +51,9 @@ export interface EggBootTimingSearchProgress {
 
 /**
  * 結果フィルター条件
+ * CommonEggResultFilters を使用（Search/Generation共通）
  */
-export interface EggBootTimingResultFilters {
-  // 色違いフィルター
-  shinyOnly?: boolean;
-  // 性格フィルター
-  natures?: number[];
-  // Timer0フィルター (hex文字列)
-  timer0Filter?: string;
-  // VCountフィルター (hex文字列)
-  vcountFilter?: string;
-}
+export type EggBootTimingResultFilters = CommonEggResultFilters;
 
 const MAX_RESULTS = 1000;
 
@@ -132,6 +125,7 @@ interface EggBootTimingSearchActions {
   updateResultFilters: (filters: Partial<EggBootTimingResultFilters>) => void;
   getFilteredResults: () => EggBootTimingSearchResult[];
   clearResults: () => void;
+  resetFilters: () => void;
   
   // --- リセット ---
   reset: () => void;
@@ -399,39 +393,29 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
     getFilteredResults: () => {
       const { results, resultFilters } = get();
       
-      // Timer0フィルター値をパース
-      const timer0FilterValue = resultFilters.timer0Filter
-        ? parseInt(resultFilters.timer0Filter, 16)
-        : null;
-      const hasTimer0Filter = timer0FilterValue !== null && !isNaN(timer0FilterValue);
+      // EggBootTimingSearchResult を EnumeratedEggDataWithBootTiming に変換して共通フィルターを適用
+      const enrichedResults = results.map(result => ({
+        advance: result.egg.advance,
+        egg: result.egg.egg,
+        isStable: result.egg.isStable,
+        seedSourceMode: 'boot-timing' as const,
+        timer0: result.boot.timer0,
+        vcount: result.boot.vcount,
+        bootTimestampIso: result.boot.datetime.toISOString(),
+      }));
       
-      // VCountフィルター値をパース
-      const vcountFilterValue = resultFilters.vcountFilter
-        ? parseInt(resultFilters.vcountFilter, 16)
-        : null;
-      const hasVcountFilter = vcountFilterValue !== null && !isNaN(vcountFilterValue);
+      const filtered = applyCommonEggFilters(enrichedResults, resultFilters, 'boot-timing');
       
-      return results.filter((result) => {
-        // 色違いフィルター
-        if (resultFilters.shinyOnly && result.egg.egg.shiny === 0) {
-          return false;
+      // フィルター通過したインデックスを取得
+      const filteredIndices = new Set<number>();
+      enrichedResults.forEach((enriched, index) => {
+        if (filtered.includes(enriched)) {
+          filteredIndices.add(index);
         }
-        // 性格フィルター
-        if (resultFilters.natures && resultFilters.natures.length > 0) {
-          if (!resultFilters.natures.includes(result.egg.egg.nature)) {
-            return false;
-          }
-        }
-        // Timer0フィルター
-        if (hasTimer0Filter && result.boot.timer0 !== timer0FilterValue) {
-          return false;
-        }
-        // VCountフィルター
-        if (hasVcountFilter && result.boot.vcount !== vcountFilterValue) {
-          return false;
-        }
-        return true;
       });
+      
+      // 元の結果形式でフィルター済み結果を返す
+      return results.filter((_, index) => filteredIndices.has(index));
     },
 
     clearResults: () => {
@@ -443,6 +427,17 @@ export const useEggBootTimingSearchStore = create<EggBootTimingSearchStore>(
         lastElapsedMs: null,
         lastCompletion: null,
       });
+    },
+
+    resetFilters: () => {
+      const defaultFilter = createDefaultEggFilter();
+      set((state) => ({
+        draftParams: {
+          ...state.draftParams,
+          filter: defaultFilter,
+        },
+        resultFilters: {},
+      }));
     },
 
     // === リセット ===

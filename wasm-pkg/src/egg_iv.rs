@@ -25,6 +25,30 @@ pub enum EggIvError {
     InvalidIvValue(IvValue),
 }
 
+/// Shiny filter mode for WASM API
+/// All = no filter, Shiny = star OR square, Star/Square/NonShiny = specific
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShinyFilterMode {
+    All = 0,
+    Shiny = 1,      // Star OR Square
+    Star = 2,
+    Square = 3,
+    NonShiny = 4,
+}
+
+impl ShinyFilterMode {
+    pub fn from_u8(value: u8) -> Self {
+        match value {
+            0 => ShinyFilterMode::All,
+            1 => ShinyFilterMode::Shiny,
+            2 => ShinyFilterMode::Star,
+            3 => ShinyFilterMode::Square,
+            4 => ShinyFilterMode::NonShiny,
+            _ => ShinyFilterMode::All,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HiddenPowerType {
     Fighting = 0,
@@ -460,7 +484,7 @@ pub struct IndividualFilter {
     pub nature: Option<Nature>,
     pub gender: Option<Gender>,
     pub ability: Option<AbilitySlot>,
-    pub shiny: Option<ShinyType>,
+    pub shiny_filter_mode: Option<ShinyFilterMode>,
     pub hidden_power_type: Option<HiddenPowerType>,
     pub hidden_power_power: Option<u8>,
 }
@@ -472,7 +496,7 @@ impl Default for IndividualFilter {
             nature: None,
             gender: None,
             ability: None,
-            shiny: None,
+            shiny_filter_mode: None,
             hidden_power_type: None,
             hidden_power_power: None,
         }
@@ -518,12 +542,10 @@ impl IndividualFilterJs {
         });
     }
 
-    pub fn set_shiny(&mut self, shiny: u8) {
-        self.inner.shiny = Some(match shiny {
-            0 => ShinyType::Normal,
-            1 => ShinyType::Square,
-            _ => ShinyType::Star,
-        });
+    /// Set shiny filter mode
+    /// 0 = All (no filter), 1 = Shiny (star OR square), 2 = Star, 3 = Square, 4 = NonShiny
+    pub fn set_shiny_filter_mode(&mut self, mode: u8) {
+        self.inner.shiny_filter_mode = Some(ShinyFilterMode::from_u8(mode));
     }
 
     pub fn set_hidden_power_type(&mut self, hp_type: u8) {
@@ -698,9 +720,29 @@ pub fn matches_filter(egg: &ResolvedEgg, filter: &IndividualFilter) -> bool {
         }
     }
 
-    if let Some(expected) = filter.shiny {
-        if egg.shiny != expected {
-            return false;
+    if let Some(mode) = filter.shiny_filter_mode {
+        match mode {
+            ShinyFilterMode::All => {}
+            ShinyFilterMode::Shiny => {
+                if egg.shiny == ShinyType::Normal {
+                    return false;
+                }
+            }
+            ShinyFilterMode::Star => {
+                if egg.shiny != ShinyType::Star {
+                    return false;
+                }
+            }
+            ShinyFilterMode::Square => {
+                if egg.shiny != ShinyType::Square {
+                    return false;
+                }
+            }
+            ShinyFilterMode::NonShiny => {
+                if egg.shiny != ShinyType::Normal {
+                    return false;
+                }
+            }
         }
     }
 

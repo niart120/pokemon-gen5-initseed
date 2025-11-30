@@ -1,8 +1,14 @@
+import type { ShinyFilterMode } from '@/store/generation-store';
 import type { LocaleText, LocaleMap } from './types';
 
 export const eggFilterPanelTitle: LocaleText = {
   ja: 'Filter',
   en: 'Filter',
+};
+
+export const eggFilterResetLabel: LocaleText = {
+  ja: 'リセット',
+  en: 'Reset',
 };
 
 export const eggFilterDisabledLabel: LocaleText = {
@@ -92,6 +98,27 @@ export const eggFilterShinyOptions: LocaleMap<Record<'none' | '0' | '1' | '2', s
     '0': '-',
     '1': '◇',
     '2': '☆',
+  },
+};
+
+/**
+ * ShinyFilterMode ベースの色違いフィルターオプション
+ * Generation Panel と統一した選択肢
+ */
+export const eggFilterShinyModeOptions: LocaleMap<Record<ShinyFilterMode, string>> = {
+  ja: {
+    all: '指定なし',
+    shiny: '☆&◇',
+    star: '☆',
+    square: '◇',
+    'non-shiny': '通常色',
+  },
+  en: {
+    all: 'Any',
+    shiny: '☆&◇',
+    star: '☆',
+    square: '◇',
+    'non-shiny': 'Normal',
   },
 };
 
