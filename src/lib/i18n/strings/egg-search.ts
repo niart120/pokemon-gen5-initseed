@@ -28,7 +28,7 @@ export const eggSearchRunCardTitle: LocaleText = {
 };
 
 export const eggSearchStatusPrefix: LocaleText = {
-  ja: 'ステータス',
+  ja: 'Status',
   en: 'Status',
 };
 
@@ -74,17 +74,17 @@ export const eggSearchButtonLabels = {
 
 export const eggSearchStatusLabels: LocaleMap<Record<EggBootTimingSearchStatus, string>> = {
   ja: {
-    idle: 'アイドル',
-    starting: '開始中',
-    running: '検索中',
-    stopping: '停止中',
-    completed: '完了',
-    error: 'エラー',
+    idle: 'Idle',
+    starting: 'Starting',
+    running: 'Running',
+    stopping: 'Stopping',
+    completed: 'Completed',
+    error: 'Error',
   },
   en: {
     idle: 'Idle',
     starting: 'Starting',
-    running: 'Searching',
+    running: 'Running',
     stopping: 'Stopping',
     completed: 'Completed',
     error: 'Error',

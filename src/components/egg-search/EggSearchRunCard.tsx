@@ -14,12 +14,13 @@ import {
   eggSearchStatusPrefix,
   eggSearchButtonLabels,
   getEggSearchStatusLabel,
-  formatEggSearchElapsed,
-  formatEggSearchResultsCount,
-  formatEggSearchPercentDisplay,
   eggSearchControlsLabel,
   eggSearchResultsLabel,
 } from '@/lib/i18n/strings/egg-search';
+import {
+  formatRunProgressPercent,
+  formatRunProgressCount,
+} from '@/lib/i18n/strings/run-progress';
 
 export function EggSearchRunCard() {
   const locale = useLocale();
@@ -29,7 +30,6 @@ export function EggSearchRunCard() {
     startSearch,
     stopSearch,
     results,
-    lastElapsedMs,
     errorMessage,
     params,
     draftParams,
@@ -54,13 +54,8 @@ export function EggSearchRunCard() {
   const pct = progress?.progressPercent ?? (maxResults > 0 ? (foundCount / maxResults) * 100 : 0);
 
   const statusDisplay = getEggSearchStatusLabel(status, locale);
-  const resultsDisplay = formatEggSearchResultsCount(foundCount, locale);
-  const percentDisplay = formatEggSearchPercentDisplay(pct, locale);
-  const elapsedDisplay = progress?.elapsedMs
-    ? formatEggSearchElapsed(progress.elapsedMs, locale)
-    : lastElapsedMs
-      ? formatEggSearchElapsed(lastElapsedMs, locale)
-      : '--';
+  const percentDisplay = formatRunProgressPercent(pct, locale);
+  const countDisplay = formatRunProgressCount(foundCount, maxResults, locale);
 
   return (
     <PanelCard
@@ -96,14 +91,11 @@ export function EggSearchRunCard() {
         </div>
       </div>
 
-      {/* Result summary */}
+      {/* Result summary - 1行表示: 12.3%  xxx / yyy results */}
       <div className="space-y-1" aria-label={eggSearchResultsLabel[locale]}>
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono flex-wrap gap-x-2">
           <span>{percentDisplay}</span>
-          <span>{resultsDisplay}</span>
-        </div>
-        <div className="flex items-center justify-end text-[11px] font-mono text-primary">
-          {elapsedDisplay}
+          <span>{countDisplay}</span>
         </div>
       </div>
     </PanelCard>

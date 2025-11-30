@@ -11,8 +11,11 @@ import {
   eggRunStatusPrefix,
   eggRunButtonLabels,
   getEggRunStatusLabel,
-  formatEggRunProgress,
 } from '@/lib/i18n/strings/egg-run';
+import {
+  formatRunProgressPercent,
+  formatRunProgressCount,
+} from '@/lib/i18n/strings/run-progress';
 
 /**
  * EggRunCard
@@ -45,8 +48,8 @@ export const EggRunCard: React.FC = () => {
   const canStart = status === 'idle' || status === 'completed' || status === 'error';
 
   const pct = draftParams.count > 0 ? (results.length / draftParams.count) * 100 : 0;
-  const advancesDisplay = formatEggRunProgress(results.length, draftParams.count, locale);
-  const percentDisplay = `${pct.toFixed(1)}%`;
+  const percentDisplay = formatRunProgressPercent(pct, locale);
+  const countDisplay = formatRunProgressCount(results.length, draftParams.count, locale);
 
   return (
     <PanelCard
@@ -81,14 +84,14 @@ export const EggRunCard: React.FC = () => {
           </Button>
         )}
         <div className="text-xs text-muted-foreground ml-auto">
-          {eggRunStatusPrefix[locale]} {getEggRunStatusLabel(status, locale)}
+          {eggRunStatusPrefix[locale]}: {getEggRunStatusLabel(status, locale)}
         </div>
       </div>
-      {/* Result summary */}
+      {/* Result summary - 1行表示: 12.3%  xxx / yyy results */}
       <div className="space-y-1" aria-label="Results">
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono flex-wrap gap-x-2">
           <span>{percentDisplay}</span>
-          <span>{advancesDisplay}</span>
+          <span>{countDisplay}</span>
         </div>
       </div>
     </PanelCard>
