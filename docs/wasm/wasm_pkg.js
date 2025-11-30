@@ -1919,10 +1919,12 @@ export class IndividualFilterJs {
         wasm.individualfilterjs_set_ability(this.__wbg_ptr, ability);
     }
     /**
-     * @param {number} shiny
+     * Set shiny filter mode
+     * 0 = All (no filter), 1 = Shiny (star OR square), 2 = Star, 3 = Square, 4 = NonShiny
+     * @param {number} mode
      */
-    set_shiny(shiny) {
-        wasm.individualfilterjs_set_shiny(this.__wbg_ptr, shiny);
+    set_shiny_filter_mode(mode) {
+        wasm.individualfilterjs_set_shiny_filter_mode(this.__wbg_ptr, mode);
     }
     /**
      * @param {number} hp_type

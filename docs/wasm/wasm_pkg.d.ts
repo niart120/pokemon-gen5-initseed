@@ -552,7 +552,11 @@ export class IndividualFilterJs {
   set_nature(nature_index: number): void;
   set_gender(gender: number): void;
   set_ability(ability: number): void;
-  set_shiny(shiny: number): void;
+  /**
+   * Set shiny filter mode
+   * 0 = All (no filter), 1 = Shiny (star OR square), 2 = Star, 3 = Square, 4 = NonShiny
+   */
+  set_shiny_filter_mode(mode: number): void;
   set_hidden_power_type(hp_type: number): void;
   set_hidden_power_power(power: number): void;
 }
@@ -1381,7 +1385,7 @@ export interface InitOutput {
   readonly individualfilterjs_set_nature: (a: number, b: number) => void;
   readonly individualfilterjs_set_gender: (a: number, b: number) => void;
   readonly individualfilterjs_set_ability: (a: number, b: number) => void;
-  readonly individualfilterjs_set_shiny: (a: number, b: number) => void;
+  readonly individualfilterjs_set_shiny_filter_mode: (a: number, b: number) => void;
   readonly individualfilterjs_set_hidden_power_type: (a: number, b: number) => void;
   readonly individualfilterjs_set_hidden_power_power: (a: number, b: number) => void;
   readonly parentsivsjs_new: () => number;
