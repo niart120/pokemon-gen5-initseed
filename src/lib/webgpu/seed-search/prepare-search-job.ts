@@ -1,7 +1,7 @@
 import romParameters from '@/data/rom-parameters';
 import { generateValidKeyCodes } from '@/lib/utils/key-input';
 import type { Hardware } from '@/types/rom';
-import type { SearchConditions } from '@/types/search';
+import type { SearchConditions, Timer0VCountSegment } from '@/types/search';
 import { resolveTimePlan, type ResolvedTimePlan } from '@/lib/search/time/time-plan';
 import type {
   SeedSearchJob,
@@ -13,15 +13,9 @@ import type {
 const GX_STAT = 0x06000000;
 const MAX_U32 = 0xffffffff;
 
-interface Timer0SegmentDescriptor {
-  timer0Min: number;
-  timer0Max: number;
-  vcount: number;
-}
-
 interface KernelContext {
   rangeSeconds: number;
-  timer0Segments: Timer0SegmentDescriptor[];
+  timer0Segments: Timer0VCountSegment[];
   keyCodes: number[];
   nazoSwapped: Uint32Array;
   macLower: number;
@@ -313,14 +307,14 @@ function resolveRomParameters(conditions: SearchConditions) {
 
   return {
     nazo: [...regionData.nazo] as [number, number, number, number, number],
-    vcountTimerRanges: regionData.vcountTimerRanges.map((entry) => [...entry] as [number, number, number]),
+    vcountTimerRanges: regionData.vcountTimerRanges.map((segment) => ({ ...segment })),
   };
 }
 
 function resolveTimer0Segments(
   conditions: SearchConditions,
-  params: { vcountTimerRanges: readonly [number, number, number][] }
-): Timer0SegmentDescriptor[] {
+  params: { vcountTimerRanges: readonly Timer0VCountSegment[] }
+): Timer0VCountSegment[] {
   const {
     timer0VCountConfig: {
       useAutoConfiguration,
@@ -331,44 +325,19 @@ function resolveTimer0Segments(
 
   if (!useAutoConfiguration) {
     // Manual mode: Timer0範囲 × VCount範囲の全組み合わせ
-    const segments: Timer0SegmentDescriptor[] = [];
+    const segments: Timer0VCountSegment[] = [];
     for (let vcount = vcountMin; vcount <= vcountMax; vcount += 1) {
       segments.push({ timer0Min, timer0Max, vcount });
     }
     return segments;
   }
 
-  // Auto mode: vcountTimerRangesを順方向で使用（逆引き不要）
-  // vcountTimerRanges = [[vcount, rangeMin, rangeMax], ...] の形式
-  return resolveTimer0SegmentsFromRomParams(params, timer0Min, timer0Max);
-}
-
-/**
- * vcountTimerRangesから指定Timer0範囲と交差するセグメントを生成
- * VCountをループの外側に置くことで、Timer0からVCountへの逆引きが不要
- */
-function resolveTimer0SegmentsFromRomParams(
-  params: { vcountTimerRanges: readonly [number, number, number][] },
-  timer0Min: number,
-  timer0Max: number
-): Timer0SegmentDescriptor[] {
-  const segments: Timer0SegmentDescriptor[] = [];
-
-  for (const [vcount, rangeMin, rangeMax] of params.vcountTimerRanges) {
-    // 指定されたTimer0範囲との交差部分を計算
-    const effectiveMin = Math.max(timer0Min, rangeMin);
-    const effectiveMax = Math.min(timer0Max, rangeMax);
-
-    if (effectiveMin <= effectiveMax) {
-      segments.push({
-        timer0Min: effectiveMin,
-        timer0Max: effectiveMax,
-        vcount,
-      });
-    }
-  }
-
-  return segments;
+  // Auto mode: ROMのvcountTimerRangesをそのまま使用
+  return params.vcountTimerRanges.map((s) => ({
+    vcount: s.vcount,
+    timer0Min: s.timer0Min,
+    timer0Max: s.timer0Max,
+  }));
 }
 
 function computeMacWords(mac: number[], frame: number): { macLower: number; data7Swapped: number } {

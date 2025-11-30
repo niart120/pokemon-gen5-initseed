@@ -18,7 +18,7 @@ import type {
 import type { SingleWorkerSearchCallbacks } from '../../types/callbacks';
 import { useAppStore } from '@/store/app-store';
 import type { SearchExecutionMode } from '@/store/app-store';
-import { computeVCountRangeFromTimer0Range } from '@/lib/utils/rom-parameter-helpers';
+import { getROMParameters } from '@/lib/utils/rom-parameter-helpers';
 
 /**
  * SearchConditions を MtSeedBootTimingSearchParams に変換
@@ -37,19 +37,32 @@ function convertToMtSeedBootTimingSearchParams(
     conditions.macAddress[5] ?? 0,
   ];
 
-  // Auto設定時はROMパラメータからVCount範囲を計算
-  // GPU検索と同様の動作を保証する
-  const vcountRange = conditions.timer0VCountConfig.useAutoConfiguration
-    ? computeVCountRangeFromTimer0Range(
-        conditions.romVersion,
-        conditions.romRegion,
-        conditions.timer0VCountConfig.timer0Range.min,
-        conditions.timer0VCountConfig.timer0Range.max
-      )
-    : {
-        min: conditions.timer0VCountConfig.vcountRange.min,
-        max: conditions.timer0VCountConfig.vcountRange.max,
+  // Auto設定時はROMパラメータからセグメントを取得し、VCount範囲を導出
+  // Manual設定時はユーザー入力をそのまま使用
+  let timer0Range: { min: number; max: number };
+  let vcountRange: { min: number; max: number };
+
+  if (conditions.timer0VCountConfig.useAutoConfiguration) {
+    const params = getROMParameters(conditions.romVersion, conditions.romRegion);
+    if (params && params.vcountTimerRanges.length > 0) {
+      const segments = params.vcountTimerRanges;
+      timer0Range = {
+        min: Math.min(...segments.map(s => s.timer0Min)),
+        max: Math.max(...segments.map(s => s.timer0Max)),
       };
+      vcountRange = {
+        min: Math.min(...segments.map(s => s.vcount)),
+        max: Math.max(...segments.map(s => s.vcount)),
+      };
+    } else {
+      // フォールバック
+      timer0Range = { ...conditions.timer0VCountConfig.timer0Range };
+      vcountRange = { ...conditions.timer0VCountConfig.vcountRange };
+    }
+  } else {
+    timer0Range = { ...conditions.timer0VCountConfig.timer0Range };
+    vcountRange = { ...conditions.timer0VCountConfig.vcountRange };
+  }
 
   return {
     dateRange: {
@@ -60,10 +73,7 @@ function convertToMtSeedBootTimingSearchParams(
       endMonth: conditions.dateRange.endMonth,
       endDay: conditions.dateRange.endDay,
     },
-    timer0Range: {
-      min: conditions.timer0VCountConfig.timer0Range.min,
-      max: conditions.timer0VCountConfig.timer0Range.max,
-    },
+    timer0Range,
     vcountRange,
     keyInputMask: conditions.keyInput,
     macAddress,

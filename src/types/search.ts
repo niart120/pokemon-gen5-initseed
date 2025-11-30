@@ -51,6 +51,17 @@ export interface BootCondition {
   macAddress: readonly [number, number, number, number, number, number];
 }
 
+/**
+ * Timer0/VCount セグメント（統一形式）
+ * Auto mode: ROMのvcountTimerRangesから直接取得
+ * Manual mode: ユーザー入力から変換
+ */
+export interface Timer0VCountSegment {
+  readonly vcount: number;
+  readonly timer0Min: number;
+  readonly timer0Max: number;
+}
+
 export interface SearchConditions {
   romVersion: ROMVersion;
   romRegion: ROMRegion;
