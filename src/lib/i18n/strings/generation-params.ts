@@ -10,8 +10,8 @@ export const generationParamsPanelTitle: LocaleText = {
 
 export const generationParamsSectionTitles = {
   target: {
-    ja: '目標',
-    en: 'Target',
+    ja: '基本設定',
+    en: 'Basic Settings',
   } satisfies LocaleText,
   encounter: {
     ja: 'エンカウント',
