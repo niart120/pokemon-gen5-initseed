@@ -137,16 +137,16 @@ describe('egg-boot-timing-search-store', () => {
   });
 
   describe('updateResultFilters', () => {
-    it('should update shinyOnly filter', () => {
+    it('should update shinyFilterMode filter', () => {
       const { updateResultFilters } = useEggBootTimingSearchStore.getState();
-      updateResultFilters({ shinyOnly: true });
-      expect(useEggBootTimingSearchStore.getState().resultFilters.shinyOnly).toBe(true);
+      updateResultFilters({ shinyFilterMode: 'shiny' });
+      expect(useEggBootTimingSearchStore.getState().resultFilters.shinyFilterMode).toBe('shiny');
     });
 
-    it('should update natures filter', () => {
+    it('should update nature filter', () => {
       const { updateResultFilters } = useEggBootTimingSearchStore.getState();
-      updateResultFilters({ natures: [1, 5, 10] });
-      expect(useEggBootTimingSearchStore.getState().resultFilters.natures).toEqual([1, 5, 10]);
+      updateResultFilters({ nature: 5 });
+      expect(useEggBootTimingSearchStore.getState().resultFilters.nature).toBe(5);
     });
   });
 
@@ -179,7 +179,7 @@ describe('egg-boot-timing-search-store', () => {
     });
 
     beforeEach(() => {
-      // Add mock results
+      // Reset filters and add mock results
       useEggBootTimingSearchStore.setState({
         results: [
           mockResult(0, 0),  // not shiny, hardy
@@ -187,6 +187,7 @@ describe('egg-boot-timing-search-store', () => {
           mockResult(1, 2),  // star shiny, brave
           mockResult(0, 3),  // not shiny, adamant
         ],
+        resultFilters: {},  // Reset filters before each test
       });
     });
 
@@ -195,25 +196,40 @@ describe('egg-boot-timing-search-store', () => {
       expect(getFilteredResults()).toHaveLength(4);
     });
 
-    it('should filter shiny only when shinyOnly is true', () => {
-      const { updateResultFilters, getFilteredResults } = useEggBootTimingSearchStore.getState();
-      updateResultFilters({ shinyOnly: true });
+    it('should filter shiny only when shinyFilterMode is shiny', () => {
+      const { updateResultFilters } = useEggBootTimingSearchStore.getState();
+      updateResultFilters({ shinyFilterMode: 'shiny' });
+      
+      const { getFilteredResults, resultFilters } = useEggBootTimingSearchStore.getState();
+      expect(resultFilters.shinyFilterMode).toBe('shiny');
+      
       const filtered = getFilteredResults();
       expect(filtered).toHaveLength(2);
       expect(filtered.every(r => r.egg.egg.shiny !== 0)).toBe(true);
     });
 
-    it('should filter by natures', () => {
-      const { updateResultFilters, getFilteredResults } = useEggBootTimingSearchStore.getState();
-      updateResultFilters({ natures: [0, 1] });
+    it('should filter by nature', () => {
+      const { updateResultFilters } = useEggBootTimingSearchStore.getState();
+      updateResultFilters({ nature: 1 }); // lonely
+      
+      // Get fresh state after update
+      const { getFilteredResults, resultFilters } = useEggBootTimingSearchStore.getState();
+      expect(resultFilters.nature).toBe(1); // Verify filter was set
+      
       const filtered = getFilteredResults();
-      expect(filtered).toHaveLength(2);
-      expect(filtered.every(r => [0, 1].includes(r.egg.egg.nature))).toBe(true);
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].egg.egg.nature).toBe(1);
     });
 
-    it('should apply both shinyOnly and natures filters', () => {
-      const { updateResultFilters, getFilteredResults } = useEggBootTimingSearchStore.getState();
-      updateResultFilters({ shinyOnly: true, natures: [1] });
+    it('should apply both shinyFilterMode and nature filters', () => {
+      const { updateResultFilters } = useEggBootTimingSearchStore.getState();
+      updateResultFilters({ shinyFilterMode: 'shiny', nature: 1 });
+      
+      // Get fresh state after update
+      const { getFilteredResults, resultFilters } = useEggBootTimingSearchStore.getState();
+      expect(resultFilters.shinyFilterMode).toBe('shiny');
+      expect(resultFilters.nature).toBe(1);
+      
       const filtered = getFilteredResults();
       expect(filtered).toHaveLength(1);
       expect(filtered[0].egg.egg.shiny).toBe(2);
@@ -251,7 +267,7 @@ describe('egg-boot-timing-search-store', () => {
         status: 'running',
         results: [{ boot: {}, lcgSeedHex: 'test', egg: {}, isStable: true } as any],
         _pendingResults: [{ boot: {}, lcgSeedHex: 'test2', egg: {}, isStable: true } as any],
-        resultFilters: { shinyOnly: true },
+        resultFilters: { shinyFilterMode: 'shiny' },
         errorMessage: 'test error',
         lastElapsedMs: 5000,
       });

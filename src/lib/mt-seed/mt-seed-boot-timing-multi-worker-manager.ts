@@ -431,8 +431,12 @@ export class MtSeedBootTimingMultiWorkerManager {
    */
   pauseAll(): void {
     this.pauseManagerTimer();
-    for (const worker of this.workers.values()) {
-      worker.postMessage({ type: 'STOP' }); // IV workerはPAUSEがないためSTOPを使用
+    for (const [workerId, worker] of this.workers.entries()) {
+      worker.postMessage({ type: 'PAUSE' });
+      const progress = this.workerProgresses.get(workerId);
+      if (progress) {
+        progress.status = 'paused';
+      }
     }
     this.callbacks?.onPaused?.();
   }
@@ -442,11 +446,13 @@ export class MtSeedBootTimingMultiWorkerManager {
    */
   resumeAll(): void {
     this.resumeManagerTimer();
-    // MT Seed workerはRESUMEをサポートしていないため、再開は新規検索が必要
-    // 現状では警告のみ
-    console.warn(
-      'MT Seed boot timing worker does not support resume. Please restart search.'
-    );
+    for (const [workerId, worker] of this.workers.entries()) {
+      worker.postMessage({ type: 'RESUME' });
+      const progress = this.workerProgresses.get(workerId);
+      if (progress && progress.status === 'paused') {
+        progress.status = 'running';
+      }
+    }
     this.callbacks?.onResumed?.();
   }
 

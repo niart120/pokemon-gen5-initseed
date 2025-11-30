@@ -7,8 +7,9 @@
  */
 
 import React from 'react';
-import { Funnel } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, Funnel } from '@phosphor-icons/react';
 import { PanelCard } from '@/components/ui/panel-card';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -20,6 +21,7 @@ import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import { natureName } from '@/lib/utils/format-display';
 import { DOMAIN_NATURE_COUNT } from '@/types/domain';
 import { createDefaultEggFilter, type StatRange, type EggIndividualFilter } from '@/types/egg';
+import type { ShinyFilterMode } from '@/store/generation-store';
 import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
 import {
   eggSearchFilterCardTitle,
@@ -27,13 +29,14 @@ import {
   eggSearchStatNames,
   eggSearchGenderOptions,
   eggSearchAbilityOptions,
-  eggSearchShinyOptions,
+  eggSearchShinyModeOptions,
+  eggSearchFilterResetLabel,
 } from '@/lib/i18n/strings/egg-search';
 
 export function EggSearchFilterCard() {
   const locale = useLocale();
   const { isStack } = useResponsiveLayout();
-  const { draftParams, updateFilter, updateResultFilters, resultFilters, status } = useEggBootTimingSearchStore();
+  const { draftParams, updateFilter, updateResultFilters, resultFilters, status, resetFilters } = useEggBootTimingSearchStore();
   
   const isRunning = status === 'running' || status === 'starting' || status === 'stopping';
   
@@ -41,12 +44,49 @@ export function EggSearchFilterCard() {
 
   const genderOptions = resolveLocaleValue(eggSearchGenderOptions, locale);
   const abilityOptions = resolveLocaleValue(eggSearchAbilityOptions, locale);
-  const shinyOptions = resolveLocaleValue(eggSearchShinyOptions, locale);
+  const shinyModeOptions = resolveLocaleValue(eggSearchShinyModeOptions, locale);
   const hpTypeNames = hiddenPowerTypeNames[locale] ?? hiddenPowerTypeNames.en;
   const statNames = resolveLocaleValue(eggSearchStatNames, locale);
+  const resetLabel = resolveLocaleValue(eggSearchFilterResetLabel, locale);
 
+  // 現在の色違いフィルターモード (filter.shinyFilterMode を優先)
+  const currentShinyMode: ShinyFilterMode = filter.shinyFilterMode ?? resultFilters.shinyFilterMode ?? 'all';
+
+  /**
+   * フィルター更新ハンドラ
+   * 検索パラメータ (filter) と結果表示フィルター (resultFilters) の両方に設定
+   */
   const handleFilterUpdate = (updates: Partial<EggIndividualFilter>) => {
+    // 検索パラメータに設定 → WASM側でフィルタリング
     updateFilter(updates);
+    
+    // 結果表示用フィルターにも設定 → クライアント側フィルタリング
+    // EggIndividualFilter から CommonEggResultFilters への変換
+    const resultFilterUpdates: Record<string, unknown> = {};
+    if (updates.shinyFilterMode !== undefined) {
+      resultFilterUpdates.shinyFilterMode = updates.shinyFilterMode;
+    }
+    if (updates.nature !== undefined) {
+      resultFilterUpdates.nature = updates.nature;
+    }
+    if (updates.gender !== undefined) {
+      resultFilterUpdates.gender = updates.gender;
+    }
+    if (updates.ability !== undefined) {
+      resultFilterUpdates.ability = updates.ability;
+    }
+    if (updates.hiddenPowerType !== undefined) {
+      resultFilterUpdates.hiddenPowerType = updates.hiddenPowerType;
+    }
+    if (updates.hiddenPowerPower !== undefined) {
+      resultFilterUpdates.hiddenPowerPower = updates.hiddenPowerPower;
+    }
+    if (updates.ivRanges !== undefined) {
+      resultFilterUpdates.ivRanges = updates.ivRanges;
+    }
+    if (Object.keys(resultFilterUpdates).length > 0) {
+      updateResultFilters(resultFilterUpdates);
+    }
   };
 
   const handleIvRangeChange = (
@@ -119,28 +159,39 @@ export function EggSearchFilterCard() {
     <PanelCard
       icon={<Funnel size={20} className="opacity-80" />}
       title={eggSearchFilterCardTitle[locale]}
+      headerActions={
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={resetFilters}
+          className="gap-1"
+        >
+          <ArrowCounterClockwise size={14} />
+          {resetLabel}
+        </Button>
+      }
       className={isStack ? 'min-h-[480px]' : undefined}
       fullHeight={!isStack}
       scrollMode={isStack ? 'parent' : 'content'}
     >
-      {/* 性格・性別・特性・色違い: 2列グリッド */}
+      {/* 特性・性別・性格・色違い: 2列グリッド */}
       <div className="grid grid-cols-2 gap-2">
-        {/* 性格フィルター */}
+        {/* 特性フィルター */}
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">{eggSearchFilterLabels.nature[locale]}</Label>
+          <Label className="text-xs">{eggSearchFilterLabels.ability[locale]}</Label>
           <Select
-            value={filter.nature !== undefined ? String(filter.nature) : 'none'}
-            onValueChange={(v) => handleFilterUpdate({ nature: v !== 'none' ? Number(v) : undefined })}
+            value={filter.ability !== undefined ? String(filter.ability) : 'none'}
+            onValueChange={(v) => handleFilterUpdate({ ability: v !== 'none' ? Number(v) as 0 | 1 | 2 : undefined })}
             disabled={isRunning }
           >
             <SelectTrigger className="text-xs h-8">
               <SelectValue placeholder={eggSearchFilterLabels.noSelection[locale]} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none" className="text-xs">{eggSearchFilterLabels.noSelection[locale]}</SelectItem>
-              {Array.from({ length: DOMAIN_NATURE_COUNT }, (_, i) => (
-                <SelectItem key={i} value={String(i)} className="text-xs">
-                  {natureName(i, locale)}
+              {Object.entries(abilityOptions).map(([value, label]) => (
+                <SelectItem key={value} value={value} className="text-xs">
+                  {label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -168,21 +219,22 @@ export function EggSearchFilterCard() {
           </Select>
         </div>
 
-        {/* 特性フィルター */}
+        {/* 性格フィルター */}
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">{eggSearchFilterLabels.ability[locale]}</Label>
+          <Label className="text-xs">{eggSearchFilterLabels.nature[locale]}</Label>
           <Select
-            value={filter.ability !== undefined ? String(filter.ability) : 'none'}
-            onValueChange={(v) => handleFilterUpdate({ ability: v !== 'none' ? Number(v) as 0 | 1 | 2 : undefined })}
+            value={filter.nature !== undefined ? String(filter.nature) : 'none'}
+            onValueChange={(v) => handleFilterUpdate({ nature: v !== 'none' ? Number(v) : undefined })}
             disabled={isRunning }
           >
             <SelectTrigger className="text-xs h-8">
               <SelectValue placeholder={eggSearchFilterLabels.noSelection[locale]} />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(abilityOptions).map(([value, label]) => (
-                <SelectItem key={value} value={value} className="text-xs">
-                  {label}
+              <SelectItem value="none" className="text-xs">{eggSearchFilterLabels.noSelection[locale]}</SelectItem>
+              {Array.from({ length: DOMAIN_NATURE_COUNT }, (_, i) => (
+                <SelectItem key={i} value={String(i)} className="text-xs">
+                  {natureName(i, locale)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -193,17 +245,17 @@ export function EggSearchFilterCard() {
         <div className="flex flex-col gap-1">
           <Label className="text-xs">{eggSearchFilterLabels.shiny[locale]}</Label>
           <Select
-            value={filter.shiny !== undefined ? String(filter.shiny) : 'none'}
-            onValueChange={(v) => handleFilterUpdate({ shiny: v !== 'none' ? Number(v) as 0 | 1 | 2 : undefined })}
+            value={currentShinyMode}
+            onValueChange={(v) => handleFilterUpdate({ shinyFilterMode: v as ShinyFilterMode })}
             disabled={isRunning }
           >
             <SelectTrigger className="text-xs h-8">
               <SelectValue placeholder={eggSearchFilterLabels.noSelection[locale]} />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(shinyOptions).map(([value, label]) => (
-                <SelectItem key={value} value={value} className="text-xs">
-                  {label}
+              {(Object.keys(shinyModeOptions) as ShinyFilterMode[]).map((mode) => (
+                <SelectItem key={mode} value={mode} className="text-xs">
+                  {shinyModeOptions[mode]}
                 </SelectItem>
               ))}
             </SelectContent>

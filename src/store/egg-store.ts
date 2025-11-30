@@ -10,6 +10,7 @@ import {
   hexParamsToEggParams,
   validateEggParams,
   createDefaultEggParamsHex,
+  createDefaultEggFilter,
   deriveEggGameMode,
 } from '@/types/egg';
 import {
@@ -68,6 +69,7 @@ interface EggStore {
   startGeneration: () => Promise<void>;
   stopGeneration: () => void;
   clearResults: () => void;
+  resetFilters: () => void;
   reset: () => void;
 }
 
@@ -288,6 +290,18 @@ export const useEggStore = create<EggStore>((set, get) => ({
 
   clearResults: () => {
     set({ results: [], lastCompletion: null, errorMessage: null, derivedSeedRunState: null, bootTimingFilters: {} });
+  },
+
+  resetFilters: () => {
+    const defaultFilter = createDefaultEggFilter();
+    set((state) => ({
+      draftParams: {
+        ...state.draftParams,
+        filter: defaultFilter,
+        filterDisabled: false,
+      },
+      bootTimingFilters: {},
+    }));
   },
 
   reset: () => {

@@ -247,8 +247,8 @@ function buildFilter(wasm: any, filter: EggBootTimingSearchParams['filter']) {
   if (filter.ability !== undefined) {
     wasmFilter.set_ability(filter.ability);
   }
-  if (filter.shiny !== undefined) {
-    wasmFilter.set_shiny(filter.shiny);
+  if (filter.shinyFilterMode !== undefined) {
+    wasmFilter.set_shiny_filter_mode(shinyFilterModeToWasm(filter.shinyFilterMode));
   }
   if (filter.hiddenPowerType !== undefined) {
     wasmFilter.set_hidden_power_type(filter.hiddenPowerType);
@@ -268,6 +268,27 @@ function genderToWasm(gender: string): number {
       return 1;
     case 'genderless':
       return 2;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * ShinyFilterMode を WASM u8 値に変換
+ * 0 = All, 1 = Shiny, 2 = Star, 3 = Square, 4 = NonShiny
+ */
+function shinyFilterModeToWasm(mode: string): number {
+  switch (mode) {
+    case 'all':
+      return 0;
+    case 'shiny':
+      return 1;
+    case 'star':
+      return 2;
+    case 'square':
+      return 3;
+    case 'non-shiny':
+      return 4;
     default:
       return 0;
   }

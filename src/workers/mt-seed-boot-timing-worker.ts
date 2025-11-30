@@ -33,12 +33,16 @@ interface InternalState {
   params: MtSeedBootTimingSearchParams | null;
   running: boolean;
   stopRequested: boolean;
+  isPaused: boolean;
+  pauseResolve: (() => void) | null;
 }
 
 const state: InternalState = {
   params: null,
   running: false,
   stopRequested: false,
+  isPaused: false,
+  pauseResolve: null,
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -117,8 +121,20 @@ ctx.onmessage = (ev: MessageEvent<MtSeedBootTimingWorkerRequest>) => {
         case 'START_SEARCH':
           await handleStart(msg.params);
           break;
+        case 'PAUSE':
+          handlePause();
+          break;
+        case 'RESUME':
+          handleResume();
+          break;
         case 'STOP':
           state.stopRequested = true;
+          // 一時停止中の場合は解除して終了させる
+          if (state.isPaused && state.pauseResolve) {
+            state.pauseResolve();
+            state.pauseResolve = null;
+            state.isPaused = false;
+          }
           break;
         default:
           break;
@@ -129,6 +145,60 @@ ctx.onmessage = (ev: MessageEvent<MtSeedBootTimingWorkerRequest>) => {
     }
   })();
 };
+
+/**
+ * 一時停止処理
+ */
+function handlePause(): void {
+  if (!state.running || state.isPaused) {
+    return;
+  }
+  state.isPaused = true;
+  post({ type: 'PROGRESS', payload: createPausedProgress() });
+}
+
+/**
+ * 再開処理
+ */
+function handleResume(): void {
+  if (!state.running || !state.isPaused) {
+    return;
+  }
+  state.isPaused = false;
+  if (state.pauseResolve) {
+    state.pauseResolve();
+    state.pauseResolve = null;
+  }
+}
+
+/**
+ * 一時停止中の進捗情報を作成
+ */
+function createPausedProgress(): MtSeedBootTimingProgress {
+  return {
+    processedCombinations: 0,
+    totalCombinations: 0,
+    foundCount: 0,
+    progressPercent: 0,
+    elapsedMs: 0,
+    estimatedRemainingMs: 0,
+  };
+}
+
+/**
+ * 一時停止中は待機する
+ */
+async function waitWhilePaused(): Promise<void> {
+  // イベントループに制御を戻してPAUSEメッセージを処理可能にする
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  if (!state.isPaused) {
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    state.pauseResolve = resolve;
+  });
+}
 
 async function handleStart(params: MtSeedBootTimingSearchParams) {
   if (state.running) {
@@ -312,6 +382,9 @@ async function executeSearch(
       vcount++
     ) {
       for (const keyCode of keyCodes) {
+        // 一時停止中は待機
+        await waitWhilePaused();
+
         if (state.stopRequested || resultsCount >= params.maxResults) {
           return { resultsCount, processedSegments, totalSegments };
         }
@@ -357,6 +430,9 @@ async function executeSearch(
           let processedSecondsInSegment = 0;
 
           while (!iterator.isFinished && resultsCount < params.maxResults) {
+            // 一時停止中は待機
+            await waitWhilePaused();
+
             if (state.stopRequested) break;
 
             const batchResults = iterator.next_batch(RESULT_LIMIT, CHUNK_SECONDS);
@@ -444,6 +520,8 @@ function cleanupState() {
   state.running = false;
   state.params = null;
   state.stopRequested = false;
+  state.isPaused = false;
+  state.pauseResolve = null;
 }
 
 ctx.onclose = () => {

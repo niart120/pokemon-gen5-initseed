@@ -35,13 +35,13 @@ export const eggParamsBaseSeedPlaceholder: LocaleText = {
 };
 
 export const eggParamsUserOffsetLabel: LocaleText = {
-  ja: '開始消費',
-  en: 'Start Frame',
+  ja: '最小消費数',
+  en: 'Min Advance',
 };
 
 export const eggParamsCountLabel: LocaleText = {
   ja: '最大消費数',
-  en: 'Max Frames',
+  en: 'Max Advance',
 };
 
 export const eggParentsMaleLabel: LocaleText = {
@@ -149,8 +149,8 @@ export const eggSeedSourceModeLabel: LocaleText = {
 
 export const eggSeedSourceModeOptions = {
   lcg: {
-    ja: 'LCG (直接入力)',
-    en: 'LCG (Direct)',
+    ja: 'LCG Seed',
+    en: 'LCG Seed',
   } satisfies LocaleText,
   'boot-timing': {
     ja: 'Boot-Timing',
@@ -170,11 +170,11 @@ export const eggParamsStatNames: LocaleMap<[string, string, string, string, stri
 
 export const eggBootTimingLabels = {
   timestamp: {
-    ja: '起動時刻',
+    ja: '起動日時',
     en: 'Boot Time',
   } satisfies LocaleText,
   timestampPlaceholder: {
-    ja: '起動時刻を入力',
+    ja: '起動日時を入力',
     en: 'Enter boot time',
   } satisfies LocaleText,
   keyInput: {
@@ -186,7 +186,7 @@ export const eggBootTimingLabels = {
     en: 'Profile Info',
   } satisfies LocaleText,
   configure: {
-    ja: '設定',
+    ja: 'Configure',
     en: 'Configure',
   } satisfies LocaleText,
   dialogTitle: {

@@ -21,7 +21,7 @@ import {
   generationParamsEncounterFieldLabel,
   generationParamsEncounterSpeciesLabel,
   generationParamsEncounterTypeLabel,
-  generationParamsMaxAdvancesLabel,
+  generationParamsMaxAdvanceLabel,
   generationParamsMinAdvanceLabel,
   generationParamsNoTypesAvailableLabel,
   generationParamsNotApplicablePlaceholder,
@@ -49,7 +49,7 @@ import {
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import type { GenerationParamsHex, SeedSourceMode } from '@/types/generation';
 import type { DomainEncounterTypeCategoryKey } from '@/types/domain';
-import { Gear } from '@phosphor-icons/react';
+import { Sliders } from '@phosphor-icons/react';
 
 // Simple hex normalization guard
 function isHexLike(v: string) {
@@ -120,7 +120,7 @@ export const GenerationParamsCard: React.FC = () => {
         bootKeyInput: resolveLocaleValue(generationParamsBootTimingKeyInputLabel, locale),
         bootProfile: resolveLocaleValue(generationParamsBootTimingProfileLabel, locale),
         minAdvance: resolveLocaleValue(generationParamsMinAdvanceLabel, locale),
-        maxAdvances: resolveLocaleValue(generationParamsMaxAdvancesLabel, locale),
+        maxAdvance: resolveLocaleValue(generationParamsMaxAdvanceLabel, locale),
         encounterCategory: resolveLocaleValue(generationParamsEncounterCategoryLabel, locale),
         encounterType: resolveLocaleValue(generationParamsEncounterTypeLabel, locale),
         encounterField: resolveLocaleValue(generationParamsEncounterFieldLabel, locale),
@@ -178,7 +178,7 @@ export const GenerationParamsCard: React.FC = () => {
   return (
     <>
       <PanelCard
-        icon={<Gear size={20} className="opacity-80" />}
+        icon={<Sliders size={20} className="opacity-80" />}
         title={<span id="gen-params-title">{localized.panelTitle}</span>}
         className={isStack ? 'max-h-200' : 'min-h-64'}
         fullHeight={!isStack}
@@ -191,7 +191,7 @@ export const GenerationParamsCard: React.FC = () => {
       <section aria-labelledby="gen-target" className="space-y-2" role="group">
         <h4 id="gen-target" className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{localized.sectionTitles.target}</h4>
         <div className="space-y-3">
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             <Label className="text-xs" id="lbl-seed-source" htmlFor="seed-source">{localized.labels.seedSource}</Label>
             <ToggleGroup
               id="seed-source"
@@ -291,7 +291,7 @@ export const GenerationParamsCard: React.FC = () => {
             </div>
             {/* Max Advances */}
             <div className="flex flex-col gap-1">
-              <Label className="text-xs" htmlFor="max-adv">{localized.labels.maxAdvances}</Label>
+              <Label className="text-xs" htmlFor="max-adv">{localized.labels.maxAdvance}</Label>
               <Input
                 id="max-adv"
                 type="number"

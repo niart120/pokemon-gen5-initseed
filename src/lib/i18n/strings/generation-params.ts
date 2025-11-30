@@ -10,8 +10,8 @@ export const generationParamsPanelTitle: LocaleText = {
 
 export const generationParamsSectionTitles = {
   target: {
-    ja: '目標',
-    en: 'Target',
+    ja: '基本設定',
+    en: 'Basic Settings',
   } satisfies LocaleText,
   encounter: {
     ja: 'エンカウント',
@@ -41,11 +41,11 @@ export const generationParamsSeedSourceLabel: LocaleText = {
 export const generationParamsSeedSourceOptionLabels: LocaleMap<Record<SeedSourceMode, string>> = {
   ja: {
     lcg: 'LCG Seed',
-    'boot-timing': '起動タイミング',
+    'boot-timing': 'Boot-Timing',
   },
   en: {
     lcg: 'LCG Seed',
-    'boot-timing': 'Boot Timing',
+    'boot-timing': 'Boot-Timing',
   },
 };
 
@@ -54,9 +54,9 @@ export const generationParamsMinAdvanceLabel: LocaleText = {
   en: 'Min Advance',
 };
 
-export const generationParamsMaxAdvancesLabel: LocaleText = {
+export const generationParamsMaxAdvanceLabel: LocaleText = {
   ja: '最大消費数',
-  en: 'Max Advances',
+  en: 'Max Advance',
 };
 
 export const generationParamsEncounterCategoryLabel: LocaleText = {

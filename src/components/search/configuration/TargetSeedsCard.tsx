@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Trash, Upload, Download, Warning, Target, FileText } from '@phosphor-icons/react';
+import { Trash, Warning, Target, FileText } from '@phosphor-icons/react';
 import { useAppStore } from '../../../store/app-store';
 import { SeedCalculator } from '../../../lib/core/seed-calculator';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
@@ -17,8 +17,6 @@ import {
   formatTargetSeedsPlaceholder,
   targetSeedsAriaLabel,
   targetSeedsClearButtonLabel,
-  targetSeedsExportButtonLabel,
-  targetSeedsImportButtonLabel,
   targetSeedsPanelTitle,
   targetSeedsParseErrorSummary,
   targetSeedsSupportsHexHint,
@@ -62,37 +60,6 @@ export function TargetSeedsCard() {
     setParseErrors([]);
   };
 
-  const handleImportFromFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      setTargetSeedInput(content);
-    };
-    reader.readAsText(file);
-    
-    // Reset file input
-    event.target.value = '';
-  };
-
-  const handleExportToFile = () => {
-    if (targetSeeds.seeds.length === 0) return;
-
-    const content = targetSeeds.seeds.map(seed => `0x${seed.toString(16).toUpperCase().padStart(8, '0')}`).join('\n');
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'target-seeds.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   const handleApplyTemplate = (seeds: number[]) => {
     // Convert seeds to hex format and set as input
     const seedsText = seeds.map(seed => `0x${seed.toString(16).toUpperCase().padStart(8, '0')}`).join('\n');
@@ -115,30 +82,16 @@ export function TargetSeedsCard() {
         title={resolveLocaleValue(targetSeedsPanelTitle, locale)}
         headerActions={
         <div
-          className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full"
+          className="flex gap-2"
           role="group"
           aria-label={operationsLabel}
         >
-          <Button className="w-full" variant="outline" size="sm" onClick={() => setIsTemplateDialogOpen(true)}>
+          <Button className="flex-1" variant="outline" size="sm" onClick={() => setIsTemplateDialogOpen(true)}>
             <FileText size={14} className="mr-2" />
             {resolveLocaleValue(targetSeedsTemplateButtonLabel, locale)}
           </Button>
-          <Button className="w-full" variant="outline" size="sm" onClick={() => document.getElementById('target-file-input')?.click()}>
-            <Upload size={14} className="mr-2" />
-            {resolveLocaleValue(targetSeedsImportButtonLabel, locale)}
-          </Button>
           <Button
-            className="w-full"
-            variant="outline"
-            size="sm"
-            onClick={handleExportToFile}
-            disabled={targetSeeds.seeds.length === 0}
-          >
-            <Download size={14} className="mr-2" />
-            {resolveLocaleValue(targetSeedsExportButtonLabel, locale)}
-          </Button>
-          <Button
-            className="w-full"
+            className="flex-1"
             variant="outline"
             size="sm"
             onClick={handleClearAll}
@@ -161,15 +114,6 @@ export function TargetSeedsCard() {
           value={targetSeedInput}
           onChange={(e) => setTargetSeedInput(e.target.value)}
           className="flex-1 min-h-20 max-h-48 font-mono text-sm resize-none overflow-auto"
-        />
-
-        {/* Hidden file input */}
-        <input
-          id="target-file-input"
-          type="file"
-          accept=".txt,.csv"
-          onChange={handleImportFromFile}
-          className="hidden"
         />
 
         {/* Status */}

@@ -3,6 +3,7 @@
  * Based on: spec/agent/pr_egg_boot_timing_search/I18N_DESIGN.md
  */
 
+import type { ShinyFilterMode } from '@/store/generation-store';
 import type { SupportedLocale } from '@/types/i18n';
 import { resolveLocaleValue, type LocaleMap, type LocaleText } from './types';
 import type { EggBootTimingSearchStatus } from '@/store/egg-boot-timing-search-store';
@@ -143,7 +144,7 @@ export const eggSearchParamsLabels = {
     en: 'Key Input',
   } satisfies LocaleText,
   keyInputConfigure: {
-    ja: '設定',
+    ja: 'Configure',
     en: 'Configure',
   } satisfies LocaleText,
   maleParentIv: {
@@ -245,6 +246,11 @@ export const eggSearchFilterCardTitle: LocaleText = {
   en: 'Filter',
 };
 
+export const eggSearchFilterResetLabel: LocaleText = {
+  ja: 'Reset Filters',
+  en: 'Reset Filters',
+};
+
 export const eggSearchFilterLabels = {
   ivRange: {
     ja: '個体値範囲',
@@ -342,6 +348,27 @@ export const eggSearchShinyOptions: LocaleMap<Record<'none' | '0' | '1' | '2', s
     '0': '-',
     '1': '◇',
     '2': '☆',
+  },
+};
+
+/**
+ * ShinyFilterMode ベースの色違いフィルターオプション
+ * Generation Panel と統一した選択肢
+ */
+export const eggSearchShinyModeOptions: LocaleMap<Record<ShinyFilterMode, string>> = {
+  ja: {
+    all: '指定なし',
+    shiny: '☆&◇',
+    star: '☆',
+    square: '◇',
+    'non-shiny': '通常色',
+  },
+  en: {
+    all: 'Any',
+    shiny: '☆&◇',
+    star: '☆',
+    square: '◇',
+    'non-shiny': 'Normal',
   },
 };
 

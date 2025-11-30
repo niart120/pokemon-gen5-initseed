@@ -155,7 +155,7 @@ const HEADER_DEFINITIONS: Record<HeaderKey, HeaderDefinition> = {
   },
   bootTimestamp: {
     label: {
-      ja: '起動時刻',
+      ja: '起動日時',
       en: 'Boot Time',
     },
   },
@@ -183,8 +183,8 @@ export const generationResultsTableEmptyMessage: LocaleText = {
 };
 
 export const generationResultsTableInitialMessage: LocaleText = {
-  ja: '生成を実行すると結果が表示されます',
-  en: 'Run generation to see results',
+  ja: '結果がありません',
+  en: 'No results',
 };
 
 export const generationResultsTableFilteredLabel: LocaleText = {
