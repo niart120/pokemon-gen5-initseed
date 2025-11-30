@@ -5,7 +5,7 @@
 
 import type { EggBootTimingSearchResult } from '@/types/egg-boot-timing-search';
 import type { IvSet, HiddenPowerInfo } from '@/types/egg';
-import { natureName, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
+import { natureName } from '@/lib/utils/format-display';
 import { keyCodeToNames } from '@/lib/utils/key-input';
 import { resolveKeyInputDisplay } from '@/lib/generation/result-formatters';
 import type { ExportFormat } from './file-utils';
@@ -35,8 +35,6 @@ interface AdaptedEggSearchResult {
   mtSeedHex: string;
   // Egg information
   advance: number;
-  directionArrow: string;
-  directionValue: number;
   ability: 0 | 1 | 2;
   abilityLabel: string;
   gender: 'male' | 'female' | 'genderless';
@@ -93,21 +91,6 @@ function adaptEggSearchResults(
   return results.map((result) => {
     const egg = result.egg.egg;
 
-    let directionValue = -1;
-    let directionArrow = '?';
-
-    // Calculate needle direction from LCG seed
-    if (result.lcgSeedHex) {
-      try {
-        const seed = BigInt(result.lcgSeedHex);
-        directionValue = calculateNeedleDirection(seed);
-        directionArrow = needleDirectionArrow(directionValue);
-      } catch {
-        directionValue = -1;
-        directionArrow = '?';
-      }
-    }
-
     // Format key input
     const keyNames = keyCodeToNames(result.boot.keyCode);
     const keyInputDisplay = resolveKeyInputDisplay(keyNames, locale) || '-';
@@ -120,8 +103,6 @@ function adaptEggSearchResults(
       lcgSeedHex: result.lcgSeedHex,
       mtSeedHex: egg.mtSeedHex,
       advance: result.egg.advance,
-      directionArrow,
-      directionValue,
       ability: egg.ability,
       abilityLabel: resolveAbilityLabel(egg.ability, locale),
       gender: egg.gender,
@@ -167,8 +148,6 @@ const CSV_HEADERS = [
   'LCGSeed',
   'MTSeed',
   'Advance',
-  'Direction',
-  'DirectionValue',
   'Ability',
   'Gender',
   'Nature',
@@ -196,8 +175,6 @@ function formatCsvExport(adapted: AdaptedEggSearchResult[]): string {
       row.lcgSeedHex,
       row.mtSeedHex,
       String(row.advance),
-      row.directionArrow,
-      row.directionValue >= 0 ? String(row.directionValue) : '',
       row.abilityLabel,
       row.genderLabel,
       row.natureName,
@@ -237,8 +214,6 @@ function formatJsonExport(
       lcgSeed: row.lcgSeedHex,
       mtSeed: row.mtSeedHex,
       advance: row.advance,
-      direction: row.directionArrow,
-      directionValue: row.directionValue >= 0 ? row.directionValue : null,
       ability: row.ability,
       abilityLabel: row.abilityLabel,
       gender: row.gender,
@@ -288,9 +263,6 @@ function formatTxtExport(
     lines.push(`  LCG Seed: ${row.lcgSeedHex}`);
     lines.push(`  MT Seed: ${row.mtSeedHex}`);
     lines.push(`  Advance: ${row.advance}`);
-    if (row.directionValue >= 0) {
-      lines.push(`  Direction: ${row.directionArrow} (${row.directionValue})`);
-    }
     lines.push(`  Ability: ${row.abilityLabel}`);
     lines.push(`  Gender: ${row.genderLabel}`);
     lines.push(`  Nature: ${row.natureName}`);
