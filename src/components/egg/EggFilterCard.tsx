@@ -315,7 +315,7 @@ export const EggFilterCard: React.FC = () => {
                 }}
                 disabled={disabled || filterDisabled}
                 placeholder={eggFilterNoSelection[locale]}
-                className="text-xs"
+                className="text-xs h-8"
               />
             </div>
 
@@ -328,7 +328,7 @@ export const EggFilterCard: React.FC = () => {
                 onChange={(e) => updateBootTimingFilters({ timer0Filter: e.target.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase() })}
                 disabled={disabled || !isBootTimingMode}
                 placeholder={isBootTimingMode ? eggFilterTimer0Placeholder[locale] : eggFilterBootTimingDisabledHint[locale]}
-                className="font-mono text-xs"
+                className="font-mono text-xs h-8"
               />
             </div>
 
@@ -341,7 +341,7 @@ export const EggFilterCard: React.FC = () => {
                 onChange={(e) => updateBootTimingFilters({ vcountFilter: e.target.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase() })}
                 disabled={disabled || !isBootTimingMode}
                 placeholder={isBootTimingMode ? eggFilterVcountPlaceholder[locale] : eggFilterBootTimingDisabledHint[locale]}
-                className="font-mono text-xs"
+                className="font-mono text-xs h-8"
               />
             </div>
           </div>
