@@ -380,8 +380,8 @@ export const eggSearchResultsTableHeaders = {
     en: 'LCG Seed',
   } satisfies LocaleText,
   advance: {
-    ja: 'Advance',
-    en: 'Advance',
+    ja: 'Adv',
+    en: 'Adv',
   } satisfies LocaleText,
   ability: {
     ja: '特性',
@@ -408,8 +408,8 @@ export const eggSearchResultsTableHeaders = {
     en: 'HP',
   } satisfies LocaleText,
   keys: {
-    ja: 'キー',
-    en: 'Keys',
+    ja: 'キー入力',
+    en: 'Key Input',
   } satisfies LocaleText,
   stable: {
     ja: '安定',
