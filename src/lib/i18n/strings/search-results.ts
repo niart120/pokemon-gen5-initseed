@@ -11,14 +11,9 @@ export const searchResultsTitle: LocaleText = {
   en: 'Results',
 };
 
-export const searchResultsInitialMessage: LocaleText = {
+export const searchResultsEmptyMessage: LocaleText = {
   ja: '検索結果はまだありません。検索を実行するとここに表示されます。',
   en: 'No results yet. Run a search to see results here.',
-};
-
-export const searchResultsFilteredEmptyMessage: LocaleText = {
-  ja: '現在のフィルター条件に一致する結果はありません。',
-  en: 'No results match the current filter criteria.',
 };
 
 export const searchResultsHeaders = {

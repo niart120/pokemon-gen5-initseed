@@ -5,7 +5,7 @@ import {
   TargetSeedsCard,
 } from '../search/configuration';
 import { SearchControlCard, SearchProgressCard } from '../search/control';
-import { ResultsControlCard, ResultsCard, ResultDetailsDialog, type SortField } from '../search/results';
+import { ResultsCard, ResultDetailsDialog } from '../search/results';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { getResponsiveSizes } from '@/lib/utils/responsive-sizes';
 import { LEFT_COLUMN_WIDTH_CLAMP } from './constants';
@@ -20,10 +20,7 @@ export function SearchPanel() {
   // スケールに応じたレスポンシブサイズ
   const sizes = getResponsiveSizes(uiScale);
 
-  // Results state management (moved from ResultsPanel)
-  const [filterSeed, setFilterSeed] = useState('');
-  const [sortField, setSortField] = useState<SortField>('datetime');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  // Results state management
   const [selectedResult, setSelectedResult] = useState<InitialSeedResult | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
@@ -44,60 +41,10 @@ export function SearchPanel() {
     }));
   }, [searchResults]);
 
-  // Filter results based on seed filter
-  const filteredResults = useMemo(() => {
-    if (!filterSeed.trim()) return searchResults;
-    
-    const filterValue = filterSeed.trim().toLowerCase();
-    return searchResults.filter(result => {
-      const seedHex = result.seed.toString(16).toLowerCase();
-      const seedDec = result.seed.toString();
-      return seedHex.includes(filterValue) || seedDec.includes(filterValue);
-    });
-  }, [searchResults, filterSeed]);
-
-  // Sort results
-  const filteredAndSortedResults = useMemo(() => {
-    const sorted = [...filteredResults].sort((a, b) => {
-      let aValue: number, bValue: number;
-      
-      switch (sortField) {
-        case 'datetime':
-          aValue = a.datetime.getTime();
-          bValue = b.datetime.getTime();
-          break;
-        case 'seed':
-          aValue = a.seed;
-          bValue = b.seed;
-          break;
-        case 'timer0':
-          aValue = a.timer0;
-          bValue = b.timer0;
-          break;
-        case 'vcount':
-          aValue = a.vcount;
-          bValue = b.vcount;
-          break;
-        default:
-          return 0;
-      }
-      
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-    
-    return sorted;
-  }, [filteredResults, sortField, sortOrder]);
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
-    }
-  };
+  // Sort results by datetime (ascending - oldest first)
+  const sortedResults = useMemo(() => {
+    return [...searchResults].sort((a, b) => a.datetime.getTime() - b.datetime.getTime());
+  }, [searchResults]);
 
   const handleShowDetails = (result: InitialSeedResult) => {
     setSelectedResult(result);
@@ -122,22 +69,10 @@ export function SearchPanel() {
         <div className="flex-none">
           <SearchProgressCard />
         </div>
-        <div className="flex-none">
-          <ResultsControlCard
-            filterSeed={filterSeed}
-            setFilterSeed={setFilterSeed}
-            sortField={sortField}
-            setSortField={setSortField}
-          />
-        </div>
         <div className="flex-1 min-h-0">
           <ResultsCard
-            filteredAndSortedResults={filteredAndSortedResults}
+            sortedResults={sortedResults}
             convertedResults={convertToSearchResults}
-            searchResultsLength={searchResults.length}
-            sortField={sortField}
-            sortOrder={sortOrder}
-            onSort={handleSort}
             onShowDetails={handleShowDetails}
           />
         </div>
@@ -182,22 +117,10 @@ export function SearchPanel() {
 
           {/* 右カラム: 結果エリア */}
           <div className={`flex-1 flex flex-col ${sizes.gap} min-w-0 ${sizes.columnWidth} overflow-y-auto`} style={{ minHeight: 0 }}>
-            <div className="flex-none">
-              <ResultsControlCard
-                filterSeed={filterSeed}
-                setFilterSeed={setFilterSeed}
-                sortField={sortField}
-                setSortField={setSortField}
-              />
-            </div>
             <div className="flex-1 min-h-0">
               <ResultsCard
-                filteredAndSortedResults={filteredAndSortedResults}
+                sortedResults={sortedResults}
                 convertedResults={convertToSearchResults}
-                searchResultsLength={searchResults.length}
-                sortField={sortField}
-                sortOrder={sortOrder}
-                onSort={handleSort}
                 onShowDetails={handleShowDetails}
               />
             </div>
