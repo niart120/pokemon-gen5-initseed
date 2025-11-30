@@ -100,7 +100,7 @@ export function ResultsCard({
     >
         <div
           ref={virtualization.containerRef}
-          className="flex-1 min-h-0 overflow-y-auto"
+          className="flex-1 min-h-0 overflow-auto"
         >
           {filteredAndSortedResults.length === 0 ? (
             <div className="flex h-full items-center justify-center px-6 text-center text-muted-foreground">
@@ -110,7 +110,7 @@ export function ResultsCard({
               )}
             </div>
           ) : (
-            <Table className="min-w-full text-xs">
+            <Table className="min-w-max text-xs">
               <TableHeader className="sticky top-0 bg-muted text-xs">
                 <TableRow className="text-left border-0">
                   <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-center">

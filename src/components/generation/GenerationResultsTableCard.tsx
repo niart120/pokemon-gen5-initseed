@@ -94,7 +94,7 @@ export const GenerationResultsTableCard: React.FC = () => {
       }
       className={isStack ? 'max-h-96' : 'min-h-96'}
       fullHeight={!isStack}
-      scrollMode={isStack ? 'parent' : 'content'}
+      scrollMode="parent"
       padding="none"
       spacing="none"
       contentClassName="p-0"
@@ -113,7 +113,7 @@ export const GenerationResultsTableCard: React.FC = () => {
             )}
           </div>
         ) : (
-        <Table className="w-max min-w-full text-xs" aria-describedby="gen-results-table-desc">
+        <Table className="min-w-max text-xs" aria-describedby="gen-results-table-desc">
           <TableCaption id="gen-results-table-desc">
             {caption}
           </TableCaption>

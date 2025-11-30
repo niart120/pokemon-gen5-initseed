@@ -115,10 +115,10 @@ export const EggResultsCard: React.FC = () => {
       icon={<TableIcon size={20} className="opacity-80" />}
       title={<span id="egg-results-title">{eggResultsPanelTitle[locale]}</span>}
       headerActions={
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary">{formatEggResultCount(sortedResults.length, locale)}</Badge>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className="flex-shrink-0">{formatEggResultCount(sortedResults.length, locale)}</Badge>
           {lastCompletion !== null && (
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="flex-shrink-0 text-xs">
               {formatEggProcessingDuration(lastCompletion.elapsedMs)}
             </Badge>
           )}
@@ -131,7 +131,7 @@ export const EggResultsCard: React.FC = () => {
       }
       className={isStack ? 'max-h-96' : undefined}
       fullHeight={!isStack}
-      scrollMode={isStack ? 'parent' : 'content'}
+      scrollMode="parent"
       padding="none"
       spacing="none"
       contentClassName="p-0"
@@ -140,7 +140,7 @@ export const EggResultsCard: React.FC = () => {
     >
       <div
         ref={virtualization.containerRef}
-        className="flex-1 min-h-0 overflow-y-auto"
+        className="flex-1 min-h-0 overflow-auto"
         data-testid="egg-results-table"
       >
         {sortedResults.length === 0 ? (
@@ -148,7 +148,7 @@ export const EggResultsCard: React.FC = () => {
             {eggResultsEmptyMessage[locale]}
           </div>
         ) : (
-          <Table className="min-w-full text-xs">
+          <Table className="min-w-max text-xs">
             <TableHeader className="sticky top-0 bg-muted text-xs">
               <TableRow className="text-left border-0">
                 <TableHead scope="col" className="px-2 py-1 font-medium">{getEggResultHeader('advance', locale)}</TableHead>
