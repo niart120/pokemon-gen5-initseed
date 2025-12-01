@@ -5,7 +5,7 @@
 
 use crate::mt19937::Mt19937;
 use crate::mt19937_simd::Mt19937x4;
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use wasm_bindgen::prelude::*;
 
 /// IVコード型（30bit圧縮表現）
@@ -69,7 +69,7 @@ pub fn search_mt_seed_segment(
     start: u32,
     end: u32,
     advances: u32,
-    target_codes: &HashSet<IvCode>,
+    target_codes: &BTreeSet<IvCode>,
 ) -> Vec<(u32, IvCode)> {
     let mut results = Vec::new();
 
@@ -88,21 +88,25 @@ pub fn search_mt_seed_segment(
 /// SIMD版検索セグメント実行
 ///
 /// 4系統同時に探索を実行し、スループットを向上させる
+/// IVコードエンコードまでSIMD演算を維持し、最後のマッチング判定時のみスカラーに変換
 ///
 /// # Arguments
 /// * `start` - 検索開始Seed (inclusive)
 /// * `end` - 検索終了Seed (inclusive)
 /// * `advances` - MT消費数
-/// * `target_codes` - 検索対象IVコードのHashSet
+/// * `target_codes` - 検索対象IVコードのBTreeSet
 ///
 /// # Returns
 /// マッチしたMT SeedとIVコードのペア配列
+#[cfg(target_arch = "wasm32")]
 pub fn search_mt_seed_segment_simd(
     start: u32,
     end: u32,
     advances: u32,
-    target_codes: &HashSet<IvCode>,
+    target_codes: &BTreeSet<IvCode>,
 ) -> Vec<(u32, IvCode)> {
+    use core::arch::wasm32::*;
+
     let mut results = Vec::new();
 
     // 4の倍数に切り下げ
@@ -119,17 +123,86 @@ pub fn search_mt_seed_segment_simd(
             mt.next_u32x4();
         }
 
+        // IV取得（6回の乱数取得）をv128のまま保持
+        // 各値は上位5bitのみ使用（>> 27）
+        let iv0 = u32x4_shr(mt.next_u32x4(), 27); // HP
+        let iv1 = u32x4_shr(mt.next_u32x4(), 27); // Atk
+        let iv2 = u32x4_shr(mt.next_u32x4(), 27); // Def
+        let iv3 = u32x4_shr(mt.next_u32x4(), 27); // SpA
+        let iv4 = u32x4_shr(mt.next_u32x4(), 27); // SpD
+        let iv5 = u32x4_shr(mt.next_u32x4(), 27); // Spe
+
+        // IVコードエンコード（SIMD演算）
+        // code = (HP << 25) | (Atk << 20) | (Def << 15) | (SpA << 10) | (SpD << 5) | Spe
+        let codes = v128_or(
+            v128_or(
+                v128_or(u32x4_shl(iv0, 25), u32x4_shl(iv1, 20)),
+                v128_or(u32x4_shl(iv2, 15), u32x4_shl(iv3, 10)),
+            ),
+            v128_or(u32x4_shl(iv4, 5), iv5),
+        );
+
+        // 最後にスカラーに変換してマッチング判定
+        let code_lanes = Mt19937x4::extract_lanes(codes);
+
+        for (i, &code) in code_lanes.iter().enumerate() {
+            let current_seed = seed.wrapping_add(i as u32);
+
+            // 範囲外チェック
+            if current_seed < start || current_seed > end {
+                continue;
+            }
+
+            if target_codes.contains(&code) {
+                results.push((current_seed, code));
+            }
+        }
+
+        // 次の4つのSeedへ（オーバーフロー対策）
+        seed = seed.wrapping_add(4);
+        if seed < aligned_start {
+            break; // オーバーフロー検出
+        }
+    }
+
+    results
+}
+
+/// SIMD版検索セグメント実行（非WASM環境用フォールバック）
+#[cfg(not(target_arch = "wasm32"))]
+pub fn search_mt_seed_segment_simd(
+    start: u32,
+    end: u32,
+    advances: u32,
+    target_codes: &BTreeSet<IvCode>,
+) -> Vec<(u32, IvCode)> {
+    let mut results = Vec::new();
+
+    // 4の倍数に切り下げ
+    let aligned_start = start & !3;
+    let mut seed = aligned_start;
+
+    while seed <= end {
+        // 4つのSeedを同時処理
+        let seeds = [seed, seed + 1, seed + 2, seed + 3];
+        let mut mt = Mt19937x4::new(seeds);
+
+        // MT消費
+        for _ in 0..advances {
+            _ = mt.next_u32x4();
+        }
+
         // IV取得（6回の乱数取得）
-        let mut iv_vals = [[0u8; 6]; 4];
+        let mut iv_vals = [[0u32; 6]; 4];
         for stat in 0..6 {
             let rand = mt.next_u32x4();
             let lanes = Mt19937x4::extract_lanes(rand);
             for i in 0..4 {
-                iv_vals[i][stat] = (lanes[i] >> 27) as u8;
+                iv_vals[i][stat] = lanes[i] >> 27;
             }
         }
 
-        // 各系統の結果をチェック
+        // IVコードエンコードとマッチング判定
         for (i, ivs) in iv_vals.iter().enumerate() {
             let current_seed = seed.wrapping_add(i as u32);
 
@@ -138,7 +211,13 @@ pub fn search_mt_seed_segment_simd(
                 continue;
             }
 
-            let code = encode_iv_code(ivs);
+            let code = (ivs[0] << 25)
+                | (ivs[1] << 20)
+                | (ivs[2] << 15)
+                | (ivs[3] << 10)
+                | (ivs[4] << 5)
+                | ivs[5];
+
             if target_codes.contains(&code) {
                 results.push((current_seed, code));
             }
@@ -173,8 +252,8 @@ pub fn mt_seed_search_segment(
     advances: u32,
     target_codes: &[u32],
 ) -> Vec<u32> {
-    // target_codesをHashSetに変換
-    let target_set: HashSet<IvCode> = target_codes.iter().cloned().collect();
+    // target_codesをBTreeSetに変換
+    let target_set: BTreeSet<IvCode> = target_codes.iter().cloned().collect();
 
     // SIMD版で検索実行
     let results = search_mt_seed_segment_simd(start, end, advances, &target_set);
@@ -275,7 +354,7 @@ mod tests {
         let ivs = derive_iv_set(seed, 0);
         let code = encode_iv_code(&ivs);
 
-        let mut target_codes = HashSet::new();
+        let mut target_codes = BTreeSet::new();
         target_codes.insert(code);
 
         // 単体版
@@ -303,7 +382,7 @@ mod tests {
         let advances = 0;
 
         // ターゲットIVコードを複数用意
-        let mut target_codes = HashSet::new();
+        let mut target_codes = BTreeSet::new();
         for seed in (start..=end).step_by(100) {
             let ivs = derive_iv_set(seed, advances);
             let code = encode_iv_code(&ivs);
