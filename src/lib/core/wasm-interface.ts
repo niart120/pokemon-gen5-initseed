@@ -76,6 +76,14 @@ export interface WasmModule {
 
   calculate_game_offset(initial_seed: bigint, mode: number): number;
   sha1_hash_batch(messages: Uint32Array): Uint32Array;
+
+  // MT Seed 32bit全探索API
+  mt_seed_search_segment(
+    start: number,
+    end: number,
+    advances: number,
+    target_codes: Uint32Array
+  ): Uint32Array;
 }
 
 let wasmModule: WasmModule | null = null;
@@ -145,6 +153,8 @@ export async function initWasm(): Promise<WasmModule> {
         MtSeedBootTimingSearchResults: module.MtSeedBootTimingSearchResults,
         calculate_game_offset: module.calculate_game_offset,
         sha1_hash_batch: module.sha1_hash_batch,
+        // MT Seed 32bit全探索API
+        mt_seed_search_segment: module.mt_seed_search_segment,
       } as unknown as WasmModule;
       
       return wasmModule;

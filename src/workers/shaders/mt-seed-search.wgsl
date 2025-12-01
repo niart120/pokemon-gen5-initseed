@@ -131,7 +131,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     
     // MT消費（advances回）
     for (var i = 0u; i < params.advances; i++) {
-        let _ = mt_next();
+        _ = mt_next();
     }
     
     // IV取得（6回の乱数取得、上位5bit）

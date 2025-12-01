@@ -19,6 +19,9 @@ const BUFFER_ALIGNMENT = 256;
 const DEFAULT_WORKGROUP_SIZE = 64;
 const MAX_RESULTS_PER_DISPATCH = 4096;
 
+// デバイス制限のフォールバック値（WebGPU仕様の最小保証値）
+const FALLBACK_MAX_WORKGROUPS_PER_DIMENSION = 65535;
+
 // SearchParams構造体のサイズ（8 * u32 = 32バイト）
 const SEARCH_PARAMS_WORDS = 8;
 
@@ -85,6 +88,7 @@ export function createMtSeedSearchGpuEngine(
   let device: GPUDevice | null = null;
   let pipeline: GPUComputePipeline | null = null;
   let bindGroupLayout: GPUBindGroupLayout | null = null;
+  let maxWorkgroupsPerDimension = FALLBACK_MAX_WORKGROUPS_PER_DIMENSION;
 
   // 再利用可能なバッファ
   let paramsBuffer: GPUBuffer | null = null;
@@ -112,6 +116,10 @@ export function createMtSeedSearchGpuEngine(
     device = await adapter.requestDevice({
       label: 'mt-seed-search-device',
     });
+
+    // デバイスの制限値を取得
+    maxWorkgroupsPerDimension = device.limits.maxComputeWorkgroupsPerDimension
+      ?? FALLBACK_MAX_WORKGROUPS_PER_DIMENSION;
 
     // シェーダーのワークグループサイズを置換
     const processedShader = shaderSource
@@ -213,7 +221,6 @@ export function createMtSeedSearchGpuEngine(
 
     // 検索範囲のサイズを計算
     const searchCount = end - start + 1;
-    const workgroupCount = Math.ceil(searchCount / workgroupSize);
 
     // ターゲットIVコードバッファを準備
     ensureTargetCodesBuffer(ivCodes);
@@ -226,88 +233,113 @@ export function createMtSeedSearchGpuEngine(
       ivCodesArray.byteLength
     );
 
-    // パラメータを書き込み
-    const paramsData = new Uint32Array([
-      start,              // start_seed
-      end,                // end_seed
-      mtAdvances,         // advances
-      ivCodes.length,     // target_count
-      maxResults,         // max_results
-      0,                  // reserved0
-      0,                  // reserved1
-      0,                  // reserved2
-    ]);
-    device.queue.writeBuffer(
-      paramsBuffer,
-      0,
-      paramsData.buffer,
-      paramsData.byteOffset,
-      paramsData.byteLength
-    );
+    // 結果集約用
+    const allMatches: MtSeedMatch[] = [];
+    let totalMatchCount = 0;
 
-    // 結果バッファをクリア（match_countを0に）
-    const zeroHeader = new Uint32Array([0]);
-    device.queue.writeBuffer(
-      resultsBuffer,
-      0,
-      zeroHeader.buffer,
-      zeroHeader.byteOffset,
-      zeroHeader.byteLength
-    );
+    // ディスパッチを分割して実行
+    // 1ディスパッチあたりの最大Seed数 = maxWorkgroupsPerDimension * workgroupSize
+    const maxSeedsPerDispatch = maxWorkgroupsPerDimension * workgroupSize;
+    let dispatchStart = start;
+    let dispatchIndex = 0;
 
-    // バインドグループを作成
-    const bindGroup = device.createBindGroup({
-      label: `mt-seed-search-bind-group-${job.jobId}`,
-      layout: bindGroupLayout,
-      entries: [
-        { binding: 0, resource: { buffer: paramsBuffer } },
-        { binding: 1, resource: { buffer: targetCodesBuffer! } },
-        { binding: 2, resource: { buffer: resultsBuffer } },
-      ],
-    });
+    while (dispatchStart <= end) {
+      // 今回のディスパッチで処理する範囲
+      const remainingSeeds = end - dispatchStart + 1;
+      const dispatchSeedCount = Math.min(maxSeedsPerDispatch, remainingSeeds);
+      const dispatchEnd = dispatchStart + dispatchSeedCount - 1;
+      const workgroupCount = Math.ceil(dispatchSeedCount / workgroupSize);
 
-    // コマンドエンコーダを作成
-    const encoder = device.createCommandEncoder({
-      label: `mt-seed-search-encoder-${job.jobId}`,
-    });
+      // パラメータを書き込み
+      const paramsData = new Uint32Array([
+        dispatchStart,      // start_seed
+        dispatchEnd,        // end_seed
+        mtAdvances,         // advances
+        ivCodes.length,     // target_count
+        maxResults,         // max_results
+        0,                  // reserved0
+        0,                  // reserved1
+        0,                  // reserved2
+      ]);
+      device.queue.writeBuffer(
+        paramsBuffer,
+        0,
+        paramsData.buffer,
+        paramsData.byteOffset,
+        paramsData.byteLength
+      );
 
-    const pass = encoder.beginComputePass({
-      label: `mt-seed-search-pass-${job.jobId}`,
-    });
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
-    pass.dispatchWorkgroups(workgroupCount);
-    pass.end();
+      // 結果バッファをクリア（match_countを0に）
+      const zeroHeader = new Uint32Array([0]);
+      device.queue.writeBuffer(
+        resultsBuffer,
+        0,
+        zeroHeader.buffer,
+        zeroHeader.byteOffset,
+        zeroHeader.byteLength
+      );
 
-    // 結果をreadbackバッファにコピー
-    const resultsWords = RESULT_HEADER_WORDS + maxResults * RESULT_RECORD_WORDS;
-    const resultsSize = alignSize(resultsWords * Uint32Array.BYTES_PER_ELEMENT);
-    encoder.copyBufferToBuffer(resultsBuffer, 0, readbackBuffer, 0, resultsSize);
+      // バインドグループを作成
+      const bindGroup = device.createBindGroup({
+        label: `mt-seed-search-bind-group-${job.jobId}-${dispatchIndex}`,
+        layout: bindGroupLayout,
+        entries: [
+          { binding: 0, resource: { buffer: paramsBuffer } },
+          { binding: 1, resource: { buffer: targetCodesBuffer! } },
+          { binding: 2, resource: { buffer: resultsBuffer } },
+        ],
+      });
 
-    const commandBuffer = encoder.finish();
-    device.queue.submit([commandBuffer]);
+      // コマンドエンコーダを作成
+      const encoder = device.createCommandEncoder({
+        label: `mt-seed-search-encoder-${job.jobId}`,
+      });
 
-    // 結果を読み取り
-    await readbackBuffer.mapAsync(GPUMapMode.READ, 0, resultsSize);
-    const mapped = readbackBuffer.getMappedRange(0, resultsSize);
-    const resultData = new Uint32Array(mapped.slice(0));
-    readbackBuffer.unmap();
+      const pass = encoder.beginComputePass({
+        label: `mt-seed-search-pass-${job.jobId}`,
+      });
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(0, bindGroup);
+      pass.dispatchWorkgroups(workgroupCount);
+      pass.end();
 
-    // 結果をパース
-    const matchCount = Math.min(resultData[0] ?? 0, maxResults);
-    const matches: MtSeedMatch[] = [];
+      // 結果をreadbackバッファにコピー
+      const resultsWords = RESULT_HEADER_WORDS + maxResults * RESULT_RECORD_WORDS;
+      const resultsSize = alignSize(resultsWords * Uint32Array.BYTES_PER_ELEMENT);
+      encoder.copyBufferToBuffer(resultsBuffer, 0, readbackBuffer, 0, resultsSize);
 
-    for (let i = 0; i < matchCount; i++) {
-      const baseIdx = RESULT_HEADER_WORDS + i * RESULT_RECORD_WORDS;
-      const mtSeed = resultData[baseIdx];
-      const ivCode: IvCode = resultData[baseIdx + 1];
-      const ivSet = decodeIvCode(ivCode);
-      matches.push({ mtSeed, ivCode, ivSet });
+      const commandBuffer = encoder.finish();
+      device.queue.submit([commandBuffer]);
+
+      // 結果を読み取り
+      await readbackBuffer.mapAsync(GPUMapMode.READ, 0, resultsSize);
+      const mapped = readbackBuffer.getMappedRange(0, resultsSize);
+      const resultData = new Uint32Array(mapped.slice(0));
+      readbackBuffer.unmap();
+
+      // 結果をパース
+      const matchCount = Math.min(resultData[0] ?? 0, maxResults);
+      totalMatchCount += matchCount;
+
+      for (let i = 0; i < matchCount; i++) {
+        const baseIdx = RESULT_HEADER_WORDS + i * RESULT_RECORD_WORDS;
+        const mtSeed = resultData[baseIdx];
+        const ivCode: IvCode = resultData[baseIdx + 1];
+        const ivSet = decodeIvCode(ivCode);
+        allMatches.push({ mtSeed, ivCode, ivSet });
+      }
+
+      // 次のディスパッチへ（オーバーフロー対策）
+      if (dispatchEnd >= end) {
+        break;
+      }
+      dispatchStart = dispatchEnd + 1;
+      dispatchIndex++;
     }
 
     return {
-      matches,
-      matchCount,
+      matches: allMatches,
+      matchCount: totalMatchCount,
       processedCount: searchCount,
     };
   };
