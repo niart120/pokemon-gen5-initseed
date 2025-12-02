@@ -7,7 +7,6 @@
 
 import type {
   MtSeedSearchJob,
-  MtSeedSearchResult,
   MtSeedMatch,
   IvCode,
 } from '@/types/mt-seed-search';

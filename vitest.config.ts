@@ -17,7 +17,15 @@ export default defineConfig({
       'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
       'test/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
     ],
-    exclude: ['node_modules', 'dist', '.git', '.cache'],
+    exclude: [
+      'node_modules',
+      'dist',
+      '.git',
+      '.cache',
+      // WebGPU / worker tests are run in browser-specific configs
+      'src/test/webgpu/**',
+      'src/test/mt-seed-search/**',
+    ],
     setupFiles: ['./src/test/setup.ts'],
     testTimeout: 10000,
   },
