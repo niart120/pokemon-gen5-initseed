@@ -48,10 +48,12 @@ impl DateTimeCode {
 
         // time_code: 0xHHMMSS00
         // 注: HHは24時間制でエンコードされている
-        // DS/DS_LITEでは0x40000000フラグが午後に付くが、HH自体は24時間制のまま
-        let hh = NumberUtils::decode_bcd((self.time_code >> 24) as u8) as u32;
-        let mi = NumberUtils::decode_bcd((self.time_code >> 16) as u8) as u32;
-        let ss = NumberUtils::decode_bcd((self.time_code >> 8) as u8) as u32;
+        // DS/DS_LITEでは0x40000000フラグ(PMフラグ)が午後に付くが、HH自体は24時間制のまま
+        // PMフラグをマスクしてからBCDデコードする
+        let time_code_masked = self.time_code & 0x3FFFFFFF; // PMフラグ(bit30)を除去
+        let hh = NumberUtils::decode_bcd((time_code_masked >> 24) as u8) as u32;
+        let mi = NumberUtils::decode_bcd((time_code_masked >> 16) as u8) as u32;
+        let ss = NumberUtils::decode_bcd((time_code_masked >> 8) as u8) as u32;
 
         DisplayDateTime {
             year: 2000 + yy,
@@ -448,6 +450,139 @@ mod tests {
         let seconds = datetime_to_seconds_since_2000(2024, 6, 15, 12, 30, 45).unwrap();
         let result = generate_display_datetime(seconds);
         assert_eq!(result, Some((2024, 6, 15, 12, 30, 45)));
+    }
+
+    // =========================================================================
+    // エンコード→デコード ラウンドトリップテスト
+    // =========================================================================
+
+    /// 2000年からの日数を計算（エンコード用）
+    fn days_since_2000(year: u32, month: u32, day: u32) -> u32 {
+        let mut total_days = 0;
+        let mut y = 2000;
+        while y < year {
+            total_days += if DateCodeGenerator::is_leap_year(y) { 366 } else { 365 };
+            y += 1;
+        }
+        let mut m = 1;
+        while m < month {
+            total_days += DateCodeGenerator::days_in_month(year, m);
+            m += 1;
+        }
+        total_days + day - 1
+    }
+
+    #[test]
+    fn test_roundtrip_date_code_basic() {
+        // 基本ケース: 2000年1月1日
+        let date_code = DateCodeGenerator::get_date_code(0);
+        let dtc = DateTimeCode::new(date_code, 0);
+        let display = dtc.to_display_datetime();
+
+        assert_eq!(display.year, 2000, "Year mismatch for 2000/1/1");
+        assert_eq!(display.month, 1, "Month mismatch for 2000/1/1");
+        assert_eq!(display.day, 1, "Day mismatch for 2000/1/1");
+    }
+
+    #[test]
+    fn test_roundtrip_time_code_basic() {
+        // 基本ケース: 0:00:00
+        let time_code = TimeCodeGenerator::get_time_code(0);
+        let dtc = DateTimeCode::new(0, time_code);
+        let display = dtc.to_display_datetime();
+
+        assert_eq!(display.hour, 0, "Hour mismatch for 0:00:00");
+        assert_eq!(display.minute, 0, "Minute mismatch for 0:00:00");
+        assert_eq!(display.second, 0, "Second mismatch for 0:00:00");
+    }
+
+    #[test]
+    fn test_roundtrip_datetime_specific_cases() {
+        // 特定の日時ケース
+        let test_cases = [
+            (2000, 1, 1, 0, 0, 0),      // 開始日時
+            (2024, 6, 15, 12, 30, 45),  // 任意の日時
+            (2024, 12, 31, 23, 59, 59), // 年末最終秒
+            (2000, 2, 29, 6, 30, 0),    // うるう年2月29日
+            (2001, 2, 28, 11, 59, 59),  // 非うるう年2月末
+            (2099, 12, 31, 23, 59, 59), // 対応範囲の末尾
+        ];
+
+        for (year, month, day, hour, minute, second) in test_cases {
+            let days = days_since_2000(year, month, day);
+            let seconds_of_day = hour * 3600 + minute * 60 + second;
+
+            let date_code = DateCodeGenerator::get_date_code(days);
+            let time_code = TimeCodeGenerator::get_time_code(seconds_of_day);
+
+            let dtc = DateTimeCode::new(date_code, time_code);
+            let display = dtc.to_display_datetime();
+
+            assert_eq!(
+                display.year, year,
+                "Year mismatch for {}/{}/{} {}:{}:{}",
+                year, month, day, hour, minute, second
+            );
+            assert_eq!(
+                display.month, month,
+                "Month mismatch for {}/{}/{} {}:{}:{}",
+                year, month, day, hour, minute, second
+            );
+            assert_eq!(
+                display.day, day,
+                "Day mismatch for {}/{}/{} {}:{}:{}",
+                year, month, day, hour, minute, second
+            );
+            assert_eq!(
+                display.hour, hour,
+                "Hour mismatch for {}/{}/{} {}:{}:{}",
+                year, month, day, hour, minute, second
+            );
+            assert_eq!(
+                display.minute, minute,
+                "Minute mismatch for {}/{}/{} {}:{}:{}",
+                year, month, day, hour, minute, second
+            );
+            assert_eq!(
+                display.second, second,
+                "Second mismatch for {}/{}/{} {}:{}:{}",
+                year, month, day, hour, minute, second
+            );
+        }
+    }
+
+    #[test]
+    fn test_roundtrip_hardware_time_codes() {
+        // ハードウェア別time_codeのラウンドトリップ
+        // DS/DS_LITEでは午後にPMフラグが付くが、デコード時は24時間制のHH値を使用
+
+        let test_hours = [0, 6, 11, 12, 18, 23];
+        let hardwares = ["DS", "DS_LITE", "3DS"];
+
+        for hour in test_hours {
+            for hardware in hardwares {
+                let seconds_of_day = hour * 3600 + 30 * 60 + 45; // HH:30:45
+                let time_code = TimeCodeGenerator::get_time_code_for_hardware(seconds_of_day, hardware);
+                let dtc = DateTimeCode::new(0, time_code);
+                let display = dtc.to_display_datetime();
+
+                assert_eq!(
+                    display.hour, hour,
+                    "Hour mismatch for {}:30:45 on {}",
+                    hour, hardware
+                );
+                assert_eq!(
+                    display.minute, 30,
+                    "Minute mismatch for {}:30:45 on {}",
+                    hour, hardware
+                );
+                assert_eq!(
+                    display.second, 45,
+                    "Second mismatch for {}:30:45 on {}",
+                    hour, hardware
+                );
+            }
+        }
     }
 
 }
