@@ -72,7 +72,7 @@ export const individualfilterjs_set_iv_range: (a: number, b: number, c: number, 
 export const individualfilterjs_set_nature: (a: number, b: number) => void;
 export const individualfilterjs_set_gender: (a: number, b: number) => void;
 export const individualfilterjs_set_ability: (a: number, b: number) => void;
-export const individualfilterjs_set_shiny: (a: number, b: number) => void;
+export const individualfilterjs_set_shiny_filter_mode: (a: number, b: number) => void;
 export const individualfilterjs_set_hidden_power_type: (a: number, b: number) => void;
 export const individualfilterjs_set_hidden_power_power: (a: number, b: number) => void;
 export const parentsivsjs_new: () => number;

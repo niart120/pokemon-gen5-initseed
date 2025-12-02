@@ -336,15 +336,14 @@ function convertWasmResult(
 
   return {
     boot: {
+      // GPU側(getDateFromTimePlan)と同様にローカルタイムとして扱う
       datetime: new Date(
-        Date.UTC(
-          wasmResult.year,
-          wasmResult.month - 1,
-          wasmResult.date,
-          wasmResult.hour,
-          wasmResult.minute,
-          wasmResult.second
-        )
+        wasmResult.year,
+        wasmResult.month - 1,
+        wasmResult.date,
+        wasmResult.hour,
+        wasmResult.minute,
+        wasmResult.second
       ),
       timer0: wasmResult.timer0,
       vcount: wasmResult.vcount,
