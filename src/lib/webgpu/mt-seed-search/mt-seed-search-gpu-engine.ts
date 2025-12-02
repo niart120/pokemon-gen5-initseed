@@ -229,6 +229,7 @@ export function createMtSeedSearchGpuEngine(
 
     // 検索範囲のサイズを計算
     const searchCount = end - start + 1;
+    const workgroupCount = Math.ceil(searchCount / actualWorkgroupSize);
 
     // ターゲットIVコードバッファを準備
     ensureTargetCodesBuffer(ivCodes);
@@ -241,113 +242,88 @@ export function createMtSeedSearchGpuEngine(
       ivCodesArray.byteLength
     );
 
-    // 結果集約用
-    const allMatches: MtSeedMatch[] = [];
-    let totalMatchCount = 0;
+    // パラメータを書き込み
+    const paramsData = new Uint32Array([
+      start,              // start_seed
+      end,                // end_seed
+      mtAdvances,         // advances
+      ivCodes.length,     // target_count
+      maxResults,         // max_results
+      0,                  // reserved0
+      0,                  // reserved1
+      0,                  // reserved2
+    ]);
+    device.queue.writeBuffer(
+      paramsBuffer,
+      0,
+      paramsData.buffer,
+      paramsData.byteOffset,
+      paramsData.byteLength
+    );
 
-    // device-context から導出した制限値を使用してディスパッチサイズを計算
-    // maxMessagesPerDispatch = workgroupSize * maxWorkgroupsPerDispatch
-    const maxSeedsPerDispatch = jobLimits.maxMessagesPerDispatch;
-    let dispatchStart = start;
-    let dispatchIndex = 0;
+    // 結果バッファをクリア（match_countを0に）
+    const zeroHeader = new Uint32Array([0]);
+    device.queue.writeBuffer(
+      resultsBuffer,
+      0,
+      zeroHeader.buffer,
+      zeroHeader.byteOffset,
+      zeroHeader.byteLength
+    );
 
-    while (dispatchStart <= end) {
-      // 今回のディスパッチで処理する範囲
-      const remainingSeeds = end - dispatchStart + 1;
-      const dispatchSeedCount = Math.min(maxSeedsPerDispatch, remainingSeeds);
-      const dispatchEnd = dispatchStart + dispatchSeedCount - 1;
-      const workgroupCount = Math.ceil(dispatchSeedCount / actualWorkgroupSize);
+    // バインドグループを作成
+    const bindGroup = device.createBindGroup({
+      label: `mt-seed-search-bind-group-${job.jobId}`,
+      layout: bindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: paramsBuffer } },
+        { binding: 1, resource: { buffer: targetCodesBuffer! } },
+        { binding: 2, resource: { buffer: resultsBuffer } },
+      ],
+    });
 
-      // パラメータを書き込み
-      const paramsData = new Uint32Array([
-        dispatchStart,      // start_seed
-        dispatchEnd,        // end_seed
-        mtAdvances,         // advances
-        ivCodes.length,     // target_count
-        maxResults,         // max_results
-        0,                  // reserved0
-        0,                  // reserved1
-        0,                  // reserved2
-      ]);
-      device.queue.writeBuffer(
-        paramsBuffer,
-        0,
-        paramsData.buffer,
-        paramsData.byteOffset,
-        paramsData.byteLength
-      );
+    // コマンドエンコーダを作成
+    const encoder = device.createCommandEncoder({
+      label: `mt-seed-search-encoder-${job.jobId}`,
+    });
 
-      // 結果バッファをクリア（match_countを0に）
-      const zeroHeader = new Uint32Array([0]);
-      device.queue.writeBuffer(
-        resultsBuffer,
-        0,
-        zeroHeader.buffer,
-        zeroHeader.byteOffset,
-        zeroHeader.byteLength
-      );
+    const pass = encoder.beginComputePass({
+      label: `mt-seed-search-pass-${job.jobId}`,
+    });
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
+    pass.dispatchWorkgroups(workgroupCount);
+    pass.end();
 
-      // バインドグループを作成
-      const bindGroup = device.createBindGroup({
-        label: `mt-seed-search-bind-group-${job.jobId}-${dispatchIndex}`,
-        layout: bindGroupLayout,
-        entries: [
-          { binding: 0, resource: { buffer: paramsBuffer } },
-          { binding: 1, resource: { buffer: targetCodesBuffer! } },
-          { binding: 2, resource: { buffer: resultsBuffer } },
-        ],
-      });
+    // 結果をreadbackバッファにコピー
+    const resultsWords = MT_SEED_RESULT_HEADER_WORDS + maxResults * MT_SEED_RESULT_RECORD_WORDS;
+    const resultsSize = alignSize(resultsWords * Uint32Array.BYTES_PER_ELEMENT);
+    encoder.copyBufferToBuffer(resultsBuffer, 0, readbackBuffer, 0, resultsSize);
 
-      // コマンドエンコーダを作成
-      const encoder = device.createCommandEncoder({
-        label: `mt-seed-search-encoder-${job.jobId}`,
-      });
+    const commandBuffer = encoder.finish();
+    device.queue.submit([commandBuffer]);
 
-      const pass = encoder.beginComputePass({
-        label: `mt-seed-search-pass-${job.jobId}`,
-      });
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(0, bindGroup);
-      pass.dispatchWorkgroups(workgroupCount);
-      pass.end();
+    // 結果を読み取り
+    await readbackBuffer.mapAsync(GPUMapMode.READ, 0, resultsSize);
+    const mapped = readbackBuffer.getMappedRange(0, resultsSize);
+    const resultData = new Uint32Array(mapped.slice(0));
+    readbackBuffer.unmap();
 
-      // 結果をreadbackバッファにコピー
-      const resultsWords = MT_SEED_RESULT_HEADER_WORDS + maxResults * MT_SEED_RESULT_RECORD_WORDS;
-      const resultsSize = alignSize(resultsWords * Uint32Array.BYTES_PER_ELEMENT);
-      encoder.copyBufferToBuffer(resultsBuffer, 0, readbackBuffer, 0, resultsSize);
+    // 結果をパース
+    const matchCount = Math.min(resultData[0] ?? 0, maxResults);
+    const matches: MtSeedMatch[] = [];
 
-      const commandBuffer = encoder.finish();
-      device.queue.submit([commandBuffer]);
-
-      // 結果を読み取り
-      await readbackBuffer.mapAsync(GPUMapMode.READ, 0, resultsSize);
-      const mapped = readbackBuffer.getMappedRange(0, resultsSize);
-      const resultData = new Uint32Array(mapped.slice(0));
-      readbackBuffer.unmap();
-
-      // 結果をパース
-      const matchCount = Math.min(resultData[0] ?? 0, maxResults);
-      totalMatchCount += matchCount;
-
-      for (let i = 0; i < matchCount; i++) {
-        const baseIdx = MT_SEED_RESULT_HEADER_WORDS + i * MT_SEED_RESULT_RECORD_WORDS;
-        const mtSeed = resultData[baseIdx];
-        const ivCode: IvCode = resultData[baseIdx + 1];
-        const ivSet = decodeIvCode(ivCode);
-        allMatches.push({ mtSeed, ivCode, ivSet });
-      }
-
-      // 次のディスパッチへ（オーバーフロー対策）
-      if (dispatchEnd >= end) {
-        break;
-      }
-      dispatchStart = dispatchEnd + 1;
-      dispatchIndex++;
+    for (let i = 0; i < matchCount; i++) {
+      const baseIdx = MT_SEED_RESULT_HEADER_WORDS + i * MT_SEED_RESULT_RECORD_WORDS;
+      const mtSeed = resultData[baseIdx];
+      const ivCode: IvCode = resultData[baseIdx + 1];
+      const ivSet = decodeIvCode(ivCode);
+      matches.push({ mtSeed, ivCode, ivSet });
     }
 
     return {
-      matches: allMatches,
-      matchCount: totalMatchCount,
+      matches,
+      matchCount,
       processedCount: searchCount,
     };
   };

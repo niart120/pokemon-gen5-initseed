@@ -185,11 +185,9 @@ async function executeSearch(
 
   // エンジンの制限値を取得してチャンクサイズを決定
   const jobLimits = engine.getJobLimits();
-  // エンジン内でさらにディスパッチ分割されるため、Worker側では大きめのチャンクで分割
-  // maxMessagesPerDispatch の倍数を使用（例: 4倍 = 4ディスパッチ分をまとめて実行）
-  const CHUNK_MULTIPLIER = 4;
+  // Worker側で1 dispatch分ずつ分割（Engine内での再分割を回避）
   const chunkSize = jobLimits
-    ? jobLimits.maxMessagesPerDispatch * CHUNK_MULTIPLIER
+    ? jobLimits.maxMessagesPerDispatch
     : 0x1000000; // フォールバック: 約1600万
 
   // 全体の検索範囲
