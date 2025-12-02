@@ -1305,6 +1305,62 @@ export function calculate_game_offset(initial_seed: bigint, mode: GameMode): num
 export function calculate_tid_sid_from_seed(initial_seed: bigint, mode: GameMode): TidSidResult;
 
 /**
+ * WASM公開関数: IVコードデコード
+ *
+ * IVコードをIVセットにデコードする
+ *
+ * # Arguments
+ * * `code` - IVコード (30bit)
+ *
+ * # Returns
+ * IVセット [HP, Atk, Def, SpA, SpD, Spe]
+ */
+export function decode_iv_code_wasm(code: number): Uint8Array;
+
+/**
+ * WASM公開関数: IVセット導出
+ *
+ * MT SeedとMT消費数からIVセットを導出する
+ *
+ * # Arguments
+ * * `mt_seed` - MT Seed
+ * * `advances` - MT消費数
+ *
+ * # Returns
+ * IVセット [HP, Atk, Def, SpA, SpD, Spe]
+ */
+export function derive_iv_set_wasm(mt_seed: number, advances: number): Uint8Array;
+
+/**
+ * WASM公開関数: IVコードエンコード
+ *
+ * IVセットをIVコードにエンコードする
+ *
+ * # Arguments
+ * * `ivs` - IVセット [HP, Atk, Def, SpA, SpD, Spe]
+ *
+ * # Returns
+ * IVコード (30bit)
+ */
+export function encode_iv_code_wasm(ivs: Uint8Array): number;
+
+/**
+ * WASM公開関数: MT Seed検索セグメント実行
+ *
+ * SIMD最適化版を使用して検索を実行
+ *
+ * # Arguments
+ * * `start` - 検索開始Seed (inclusive)
+ * * `end` - 検索終了Seed (inclusive)
+ * * `advances` - MT消費数
+ * * `target_codes` - 検索対象IVコードのスライス
+ *
+ * # Returns
+ * フラット配列 [seed0, code0, seed1, code1, ...]
+ */
+export function mt_seed_search_segment(start: number, end: number, advances: number, target_codes: Uint32Array): Uint32Array;
+
+/**
  * WebAssembly向けバッチSHA-1計算エントリポイント
  * `messages` は 16 ワード単位（512bit）で並ぶフラットな配列である必要がある
  */
@@ -1417,6 +1473,10 @@ export interface InitOutput {
   readonly mtseedboottimingsearchiterator_total_seconds: (a: number) => number;
   readonly mtseedboottimingsearchiterator_progress: (a: number) => number;
   readonly mtseedboottimingsearchiterator_next_batch: (a: number, b: number, c: number) => number;
+  readonly mt_seed_search_segment: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+  readonly derive_iv_set_wasm: (a: number, b: number, c: number) => void;
+  readonly encode_iv_code_wasm: (a: number, b: number) => number;
+  readonly decode_iv_code_wasm: (a: number, b: number) => void;
   readonly __wbg_tidsidresult_free: (a: number, b: number) => void;
   readonly __wbg_get_tidsidresult_tid: (a: number) => number;
   readonly __wbg_set_tidsidresult_tid: (a: number, b: number) => void;

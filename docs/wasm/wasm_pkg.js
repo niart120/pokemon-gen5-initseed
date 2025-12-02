@@ -3790,6 +3790,117 @@ export function calculate_tid_sid_from_seed(initial_seed, mode) {
 }
 
 /**
+ * WASM公開関数: IVコードデコード
+ *
+ * IVコードをIVセットにデコードする
+ *
+ * # Arguments
+ * * `code` - IVコード (30bit)
+ *
+ * # Returns
+ * IVセット [HP, Atk, Def, SpA, SpD, Spe]
+ * @param {number} code
+ * @returns {Uint8Array}
+ */
+export function decode_iv_code_wasm(code) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.decode_iv_code_wasm(retptr, code);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var v1 = getArrayU8FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_export2(r0, r1 * 1, 1);
+        return v1;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * WASM公開関数: IVセット導出
+ *
+ * MT SeedとMT消費数からIVセットを導出する
+ *
+ * # Arguments
+ * * `mt_seed` - MT Seed
+ * * `advances` - MT消費数
+ *
+ * # Returns
+ * IVセット [HP, Atk, Def, SpA, SpD, Spe]
+ * @param {number} mt_seed
+ * @param {number} advances
+ * @returns {Uint8Array}
+ */
+export function derive_iv_set_wasm(mt_seed, advances) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.derive_iv_set_wasm(retptr, mt_seed, advances);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var v1 = getArrayU8FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_export2(r0, r1 * 1, 1);
+        return v1;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * WASM公開関数: IVコードエンコード
+ *
+ * IVセットをIVコードにエンコードする
+ *
+ * # Arguments
+ * * `ivs` - IVセット [HP, Atk, Def, SpA, SpD, Spe]
+ *
+ * # Returns
+ * IVコード (30bit)
+ * @param {Uint8Array} ivs
+ * @returns {number}
+ */
+export function encode_iv_code_wasm(ivs) {
+    const ptr0 = passArray8ToWasm0(ivs, wasm.__wbindgen_export3);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.encode_iv_code_wasm(ptr0, len0);
+    return ret >>> 0;
+}
+
+/**
+ * WASM公開関数: MT Seed検索セグメント実行
+ *
+ * SIMD最適化版を使用して検索を実行
+ *
+ * # Arguments
+ * * `start` - 検索開始Seed (inclusive)
+ * * `end` - 検索終了Seed (inclusive)
+ * * `advances` - MT消費数
+ * * `target_codes` - 検索対象IVコードのスライス
+ *
+ * # Returns
+ * フラット配列 [seed0, code0, seed1, code1, ...]
+ * @param {number} start
+ * @param {number} end
+ * @param {number} advances
+ * @param {Uint32Array} target_codes
+ * @returns {Uint32Array}
+ */
+export function mt_seed_search_segment(start, end, advances, target_codes) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArray32ToWasm0(target_codes, wasm.__wbindgen_export3);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.mt_seed_search_segment(retptr, start, end, advances, ptr0, len0);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var v2 = getArrayU32FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_export2(r0, r1 * 4, 4);
+        return v2;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
  * WebAssembly向けバッチSHA-1計算エントリポイント
  * `messages` は 16 ワード単位（512bit）で並ぶフラットな配列である必要がある
  * @param {Uint32Array} messages
