@@ -1,6 +1,7 @@
 import type { SearchConditions, InitialSeedResult } from '@/types/search';
 import type { WorkerProgressMessage } from '@/types/callbacks';
 import type { SearchTimePlan } from '@/lib/search/time/time-plan';
+import type { SeedSearchJobLimits } from '@/lib/webgpu/utils';
 
 export type WebGpuRunnerProgress = WorkerProgressMessage;
 
@@ -33,13 +34,7 @@ export interface SeedSearchJobSummary {
   rangeSeconds: number;
 }
 
-export interface SeedSearchJobLimits {
-  workgroupSize: number;
-  maxWorkgroupsPerDispatch: number;
-  candidateCapacityPerDispatch: number;
-  maxMessagesPerDispatch: number;
-  maxDispatchesInFlight: number;
-}
+// SeedSearchJobLimits は utils/types から re-export されている
 
 export interface SeedSearchJobOptions {
   limits: SeedSearchJobLimits;

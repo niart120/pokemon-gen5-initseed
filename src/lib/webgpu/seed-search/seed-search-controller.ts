@@ -3,7 +3,7 @@ import type { InitialSeedResult } from '@/types/search';
 import {
   MATCH_OUTPUT_HEADER_WORDS,
   MATCH_RECORD_WORDS,
-} from './constants';
+} from '@/lib/webgpu/utils';
 import { createSeedSearchEngine, type SeedSearchEngine } from './seed-search-engine';
 import type {
   SeedSearchJob,

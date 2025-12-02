@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { prepareSearchJob } from '@/lib/webgpu/seed-search/prepare-search-job';
 import { createSeedSearchController } from '@/lib/webgpu/seed-search/seed-search-controller';
 import type { SeedSearchController } from '@/lib/webgpu/seed-search/seed-search-controller';
-import { isWebGpuSeedSearchSupported } from '@/lib/webgpu/seed-search/device-context';
+import { isWebGpuSeedSearchSupported } from '@/lib/webgpu/utils';
 import type { WebGpuRunnerCallbacks, WebGpuRunnerProgress } from '@/lib/webgpu/seed-search/types';
 import { enumerateJobCpuBaseline, pickUniqueEntries } from './job-baseline-helpers';
 import type { CpuBaselineEntry } from './job-baseline-helpers';

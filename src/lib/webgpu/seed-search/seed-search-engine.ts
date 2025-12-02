@@ -1,7 +1,12 @@
-import { MATCH_OUTPUT_HEADER_WORDS, MATCH_RECORD_WORDS } from './constants';
-import { createWebGpuDeviceContext, type WebGpuDeviceContext } from './device-context';
-import type { SeedSearchJobLimits, SeedSearchJobSegment } from './types';
-import { createSeedSearchKernel } from './kernel/seed-search-kernel';
+import {
+  MATCH_OUTPUT_HEADER_WORDS,
+  MATCH_RECORD_WORDS,
+  createWebGpuDeviceContext,
+  type WebGpuDeviceContext,
+  type SeedSearchJobLimits,
+} from '@/lib/webgpu/utils';
+import type { SeedSearchJobSegment } from './types';
+import { createSeedSearchKernel } from '@/lib/webgpu/kernel';
 
 const DISPATCH_STATE_WORD_COUNT = 4;
 const BUFFER_ALIGNMENT = 256;

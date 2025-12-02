@@ -1,5 +1,5 @@
 import { describe, it } from 'vitest';
-import { createWebGpuDeviceContext, isWebGpuSupported } from '@/lib/webgpu/seed-search/device-context';
+import { createWebGpuDeviceContext, isWebGpuSupported } from '@/lib/webgpu/utils';
 
 const hasWebGpu = isWebGpuSupported();
 const describeWebGpu = hasWebGpu ? describe : describe.skip;

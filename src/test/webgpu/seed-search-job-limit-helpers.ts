@@ -1,4 +1,4 @@
-import type { SeedSearchJobLimits } from '@/lib/webgpu/seed-search/types';
+import type { SeedSearchJobLimits } from '@/lib/webgpu/utils';
 
 const BASE_TEST_LIMITS: SeedSearchJobLimits = {
   workgroupSize: 32,
