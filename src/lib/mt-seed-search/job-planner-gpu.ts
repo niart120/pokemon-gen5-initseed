@@ -99,9 +99,9 @@ export function getDeviceLimits(device?: GPUDevice): GpuJobPlannerConfig['device
 
 /**
  * 推奨ワークグループサイズ
- * MT19937のstate配列（2.5KB）を考慮して64を推奨
+ * device-context のデフォルト値に合わせて256を推奨
  */
-export const RECOMMENDED_WORKGROUP_SIZE = 64;
+export const RECOMMENDED_WORKGROUP_SIZE = 256;
 
 /**
  * 32bit全探索用のGPUジョブ計画設定を作成
