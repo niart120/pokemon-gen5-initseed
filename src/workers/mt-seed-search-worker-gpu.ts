@@ -15,7 +15,7 @@ import type {
 import {
   createMtSeedSearchGpuEngine,
   type MtSeedSearchGpuEngine,
-} from '@/lib/mt-seed-search/mt-seed-search-gpu-engine';
+} from '@/lib/webgpu/mt-seed-search';
 
 interface InternalState {
   job: MtSeedSearchJob | null;
@@ -158,10 +158,10 @@ async function handleStart(job: MtSeedSearchJob) {
 }
 
 /**
- * チャンクサイズ（1ディスパッチあたりの検索Seed数）
- * GPUの場合はより大きなチャンクで処理可能
+ * チャンクサイズ（Worker側での分割）
+ * GPUエンジンが内部でディスパッチ分割するため、ここでは大きめのチャンクで分割
+ * → エンジンの maxMessagesPerDispatch に基づいて動的に決定
  */
-const CHUNK_SIZE = 0x1000000; // 約1600万Seed/チャンク
 
 /**
  * 進捗報告間隔（ミリ秒）
@@ -183,6 +183,15 @@ async function executeSearch(
   const { searchRange, ivCodes, mtAdvances, jobId } = job;
   const { start, end } = searchRange;
 
+  // エンジンの制限値を取得してチャンクサイズを決定
+  const jobLimits = engine.getJobLimits();
+  // エンジン内でさらにディスパッチ分割されるため、Worker側では大きめのチャンクで分割
+  // maxMessagesPerDispatch の倍数を使用（例: 4倍 = 4ディスパッチ分をまとめて実行）
+  const CHUNK_MULTIPLIER = 4;
+  const chunkSize = jobLimits
+    ? jobLimits.maxMessagesPerDispatch * CHUNK_MULTIPLIER
+    : 0x1000000; // フォールバック: 約1600万
+
   // 全体の検索範囲
   const totalCount = end - start + 1;
   let processedCount = 0;
@@ -201,7 +210,7 @@ async function executeSearch(
     }
 
     // チャンク終端を計算（オーバーフロー対策）
-    const chunkEnd = Math.min(chunkStart + CHUNK_SIZE - 1, end);
+    const chunkEnd = Math.min(chunkStart + chunkSize - 1, end);
 
     // GPUで検索実行
     const chunkJob: MtSeedSearchJob = {

@@ -3,6 +3,8 @@
  *
  * WebGPUを使用してMT Seedの全探索を実行する。
  * MT19937のstate配列（624×32bit = 2.5KB）はGPUのprivateメモリに配置。
+ *
+ * device-context から制限値を取得し、最適なディスパッチサイズを動的に決定する。
  */
 
 import type {
@@ -11,29 +13,25 @@ import type {
   IvCode,
 } from '@/types/mt-seed-search';
 import { decodeIvCode } from '@/types/mt-seed-search';
-import shaderSource from '@/workers/shaders/mt-seed-search.wgsl?raw';
-
-// === 定数 ===
-const BUFFER_ALIGNMENT = 256;
-const DEFAULT_WORKGROUP_SIZE = 64;
-const MAX_RESULTS_PER_DISPATCH = 4096;
-
-// デバイス制限のフォールバック値（WebGPU仕様の最小保証値）
-const FALLBACK_MAX_WORKGROUPS_PER_DIMENSION = 65535;
-
-// SearchParams構造体のサイズ（8 * u32 = 32バイト）
-const SEARCH_PARAMS_WORDS = 8;
-
-// 結果バッファのヘッダサイズ（match_count: 1 word）
-const RESULT_HEADER_WORDS = 1;
-
-// 1レコードのサイズ（seed + iv_code = 2 words）
-const RESULT_RECORD_WORDS = 2;
+import {
+  createWebGpuDeviceContext,
+  isWebGpuSupported,
+  BUFFER_ALIGNMENT,
+  MT_SEED_SEARCH_PARAMS_WORDS,
+  MT_SEED_RESULT_HEADER_WORDS,
+  MT_SEED_RESULT_RECORD_WORDS,
+  MT_SEED_MAX_RESULTS_PER_DISPATCH,
+  type WebGpuDeviceContext,
+  type SeedSearchJobLimits,
+} from '@/lib/webgpu/utils';
+import shaderSource from '@/lib/webgpu/kernel/mt-seed-search.wgsl?raw';
 
 // === 型定義 ===
 
 export interface MtSeedSearchGpuEngineConfig {
+  /** 希望するワークグループサイズ（デフォルト: 256、device-contextで調整） */
   workgroupSize?: number;
+  /** ディスパッチあたりの最大結果数 */
   maxResultsPerDispatch?: number;
 }
 
@@ -65,9 +63,14 @@ export interface MtSeedSearchGpuEngine {
   isAvailable(): boolean;
 
   /**
-   * ワークグループサイズを取得
+   * 実際のワークグループサイズを取得
    */
   getWorkgroupSize(): number;
+
+  /**
+   * ジョブ制限値を取得
+   */
+  getJobLimits(): SeedSearchJobLimits | null;
 }
 
 // === ユーティリティ ===
@@ -81,13 +84,13 @@ function alignSize(bytes: number): number {
 export function createMtSeedSearchGpuEngine(
   config?: MtSeedSearchGpuEngineConfig
 ): MtSeedSearchGpuEngine {
-  const workgroupSize = config?.workgroupSize ?? DEFAULT_WORKGROUP_SIZE;
-  const maxResults = config?.maxResultsPerDispatch ?? MAX_RESULTS_PER_DISPATCH;
+  const requestedWorkgroupSize = config?.workgroupSize ?? 256;
+  const maxResults = config?.maxResultsPerDispatch ?? MT_SEED_MAX_RESULTS_PER_DISPATCH;
 
-  let device: GPUDevice | null = null;
+  let deviceContext: WebGpuDeviceContext | null = null;
+  let jobLimits: SeedSearchJobLimits | null = null;
   let pipeline: GPUComputePipeline | null = null;
   let bindGroupLayout: GPUBindGroupLayout | null = null;
-  let maxWorkgroupsPerDimension = FALLBACK_MAX_WORKGROUPS_PER_DIMENSION;
 
   // 再利用可能なバッファ
   let paramsBuffer: GPUBuffer | null = null;
@@ -96,9 +99,10 @@ export function createMtSeedSearchGpuEngine(
   let readbackBuffer: GPUBuffer | null = null;
 
   let targetCodesCapacity = 0;
+  let actualWorkgroupSize = requestedWorkgroupSize;
 
   const isAvailable = (): boolean => {
-    return typeof navigator !== 'undefined' && typeof navigator.gpu !== 'undefined';
+    return isWebGpuSupported();
   };
 
   const initialize = async (): Promise<void> => {
@@ -106,24 +110,27 @@ export function createMtSeedSearchGpuEngine(
       throw new Error('WebGPU is not available in this environment');
     }
 
-    const gpu = navigator.gpu!;
-    const adapter = await gpu.requestAdapter({ powerPreference: 'high-performance' });
-    if (!adapter) {
-      throw new Error('Failed to acquire WebGPU adapter');
-    }
-
-    device = await adapter.requestDevice({
+    // WebGpuDeviceContext を使用してデバイスを取得
+    deviceContext = await createWebGpuDeviceContext({
+      powerPreference: 'high-performance',
       label: 'mt-seed-search-device',
     });
 
-    // デバイスの制限値を取得
-    maxWorkgroupsPerDimension = device.limits.maxComputeWorkgroupsPerDimension
-      ?? FALLBACK_MAX_WORKGROUPS_PER_DIMENSION;
+    // デバイスの制限値から検索ジョブの制限を導出
+    jobLimits = deviceContext.deriveSearchJobLimits({
+      workgroupSize: requestedWorkgroupSize,
+      candidateCapacityPerDispatch: maxResults,
+    });
+
+    // 実際に使用するワークグループサイズを取得
+    actualWorkgroupSize = jobLimits.workgroupSize;
+
+    const device = deviceContext.getDevice();
 
     // シェーダーのワークグループサイズを置換
     const processedShader = shaderSource
-      .replace(/WORKGROUP_SIZE_PLACEHOLDERu/g, `${workgroupSize}u`)
-      .replace(/WORKGROUP_SIZE_PLACEHOLDER/g, `${workgroupSize}`);
+      .replace(/WORKGROUP_SIZE_PLACEHOLDERu/g, `${actualWorkgroupSize}u`)
+      .replace(/WORKGROUP_SIZE_PLACEHOLDER/g, `${actualWorkgroupSize}`);
 
     const shaderModule = device.createShaderModule({
       label: 'mt-seed-search-shader',
@@ -167,7 +174,7 @@ export function createMtSeedSearchGpuEngine(
     });
 
     // パラメータバッファを作成
-    const paramsSize = alignSize(SEARCH_PARAMS_WORDS * Uint32Array.BYTES_PER_ELEMENT);
+    const paramsSize = alignSize(MT_SEED_SEARCH_PARAMS_WORDS * Uint32Array.BYTES_PER_ELEMENT);
     paramsBuffer = device.createBuffer({
       label: 'mt-seed-search-params',
       size: paramsSize,
@@ -175,7 +182,7 @@ export function createMtSeedSearchGpuEngine(
     });
 
     // 結果バッファを作成
-    const resultsWords = RESULT_HEADER_WORDS + maxResults * RESULT_RECORD_WORDS;
+    const resultsWords = MT_SEED_RESULT_HEADER_WORDS + maxResults * MT_SEED_RESULT_RECORD_WORDS;
     const resultsSize = alignSize(resultsWords * Uint32Array.BYTES_PER_ELEMENT);
     resultsBuffer = device.createBuffer({
       label: 'mt-seed-search-results',
@@ -190,10 +197,11 @@ export function createMtSeedSearchGpuEngine(
   };
 
   const ensureTargetCodesBuffer = (ivCodes: IvCode[]): void => {
-    if (!device) {
+    if (!deviceContext) {
       throw new Error('Engine not initialized');
     }
 
+    const device = deviceContext.getDevice();
     const requiredCapacity = ivCodes.length;
     if (targetCodesBuffer && targetCodesCapacity >= requiredCapacity) {
       return;
@@ -211,10 +219,11 @@ export function createMtSeedSearchGpuEngine(
   };
 
   const executeJob = async (job: MtSeedSearchJob): Promise<MtSeedSearchGpuEngineResult> => {
-    if (!device || !pipeline || !bindGroupLayout || !paramsBuffer || !resultsBuffer || !readbackBuffer) {
+    if (!deviceContext || !pipeline || !bindGroupLayout || !paramsBuffer || !resultsBuffer || !readbackBuffer || !jobLimits) {
       throw new Error('Engine not initialized');
     }
 
+    const device = deviceContext.getDevice();
     const { searchRange, ivCodes, mtAdvances } = job;
     const { start, end } = searchRange;
 
@@ -236,9 +245,9 @@ export function createMtSeedSearchGpuEngine(
     const allMatches: MtSeedMatch[] = [];
     let totalMatchCount = 0;
 
-    // ディスパッチを分割して実行
-    // 1ディスパッチあたりの最大Seed数 = maxWorkgroupsPerDimension * workgroupSize
-    const maxSeedsPerDispatch = maxWorkgroupsPerDimension * workgroupSize;
+    // device-context から導出した制限値を使用してディスパッチサイズを計算
+    // maxMessagesPerDispatch = workgroupSize * maxWorkgroupsPerDispatch
+    const maxSeedsPerDispatch = jobLimits.maxMessagesPerDispatch;
     let dispatchStart = start;
     let dispatchIndex = 0;
 
@@ -247,7 +256,7 @@ export function createMtSeedSearchGpuEngine(
       const remainingSeeds = end - dispatchStart + 1;
       const dispatchSeedCount = Math.min(maxSeedsPerDispatch, remainingSeeds);
       const dispatchEnd = dispatchStart + dispatchSeedCount - 1;
-      const workgroupCount = Math.ceil(dispatchSeedCount / workgroupSize);
+      const workgroupCount = Math.ceil(dispatchSeedCount / actualWorkgroupSize);
 
       // パラメータを書き込み
       const paramsData = new Uint32Array([
@@ -303,7 +312,7 @@ export function createMtSeedSearchGpuEngine(
       pass.end();
 
       // 結果をreadbackバッファにコピー
-      const resultsWords = RESULT_HEADER_WORDS + maxResults * RESULT_RECORD_WORDS;
+      const resultsWords = MT_SEED_RESULT_HEADER_WORDS + maxResults * MT_SEED_RESULT_RECORD_WORDS;
       const resultsSize = alignSize(resultsWords * Uint32Array.BYTES_PER_ELEMENT);
       encoder.copyBufferToBuffer(resultsBuffer, 0, readbackBuffer, 0, resultsSize);
 
@@ -321,7 +330,7 @@ export function createMtSeedSearchGpuEngine(
       totalMatchCount += matchCount;
 
       for (let i = 0; i < matchCount; i++) {
-        const baseIdx = RESULT_HEADER_WORDS + i * RESULT_RECORD_WORDS;
+        const baseIdx = MT_SEED_RESULT_HEADER_WORDS + i * MT_SEED_RESULT_RECORD_WORDS;
         const mtSeed = resultData[baseIdx];
         const ivCode: IvCode = resultData[baseIdx + 1];
         const ivSet = decodeIvCode(ivCode);
@@ -355,12 +364,15 @@ export function createMtSeedSearchGpuEngine(
     readbackBuffer = null;
     targetCodesCapacity = 0;
 
-    device = null;
+    deviceContext = null;
     pipeline = null;
     bindGroupLayout = null;
+    jobLimits = null;
   };
 
-  const getWorkgroupSize = (): number => workgroupSize;
+  const getWorkgroupSize = (): number => actualWorkgroupSize;
+
+  const getJobLimits = (): SeedSearchJobLimits | null => jobLimits;
 
   return {
     initialize,
@@ -368,6 +380,7 @@ export function createMtSeedSearchGpuEngine(
     dispose,
     isAvailable,
     getWorkgroupSize,
+    getJobLimits,
   };
 }
 
@@ -375,5 +388,5 @@ export function createMtSeedSearchGpuEngine(
  * WebGPUが利用可能かどうかを確認
  */
 export function isMtSeedSearchGpuAvailable(): boolean {
-  return typeof navigator !== 'undefined' && typeof navigator.gpu !== 'undefined';
+  return isWebGpuSupported();
 }

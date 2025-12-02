@@ -9,9 +9,10 @@ import {
   createWebGpuDeviceContext,
   isWebGpuSeedSearchSupported,
   type WebGpuDeviceContext,
-} from '@/lib/webgpu/seed-search/device-context';
+  type SeedSearchJobLimits,
+} from '@/lib/webgpu/utils';
 import { createSeedSearchEngine } from '@/lib/webgpu/seed-search/seed-search-engine';
-import type { SeedSearchJobLimits, WebGpuRunnerCallbacks } from '@/lib/webgpu/seed-search/types';
+import type { WebGpuRunnerCallbacks } from '@/lib/webgpu/seed-search/types';
 import type { WorkerRequest, WorkerResponse } from '@/types/worker';
 
 const ctx: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobalScope;

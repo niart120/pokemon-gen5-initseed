@@ -21,7 +21,7 @@ import { isMtSeedSearchWorkerResponse, FULL_SEARCH_RANGE } from '@/types/mt-seed
 import { generateIvCodes } from './iv-code-generator';
 import { planCpuJobs } from './job-planner-cpu';
 import { planGpuJobs, RECOMMENDED_WORKGROUP_SIZE } from './job-planner-gpu';
-import { isMtSeedSearchGpuAvailable } from './mt-seed-search-gpu-engine';
+import { isMtSeedSearchGpuAvailable } from '@/lib/webgpu/mt-seed-search';
 
 // === 型定義 ===
 
@@ -53,6 +53,9 @@ export interface SearchParams {
 
   /** 検索フィルター */
   filter: IvSearchFilter;
+
+  /** 徘徊ポケモンモード（IV順序を HABDSC に変換） */
+  isRoamer?: boolean;
 }
 
 export interface AggregatedProgress {
@@ -379,8 +382,8 @@ export function createMtSeedSearchManager(
       return;
     }
 
-    // IVコードを生成
-    const ivCodeResult = generateIvCodes(params.filter);
+    // IVコードを生成（徘徊モード時はIV順序を変換）
+    const ivCodeResult = generateIvCodes(params.filter, { isRoamer: params.isRoamer });
     if (!ivCodeResult.success) {
       const error: SearchError = {
         message: `検索条件が広すぎます。個体値の組み合わせが${ivCodeResult.estimatedCount.toLocaleString()}件あります（上限: 1024件）。条件を絞り込んでください。`,

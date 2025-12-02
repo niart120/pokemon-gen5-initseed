@@ -8,10 +8,10 @@ import {
   isWebGpuSeedSearchSupported,
   type SeedSearchLimitPreferences,
   type WebGpuDeviceContext,
-} from '@/lib/webgpu/seed-search/device-context';
+  type SeedSearchJobLimits,
+} from '@/lib/webgpu/utils';
 import { createSeedSearchEngine, type SeedSearchEngineObserver } from '@/lib/webgpu/seed-search/seed-search-engine';
 import type {
-  SeedSearchJobLimits,
   SeedSearchJobSegment,
   WebGpuRunnerCallbacks,
 } from '@/lib/webgpu/seed-search/types';

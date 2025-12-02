@@ -78,6 +78,30 @@ export function calculateHiddenPower(ivs: IvSet): HiddenPowerResult {
 // === IVコード生成 ===
 
 /**
+ * 徘徊ポケモン用IV並び替え
+ * 通常: HABCDS (HP, Atk, Def, SpA, SpD, Spe)
+ * 徘徊: HABDSC (HP, Atk, Def, Spe, SpA, SpD) → MT取得順に合わせる
+ *
+ * IVコードは HABCDS 順でエンコードされているため、
+ * 徘徊検索時は SpD と Spe を入れ替えたコードを生成する必要がある
+ */
+export function reorderIvCodeForRoamer(ivCode: IvCode): IvCode {
+  // 現在の配置: [HP:5][Atk:5][Def:5][SpA:5][SpD:5][Spe:5]
+  const hp = (ivCode >> 25) & 0x1f;
+  const atk = (ivCode >> 20) & 0x1f;
+  const def = (ivCode >> 15) & 0x1f;
+  const spa = (ivCode >> 10) & 0x1f;
+  const spd = (ivCode >> 5) & 0x1f;
+  const spe = ivCode & 0x1f;
+
+  // 徘徊用配置: [HP:5][Atk:5][Def:5][Spe:5][SpA:5][SpD:5]
+  // ※IVコードのエンコード順序は変更せず、検索対象の値を入れ替える
+  // MTから取得される順: HP, Atk, Def, Spe, SpA, SpD
+  // これを標準IVコード形式 (HABCDS) で表現:
+  return (hp << 25) | (atk << 20) | (def << 15) | (spe << 10) | (spa << 5) | spd;
+}
+
+/**
  * めざパフィルターとのマッチング判定
  */
 function matchesHiddenPowerFilter(
@@ -162,10 +186,16 @@ export function validateIvSearchFilter(filter: IvSearchFilter): string[] {
  * 検索条件からIVコードリストを生成
  *
  * @param filter - 検索フィルター
+ * @param options - オプション
+ * @param options.isRoamer - 徘徊ポケモンモード（IV順序を HABDSC に変換）
  * @returns 成功時はIVコード配列、失敗時はエラー情報
  */
-export function generateIvCodes(filter: IvSearchFilter): IvCodeGenerationResult {
+export function generateIvCodes(
+  filter: IvSearchFilter,
+  options?: { isRoamer?: boolean }
+): IvCodeGenerationResult {
   const candidates: IvCode[] = [];
+  const isRoamer = options?.isRoamer ?? false;
 
   const [hpRange, atkRange, defRange, spaRange, spdRange, speRange] =
     filter.ivRanges;
@@ -184,7 +214,12 @@ export function generateIvCodes(filter: IvSearchFilter): IvCodeGenerationResult 
                 continue;
               }
 
-              candidates.push(encodeIvCode(ivs));
+              // IVコードを生成（徘徊モード時は順序変換）
+              let ivCode = encodeIvCode(ivs);
+              if (isRoamer) {
+                ivCode = reorderIvCodeForRoamer(ivCode);
+              }
+              candidates.push(ivCode);
 
               // 上限チェック（早期終了）
               if (candidates.length > MAX_IV_CODES) {

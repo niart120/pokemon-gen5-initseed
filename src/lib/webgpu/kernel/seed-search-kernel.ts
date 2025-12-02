@@ -1,4 +1,7 @@
-import shaderTemplate from './sha1-generate.wgsl?raw';
+/**
+ * 初期Seed検索用GPUカーネル
+ */
+import shaderTemplate from './seed-search.wgsl?raw';
 
 export interface SeedSearchKernel {
   pipeline: GPUComputePipeline;

@@ -1,50 +1,22 @@
+/**
+ * WebGPUデバイスコンテキスト
+ * 
+ * GPUデバイスの取得・能力検出・制限値計算を担当する共通ユーティリティ
+ */
+
 import { MATCH_RECORD_WORDS } from './constants';
-import type { SeedSearchJobLimits } from './types';
+import type {
+  SeedSearchJobLimits,
+  SeedSearchLimitPreferences,
+  WebGpuDeviceContext,
+  WebGpuDeviceOptions,
+  WebGpuCapabilities,
+  GpuProfile,
+  GpuProfileKind,
+  AdapterInfoResult,
+} from './types';
 
-export interface WebGpuDeviceOptions {
-  requiredFeatures?: GPUFeatureName[];
-  requiredLimits?: GPUDeviceDescriptor['requiredLimits'];
-  label?: string;
-  powerPreference?: GPUPowerPreference;
-}
-
-export interface WebGpuCapabilities {
-  limits: GPUSupportedLimits;
-  features: ReadonlySet<GPUFeatureName>;
-}
-
-export type GpuProfileKind = 'unknown' | 'integrated' | 'mobile' | 'discrete';
-
-export type GpuProfileSource = 'unknown' | 'user-agent' | 'adapter-info' | 'webgl' | 'fallback';
-
-export interface GpuProfile {
-  kind: GpuProfileKind;
-  source: GpuProfileSource;
-  userAgent?: string;
-  isFallbackAdapter: boolean;
-  adapterInfo?: AdapterInfoResult;
-}
-
-export interface SeedSearchLimitPreferences {
-  workgroupSize?: number;
-  maxWorkgroupsPerDispatch?: number;
-  maxMessagesPerDispatch?: number;
-  candidateCapacityPerDispatch?: number;
-  maxDispatchesInFlight?: number;
-}
-
-export interface WebGpuDeviceContext {
-  getAdapter(): GPUAdapter;
-  getDevice(): GPUDevice;
-  getQueue(): GPUQueue;
-  getLimits(): GPUSupportedLimits;
-  getCapabilities(): WebGpuCapabilities;
-  getGpuProfile(): GpuProfile;
-  deriveSearchJobLimits(preferences?: SeedSearchLimitPreferences): SeedSearchJobLimits;
-  isLost(): boolean;
-  waitForLoss(): Promise<GPUDeviceLostInfo>;
-  getSupportedWorkgroupSize(targetSize?: number): number;
-}
+// === 定数 ===
 
 const DEFAULT_DEVICE_OPTIONS: Required<Pick<WebGpuDeviceOptions, 'requiredFeatures' | 'powerPreference'>> = {
   requiredFeatures: [],
@@ -68,19 +40,32 @@ const DEFAULT_DISPATCH_SLOTS_BY_PROFILE: Record<GpuProfileKind, number> = {
 const FALLBACK_DISPATCH_SLOTS = 1;
 const MAX_AUTOMATIC_DISPATCH_SLOTS = 8;
 
+// === エクスポート関数 ===
+
+/**
+ * WebGPUがサポートされているか確認
+ */
 export function isWebGpuSupported(): boolean {
   return typeof navigator !== 'undefined' && typeof navigator.gpu !== 'undefined';
 }
 
+/**
+ * 後方互換性のためのエイリアス
+ */
 export const isWebGpuSeedSearchSupported = isWebGpuSupported;
 
+/**
+ * WebGPUデバイスコンテキストを作成
+ */
 export async function createWebGpuDeviceContext(options?: WebGpuDeviceOptions): Promise<WebGpuDeviceContext> {
   if (!isWebGpuSupported()) {
     throw new Error('WebGPU is not available in this environment');
   }
 
   const gpu = navigator.gpu!;
-  const adapter = await gpu.requestAdapter({ powerPreference: options?.powerPreference ?? DEFAULT_DEVICE_OPTIONS.powerPreference });
+  const adapter = await gpu.requestAdapter({
+    powerPreference: options?.powerPreference ?? DEFAULT_DEVICE_OPTIONS.powerPreference,
+  });
   if (!adapter) {
     throw new Error('Failed to acquire WebGPU adapter');
   }
@@ -91,7 +76,11 @@ export async function createWebGpuDeviceContext(options?: WebGpuDeviceOptions): 
     label: options?.label ?? 'seed-search-device',
   };
 
-  const [device, gpuProfile] = await Promise.all([adapter.requestDevice(descriptor), detectGpuProfile(adapter)]);
+  const [device, gpuProfile] = await Promise.all([
+    adapter.requestDevice(descriptor),
+    detectGpuProfile(adapter),
+  ]);
+
   let deviceLost = false;
   const lostPromise = device.lost.then((info) => {
     deviceLost = true;
@@ -117,6 +106,25 @@ export async function createWebGpuDeviceContext(options?: WebGpuDeviceOptions): 
     },
   };
 }
+
+/**
+ * デバイスの制限値から検索ジョブの制限値を導出
+ * 外部から直接呼び出す場合用
+ */
+export function deriveSearchJobLimitsFromDevice(
+  device: GPUDevice,
+  profile?: GpuProfile,
+  preferences?: SeedSearchLimitPreferences
+): SeedSearchJobLimits {
+  const effectiveProfile: GpuProfile = profile ?? {
+    kind: 'unknown',
+    source: 'unknown',
+    isFallbackAdapter: false,
+  };
+  return deriveSearchJobLimits(device.limits, effectiveProfile, preferences);
+}
+
+// === 内部関数 ===
 
 function extractCapabilities(adapter: GPUAdapter, device: GPUDevice): WebGpuCapabilities {
   const featureSet = new Set<GPUFeatureName>();
@@ -213,12 +221,7 @@ function resolveMaxDispatchesInFlight(profile: GpuProfile, prefs: SeedSearchLimi
   return clampPositive(Math.min(profileDefault, MAX_AUTOMATIC_DISPATCH_SLOTS), 'maxDispatchesInFlight');
 }
 
-export type AdapterInfoResult = {
-  vendor?: string;
-  architecture?: string;
-  device?: string;
-  description?: string;
-};
+// === GPUプロファイル検出 ===
 
 async function detectGpuProfile(adapter: GPUAdapter): Promise<GpuProfile> {
   const userAgent = getUserAgent();
