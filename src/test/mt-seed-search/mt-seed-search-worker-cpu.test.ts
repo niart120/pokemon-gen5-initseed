@@ -5,7 +5,7 @@
  * スループット基準: 40M/s (32並列時)
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import type { MtSeedSearchWorkerResponse, MtSeedSearchCompletion, MtSeedSearchProgress } from '@/types/mt-seed-search';
+import type { MtSeedSearchCompletion, MtSeedSearchProgress } from '@/types/mt-seed-search';
 import {
   createCpuWorker,
   waitForMessage,

@@ -65,6 +65,7 @@ pub fn derive_iv_set(mt_seed: u32, advances: u32) -> [u8; 6] {
 ///
 /// # Returns
 /// マッチしたMT SeedとIVコードのペア配列
+#[allow(dead_code)]
 pub fn search_mt_seed_segment(
     start: u32,
     end: u32,

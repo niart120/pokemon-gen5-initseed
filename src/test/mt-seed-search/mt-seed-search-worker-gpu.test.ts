@@ -5,7 +5,7 @@
  * スループット基準: 100M/s
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import type { MtSeedSearchWorkerResponse, MtSeedSearchCompletion, MtSeedSearchProgress } from '@/types/mt-seed-search';
+import type { MtSeedSearchCompletion, MtSeedSearchProgress } from '@/types/mt-seed-search';
 import {
   createGpuWorker,
   waitForMessage,
