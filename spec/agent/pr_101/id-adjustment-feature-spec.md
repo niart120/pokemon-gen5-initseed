@@ -16,32 +16,42 @@ MiscPanel上の一機能として実装する。
 
 ## 2. ユーザー入力仕様
 
-### 2.1 ID検索パラメータ
+### 2.1 検索条件VO（IdAdjustmentSearchConditionVO）
 
-| フィールド | 型 | 必須 | 説明 | 有効範囲 |
-|-----------|-----|------|------|----------|
-| `targetTid` | `number` | 必須 | 表ID（Trainer ID） | 0〜65535 |
-| `targetSid` | `number \| null` | 任意 | 裏ID（Secret ID） | 0〜65535 または null |
-| `shinyPid` | `number \| null` | 任意 | 色違いにしたい個体のPID | 0〜0xFFFFFFFF または null |
+検索条件はValue Objectとしてまとめて管理する。
 
-### 2.2 検索期間パラメータ
+```typescript
+/**
+ * ID調整検索条件VO
+ * IdAdjustmentCardから入力される全ての検索パラメータをまとめた値オブジェクト
+ */
+interface IdAdjustmentSearchConditionVO {
+  // --- ID検索パラメータ ---
+  targetTid: number;           // 表ID（必須、0〜65535）
+  targetSid: number | null;    // 裏ID（任意、0〜65535 または null）
+  shinyPid: number | null;     // 色違いにしたい個体のPID（任意、0〜0xFFFFFFFF または null）
+  
+  // --- 検索期間パラメータ ---
+  dateRange: {
+    startYear: number;         // 検索開始年 (2000〜2099)
+    startMonth: number;        // 検索開始月 (1〜12)
+    startDay: number;          // 検索開始日 (1〜31)
+    endYear: number;           // 検索終了年 (2000〜2099)
+    endMonth: number;          // 検索終了月 (1〜12)
+    endDay: number;            // 検索終了日 (1〜31)
+  };
+  timeRange: {
+    hour: { start: number; end: number };     // 0〜23
+    minute: { start: number; end: number };   // 0〜59
+    second: { start: number; end: number };   // 0〜59
+  };
+  
+  // --- キー入力パラメータ（IdAdjustmentCardから入力） ---
+  keyInputMask: number;        // 許可するキー入力マスク
+}
+```
 
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|------|------|
-| `dateRange.startYear` | `number` | 必須 | 検索開始年 (2000〜2099) |
-| `dateRange.startMonth` | `number` | 必須 | 検索開始月 (1〜12) |
-| `dateRange.startDay` | `number` | 必須 | 検索開始日 (1〜31) |
-| `dateRange.endYear` | `number` | 必須 | 検索終了年 (2000〜2099) |
-| `dateRange.endMonth` | `number` | 必須 | 検索終了月 (1〜12) |
-| `dateRange.endDay` | `number` | 必須 | 検索終了日 (1〜31) |
-| `timeRange.hour.start` | `number` | 必須 | 検索開始時 (0〜23) |
-| `timeRange.hour.end` | `number` | 必須 | 検索終了時 (0〜23) |
-| `timeRange.minute.start` | `number` | 必須 | 検索開始分 (0〜59) |
-| `timeRange.minute.end` | `number` | 必須 | 検索終了分 (0〜59) |
-| `timeRange.second.start` | `number` | 必須 | 検索開始秒 (0〜59) |
-| `timeRange.second.end` | `number` | 必須 | 検索終了秒 (0〜59) |
-
-### 2.3 暗黙的パラメータ（ProfileCardから取得）
+### 2.2 暗黙的パラメータ（ProfileCardから取得）
 
 | フィールド | 型 | 説明 |
 |-----------|-----|------|
@@ -54,7 +64,8 @@ MiscPanel上の一機能として実装する。
 | `newGame` | `boolean` | 始めからかどうか |
 | `withSave` | `boolean` | セーブデータがあるか |
 | `memoryLink` | `boolean` | 思い出リンク済みか（BW2のみ） |
-| `keyInputMask` | `number` | 許可するキー入力マスク |
+
+**注**: `keyInputMask` はProfileCardからではなくIdAdjustmentCardから入力する。
 
 ## 3. 検索結果仕様
 
@@ -79,7 +90,7 @@ interface IdAdjustmentSearchResult {
 
 ### 3.2 表示制限
 
-- 最大結果件数: 1000件
+- 最大結果件数: 32件
 - 結果は仮想テーブル（Virtual Table）を用いて表示
 
 ### 3.3 結果テーブルカラム
@@ -176,23 +187,23 @@ interface IdAdjustmentCardProps {}
 const IdAdjustmentCard: React.FC<IdAdjustmentCardProps> = () => {
   // Zustand storeから状態を取得
   const { 
-    searchParams, 
+    searchCondition, 
     results, 
     isSearching, 
     progress,
     startSearch,
     stopSearch,
-    updateSearchParams 
+    updateSearchCondition 
   } = useIdAdjustmentStore();
   
-  // ProfileCardから暗黙的パラメータを取得
+  // ProfileCardから暗黙的パラメータを取得（keyInputMask以外）
   const profile = useActiveProfile();
   
   return (
     <PanelCard title="ID調整">
       <IdAdjustmentSearchForm 
-        params={searchParams} 
-        onParamsChange={updateSearchParams} 
+        condition={searchCondition} 
+        onConditionChange={updateSearchCondition} 
       />
       <SearchControls 
         isSearching={isSearching}
@@ -212,8 +223,8 @@ const IdAdjustmentCard: React.FC<IdAdjustmentCardProps> = () => {
 
 ```typescript
 interface IdAdjustmentSearchFormProps {
-  params: IdAdjustmentSearchParams;
-  onParamsChange: (params: Partial<IdAdjustmentSearchParams>) => void;
+  condition: IdAdjustmentSearchConditionVO;
+  onConditionChange: (condition: Partial<IdAdjustmentSearchConditionVO>) => void;
 }
 ```
 
@@ -223,6 +234,7 @@ interface IdAdjustmentSearchFormProps {
 - 色違いPID（任意、16進数入力）
 - 検索日付範囲（開始日〜終了日）
 - 検索時刻範囲（時分秒それぞれのstart〜end）
+- キー入力設定（許可するキー入力マスク）
 
 ### 5.3 IdAdjustmentResultsTable
 
@@ -246,7 +258,7 @@ CPUコア数に応じてWorkerを生成・管理する。
 // id-adjustment-worker-manager.ts
 
 interface IdAdjustmentWorkerManager {
-  startSearch(params: IdAdjustmentSearchParams): Promise<void>;
+  startSearch(condition: IdAdjustmentSearchConditionVO, profile: ProfileData): Promise<void>;
   stopSearch(): void;
   onProgress(callback: (progress: SearchProgress) => void): void;
   onResults(callback: (results: IdAdjustmentSearchResult[]) => void): void;
@@ -264,7 +276,7 @@ interface IdAdjustmentWorkerManager {
 ```typescript
 // Worker への要求
 type IdAdjustmentWorkerRequest =
-  | { type: 'START_SEARCH'; params: IdAdjustmentSearchParams; workerIndex: number; totalWorkers: number }
+  | { type: 'START_SEARCH'; condition: IdAdjustmentSearchConditionVO; profile: ProfileData; workerIndex: number; totalWorkers: number }
   | { type: 'PAUSE' }
   | { type: 'RESUME' }
   | { type: 'STOP' };
@@ -452,25 +464,28 @@ fn check_shiny(pid: u32, tid: u16, sid: u16) -> bool {
 // src/store/id-adjustment-store.ts
 import { create } from 'zustand';
 
-interface IdAdjustmentSearchParams {
+/**
+ * ID調整検索条件VO
+ */
+interface IdAdjustmentSearchConditionVO {
   targetTid: number;
   targetSid: number | null;
   shinyPid: number | null;
   dateRange: DateRange;
   timeRange: TimeRange;
-  maxResults: number;
+  keyInputMask: number;
 }
 
 interface IdAdjustmentState {
-  // 検索パラメータ
-  searchParams: IdAdjustmentSearchParams;
+  // 検索条件VO
+  searchCondition: IdAdjustmentSearchConditionVO;
   
   // 検索状態
   isSearching: boolean;
   isPaused: boolean;
   progress: SearchProgress;
   
-  // 検索結果
+  // 検索結果（最大32件）
   results: IdAdjustmentSearchResult[];
   
   // エラー
@@ -478,7 +493,7 @@ interface IdAdjustmentState {
 }
 
 interface IdAdjustmentActions {
-  updateSearchParams: (params: Partial<IdAdjustmentSearchParams>) => void;
+  updateSearchCondition: (condition: Partial<IdAdjustmentSearchConditionVO>) => void;
   startSearch: (profile: ProfileData) => Promise<void>;
   pauseSearch: () => void;
   resumeSearch: () => void;
@@ -488,15 +503,17 @@ interface IdAdjustmentActions {
   setError: (error: Error | null) => void;
 }
 
+const MAX_RESULTS = 32;
+
 const useIdAdjustmentStore = create<IdAdjustmentState & IdAdjustmentActions>((set, get) => ({
   // 初期状態
-  searchParams: {
+  searchCondition: {
     targetTid: 0,
     targetSid: null,
     shinyPid: null,
     dateRange: { startYear: 2010, startMonth: 1, startDay: 1, endYear: 2010, endMonth: 12, endDay: 31 },
     timeRange: { hour: { start: 0, end: 23 }, minute: { start: 0, end: 59 }, second: { start: 0, end: 59 } },
-    maxResults: 1000,
+    keyInputMask: 0,
   },
   isSearching: false,
   isPaused: false,
@@ -505,12 +522,13 @@ const useIdAdjustmentStore = create<IdAdjustmentState & IdAdjustmentActions>((se
   error: null,
   
   // アクション
-  updateSearchParams: (params) => set((state) => ({ 
-    searchParams: { ...state.searchParams, ...params } 
+  updateSearchCondition: (condition) => set((state) => ({ 
+    searchCondition: { ...state.searchCondition, ...condition } 
   })),
   
   startSearch: async (profile) => {
     // WorkerManager を通じて検索開始
+    // 検索条件VOとProfileDataを渡す
   },
   
   pauseSearch: () => {
@@ -528,7 +546,7 @@ const useIdAdjustmentStore = create<IdAdjustmentState & IdAdjustmentActions>((se
   clearResults: () => set({ results: [] }),
   
   addResults: (newResults) => set((state) => ({
-    results: [...state.results, ...newResults].slice(0, state.searchParams.maxResults)
+    results: [...state.results, ...newResults].slice(0, MAX_RESULTS)
   })),
   
   setError: (error) => set({ error }),
@@ -612,10 +630,12 @@ IdAdjustmentCard
 ├── 期間設定セクション
 │   ├── 日付範囲（DatePicker または 年月日入力）
 │   └── 時刻範囲（時分秒の範囲入力）
+├── キー入力設定セクション
+│   └── 許可するキー入力マスク設定
 ├── 検索コントロール
 │   ├── 検索開始/停止ボタン
 │   └── 進捗バー
-└── 結果テーブル（仮想スクロール）
+└── 結果テーブル（仮想スクロール、最大32件）
 ```
 
 ### 11.3 レスポンシブ対応
@@ -667,37 +687,28 @@ Worker数上限の根拠:
 
 ### 13.2 バッチ処理
 
-チャンク処理パラメータは、既存の `mt-seed-boot-timing-worker.ts` の実績値を参考に設定:
-
 ```typescript
 const BATCH_CONFIG = {
-  // 1チャンクあたりの処理秒数
-  // 5日分 × セグメント数 = 基準値（mt-seed-boot-timing-worker.ts準拠）
-  CHUNK_SECONDS_BASE: 3600 * 24 * 5,
+  // 1チャンクあたりの処理秒数: 7日分
+  CHUNK_SECONDS: 3600 * 24 * 7,  // 604,800秒
   
-  // 結果送信のバッファサイズ
-  RESULT_BUFFER_SIZE: 100,
+  // 検索結果の上限
+  MAX_RESULTS: 32,
   
   // 進捗報告インターバル（ms）
   PROGRESS_INTERVAL_MS: 500,
-  
-  // 結果送信タイムアウト（ms）
-  RESULT_SEND_TIMEOUT_MS: 500,
 };
 ```
 
 パラメータ設計根拠:
-- `CHUNK_SECONDS_BASE`: 既存実装 (`mt-seed-boot-timing-worker.ts` line 361) と同値を採用
-  - 大きすぎるとメモリ圧迫、小さすぎるとオーバーヘッド増加
-  - セグメント数が多い場合は動的に調整（上限: 1日分 × セグメント数）
+- `CHUNK_SECONDS`: 7日分（604,800秒）を1チャンクとして処理
+- `MAX_RESULTS`: 32件を上限とし、それ以降の検索結果は破棄
 - `PROGRESS_INTERVAL_MS`: UI更新頻度とのバランス（既存実装と同値）
-
-実装時に性能テストを実施し、必要に応じてチューニングすること。
 
 ### 13.3 メモリ管理
 
-- 結果は最大1000件に制限
-- 古い結果は破棄せず、新規追加を停止
+- 結果は最大32件に制限
+- 上限到達後は新規追加を停止
 - Worker終了時はリソースを解放
 
 ## 14. テスト仕様
