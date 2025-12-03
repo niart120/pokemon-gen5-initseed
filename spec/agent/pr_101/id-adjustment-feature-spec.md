@@ -16,42 +16,91 @@ MiscPanel上の一機能として実装する。
 
 ## 2. ユーザー入力仕様
 
-### 2.1 検索条件VO（IdAdjustmentSearchConditionVO）
+### 2.1 検索パラメータ（IdAdjustmentSearchParams）
 
-検索条件はValue Objectとしてまとめて管理する。
+検索パラメータは既存の `MtSeedBootTimingSearchParams` / `EggBootTimingSearchParams` と同様の命名規則・構造に従う。
+共通の型（`DateRange`, `DailyTimeRange`, `BootCondition` 等）は `@/types/search` から再利用する。
 
 ```typescript
+import type { Hardware, ROMRegion, ROMVersion } from '@/types/rom';
+import type { DailyTimeRange, DateRange, BootCondition } from '@/types/search';
+
+// Re-export shared types for convenience
+export type { DateRange, BootCondition };
+
 /**
- * ID調整検索条件VO
- * IdAdjustmentCardから入力される全ての検索パラメータをまとめた値オブジェクト
+ * ID調整検索パラメータ
+ * 既存の MtSeedBootTimingSearchParams と同様の構造
  */
-interface IdAdjustmentSearchConditionVO {
-  // --- ID検索パラメータ ---
-  targetTid: number;           // 表ID（必須、0〜65535）
-  targetSid: number | null;    // 裏ID（任意、0〜65535 または null）
-  shinyPid: number | null;     // 色違いにしたい個体のPID（任意、0〜0xFFFFFFFF または null）
-  
-  // --- 検索期間パラメータ ---
-  dateRange: {
-    startYear: number;         // 検索開始年 (2000〜2099)
-    startMonth: number;        // 検索開始月 (1〜12)
-    startDay: number;          // 検索開始日 (1〜31)
-    endYear: number;           // 検索終了年 (2000〜2099)
-    endMonth: number;          // 検索終了月 (1〜12)
-    endDay: number;            // 検索終了日 (1〜31)
+export interface IdAdjustmentSearchParams {
+  // === 起動時間パラメータ（boot-timing-search共通） ===
+
+  /** 日付範囲 */
+  dateRange: DateRange;
+
+  /**
+   * 検索範囲（秒）
+   * チャンク分割時にManagerが設定。
+   * 指定されている場合、dateRangeからの再計算をスキップする。
+   */
+  rangeSeconds?: number;
+
+  /** Timer0範囲 */
+  timer0Range: {
+    min: number; // 0x0000-0xFFFF
+    max: number;
   };
-  timeRange: {
-    hour: { start: number; end: number };     // 0〜23
-    minute: { start: number; end: number };   // 0〜59
-    second: { start: number; end: number };   // 0〜59
+
+  /** VCount範囲 */
+  vcountRange: {
+    min: number; // 0x00-0xFF
+    max: number;
   };
-  
-  // --- キー入力パラメータ（IdAdjustmentCardから入力） ---
-  keyInputMask: number;        // 許可するキー入力マスク
+
+  /** キー入力マスク (ビットマスク) - IdAdjustmentCardから入力 */
+  keyInputMask: number;
+
+  /** MACアドレス (6バイト) */
+  macAddress: readonly [number, number, number, number, number, number];
+
+  /** ハードウェア */
+  hardware: Hardware;
+
+  /** ROMバージョン */
+  romVersion: ROMVersion;
+
+  /** ROM地域 */
+  romRegion: ROMRegion;
+
+  /** 時刻範囲フィルター（1日の中で検索する時間帯） */
+  timeRange: DailyTimeRange;
+
+  // === ID調整固有パラメータ ===
+
+  /** 検索対象の表ID（必須、0〜65535） */
+  targetTid: number;
+
+  /** 検索対象の裏ID（任意、0〜65535 または null） */
+  targetSid: number | null;
+
+  /** 色違いにしたい個体のPID（任意、0〜0xFFFFFFFF または null） */
+  shinyPid: number | null;
+
+  /** ゲームモード */
+  gameMode: GameMode;
+
+  // === 制限 ===
+
+  /** 結果上限数 (全体) */
+  maxResults: number;
 }
 ```
 
+**注**: `keyInputMask` はProfileCardからではなくIdAdjustmentCardから入力する。
+
 ### 2.2 暗黙的パラメータ（ProfileCardから取得）
+
+以下のパラメータは ProfileCard から取得し、`IdAdjustmentSearchParams` に統合する:
 
 | フィールド | 型 | 説明 |
 |-----------|-----|------|
@@ -61,37 +110,45 @@ interface IdAdjustmentSearchConditionVO {
 | `macAddress` | `[number, number, number, number, number, number]` | MACアドレス |
 | `timer0Range` | `{ min: number, max: number }` | Timer0範囲 |
 | `vcountRange` | `{ min: number, max: number }` | VCount範囲 |
-| `newGame` | `boolean` | 始めからかどうか |
-| `withSave` | `boolean` | セーブデータがあるか |
-| `memoryLink` | `boolean` | 思い出リンク済みか（BW2のみ） |
-
-**注**: `keyInputMask` はProfileCardからではなくIdAdjustmentCardから入力する。
+| `newGame` | `boolean` | 始めからかどうか（GameMode導出に使用） |
+| `withSave` | `boolean` | セーブデータがあるか（GameMode導出に使用） |
+| `memoryLink` | `boolean` | 思い出リンク済みか（BW2のみ、GameMode導出に使用） |
 
 ## 3. 検索結果仕様
 
 ### 3.1 結果データ構造
 
+既存の `MtSeedBootTimingSearchResult` と同様に、共通の `BootCondition` 型を使用する。
+
 ```typescript
-interface IdAdjustmentSearchResult {
-  boot: {
-    datetime: Date;         // 起動日時
-    timer0: number;         // Timer0値
-    vcount: number;         // VCount値
-    keyCode: number;        // キー入力コード
-    keyInputNames: string[]; // キー入力名
-    macAddress: readonly [number, number, number, number, number, number];
-  };
-  lcgSeedHex: string;       // 初期Seed（16進数文字列）
-  tid: number;              // 算出された表ID
-  sid: number;              // 算出された裏ID
-  isShiny?: boolean;        // 指定PIDが色違いになるか（shinyPid指定時）
+import type { BootCondition } from '@/types/search';
+
+/**
+ * ID調整検索結果1件
+ */
+export interface IdAdjustmentSearchResult {
+  /** 起動条件（boot-timing-search共通） */
+  boot: BootCondition;
+
+  /** LCG Seed (16進文字列) */
+  lcgSeedHex: string;
+
+  /** 算出された表ID */
+  tid: number;
+
+  /** 算出された裏ID */
+  sid: number;
+
+  /** 指定PIDが色違いになるか（shinyPid指定時のみ有効） */
+  isShiny?: boolean;
 }
 ```
 
 ### 3.2 表示制限
 
-- 最大結果件数: 32件
+- バッチ検索あたりの結果上限: 32件
 - 結果は仮想テーブル（Virtual Table）を用いて表示
+- 全体の結果上限は `maxResults` パラメータで制御（デフォルト: 1000件）
 
 ### 3.3 結果テーブルカラム
 
@@ -187,13 +244,13 @@ interface IdAdjustmentCardProps {}
 const IdAdjustmentCard: React.FC<IdAdjustmentCardProps> = () => {
   // Zustand storeから状態を取得
   const { 
-    searchCondition, 
+    searchParams, 
     results, 
     isSearching, 
     progress,
     startSearch,
     stopSearch,
-    updateSearchCondition 
+    updateSearchParams 
   } = useIdAdjustmentStore();
   
   // ProfileCardから暗黙的パラメータを取得（keyInputMask以外）
@@ -202,8 +259,8 @@ const IdAdjustmentCard: React.FC<IdAdjustmentCardProps> = () => {
   return (
     <PanelCard title="ID調整">
       <IdAdjustmentSearchForm 
-        condition={searchCondition} 
-        onConditionChange={updateSearchCondition} 
+        params={searchParams} 
+        onParamsChange={updateSearchParams} 
       />
       <SearchControls 
         isSearching={isSearching}
@@ -223,8 +280,8 @@ const IdAdjustmentCard: React.FC<IdAdjustmentCardProps> = () => {
 
 ```typescript
 interface IdAdjustmentSearchFormProps {
-  condition: IdAdjustmentSearchConditionVO;
-  onConditionChange: (condition: Partial<IdAdjustmentSearchConditionVO>) => void;
+  params: IdAdjustmentSearchParams;
+  onParamsChange: (params: Partial<IdAdjustmentSearchParams>) => void;
 }
 ```
 
@@ -258,7 +315,7 @@ CPUコア数に応じてWorkerを生成・管理する。
 // id-adjustment-worker-manager.ts
 
 interface IdAdjustmentWorkerManager {
-  startSearch(condition: IdAdjustmentSearchConditionVO, profile: ProfileData): Promise<void>;
+  startSearch(params: IdAdjustmentSearchParams): Promise<void>;
   stopSearch(): void;
   onProgress(callback: (progress: SearchProgress) => void): void;
   onResults(callback: (results: IdAdjustmentSearchResult[]) => void): void;
@@ -273,21 +330,108 @@ interface IdAdjustmentWorkerManager {
 
 ### 6.2 Worker通信プロトコル
 
-```typescript
-// Worker への要求
-type IdAdjustmentWorkerRequest =
-  | { type: 'START_SEARCH'; condition: IdAdjustmentSearchConditionVO; profile: ProfileData; workerIndex: number; totalWorkers: number }
-  | { type: 'PAUSE' }
-  | { type: 'RESUME' }
-  | { type: 'STOP' };
+既存の `MtSeedBootTimingWorkerRequest` / `MtSeedBootTimingWorkerResponse` と同様の構造に従う。
 
-// Worker からの応答
-type IdAdjustmentWorkerResponse =
+```typescript
+/**
+ * Worker リクエスト
+ */
+export type IdAdjustmentWorkerRequest =
+  | {
+      type: 'START_SEARCH';
+      params: IdAdjustmentSearchParams;
+      requestId?: string;
+    }
+  | {
+      type: 'PAUSE';
+      requestId?: string;
+    }
+  | {
+      type: 'RESUME';
+      requestId?: string;
+    }
+  | {
+      type: 'STOP';
+      requestId?: string;
+    };
+
+/**
+ * Worker レスポンス
+ */
+export type IdAdjustmentWorkerResponse =
   | { type: 'READY'; version: string }
   | { type: 'PROGRESS'; payload: IdAdjustmentProgress }
-  | { type: 'RESULTS'; payload: { results: IdAdjustmentSearchResult[]; batchIndex: number } }
+  | { type: 'RESULTS'; payload: IdAdjustmentResultsPayload }
   | { type: 'COMPLETE'; payload: IdAdjustmentCompletion }
-  | { type: 'ERROR'; message: string; category: string; fatal: boolean };
+  | {
+      type: 'ERROR';
+      message: string;
+      category: IdAdjustmentErrorCategory;
+      fatal: boolean;
+    };
+
+/**
+ * 進捗情報
+ */
+export interface IdAdjustmentProgress {
+  /** 処理済み起動条件の組み合わせ数（完了セグメント数） */
+  processedCombinations: number;
+
+  /** 総組み合わせ数 */
+  totalCombinations: number;
+
+  /** 見つかった結果数 */
+  foundCount: number;
+
+  /** 進捗率 (0-100) */
+  progressPercent: number;
+
+  /** 経過時間 (ms) */
+  elapsedMs: number;
+
+  /** 推定残り時間 (ms) */
+  estimatedRemainingMs: number;
+
+  /** 処理済み秒数（検索範囲の秒数単位） */
+  processedSeconds?: number;
+}
+
+/**
+ * 結果ペイロード（バッチ送信用）
+ */
+export interface IdAdjustmentResultsPayload {
+  results: IdAdjustmentSearchResult[];
+  batchIndex: number;
+}
+
+/**
+ * 完了情報
+ */
+export interface IdAdjustmentCompletion {
+  /** 完了理由 */
+  reason: 'completed' | 'stopped' | 'max-results' | 'error';
+
+  /** 処理した起動条件の組み合わせ数 */
+  processedCombinations: number;
+
+  /** 総組み合わせ数 */
+  totalCombinations: number;
+
+  /** 見つかった結果数 */
+  resultsCount: number;
+
+  /** 経過時間 (ms) */
+  elapsedMs: number;
+}
+
+/**
+ * エラーカテゴリ
+ */
+export type IdAdjustmentErrorCategory =
+  | 'VALIDATION' // パラメータ検証エラー
+  | 'WASM_INIT' // WASM初期化エラー
+  | 'RUNTIME' // 実行時エラー
+  | 'ABORTED'; // 中断
 ```
 
 ### 6.3 Worker内部処理フロー
@@ -332,16 +476,20 @@ pub fn calculate_tid_sid_from_seed(initial_seed: u64, mode: GameMode) -> TidSidR
 
 ### 7.2 新規API: IdAdjustmentSearchIterator
 
+既存の `MtSeedBootTimingSearchIterator` と同様の構造に従い、共通のJS用ラッパー型（`DSConfigJs`, `SegmentParamsJs`, `TimeRangeParamsJs`, `SearchRangeParamsJs`）を再利用する。
+
 ```rust
 // wasm-pkg/src/id_adjustment_search.rs
 
 use wasm_bindgen::prelude::*;
+use crate::mt_seed_boot_timing_search::{DSConfigJs, SegmentParamsJs, TimeRangeParamsJs, SearchRangeParamsJs};
 
-/// ID調整検索結果
+/// ID調整検索結果（WASM向け）
+/// MtSeedBootTimingSearchResult と同様の起動条件フィールドを持つ
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct IdAdjustmentSearchResult {
-    // 起動条件
+    // 起動条件（boot-timing-search共通）
     pub year: u16,
     pub month: u8,
     pub day: u8,
@@ -360,15 +508,16 @@ pub struct IdAdjustmentSearchResult {
 }
 
 /// ID調整検索イテレータ
+/// MtSeedBootTimingSearchIterator と同様のインターフェースを提供
 #[wasm_bindgen]
 pub struct IdAdjustmentSearchIterator {
-    // 内部状態
+    // 内部状態（boot-timing-search共通の構造体を再利用）
     ds_config: DSConfigJs,
     segment_params: SegmentParamsJs,
     time_range_params: TimeRangeParamsJs,
     search_range_params: SearchRangeParamsJs,
     
-    // フィルタ条件
+    // ID調整固有のフィルタ条件
     target_tid: u16,
     target_sid: Option<u16>,
     shiny_pid: Option<u32>,
@@ -463,29 +612,18 @@ fn check_shiny(pid: u32, tid: u16, sid: u16) -> bool {
 ```typescript
 // src/store/id-adjustment-store.ts
 import { create } from 'zustand';
-
-/**
- * ID調整検索条件VO
- */
-interface IdAdjustmentSearchConditionVO {
-  targetTid: number;
-  targetSid: number | null;
-  shinyPid: number | null;
-  dateRange: DateRange;
-  timeRange: TimeRange;
-  keyInputMask: number;
-}
+import type { IdAdjustmentSearchParams, IdAdjustmentSearchResult, IdAdjustmentProgress } from '@/types/id-adjustment-search';
 
 interface IdAdjustmentState {
-  // 検索条件VO
-  searchCondition: IdAdjustmentSearchConditionVO;
+  // 検索パラメータ
+  searchParams: IdAdjustmentSearchParams;
   
   // 検索状態
   isSearching: boolean;
   isPaused: boolean;
-  progress: SearchProgress;
+  progress: IdAdjustmentProgress;
   
-  // 検索結果（最大32件）
+  // 検索結果
   results: IdAdjustmentSearchResult[];
   
   // エラー
@@ -493,8 +631,8 @@ interface IdAdjustmentState {
 }
 
 interface IdAdjustmentActions {
-  updateSearchCondition: (condition: Partial<IdAdjustmentSearchConditionVO>) => void;
-  startSearch: (profile: ProfileData) => Promise<void>;
+  updateSearchParams: (params: Partial<IdAdjustmentSearchParams>) => void;
+  startSearch: () => Promise<void>;
   pauseSearch: () => void;
   resumeSearch: () => void;
   stopSearch: () => void;
@@ -503,32 +641,31 @@ interface IdAdjustmentActions {
   setError: (error: Error | null) => void;
 }
 
-const MAX_RESULTS = 32;
-
 const useIdAdjustmentStore = create<IdAdjustmentState & IdAdjustmentActions>((set, get) => ({
-  // 初期状態
-  searchCondition: {
-    targetTid: 0,
-    targetSid: null,
-    shinyPid: null,
-    dateRange: { startYear: 2010, startMonth: 1, startDay: 1, endYear: 2010, endMonth: 12, endDay: 31 },
-    timeRange: { hour: { start: 0, end: 23 }, minute: { start: 0, end: 59 }, second: { start: 0, end: 59 } },
-    keyInputMask: 0,
-  },
+  // 初期状態（createDefaultIdAdjustmentSearchParams() で生成）
+  searchParams: createDefaultIdAdjustmentSearchParams(),
   isSearching: false,
   isPaused: false,
-  progress: { processedCombinations: 0, totalCombinations: 0, foundCount: 0, progressPercent: 0, elapsedMs: 0, estimatedRemainingMs: 0 },
+  progress: { 
+    processedCombinations: 0, 
+    totalCombinations: 0, 
+    foundCount: 0, 
+    progressPercent: 0, 
+    elapsedMs: 0, 
+    estimatedRemainingMs: 0 
+  },
   results: [],
   error: null,
   
   // アクション
-  updateSearchCondition: (condition) => set((state) => ({ 
-    searchCondition: { ...state.searchCondition, ...condition } 
+  updateSearchParams: (params) => set((state) => ({ 
+    searchParams: { ...state.searchParams, ...params } 
   })),
   
-  startSearch: async (profile) => {
+  startSearch: async () => {
+    const { searchParams } = get();
     // WorkerManager を通じて検索開始
-    // 検索条件VOとProfileDataを渡す
+    // searchParams を渡す（ProfileData は既に統合済み）
   },
   
   pauseSearch: () => {
@@ -546,7 +683,7 @@ const useIdAdjustmentStore = create<IdAdjustmentState & IdAdjustmentActions>((se
   clearResults: () => set({ results: [] }),
   
   addResults: (newResults) => set((state) => ({
-    results: [...state.results, ...newResults].slice(0, MAX_RESULTS)
+    results: [...state.results, ...newResults].slice(0, state.searchParams.maxResults)
   })),
   
   setError: (error) => set({ error }),
@@ -635,7 +772,7 @@ IdAdjustmentCard
 ├── 検索コントロール
 │   ├── 検索開始/停止ボタン
 │   └── 進捗バー
-└── 結果テーブル（仮想スクロール、最大32件）
+└── 結果テーブル（仮想スクロール）
 ```
 
 ### 11.3 レスポンシブ対応
@@ -692,8 +829,8 @@ const BATCH_CONFIG = {
   // 1チャンクあたりの処理秒数: 7日分
   CHUNK_SECONDS: 3600 * 24 * 7,  // 604,800秒
   
-  // 検索結果の上限
-  MAX_RESULTS: 32,
+  // バッチ検索あたりの結果上限
+  BATCH_RESULT_LIMIT: 32,
   
   // 進捗報告インターバル（ms）
   PROGRESS_INTERVAL_MS: 500,
@@ -702,13 +839,13 @@ const BATCH_CONFIG = {
 
 パラメータ設計根拠:
 - `CHUNK_SECONDS`: 7日分（604,800秒）を1チャンクとして処理
-- `MAX_RESULTS`: 32件を上限とし、それ以降の検索結果は破棄
+- `BATCH_RESULT_LIMIT`: 1回のバッチ検索で32件を上限とし、それ以降は次のバッチへ
 - `PROGRESS_INTERVAL_MS`: UI更新頻度とのバランス（既存実装と同値）
 
 ### 13.3 メモリ管理
 
-- 結果は最大32件に制限
-- 上限到達後は新規追加を停止
+- バッチあたりの結果は32件に制限
+- 全体の結果上限は `maxResults` パラメータで制御（デフォルト: 1000件）
 - Worker終了時はリソースを解放
 
 ## 14. テスト仕様
