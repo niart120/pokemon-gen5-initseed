@@ -7,7 +7,6 @@
 
 import React, { useEffect } from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
-import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -395,8 +394,6 @@ export const IdAdjustmentCard: React.FC = () => {
               <span>{countDisplay}</span>
             </div>
           </div>
-
-      <Separator />
 
       {/* パラメータ入力セクション */}
       <Label className="text-xs text-muted-foreground">{idAdjustmentBasicSettingLabel[locale]}</Label>

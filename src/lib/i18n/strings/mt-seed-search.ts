@@ -28,19 +28,19 @@ export const mtSeedSearchCardTitle: LocaleText = {
 // === Status Labels ===
 
 export const mtSeedSearchStatusPrefix: LocaleText = {
-  ja: 'ステータス',
+  ja: 'Status',
   en: 'Status',
 };
 
 export const mtSeedSearchStatusLabels: LocaleMap<Record<MtSeedSearchStatus, string>> = {
   ja: {
-    idle: '待機中',
-    starting: '開始中...',
-    running: '検索中',
-    paused: '一時停止中',
-    stopping: '停止中...',
-    completed: '完了',
-    error: 'エラー',
+    idle: 'Idle',
+    starting: 'Starting...',
+    running: 'Running',
+    paused: 'Paused',
+    stopping: 'Stopping...',
+    completed: 'Completed',
+    error: 'Error',
   },
   en: {
     idle: 'Idle',

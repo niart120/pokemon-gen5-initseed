@@ -31,6 +31,7 @@ import {
   idAdjustmentResultsEmpty,
   idAdjustmentResultsSearching,
   getIdAdjustmentShinyTypeLabel,
+  idAdjustmentResultsLabel,
 } from '@/lib/i18n/strings/id-adjustment-search';
 
 const COLUMN_COUNT = 8;
@@ -60,7 +61,6 @@ export function IdAdjustmentResultsTable() {
     resultFilters,
     getFilteredResults,
     updateResultFilters,
-    progress,
   } = useIdAdjustmentSearchStore();
 
   const filteredResults = React.useMemo(
@@ -78,11 +78,9 @@ export function IdAdjustmentResultsTable() {
   const virtualRows = virtualization.virtualRows;
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 border-t">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Results label */}
-      <div className="px-4 py-2 border-b">
-        <Label className="text-xs">Results ({filteredResults.length})</Label>
-      </div>
+      <Label className="text-xs">{idAdjustmentResultsLabel[locale]} ({filteredResults.length})</Label>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4 px-4 py-2 border-b bg-muted/30">
@@ -133,7 +131,7 @@ export function IdAdjustmentResultsTable() {
       >
         {filteredResults.length === 0 ? (
           <div className="flex h-32 items-center justify-center px-6 text-center text-muted-foreground">
-            {progress && progress.processedCombinations > 0
+            {status === 'running' || status === 'starting'
               ? idAdjustmentResultsSearching[locale]
               : idAdjustmentResultsEmpty[locale]}
           </div>

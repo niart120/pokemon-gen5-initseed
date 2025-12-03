@@ -26,19 +26,19 @@ export const idAdjustmentCardTitle: LocaleText = {
 // === Status Labels ===
 
 export const idAdjustmentStatusPrefix: LocaleText = {
-  ja: 'ステータス',
+  ja: 'Status',
   en: 'Status',
 };
 
 export const idAdjustmentStatusLabels: LocaleMap<Record<IdAdjustmentSearchStatus, string>> = {
   ja: {
-    idle: '待機中',
-    starting: '開始中...',
-    running: '実行中',
-    paused: '一時停止中',
-    stopping: '停止中...',
-    completed: '完了',
-    error: 'エラー',
+    idle: 'Idle',
+    starting: 'Starting...',
+    running: 'Running',
+    paused: 'Paused',
+    stopping: 'Stopping...',
+    completed: 'Completed',
+    error: 'Error',
   },
   en: {
     idle: 'Idle',
@@ -83,7 +83,7 @@ export const idAdjustmentButtonLabels = {
 // === Controls Labels ===
 
 export const idAdjustmentControlsLabel: LocaleText = {
-  ja: '検索コントロール',
+  ja: 'Search Controls',
   en: 'Search Controls',
 };
 
@@ -238,13 +238,13 @@ export const idAdjustmentResultsSearching: LocaleText = {
 
 export const idAdjustmentShinyTypeLabels: LocaleMap<Record<'square' | 'star' | 'normal', string>> = {
   ja: {
-    square: '◇スクエア',
-    star: '★スター',
+    square: '◇',
+    star: '☆',
     normal: '—',
   },
   en: {
-    square: '◇ Square',
-    star: '★ Star',
+    square: '◇',
+    star: '☆',
     normal: '—',
   },
 };
