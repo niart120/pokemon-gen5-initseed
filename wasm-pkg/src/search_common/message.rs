@@ -50,6 +50,7 @@ impl BaseMessageBuilder {
     /// - `timer0`: Timer0値
     /// - `vcount`: VCount値
     /// - `key_code`: キーコード
+    #[allow(dead_code)]
     pub fn new(
         mac: &[u8],
         nazo: &[u32],
@@ -124,6 +125,7 @@ impl BaseMessageBuilder {
     }
 
     /// 基本メッセージを取得
+    #[allow(dead_code)]
     pub fn base_message(&self) -> &[u32; 16] {
         &self.base_message
     }
@@ -141,6 +143,7 @@ impl BaseMessageBuilder {
     }
 
     /// 日時コードを適用したメッセージを構築
+    #[allow(dead_code)]
     #[inline(always)]
     pub fn build_message(&self, date_code: u32, time_code: u32) -> [u32; 16] {
         let mut message = self.base_message;
