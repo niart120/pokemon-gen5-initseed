@@ -19,8 +19,8 @@ export type IdAdjustmentSearchStatus =
 // === Card Titles ===
 
 export const idAdjustmentCardTitle: LocaleText = {
-  ja: 'ID調整検索',
-  en: 'ID Adjustment Search',
+  ja: 'TID/SID Search',
+  en: 'TID/SID Search',
 };
 
 // === Status Labels ===

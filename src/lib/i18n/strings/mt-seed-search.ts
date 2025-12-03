@@ -21,8 +21,8 @@ export type MtSeedSearchMode = 'gpu' | 'cpu';
 // === Card Title ===
 
 export const mtSeedSearchCardTitle: LocaleText = {
-  ja: 'Search Control',
-  en: 'Search Control',
+  ja: 'MT Seed Search',
+  en: 'MT Seed Search',
 };
 
 // === Status Labels ===
