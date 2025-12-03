@@ -213,7 +213,7 @@ export const MtSeedSearchCard: React.FC = () => {
 
       {/* MT消費数 + 徘徊チェックボックス */}
       <div className="space-y-2">
-        <Label className="text-xs font-medium">{mtSeedSearchParamLabels.mtAdvances[locale]}</Label>
+        <Label className="text-xs">{mtSeedSearchParamLabels.mtAdvances[locale]}</Label>
         <div className="flex items-center gap-4">
           <Input
             type="number"
@@ -245,7 +245,7 @@ export const MtSeedSearchCard: React.FC = () => {
 
       {/* IV範囲 */}
       <div className="space-y-2">
-        <Label className="text-xs font-medium">{mtSeedSearchParamLabels.ivRanges[locale]}</Label>
+        <Label className="text-xs">{mtSeedSearchParamLabels.ivRanges[locale]}</Label>
         <div className="space-y-1.5">
           {statNameList.map((stat, i) => {
             const range = draftParams.filter.ivRanges[i];
@@ -336,7 +336,7 @@ export const MtSeedSearchCard: React.FC = () => {
 
       {/* 結果表示 */}
       <div className="space-y-1">
-        <Label className="text-xs font-medium">
+        <Label className="text-xs">
           {mtSeedSearchParamLabels.results[locale]} ({results.length})
         </Label>
         <Textarea

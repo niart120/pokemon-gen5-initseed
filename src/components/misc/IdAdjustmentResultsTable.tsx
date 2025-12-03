@@ -79,6 +79,11 @@ export function IdAdjustmentResultsTable() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 border-t">
+      {/* Results label */}
+      <div className="px-4 py-2 border-b">
+        <Label className="text-xs">Results ({filteredResults.length})</Label>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4 px-4 py-2 border-b bg-muted/30">
         <div className="flex items-center gap-2">
@@ -176,12 +181,11 @@ export function IdAdjustmentResultsTable() {
                 const result = filteredResults[virtualRow.index];
                 if (!result) return null;
 
-                const entryKey = `${result.lcgSeedHex}-${result.boot.datetime.getTime()}-${result.boot.timer0}-${result.boot.vcount}`;
                 const isShiny = (result.shinyType ?? DomainShinyType.Normal) !== DomainShinyType.Normal;
 
                 return (
                   <TableRow
-                    key={entryKey}
+                    key={virtualRow.index}
                     ref={virtualization.measureRow}
                     data-index={virtualRow.index}
                     className={`border-0 ${

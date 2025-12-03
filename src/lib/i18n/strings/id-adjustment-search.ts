@@ -92,6 +92,16 @@ export const idAdjustmentResultsLabel: LocaleText = {
   en: 'Results',
 };
 
+export const idAdjustmentBasicSettingLabel: LocaleText = {
+  ja: '基本設定',
+  en: 'Basic Setting',
+};
+
+export const idAdjustmentIdSettingLabel: LocaleText = {
+  ja: 'ID設定',
+  en: 'ID Setting',
+};
+
 // === Parameter Labels ===
 
 export const idAdjustmentParamLabels = {

@@ -42,6 +42,8 @@ import {
   idAdjustmentButtonLabels,
   idAdjustmentControlsLabel,
   idAdjustmentResultsLabel,
+  idAdjustmentBasicSettingLabel,
+  idAdjustmentIdSettingLabel,
   idAdjustmentParamLabels,
   idAdjustmentKeyDialogLabels,
   getIdAdjustmentStatusLabel,
@@ -397,82 +399,12 @@ export const IdAdjustmentCard: React.FC = () => {
       <Separator />
 
       {/* パラメータ入力セクション */}
+      <Label className="text-xs text-muted-foreground">{idAdjustmentBasicSettingLabel[locale]}</Label>
       <div className="space-y-4">
-          {/* Target TID/SID + Shiny PID Filter (4-column grid) */}
-          <div className="grid grid-cols-4 gap-2">
-            <div className="space-y-1">
-              <Label htmlFor="target-tid" className="text-xs text-muted-foreground">
-                {idAdjustmentParamLabels.tid[locale]}
-              </Label>
-              <Input
-                id="target-tid"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={65535}
-                value={draftParams.targetTid}
-                onChange={(e) => handleTidChange(e.target.value)}
-                className="h-9"
-                disabled={isSearchActive}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="target-sid" className="text-xs text-muted-foreground">
-                {idAdjustmentParamLabels.sid[locale]}
-              </Label>
-              <Input
-                id="target-sid"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={65535}
-                value={draftParams.targetSid ?? ''}
-                onChange={(e) => handleSidChange(e.target.value)}
-                className="h-9"
-                disabled={isSearchActive}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground invisible">Filter</Label>
-              <div className="flex items-center h-9 gap-1.5">
-                <Checkbox
-                  id="use-shiny-pid"
-                  checked={draftParams.shinyPid !== null}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      updateDraftParams({ shinyPid: 0 });
-                    } else {
-                      updateDraftParams({ shinyPid: null });
-                    }
-                  }}
-                  disabled={isSearchActive}
-                />
-                <Label htmlFor="use-shiny-pid" className="text-xs">
-                  {idAdjustmentParamLabels.shinyPid[locale]}
-                </Label>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="shiny-pid" className="text-xs text-muted-foreground">
-                PID
-              </Label>
-              <Input
-                id="shiny-pid"
-                type="text"
-                placeholder="XXXXXXXX"
-                value={draftParams.shinyPid?.toString(16).toUpperCase().padStart(8, '0') ?? ''}
-                onChange={(e) => handleShinyPidChange(e.target.value)}
-                className="h-9 font-mono"
-                maxLength={8}
-                disabled={draftParams.shinyPid === null || isSearchActive}
-              />
-            </div>
-          </div>
-
           {/* Date Range */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="start-date" className="text-sm font-medium">
+              <Label htmlFor="start-date" className="text-xs">
                 {idAdjustmentParamLabels.startDate[locale]}
               </Label>
               <Input
@@ -487,7 +419,7 @@ export const IdAdjustmentCard: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="end-date" className="text-sm font-medium">
+              <Label htmlFor="end-date" className="text-xs">
                 {idAdjustmentParamLabels.endDate[locale]}
               </Label>
               <Input
@@ -505,7 +437,7 @@ export const IdAdjustmentCard: React.FC = () => {
 
           {/* Time Range */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">
+            <Label className="text-xs">
               {idAdjustmentParamLabels.timeRange[locale]}
             </Label>
             <div className="flex items-center gap-0 overflow-x-auto">
@@ -574,6 +506,76 @@ export const IdAdjustmentCard: React.FC = () => {
               {idAdjustmentParamLabels.configure[locale]}
             </Button>
           </div>
+        </div>
+      </div>
+        <Label className="text-xs text-muted-foreground">{idAdjustmentIdSettingLabel[locale]}</Label>
+        {/* Target TID/SID + Shiny PID Filter (4-column grid) */}
+        <div className="grid grid-cols-4 gap-2">
+        <div className="space-y-1">
+            <Label htmlFor="target-tid" className="text-xs">
+            {idAdjustmentParamLabels.tid[locale]}
+            </Label>
+            <Input
+            id="target-tid"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={65535}
+            value={draftParams.targetTid}
+            onChange={(e) => handleTidChange(e.target.value)}
+            className="h-9"
+            disabled={isSearchActive}
+            />
+        </div>
+        <div className="space-y-1">
+            <Label htmlFor="target-sid" className="text-xs">
+            {idAdjustmentParamLabels.sid[locale]}
+            </Label>
+            <Input
+            id="target-sid"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={65535}
+            value={draftParams.targetSid ?? ''}
+            onChange={(e) => handleSidChange(e.target.value)}
+            className="h-9"
+            disabled={isSearchActive}
+            />
+        </div>
+        <div className="space-y-1">
+            <div className="flex items-center h-9 gap-1.5">
+            <Checkbox
+                id="use-shiny-pid"
+                checked={draftParams.shinyPid !== null}
+                onCheckedChange={(checked) => {
+                if (checked) {
+                    updateDraftParams({ shinyPid: 0 });
+                } else {
+                    updateDraftParams({ shinyPid: null });
+                }
+                }}
+                disabled={isSearchActive}
+            />
+            <Label htmlFor="use-shiny-pid" className="text-xs">
+                {idAdjustmentParamLabels.shinyPid[locale]}
+            </Label>
+            </div>
+        </div>
+        <div className="space-y-1">
+            <Label htmlFor="shiny-pid" className="text-xs text-muted-foreground">
+            PID
+            </Label>
+            <Input
+            id="shiny-pid"
+            type="text"
+            placeholder="XXXXXXXX"
+            value={draftParams.shinyPid?.toString(16).toUpperCase().padStart(8, '0') ?? ''}
+            onChange={(e) => handleShinyPidChange(e.target.value)}
+            className="h-9 font-mono"
+            maxLength={8}
+            disabled={draftParams.shinyPid === null || isSearchActive}
+            />
         </div>
       </div>
 
