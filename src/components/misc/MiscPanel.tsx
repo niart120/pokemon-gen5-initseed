@@ -40,8 +40,8 @@ export const MiscPanel: React.FC = () => {
         <ProfileCard />
       </div>
 
-      {/* メインコンテンツ: 2列グリッド */}
-      <div className={`grid grid-cols-2 ${sizes.gap} flex-1 min-h-0 overflow-hidden`}>
+      {/* メインコンテンツ: 3列グリッド */}
+      <div className={`grid grid-cols-3 ${sizes.gap} flex-1 min-h-0 overflow-hidden`}>
         {/* Column 1: MT Seed 検索 */}
         <div className="flex flex-col min-h-0 overflow-y-auto">
           <MtSeedSearchCard />
@@ -50,6 +50,11 @@ export const MiscPanel: React.FC = () => {
         {/* Column 2: ID調整 */}
         <div className="flex flex-col min-h-0 overflow-y-auto">
           <IdAdjustmentCard />
+        </div>
+
+        {/* Column 3: その他機能 */}
+        <div className="flex flex-col min-h-0 overflow-y-auto">
+          {/* Add other miscellaneous components here */}
         </div>
       </div>
     </div>

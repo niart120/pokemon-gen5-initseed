@@ -55,27 +55,27 @@ export const idAdjustmentStatusLabels: LocaleMap<Record<IdAdjustmentSearchStatus
 
 export const idAdjustmentButtonLabels = {
   startSearch: {
-    ja: '検索開始',
-    en: 'Start Search',
+    ja: 'Search',
+    en: 'Search',
   } satisfies LocaleText,
   starting: {
-    ja: '開始中...',
+    ja: 'Starting...',
     en: 'Starting...',
   } satisfies LocaleText,
   pause: {
-    ja: '一時停止',
+    ja: 'Pause',
     en: 'Pause',
   } satisfies LocaleText,
   resume: {
-    ja: '再開',
+    ja: 'Resume',
     en: 'Resume',
   } satisfies LocaleText,
   stop: {
-    ja: '停止',
+    ja: 'Stop',
     en: 'Stop',
   } satisfies LocaleText,
   stopping: {
-    ja: '停止中...',
+    ja: 'Stopping...',
     en: 'Stopping...',
   } satisfies LocaleText,
 };
