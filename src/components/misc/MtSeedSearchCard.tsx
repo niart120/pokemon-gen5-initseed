@@ -164,25 +164,24 @@ export const MtSeedSearchCard: React.FC = () => {
       scrollMode="parent"
       spacing="compact"
     >
-      <div className="space-y-3">
-        {/* Validation Errors */}
-        {validationErrors.length > 0 && (
-          <div className="text-destructive text-xs space-y-0.5" role="alert">
-            {validationErrors.map((e, i) => (
-              <div key={i}>{e}</div>
-            ))}
-          </div>
-        )}
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <div className="text-destructive text-xs space-y-0.5" role="alert">
+          {validationErrors.map((e, i) => (
+            <div key={i}>{e}</div>
+          ))}
+        </div>
+      )}
 
-        {/* Error Message */}
-        {errorMessage && (
-          <div className="text-destructive text-xs" role="alert">
-            {errorMessage}
-          </div>
-        )}
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="text-destructive text-xs" role="alert">
+          {errorMessage}
+        </div>
+      )}
 
-        {/* 検索ボタン・ステータス */}
-        <div className="flex items-center gap-2 flex-wrap">
+      {/* 検索ボタン・ステータス */}
+      <div className="flex items-center gap-2 flex-wrap">
           {canStart && (
             <Button
               size="sm"
@@ -217,21 +216,21 @@ export const MtSeedSearchCard: React.FC = () => {
               {labels.stop[locale]}
             </Button>
           )}
-          <div className="text-xs text-muted-foreground ml-auto">
-            {labels.status[status][locale]}
-            {progress && ` (${labels.mode[progress.mode][locale]})`}
-          </div>
+        <div className="text-xs text-muted-foreground ml-auto">
+          {labels.status[status][locale]}
+          {progress && ` (${labels.mode[progress.mode][locale]})`}
         </div>
+      </div>
 
-        {/* 進捗バー */}
-        {(status === 'running' || status === 'paused' || status === 'stopping') && (
-          <div className="space-y-1">
-            <Progress value={progressPercent} className="h-2" />
-            <div className="text-xs text-muted-foreground text-right">{progressText}</div>
-          </div>
-        )}
+      {/* 進捗バー */}
+      {(status === 'running' || status === 'paused' || status === 'stopping') && (
+        <div className="space-y-1">
+          <Progress value={progressPercent} className="h-2" />
+          <div className="text-xs text-muted-foreground text-right">{progressText}</div>
+        </div>
+      )}
 
-        {/* MT消費数 + 徘徊チェックボックス */}
+      {/* MT消費数 + 徘徊チェックボックス */}
         <div className="space-y-2">
           <Label className="text-xs font-medium">{labels.mtAdvances[locale]}</Label>
           <div className="flex items-center gap-4">
@@ -366,7 +365,6 @@ export const MtSeedSearchCard: React.FC = () => {
             className="font-mono text-xs h-32 resize-none"
           />
         </div>
-      </div>
     </PanelCard>
   );
 };

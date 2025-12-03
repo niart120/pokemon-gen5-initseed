@@ -290,33 +290,29 @@ export const IdAdjustmentCard: React.FC = () => {
       title={<span id="id-adjustment-title">{idAdjustmentCardTitle[locale]}</span>}
       className={isStack ? 'max-h-[80vh]' : undefined}
       fullHeight={!isStack}
-      scrollMode="content"
-      padding="none"
-      spacing="none"
+      scrollMode={isStack ? 'parent' : 'content'}
       role="region"
       aria-labelledby="id-adjustment-title"
     >
-      <div className="flex flex-col h-full">
-        {/* 検索コントロールセクション（トップに配置） */}
-        {/* エラーメッセージ表示 */}
-        {status === 'error' && errorMessage && (
-          <div className="mx-4 mt-2 flex items-start gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20 text-xs">
-            <Warning size={14} className="text-destructive mt-0.5 flex-shrink-0" />
-            <p className="text-destructive break-all">{errorMessage}</p>
-          </div>
-        )}
+      {/* エラーメッセージ表示 */}
+      {status === 'error' && errorMessage && (
+        <div className="flex items-start gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20 text-xs">
+          <Warning size={14} className="text-destructive mt-0.5 flex-shrink-0" />
+          <p className="text-destructive break-all">{errorMessage}</p>
+        </div>
+      )}
 
-        {/* Validation Errors */}
-        {validationErrors.length > 0 && (
-          <div className="mx-4 mt-2 text-destructive text-xs space-y-0.5" role="alert">
-            {validationErrors.map((e, i) => (
-              <div key={i}>{e}</div>
-            ))}
-          </div>
-        )}
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <div className="text-destructive text-xs space-y-0.5" role="alert">
+          {validationErrors.map((e, i) => (
+            <div key={i}>{e}</div>
+          ))}
+        </div>
+      )}
 
-        {/* Controls */}
-        <div className="px-4 py-2 flex items-center gap-2 flex-wrap" role="group" aria-label={controlsLabel}>
+      {/* Controls */}
+      <div className="flex items-center gap-2 flex-wrap" role="group" aria-label={controlsLabel}>
             {isIdle && (
               <Button
                 size="sm"
@@ -398,10 +394,10 @@ export const IdAdjustmentCard: React.FC = () => {
             </div>
           </div>
 
-        <Separator />
+      <Separator />
 
-        {/* パラメータ入力セクション */}
-        <div className="px-4 py-3 space-y-4 overflow-y-auto flex-shrink-0">
+      {/* パラメータ入力セクション */}
+      <div className="space-y-4">
           {/* Target TID/SID + Shiny PID Filter (4-column grid) */}
           <div className="grid grid-cols-4 gap-2">
             <div className="space-y-1">
@@ -574,16 +570,15 @@ export const IdAdjustmentCard: React.FC = () => {
                 className="gap-2"
                 disabled={isSearchActive}
               >
-                <GameController size={16} />
-                {idAdjustmentParamLabels.configure[locale]}
-              </Button>
-            </div>
+              <GameController size={16} />
+              {idAdjustmentParamLabels.configure[locale]}
+            </Button>
           </div>
         </div>
-
-        {/* 結果テーブル（常に表示） */}
-        <IdAdjustmentResultsTable />
       </div>
+
+      {/* 結果テーブル（常に表示） */}
+      <IdAdjustmentResultsTable />
 
       <KeyInputDialog
         isOpen={isKeyDialogOpen}
