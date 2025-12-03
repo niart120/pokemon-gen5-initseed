@@ -31,6 +31,10 @@ import { useMtSeedSearchStore } from '@/store/mt-seed-search-store';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { hiddenPowerTypeNames } from '@/lib/i18n/strings/hidden-power';
 import {
+  formatRunProgressPercent,
+  formatRunProgressCount,
+} from '@/lib/i18n/strings/run-progress';
+import {
   mtSeedSearchCardTitle,
   mtSeedSearchStatusPrefix,
   mtSeedSearchButtonLabels,
@@ -97,11 +101,12 @@ export const MtSeedSearchCard: React.FC = () => {
     await startSearch();
   }, [startSearch]);
 
-  // 進捗表示
+  // 進捗表示（他のRunCardと同様の形式）
   const progressPercent = progress?.progressPercent ?? 0;
-  const progressText = progress
-    ? `${progressPercent.toFixed(1)}% (${progress.matchesFound} found)`
-    : '';
+  const matchesFound = progress?.matchesFound ?? results.length;
+  const maxResults = 2 ** 32; // MT Seedは32bit全探索
+  const percentDisplay = formatRunProgressPercent(progressPercent, locale);
+  const countDisplay = formatRunProgressCount(matchesFound, maxResults, locale);
 
   return (
     <PanelCard
@@ -195,13 +200,16 @@ export const MtSeedSearchCard: React.FC = () => {
         </div>
       </div>
 
-      {/* 進捗バー */}
+      {/* 進捗バー - running/paused/stopping時のみ表示 */}
       {(status === 'running' || status === 'paused' || status === 'stopping') && (
-        <div className="space-y-1">
-          <Progress value={progressPercent} className="h-2" />
-          <div className="text-xs text-muted-foreground text-right">{progressText}</div>
-        </div>
+        <Progress value={progressPercent} className="h-2" />
       )}
+
+      {/* Result summary - 常に表示 */}
+      <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono flex-wrap gap-x-2">
+        <span>{percentDisplay}</span>
+        <span>{countDisplay}</span>
+      </div>
 
       {/* MT消費数 + 徘徊チェックボックス */}
       <div className="space-y-2">
