@@ -231,6 +231,18 @@ const GenerationConditionsJsFinalization = (typeof FinalizationRegistry === 'und
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_generationconditionsjs_free(ptr >>> 0, 1));
 
+const IdAdjustmentSearchIteratorFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_idadjustmentsearchiterator_free(ptr >>> 0, 1));
+
+const IdAdjustmentSearchResultFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_idadjustmentsearchresult_free(ptr >>> 0, 1));
+
+const IdAdjustmentSearchResultsFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_idadjustmentsearchresults_free(ptr >>> 0, 1));
+
 const IndividualFilterJsFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_individualfilterjs_free(ptr >>> 0, 1));
@@ -326,40 +338,6 @@ export class ArrayUtils {
         wasm.__wbg_arrayutils_free(ptr, 0);
     }
     /**
-     * 32bit配列の合計値を計算
-     *
-     * # Arguments
-     * * `array` - 対象配列
-     *
-     * # Returns
-     * 合計値
-     * @param {Uint32Array} array
-     * @returns {bigint}
-     */
-    static sum_u32_array(array) {
-        const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export3);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.arrayutils_sum_u32_array(ptr0, len0);
-        return BigInt.asUintN(64, ret);
-    }
-    /**
-     * 32bit配列の平均値を計算
-     *
-     * # Arguments
-     * * `array` - 対象配列
-     *
-     * # Returns
-     * 平均値
-     * @param {Uint32Array} array
-     * @returns {number}
-     */
-    static average_u32_array(array) {
-        const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export3);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.arrayutils_average_u32_array(ptr0, len0);
-        return ret;
-    }
-    /**
      * 32bit配列の最大値を取得
      *
      * # Arguments
@@ -392,6 +370,40 @@ export class ArrayUtils {
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.arrayutils_min_u32_array(ptr0, len0);
         return ret >>> 0;
+    }
+    /**
+     * 32bit配列の合計値を計算
+     *
+     * # Arguments
+     * * `array` - 対象配列
+     *
+     * # Returns
+     * 合計値
+     * @param {Uint32Array} array
+     * @returns {bigint}
+     */
+    static sum_u32_array(array) {
+        const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export3);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.arrayutils_sum_u32_array(ptr0, len0);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * 32bit配列の平均値を計算
+     *
+     * # Arguments
+     * * `array` - 対象配列
+     *
+     * # Returns
+     * 平均値
+     * @param {Uint32Array} array
+     * @returns {number}
+     */
+    static average_u32_array(array) {
+        const ptr0 = passArray32ToWasm0(array, wasm.__wbindgen_export3);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.arrayutils_average_u32_array(ptr0, len0);
+        return ret;
     }
     /**
      * 配列の重複要素を除去
@@ -437,6 +449,49 @@ export class BWGenerationConfig {
         wasm.__wbg_bwgenerationconfig_free(ptr, 0);
     }
     /**
+     * getter methods
+     * @returns {GameVersion}
+     */
+    get get_version() {
+        const ret = wasm.bwgenerationconfig_get_version(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {boolean}
+     */
+    get get_sync_enabled() {
+        const ret = wasm.bwgenerationconfig_get_sync_enabled(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @returns {EncounterType}
+     */
+    get get_encounter_type() {
+        const ret = wasm.bwgenerationconfig_get_encounter_type(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_sync_nature_id() {
+        const ret = wasm.bwgenerationconfig_get_sync_nature_id(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {boolean}
+     */
+    get get_has_shiny_charm() {
+        const ret = wasm.bwgenerationconfig_get_has_shiny_charm(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @returns {boolean}
+     */
+    get get_is_shiny_locked() {
+        const ret = wasm.bwgenerationconfig_get_is_shiny_locked(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * 新しいBW準拠設定を作成
      * @param {GameVersion} version
      * @param {EncounterType} encounter_type
@@ -454,18 +509,10 @@ export class BWGenerationConfig {
         return this;
     }
     /**
-     * getter methods
-     * @returns {GameVersion}
+     * @returns {number}
      */
-    get get_version() {
-        const ret = wasm.bwgenerationconfig_get_version(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * @returns {EncounterType}
-     */
-    get get_encounter_type() {
-        const ret = wasm.bwgenerationconfig_get_encounter_type(this.__wbg_ptr);
+    get get_sid() {
+        const ret = wasm.bwgenerationconfig_get_sid(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -474,41 +521,6 @@ export class BWGenerationConfig {
     get get_tid() {
         const ret = wasm.bwgenerationconfig_get_tid(this.__wbg_ptr);
         return ret;
-    }
-    /**
-     * @returns {number}
-     */
-    get get_sid() {
-        const ret = wasm.bwgenerationconfig_get_sid(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * @returns {boolean}
-     */
-    get get_sync_enabled() {
-        const ret = wasm.bwgenerationconfig_get_sync_enabled(this.__wbg_ptr);
-        return ret !== 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get get_sync_nature_id() {
-        const ret = wasm.bwgenerationconfig_get_sync_nature_id(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * @returns {boolean}
-     */
-    get get_is_shiny_locked() {
-        const ret = wasm.bwgenerationconfig_get_is_shiny_locked(this.__wbg_ptr);
-        return ret !== 0;
-    }
-    /**
-     * @returns {boolean}
-     */
-    get get_has_shiny_charm() {
-        const ret = wasm.bwgenerationconfig_get_has_shiny_charm(this.__wbg_ptr);
-        return ret !== 0;
     }
 }
 if (Symbol.dispose) BWGenerationConfig.prototype[Symbol.dispose] = BWGenerationConfig.prototype.free;
@@ -526,6 +538,40 @@ export class BitUtils {
     free() {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_bitutils_free(ptr, 0);
+    }
+    /**
+     * ビット数をカウント
+     *
+     * # Arguments
+     * * `value` - 対象の値
+     *
+     * # Returns
+     * 設定されているビット数
+     * @param {number} value
+     * @returns {number}
+     */
+    static count_bits(value) {
+        const ret = wasm.bitutils_count_bits(value);
+        return ret >>> 0;
+    }
+    /**
+     * ビットフィールドを抽出
+     *
+     * # Arguments
+     * * `value` - 対象の値
+     * * `start_bit` - 開始ビット位置
+     * * `bit_count` - 抽出するビット数
+     *
+     * # Returns
+     * 抽出されたビットフィールド
+     * @param {number} value
+     * @param {number} start_bit
+     * @param {number} bit_count
+     * @returns {number}
+     */
+    static extract_bits(value, start_bit, bit_count) {
+        const ret = wasm.bitutils_extract_bits(value, start_bit, bit_count);
+        return ret >>> 0;
     }
     /**
      * 32bit値の左ローテート
@@ -597,40 +643,6 @@ export class BitUtils {
         const ret = wasm.bitutils_set_bit(value, bit_position, bit_value);
         return ret >>> 0;
     }
-    /**
-     * ビット数をカウント
-     *
-     * # Arguments
-     * * `value` - 対象の値
-     *
-     * # Returns
-     * 設定されているビット数
-     * @param {number} value
-     * @returns {number}
-     */
-    static count_bits(value) {
-        const ret = wasm.bitutils_count_bits(value);
-        return ret >>> 0;
-    }
-    /**
-     * ビットフィールドを抽出
-     *
-     * # Arguments
-     * * `value` - 対象の値
-     * * `start_bit` - 開始ビット位置
-     * * `bit_count` - 抽出するビット数
-     *
-     * # Returns
-     * 抽出されたビットフィールド
-     * @param {number} value
-     * @param {number} start_bit
-     * @param {number} bit_count
-     * @returns {number}
-     */
-    static extract_bits(value, start_bit, bit_count) {
-        const ret = wasm.bitutils_extract_bits(value, start_bit, bit_count);
-        return ret >>> 0;
-    }
 }
 if (Symbol.dispose) BitUtils.prototype[Symbol.dispose] = BitUtils.prototype.free;
 
@@ -650,6 +662,22 @@ export class DSConfigJs {
     free() {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_dsconfigjs_free(ptr, 0);
+    }
+    /**
+     * @returns {Uint8Array}
+     */
+    get mac() {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.dsconfigjs_mac(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var v1 = getArrayU8FromWasm0(r0, r1).slice();
+            wasm.__wbindgen_export2(r0, r1 * 1, 1);
+            return v1;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
     }
     /**
      * 新規作成
@@ -676,22 +704,6 @@ export class DSConfigJs {
             this.__wbg_ptr = r0 >>> 0;
             DSConfigJsFinalization.register(this, this.__wbg_ptr, this);
             return this;
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-        }
-    }
-    /**
-     * @returns {Uint8Array}
-     */
-    get mac() {
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.dsconfigjs_mac(retptr, this.__wbg_ptr);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            var v1 = getArrayU8FromWasm0(r0, r1).slice();
-            wasm.__wbindgen_export2(r0, r1 * 1, 1);
-            return v1;
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
@@ -789,6 +801,44 @@ export class EggBootTimingSearchIterator {
         wasm.__wbg_eggboottimingsearchiterator_free(ptr, 0);
     }
     /**
+     * 次のバッチを取得
+     *
+     * - result_limit件見つかったら即return
+     * - chunk_seconds秒分処理したら結果がなくても一旦return
+     * - 検索範囲を全て処理したらfinished=trueになる
+     * @param {number} result_limit
+     * @param {number} chunk_seconds
+     * @returns {Array<any>}
+     */
+    next_batch(result_limit, chunk_seconds) {
+        const ret = wasm.eggboottimingsearchiterator_next_batch(this.__wbg_ptr, result_limit, chunk_seconds);
+        return takeObject(ret);
+    }
+    /**
+     * 検索が完了したかどうか
+     * @returns {boolean}
+     */
+    get isFinished() {
+        const ret = wasm.eggboottimingsearchiterator_is_finished(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * 総秒数
+     * @returns {number}
+     */
+    get totalSeconds() {
+        const ret = wasm.eggboottimingsearchiterator_total_seconds(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * 処理済み秒数
+     * @returns {number}
+     */
+    get processedSeconds() {
+        const ret = wasm.eggboottimingsearchiterator_processed_seconds(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
      * コンストラクタ
      *
      * # Arguments
@@ -844,50 +894,12 @@ export class EggBootTimingSearchIterator {
         }
     }
     /**
-     * 検索が完了したかどうか
-     * @returns {boolean}
-     */
-    get isFinished() {
-        const ret = wasm.eggboottimingsearchiterator_is_finished(this.__wbg_ptr);
-        return ret !== 0;
-    }
-    /**
-     * 処理済み秒数
-     * @returns {number}
-     */
-    get processedSeconds() {
-        const ret = wasm.eggboottimingsearchiterator_processed_seconds(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * 総秒数
-     * @returns {number}
-     */
-    get totalSeconds() {
-        const ret = wasm.eggboottimingsearchiterator_total_seconds(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
      * 進捗率 (0.0 - 1.0)
      * @returns {number}
      */
     get progress() {
         const ret = wasm.eggboottimingsearchiterator_progress(this.__wbg_ptr);
         return ret;
-    }
-    /**
-     * 次のバッチを取得
-     *
-     * - result_limit件見つかったら即return
-     * - chunk_seconds秒分処理したら結果がなくても一旦return
-     * - 検索範囲を全て処理したらfinished=trueになる
-     * @param {number} result_limit
-     * @param {number} chunk_seconds
-     * @returns {Array<any>}
-     */
-    next_batch(result_limit, chunk_seconds) {
-        const ret = wasm.eggboottimingsearchiterator_next_batch(this.__wbg_ptr, result_limit, chunk_seconds);
-        return takeObject(ret);
     }
 }
 if (Symbol.dispose) EggBootTimingSearchIterator.prototype[Symbol.dispose] = EggBootTimingSearchIterator.prototype.free;
@@ -914,17 +926,64 @@ export class EggBootTimingSearchResult {
         wasm.__wbg_eggboottimingsearchresult_free(ptr, 0);
     }
     /**
-     * @returns {number}
+     * @returns {string}
      */
-    get year() {
-        const ret = wasm.eggboottimingsearchresult_year(this.__wbg_ptr);
-        return ret >>> 0;
+    get mtSeedHex() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.eggboottimingsearchresult_mt_seed_hex(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export2(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    get lcgSeedHex() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.eggboottimingsearchresult_lcg_seed_hex(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export2(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {Uint8Array}
+     */
+    get ivs() {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.eggboottimingsearchresult_ivs(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var v1 = getArrayU8FromWasm0(r0, r1).slice();
+            wasm.__wbindgen_export2(r0, r1 * 1, 1);
+            return v1;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
     }
     /**
      * @returns {number}
      */
-    get month() {
-        const ret = wasm.eggboottimingsearchresult_month(this.__wbg_ptr);
+    get pid() {
+        const ret = wasm.eggboottimingsearchresult_pid(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -944,9 +1003,46 @@ export class EggBootTimingSearchResult {
     /**
      * @returns {number}
      */
+    get year() {
+        const ret = wasm.eggboottimingsearchresult_year(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get month() {
+        const ret = wasm.eggboottimingsearchresult_month(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * Shiny type: 0=Normal (not shiny), 1=Square shiny, 2=Star shiny
+     * @returns {number}
+     */
+    get shiny() {
+        const ret = wasm.eggboottimingsearchresult_shiny(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * Gender: 0=Male, 1=Female, 2=Genderless
+     * @returns {number}
+     */
+    get gender() {
+        const ret = wasm.eggboottimingsearchresult_gender(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
     get minute() {
         const ret = wasm.eggboottimingsearchresult_minute(this.__wbg_ptr);
         return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get nature() {
+        const ret = wasm.eggboottimingsearchresult_nature(this.__wbg_ptr);
+        return ret;
     }
     /**
      * @returns {number}
@@ -970,77 +1066,6 @@ export class EggBootTimingSearchResult {
         return ret >>> 0;
     }
     /**
-     * @returns {number}
-     */
-    get keyCode() {
-        const ret = wasm.eggboottimingsearchresult_key_code(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {string}
-     */
-    get lcgSeedHex() {
-        let deferred1_0;
-        let deferred1_1;
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.eggboottimingsearchresult_lcg_seed_hex(retptr, this.__wbg_ptr);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            deferred1_0 = r0;
-            deferred1_1 = r1;
-            return getStringFromWasm0(r0, r1);
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export2(deferred1_0, deferred1_1, 1);
-        }
-    }
-    /**
-     * @returns {bigint}
-     */
-    get advance() {
-        const ret = wasm.eggboottimingsearchresult_advance(this.__wbg_ptr);
-        return BigInt.asUintN(64, ret);
-    }
-    /**
-     * @returns {boolean}
-     */
-    get isStable() {
-        const ret = wasm.eggboottimingsearchresult_is_stable(this.__wbg_ptr);
-        return ret !== 0;
-    }
-    /**
-     * @returns {Uint8Array}
-     */
-    get ivs() {
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.eggboottimingsearchresult_ivs(retptr, this.__wbg_ptr);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            var v1 = getArrayU8FromWasm0(r0, r1).slice();
-            wasm.__wbindgen_export2(r0, r1 * 1, 1);
-            return v1;
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-        }
-    }
-    /**
-     * @returns {number}
-     */
-    get nature() {
-        const ret = wasm.eggboottimingsearchresult_nature(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * Gender: 0=Male, 1=Female, 2=Genderless
-     * @returns {number}
-     */
-    get gender() {
-        const ret = wasm.eggboottimingsearchresult_gender(this.__wbg_ptr);
-        return ret;
-    }
-    /**
      * Ability slot: 0=Ability1, 1=Ability2, 2=Hidden
      * @returns {number}
      */
@@ -1049,19 +1074,11 @@ export class EggBootTimingSearchResult {
         return ret;
     }
     /**
-     * Shiny type: 0=Normal (not shiny), 1=Square shiny, 2=Star shiny
-     * @returns {number}
+     * @returns {bigint}
      */
-    get shiny() {
-        const ret = wasm.eggboottimingsearchresult_shiny(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * @returns {number}
-     */
-    get pid() {
-        const ret = wasm.eggboottimingsearchresult_pid(this.__wbg_ptr);
-        return ret >>> 0;
+    get advance() {
+        const ret = wasm.eggboottimingsearchresult_advance(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
     }
     /**
      * @returns {number}
@@ -1073,9 +1090,9 @@ export class EggBootTimingSearchResult {
     /**
      * @returns {number}
      */
-    get hpPower() {
-        const ret = wasm.eggboottimingsearchresult_hp_power(this.__wbg_ptr);
-        return ret;
+    get mtSeed() {
+        const ret = wasm.eggboottimingsearchresult_mt_seed(this.__wbg_ptr);
+        return ret >>> 0;
     }
     /**
      * @returns {boolean}
@@ -1087,28 +1104,23 @@ export class EggBootTimingSearchResult {
     /**
      * @returns {number}
      */
-    get mtSeed() {
-        const ret = wasm.eggboottimingsearchresult_mt_seed(this.__wbg_ptr);
+    get hpPower() {
+        const ret = wasm.eggboottimingsearchresult_hp_power(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get keyCode() {
+        const ret = wasm.eggboottimingsearchresult_key_code(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
-     * @returns {string}
+     * @returns {boolean}
      */
-    get mtSeedHex() {
-        let deferred1_0;
-        let deferred1_1;
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.eggboottimingsearchresult_mt_seed_hex(retptr, this.__wbg_ptr);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            deferred1_0 = r0;
-            deferred1_1 = r1;
-            return getStringFromWasm0(r0, r1);
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export2(deferred1_0, deferred1_1, 1);
-        }
+    get isStable() {
+        const ret = wasm.eggboottimingsearchresult_is_stable(this.__wbg_ptr);
+        return ret !== 0;
     }
 }
 if (Symbol.dispose) EggBootTimingSearchResult.prototype[Symbol.dispose] = EggBootTimingSearchResult.prototype.free;
@@ -1179,34 +1191,6 @@ export class EncounterCalculator {
         wasm.__wbg_encountercalculator_free(ptr, 0);
     }
     /**
-     * 新しいEncounterCalculatorインスタンスを作成
-     */
-    constructor() {
-        const ret = wasm.encountercalculator_new();
-        this.__wbg_ptr = ret >>> 0;
-        EncounterCalculatorFinalization.register(this, this.__wbg_ptr, this);
-        return this;
-    }
-    /**
-     * エンカウントスロットを計算
-     *
-     * # Arguments
-     * * `version` - ゲームバージョン
-     * * `encounter_type` - エンカウントタイプ
-     * * `random_value` - 乱数値（32bit）
-     *
-     * # Returns
-     * エンカウントスロット番号（0-11）
-     * @param {GameVersion} version
-     * @param {EncounterType} encounter_type
-     * @param {number} random_value
-     * @returns {number}
-     */
-    static calculate_encounter_slot(version, encounter_type, random_value) {
-        const ret = wasm.encountercalculator_calculate_encounter_slot(version, encounter_type, random_value);
-        return ret;
-    }
-    /**
      * スロット番号をテーブルインデックスに変換
      *
      * # Arguments
@@ -1237,6 +1221,34 @@ export class EncounterCalculator {
     static get_dust_cloud_content(slot) {
         const ret = wasm.encountercalculator_get_dust_cloud_content(slot);
         return ret;
+    }
+    /**
+     * エンカウントスロットを計算
+     *
+     * # Arguments
+     * * `version` - ゲームバージョン
+     * * `encounter_type` - エンカウントタイプ
+     * * `random_value` - 乱数値（32bit）
+     *
+     * # Returns
+     * エンカウントスロット番号（0-11）
+     * @param {GameVersion} version
+     * @param {EncounterType} encounter_type
+     * @param {number} random_value
+     * @returns {number}
+     */
+    static calculate_encounter_slot(version, encounter_type, random_value) {
+        const ret = wasm.encountercalculator_calculate_encounter_slot(version, encounter_type, random_value);
+        return ret;
+    }
+    /**
+     * 新しいEncounterCalculatorインスタンスを作成
+     */
+    constructor() {
+        const ret = wasm.encountercalculator_new();
+        this.__wbg_ptr = ret >>> 0;
+        EncounterCalculatorFinalization.register(this, this.__wbg_ptr, this);
+        return this;
     }
 }
 if (Symbol.dispose) EncounterCalculator.prototype[Symbol.dispose] = EncounterCalculator.prototype.free;
@@ -1315,17 +1327,20 @@ export class EndianUtils {
         wasm.__wbg_endianutils_free(ptr, 0);
     }
     /**
-     * 32bit値のバイトスワップ
-     *
-     * # Arguments
-     * * `value` - 変換する32bit値
-     *
-     * # Returns
-     * バイトスワップされた値
+     * ビッグエンディアン32bit値をリトルエンディアンに変換
      * @param {number} value
      * @returns {number}
      */
-    static swap_bytes_32(value) {
+    static be32_to_le(value) {
+        const ret = wasm.endianutils_be32_to_le(value);
+        return ret >>> 0;
+    }
+    /**
+     * リトルエンディアン32bit値をビッグエンディアンに変換
+     * @param {number} value
+     * @returns {number}
+     */
+    static le32_to_be(value) {
         const ret = wasm.endianutils_le32_to_be(value);
         return ret >>> 0;
     }
@@ -1345,6 +1360,21 @@ export class EndianUtils {
         return ret;
     }
     /**
+     * 32bit値のバイトスワップ
+     *
+     * # Arguments
+     * * `value` - 変換する32bit値
+     *
+     * # Returns
+     * バイトスワップされた値
+     * @param {number} value
+     * @returns {number}
+     */
+    static swap_bytes_32(value) {
+        const ret = wasm.endianutils_le32_to_be(value);
+        return ret >>> 0;
+    }
+    /**
      * 64bit値のバイトスワップ
      *
      * # Arguments
@@ -1358,24 +1388,6 @@ export class EndianUtils {
     static swap_bytes_64(value) {
         const ret = wasm.endianutils_swap_bytes_64(value);
         return BigInt.asUintN(64, ret);
-    }
-    /**
-     * ビッグエンディアン32bit値をリトルエンディアンに変換
-     * @param {number} value
-     * @returns {number}
-     */
-    static be32_to_le(value) {
-        const ret = wasm.endianutils_be32_to_le(value);
-        return ret >>> 0;
-    }
-    /**
-     * リトルエンディアン32bit値をビッグエンディアンに変換
-     * @param {number} value
-     * @returns {number}
-     */
-    static le32_to_be(value) {
-        const ret = wasm.endianutils_le32_to_be(value);
-        return ret >>> 0;
     }
 }
 if (Symbol.dispose) EndianUtils.prototype[Symbol.dispose] = EndianUtils.prototype.free;
@@ -1399,27 +1411,6 @@ export class EnumeratedPokemonData {
         wasm.__wbg_enumeratedpokemondata_free(ptr, 0);
     }
     /**
-     * @returns {bigint}
-     */
-    get get_advance() {
-        const ret = wasm.eggboottimingsearchresult_advance(this.__wbg_ptr);
-        return BigInt.asUintN(64, ret);
-    }
-    /**
-     * @returns {bigint}
-     */
-    get get_seed() {
-        const ret = wasm.enumeratedpokemondata_get_seed(this.__wbg_ptr);
-        return BigInt.asUintN(64, ret);
-    }
-    /**
-     * @returns {number}
-     */
-    get get_pid() {
-        const ret = wasm.eggboottimingsearchresult_date(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
      * @returns {number}
      */
     get get_nature() {
@@ -1427,11 +1418,18 @@ export class EnumeratedPokemonData {
         return ret;
     }
     /**
-     * @returns {boolean}
+     * @returns {bigint}
      */
-    get get_sync_applied() {
-        const ret = wasm.enumeratedpokemondata_get_sync_applied(this.__wbg_ptr);
-        return ret !== 0;
+    get get_advance() {
+        const ret = wasm.eggboottimingsearchresult_advance(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * @returns {number}
+     */
+    get get_shiny_type() {
+        const ret = wasm.enumeratedpokemondata_get_shiny_type(this.__wbg_ptr);
+        return ret;
     }
     /**
      * @returns {number}
@@ -1448,11 +1446,11 @@ export class EnumeratedPokemonData {
         return ret;
     }
     /**
-     * @returns {number}
+     * @returns {boolean}
      */
-    get get_encounter_slot_value() {
-        const ret = wasm.enumeratedpokemondata_get_encounter_slot_value(this.__wbg_ptr);
-        return ret;
+    get get_sync_applied() {
+        const ret = wasm.enumeratedpokemondata_get_sync_applied(this.__wbg_ptr);
+        return ret !== 0;
     }
     /**
      * @returns {number}
@@ -1471,9 +1469,23 @@ export class EnumeratedPokemonData {
     /**
      * @returns {number}
      */
-    get get_shiny_type() {
-        const ret = wasm.enumeratedpokemondata_get_shiny_type(this.__wbg_ptr);
+    get get_encounter_slot_value() {
+        const ret = wasm.enumeratedpokemondata_get_encounter_slot_value(this.__wbg_ptr);
         return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_pid() {
+        const ret = wasm.eggboottimingsearchresult_date(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {bigint}
+     */
+    get get_seed() {
+        const ret = wasm.enumeratedpokemondata_get_seed(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
     }
     /**
      * 任意: 元の RawPokemonData を複製して取得
@@ -1547,6 +1559,41 @@ export class ExtraResult {
         wasm.__wbg_extraresult_free(ptr, 0);
     }
     /**
+     * @returns {number}
+     */
+    get get_value1() {
+        const ret = wasm.extraresult_get_value1(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_value2() {
+        const ret = wasm.extraresult_get_value2(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_value3() {
+        const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {boolean}
+     */
+    get get_success() {
+        const ret = wasm.extraresult_get_success(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_advances() {
+        const ret = wasm.extraresult_get_advances(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
      * 消費した乱数回数
      * @returns {number}
      */
@@ -1617,41 +1664,6 @@ export class ExtraResult {
     set value3(arg0) {
         wasm.__wbg_set_extraresult_value3(this.__wbg_ptr, arg0);
     }
-    /**
-     * @returns {number}
-     */
-    get get_advances() {
-        const ret = wasm.extraresult_get_advances(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {boolean}
-     */
-    get get_success() {
-        const ret = wasm.extraresult_get_success(this.__wbg_ptr);
-        return ret !== 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get get_value1() {
-        const ret = wasm.extraresult_get_value1(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get get_value2() {
-        const ret = wasm.extraresult_get_value2(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get get_value3() {
-        const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
-        return ret >>> 0;
-    }
 }
 if (Symbol.dispose) ExtraResult.prototype[Symbol.dispose] = ExtraResult.prototype.free;
 
@@ -1717,6 +1729,24 @@ export class GenderRatio {
         wasm.__wbg_genderratio_free(ptr, 0);
     }
     /**
+     * @param {number} threshold
+     * @param {boolean} genderless
+     */
+    constructor(threshold, genderless) {
+        const ret = wasm.genderratio_new(threshold, genderless);
+        this.__wbg_ptr = ret >>> 0;
+        GenderRatioFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @param {number} gender_value
+     * @returns {number}
+     */
+    resolve(gender_value) {
+        const ret = wasm.genderratio_resolve(this.__wbg_ptr, gender_value);
+        return ret;
+    }
+    /**
      * @returns {number}
      */
     get threshold() {
@@ -1741,24 +1771,6 @@ export class GenderRatio {
      */
     set genderless(arg0) {
         wasm.__wbg_set_genderratio_genderless(this.__wbg_ptr, arg0);
-    }
-    /**
-     * @param {number} threshold
-     * @param {boolean} genderless
-     */
-    constructor(threshold, genderless) {
-        const ret = wasm.genderratio_new(threshold, genderless);
-        this.__wbg_ptr = ret >>> 0;
-        GenderRatioFinalization.register(this, this.__wbg_ptr, this);
-        return this;
-    }
-    /**
-     * @param {number} gender_value
-     * @returns {number}
-     */
-    resolve(gender_value) {
-        const ret = wasm.genderratio_resolve(this.__wbg_ptr, gender_value);
-        return ret;
     }
 }
 if (Symbol.dispose) GenderRatio.prototype[Symbol.dispose] = GenderRatio.prototype.free;
@@ -1842,12 +1854,6 @@ export class GenerationConditionsJs {
     set reroll_count(arg0) {
         wasm.__wbg_set_generationconditionsjs_reroll_count(this.__wbg_ptr, arg0);
     }
-    constructor() {
-        const ret = wasm.generationconditionsjs_new();
-        this.__wbg_ptr = ret >>> 0;
-        GenerationConditionsJsFinalization.register(this, this.__wbg_ptr, this);
-        return this;
-    }
     /**
      * @param {EverstonePlanJs} plan
      */
@@ -1869,8 +1875,319 @@ export class GenerationConditionsJs {
         _assertClass(ratio, GenderRatio);
         wasm.generationconditionsjs_set_gender_ratio(this.__wbg_ptr, ratio.__wbg_ptr);
     }
+    constructor() {
+        const ret = wasm.generationconditionsjs_new();
+        this.__wbg_ptr = ret >>> 0;
+        GenerationConditionsJsFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
 }
 if (Symbol.dispose) GenerationConditionsJs.prototype[Symbol.dispose] = GenerationConditionsJs.prototype.free;
+
+/**
+ * ID調整検索イテレータ
+ *
+ * 単一セグメント（固定 timer0/vcount/keyCode）に対して seconds 方向の検索を行う。
+ * TypeScript側で timer0 × vcount × keyCode のセグメントループを実装し、
+ * 各セグメントに対してこのイテレータを作成する。
+ */
+export class IdAdjustmentSearchIterator {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        IdAdjustmentSearchIteratorFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_idadjustmentsearchiterator_free(ptr, 0);
+    }
+    /**
+     * 次のバッチを取得
+     *
+     * - max_results件見つかったら即return
+     * - chunk_seconds秒分処理したら結果がなくても一旦return
+     * - 検索範囲を全て処理したらfinished=trueになる
+     * @param {number} max_results
+     * @param {number} chunk_seconds
+     * @returns {IdAdjustmentSearchResults}
+     */
+    next_batch(max_results, chunk_seconds) {
+        const ret = wasm.idadjustmentsearchiterator_next_batch(this.__wbg_ptr, max_results, chunk_seconds);
+        return IdAdjustmentSearchResults.__wrap(ret);
+    }
+    /**
+     * 検索が完了したかどうか
+     * @returns {boolean}
+     */
+    get isFinished() {
+        const ret = wasm.idadjustmentsearchiterator_is_finished(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * 総秒数
+     * @returns {number}
+     */
+    get totalSeconds() {
+        const ret = wasm.idadjustmentsearchiterator_total_seconds(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * 処理済み秒数
+     * @returns {number}
+     */
+    get processedSeconds() {
+        const ret = wasm.idadjustmentsearchiterator_processed_seconds(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * コンストラクタ
+     *
+     * # Arguments
+     * - `ds_config`: DS設定パラメータ (MAC/Nazo/Hardware)
+     * - `segment`: セグメントパラメータ (Timer0/VCount/KeyCode)
+     * - `time_range`: 時刻範囲パラメータ
+     * - `search_range`: 検索範囲パラメータ
+     * - `target_tid`: 検索対象の表ID
+     * - `target_sid`: 検索対象の裏ID（-1で指定なし）
+     * - `shiny_pid`: 色違いにしたい個体のPID（-1で指定なし）
+     * - `game_mode`: ゲームモード (0-7)
+     * @param {DSConfigJs} ds_config
+     * @param {SegmentParamsJs} segment
+     * @param {TimeRangeParamsJs} time_range
+     * @param {SearchRangeParamsJs} search_range
+     * @param {number} target_tid
+     * @param {number} target_sid
+     * @param {number} shiny_pid
+     * @param {number} game_mode
+     */
+    constructor(ds_config, segment, time_range, search_range, target_tid, target_sid, shiny_pid, game_mode) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            _assertClass(ds_config, DSConfigJs);
+            _assertClass(segment, SegmentParamsJs);
+            _assertClass(time_range, TimeRangeParamsJs);
+            _assertClass(search_range, SearchRangeParamsJs);
+            wasm.idadjustmentsearchiterator_new(retptr, ds_config.__wbg_ptr, segment.__wbg_ptr, time_range.__wbg_ptr, search_range.__wbg_ptr, target_tid, target_sid, shiny_pid, game_mode);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            this.__wbg_ptr = r0 >>> 0;
+            IdAdjustmentSearchIteratorFinalization.register(this, this.__wbg_ptr, this);
+            return this;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * 進捗率 (0.0 - 1.0)
+     * @returns {number}
+     */
+    get progress() {
+        const ret = wasm.idadjustmentsearchiterator_progress(this.__wbg_ptr);
+        return ret;
+    }
+}
+if (Symbol.dispose) IdAdjustmentSearchIterator.prototype[Symbol.dispose] = IdAdjustmentSearchIterator.prototype.free;
+
+/**
+ * ID調整検索結果1件
+ */
+export class IdAdjustmentSearchResult {
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(IdAdjustmentSearchResult.prototype);
+        obj.__wbg_ptr = ptr;
+        IdAdjustmentSearchResultFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        IdAdjustmentSearchResultFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_idadjustmentsearchresult_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get shinyType() {
+        const ret = wasm.idadjustmentsearchresult_shiny_type(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {string}
+     */
+    get lcgSeedHex() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.idadjustmentsearchresult_lcg_seed_hex(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export2(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {number}
+     */
+    get lcgSeedLow() {
+        const ret = wasm.extraresult_get_value1(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get lcgSeedHigh() {
+        const ret = wasm.extraresult_get_advances(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get day() {
+        const ret = wasm.eggboottimingsearchresult_month(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get sid() {
+        const ret = wasm.idadjustmentsearchresult_sid(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get tid() {
+        const ret = wasm.idadjustmentsearchresult_tid(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get hour() {
+        const ret = wasm.idadjustmentsearchresult_hour(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get year() {
+        const ret = wasm.extraresult_get_value2(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get month() {
+        const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get minute() {
+        const ret = wasm.eggboottimingsearchresult_hour(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get second() {
+        const ret = wasm.idadjustmentsearchresult_second(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get timer0() {
+        const ret = wasm.eggboottimingsearchresult_second(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get vcount() {
+        const ret = wasm.idadjustmentsearchresult_vcount(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get keyCode() {
+        const ret = wasm.eggboottimingsearchresult_vcount(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+}
+if (Symbol.dispose) IdAdjustmentSearchResult.prototype[Symbol.dispose] = IdAdjustmentSearchResult.prototype.free;
+
+/**
+ * バッチ検索結果
+ */
+export class IdAdjustmentSearchResults {
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(IdAdjustmentSearchResults.prototype);
+        obj.__wbg_ptr = ptr;
+        IdAdjustmentSearchResultsFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        IdAdjustmentSearchResultsFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_idadjustmentsearchresults_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get processedInChunk() {
+        const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * 指定インデックスの結果を取得
+     * @param {number} index
+     * @returns {IdAdjustmentSearchResult | undefined}
+     */
+    get(index) {
+        const ret = wasm.idadjustmentsearchresults_get(this.__wbg_ptr, index);
+        return ret === 0 ? undefined : IdAdjustmentSearchResult.__wrap(ret);
+    }
+    /**
+     * @returns {number}
+     */
+    get length() {
+        const ret = wasm.idadjustmentsearchresults_length(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * 結果をJavaScript配列として取得
+     * @returns {Array<any>}
+     */
+    to_array() {
+        const ret = wasm.idadjustmentsearchresults_to_array(this.__wbg_ptr);
+        return takeObject(ret);
+    }
+}
+if (Symbol.dispose) IdAdjustmentSearchResults.prototype[Symbol.dispose] = IdAdjustmentSearchResults.prototype.free;
 
 /**
  * WASM wrapper for IndividualFilter
@@ -1886,11 +2203,23 @@ export class IndividualFilterJs {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_individualfilterjs_free(ptr, 0);
     }
-    constructor() {
-        const ret = wasm.individualfilterjs_new();
-        this.__wbg_ptr = ret >>> 0;
-        IndividualFilterJsFinalization.register(this, this.__wbg_ptr, this);
-        return this;
+    /**
+     * @param {number} gender
+     */
+    set_gender(gender) {
+        wasm.individualfilterjs_set_gender(this.__wbg_ptr, gender);
+    }
+    /**
+     * @param {number} nature_index
+     */
+    set_nature(nature_index) {
+        wasm.individualfilterjs_set_nature(this.__wbg_ptr, nature_index);
+    }
+    /**
+     * @param {number} ability
+     */
+    set_ability(ability) {
+        wasm.individualfilterjs_set_ability(this.__wbg_ptr, ability);
     }
     /**
      * @param {number} stat_index
@@ -1901,22 +2230,10 @@ export class IndividualFilterJs {
         wasm.individualfilterjs_set_iv_range(this.__wbg_ptr, stat_index, min, max);
     }
     /**
-     * @param {number} nature_index
+     * @param {number} hp_type
      */
-    set_nature(nature_index) {
-        wasm.individualfilterjs_set_nature(this.__wbg_ptr, nature_index);
-    }
-    /**
-     * @param {number} gender
-     */
-    set_gender(gender) {
-        wasm.individualfilterjs_set_gender(this.__wbg_ptr, gender);
-    }
-    /**
-     * @param {number} ability
-     */
-    set_ability(ability) {
-        wasm.individualfilterjs_set_ability(this.__wbg_ptr, ability);
+    set_hidden_power_type(hp_type) {
+        wasm.individualfilterjs_set_hidden_power_type(this.__wbg_ptr, hp_type);
     }
     /**
      * Set shiny filter mode
@@ -1927,16 +2244,16 @@ export class IndividualFilterJs {
         wasm.individualfilterjs_set_shiny_filter_mode(this.__wbg_ptr, mode);
     }
     /**
-     * @param {number} hp_type
-     */
-    set_hidden_power_type(hp_type) {
-        wasm.individualfilterjs_set_hidden_power_type(this.__wbg_ptr, hp_type);
-    }
-    /**
      * @param {number} power
      */
     set_hidden_power_power(power) {
         wasm.individualfilterjs_set_hidden_power_power(this.__wbg_ptr, power);
+    }
+    constructor() {
+        const ret = wasm.individualfilterjs_new();
+        this.__wbg_ptr = ret >>> 0;
+        IndividualFilterJsFinalization.register(this, this.__wbg_ptr, this);
+        return this;
     }
 }
 if (Symbol.dispose) IndividualFilterJs.prototype[Symbol.dispose] = IndividualFilterJs.prototype.free;
@@ -1958,6 +2275,44 @@ export class MtSeedBootTimingSearchIterator {
     free() {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_mtseedboottimingsearchiterator_free(ptr, 0);
+    }
+    /**
+     * 次のバッチを取得
+     *
+     * - max_results件見つかったら即return
+     * - chunk_seconds秒分処理したら結果がなくても一旦return
+     * - 検索範囲を全て処理したらfinished=trueになる
+     * @param {number} max_results
+     * @param {number} chunk_seconds
+     * @returns {MtSeedBootTimingSearchResults}
+     */
+    next_batch(max_results, chunk_seconds) {
+        const ret = wasm.mtseedboottimingsearchiterator_next_batch(this.__wbg_ptr, max_results, chunk_seconds);
+        return MtSeedBootTimingSearchResults.__wrap(ret);
+    }
+    /**
+     * 検索が完了したかどうか
+     * @returns {boolean}
+     */
+    get isFinished() {
+        const ret = wasm.mtseedboottimingsearchiterator_is_finished(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * 総秒数
+     * @returns {number}
+     */
+    get totalSeconds() {
+        const ret = wasm.idadjustmentsearchiterator_total_seconds(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * 処理済み秒数
+     * @returns {number}
+     */
+    get processedSeconds() {
+        const ret = wasm.idadjustmentsearchiterator_processed_seconds(this.__wbg_ptr);
+        return ret >>> 0;
     }
     /**
      * コンストラクタ
@@ -1998,50 +2353,12 @@ export class MtSeedBootTimingSearchIterator {
         }
     }
     /**
-     * 検索が完了したかどうか
-     * @returns {boolean}
-     */
-    get isFinished() {
-        const ret = wasm.mtseedboottimingsearchiterator_is_finished(this.__wbg_ptr);
-        return ret !== 0;
-    }
-    /**
-     * 処理済み秒数
-     * @returns {number}
-     */
-    get processedSeconds() {
-        const ret = wasm.mtseedboottimingsearchiterator_processed_seconds(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * 総秒数
-     * @returns {number}
-     */
-    get totalSeconds() {
-        const ret = wasm.mtseedboottimingsearchiterator_total_seconds(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
      * 進捗率 (0.0 - 1.0)
      * @returns {number}
      */
     get progress() {
-        const ret = wasm.mtseedboottimingsearchiterator_progress(this.__wbg_ptr);
+        const ret = wasm.idadjustmentsearchiterator_progress(this.__wbg_ptr);
         return ret;
-    }
-    /**
-     * 次のバッチを取得
-     *
-     * - max_results件見つかったら即return
-     * - chunk_seconds秒分処理したら結果がなくても一旦return
-     * - 検索範囲を全て処理したらfinished=trueになる
-     * @param {number} max_results
-     * @param {number} chunk_seconds
-     * @returns {MtSeedBootTimingSearchResults}
-     */
-    next_batch(max_results, chunk_seconds) {
-        const ret = wasm.mtseedboottimingsearchiterator_next_batch(this.__wbg_ptr, max_results, chunk_seconds);
-        return MtSeedBootTimingSearchResults.__wrap(ret);
     }
 }
 if (Symbol.dispose) MtSeedBootTimingSearchIterator.prototype[Symbol.dispose] = MtSeedBootTimingSearchIterator.prototype.free;
@@ -2068,13 +2385,6 @@ export class MtSeedBootTimingSearchResult {
         wasm.__wbg_mtseedboottimingsearchresult_free(ptr, 0);
     }
     /**
-     * @returns {number}
-     */
-    get mtSeed() {
-        const ret = wasm.extraresult_get_advances(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
      * @returns {string}
      */
     get mtSeedHex() {
@@ -2092,20 +2402,6 @@ export class MtSeedBootTimingSearchResult {
             wasm.__wbindgen_add_to_stack_pointer(16);
             wasm.__wbindgen_export2(deferred1_0, deferred1_1, 1);
         }
-    }
-    /**
-     * @returns {number}
-     */
-    get lcgSeedHigh() {
-        const ret = wasm.extraresult_get_value1(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get lcgSeedLow() {
-        const ret = wasm.extraresult_get_value2(this.__wbg_ptr);
-        return ret >>> 0;
     }
     /**
      * @returns {string}
@@ -2129,6 +2425,34 @@ export class MtSeedBootTimingSearchResult {
     /**
      * @returns {number}
      */
+    get lcgSeedLow() {
+        const ret = wasm.extraresult_get_value2(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get lcgSeedHigh() {
+        const ret = wasm.extraresult_get_value1(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get day() {
+        const ret = wasm.idadjustmentsearchresult_hour(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get hour() {
+        const ret = wasm.eggboottimingsearchresult_hour(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
     get year() {
         const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
         return ret >>> 0;
@@ -2143,22 +2467,8 @@ export class MtSeedBootTimingSearchResult {
     /**
      * @returns {number}
      */
-    get day() {
-        const ret = wasm.mtseedboottimingsearchresult_day(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get hour() {
-        const ret = wasm.eggboottimingsearchresult_hour(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
     get minute() {
-        const ret = wasm.mtseedboottimingsearchresult_minute(this.__wbg_ptr);
+        const ret = wasm.idadjustmentsearchresult_second(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -2172,7 +2482,7 @@ export class MtSeedBootTimingSearchResult {
      * @returns {number}
      */
     get timer0() {
-        const ret = wasm.mtseedboottimingsearchresult_timer0(this.__wbg_ptr);
+        const ret = wasm.idadjustmentsearchresult_vcount(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -2180,6 +2490,13 @@ export class MtSeedBootTimingSearchResult {
      */
     get vcount() {
         const ret = wasm.eggboottimingsearchresult_vcount(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get mtSeed() {
+        const ret = wasm.extraresult_get_advances(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -2216,24 +2533,9 @@ export class MtSeedBootTimingSearchResults {
     /**
      * @returns {number}
      */
-    get length() {
-        const ret = wasm.mtseedboottimingsearchresults_length(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
     get processedInChunk() {
         const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
         return ret >>> 0;
-    }
-    /**
-     * 結果をJavaScript配列として取得
-     * @returns {Array<any>}
-     */
-    to_array() {
-        const ret = wasm.mtseedboottimingsearchresults_to_array(this.__wbg_ptr);
-        return takeObject(ret);
     }
     /**
      * 指定インデックスの結果を取得
@@ -2243,6 +2545,21 @@ export class MtSeedBootTimingSearchResults {
     get(index) {
         const ret = wasm.mtseedboottimingsearchresults_get(this.__wbg_ptr, index);
         return ret === 0 ? undefined : MtSeedBootTimingSearchResult.__wrap(ret);
+    }
+    /**
+     * @returns {number}
+     */
+    get length() {
+        const ret = wasm.mtseedboottimingsearchresults_length(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * 結果をJavaScript配列として取得
+     * @returns {Array<any>}
+     */
+    to_array() {
+        const ret = wasm.mtseedboottimingsearchresults_to_array(this.__wbg_ptr);
+        return takeObject(ret);
     }
 }
 if (Symbol.dispose) MtSeedBootTimingSearchResults.prototype[Symbol.dispose] = MtSeedBootTimingSearchResults.prototype.free;
@@ -2260,6 +2577,36 @@ export class NumberUtils {
     free() {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_numberutils_free(ptr, 0);
+    }
+    /**
+     * BCD（Binary Coded Decimal）デコード
+     *
+     * # Arguments
+     * * `bcd_value` - デコードするBCD値
+     *
+     * # Returns
+     * デコードされた値
+     * @param {number} bcd_value
+     * @returns {number}
+     */
+    static decode_bcd(bcd_value) {
+        const ret = wasm.numberutils_decode_bcd(bcd_value);
+        return ret;
+    }
+    /**
+     * BCD（Binary Coded Decimal）エンコード
+     *
+     * # Arguments
+     * * `value` - エンコードする値（0-99）
+     *
+     * # Returns
+     * BCDエンコードされた値
+     * @param {number} value
+     * @returns {number}
+     */
+    static encode_bcd(value) {
+        const ret = wasm.numberutils_encode_bcd(value);
+        return ret;
     }
     /**
      * 16進数文字列を32bit整数に変換
@@ -2306,36 +2653,6 @@ export class NumberUtils {
             wasm.__wbindgen_add_to_stack_pointer(16);
             wasm.__wbindgen_export2(deferred1_0, deferred1_1, 1);
         }
-    }
-    /**
-     * BCD（Binary Coded Decimal）エンコード
-     *
-     * # Arguments
-     * * `value` - エンコードする値（0-99）
-     *
-     * # Returns
-     * BCDエンコードされた値
-     * @param {number} value
-     * @returns {number}
-     */
-    static encode_bcd(value) {
-        const ret = wasm.numberutils_encode_bcd(value);
-        return ret;
-    }
-    /**
-     * BCD（Binary Coded Decimal）デコード
-     *
-     * # Arguments
-     * * `bcd_value` - デコードするBCD値
-     *
-     * # Returns
-     * デコードされた値
-     * @param {number} bcd_value
-     * @returns {number}
-     */
-    static decode_bcd(bcd_value) {
-        const ret = wasm.numberutils_decode_bcd(bcd_value);
-        return ret;
     }
     /**
      * パーセンテージを乱数閾値に変換
@@ -2385,28 +2702,24 @@ export class OffsetCalculator {
         wasm.__wbg_offsetcalculator_free(ptr, 0);
     }
     /**
-     * 新しいOffsetCalculatorインスタンスを作成
-     *
-     * # Arguments
-     * * `seed` - 初期Seed値
-     * @param {bigint} seed
-     */
-    constructor(seed) {
-        const ret = wasm.offsetcalculator_new(seed);
-        this.__wbg_ptr = ret >>> 0;
-        OffsetCalculatorFinalization.register(this, this.__wbg_ptr, this);
-        return this;
-    }
-    /**
-     * 次の32bit乱数値を取得（上位32bit）
+     * 現在の進行回数を取得
      *
      * # Returns
-     * 32bit乱数値
+     * 進行回数
      * @returns {number}
      */
-    next_rand() {
-        const ret = wasm.offsetcalculator_next_rand(this.__wbg_ptr);
+    get get_advances() {
+        const ret = wasm.eggboottimingsearchresult_year(this.__wbg_ptr);
         return ret >>> 0;
+    }
+    /**
+     * Extra処理（BW2専用：重複値回避ループ）
+     * 3つの値（0-14範囲）がすべて異なるまでループ
+     * @returns {ExtraResult}
+     */
+    extra_process() {
+        const ret = wasm.offsetcalculator_extra_process(this.__wbg_ptr);
+        return ExtraResult.__wrap(ret);
     }
     /**
      * 指定回数だけ乱数を消費（Rand×n）
@@ -2417,17 +2730,6 @@ export class OffsetCalculator {
      */
     consume_random(count) {
         wasm.offsetcalculator_consume_random(this.__wbg_ptr, count);
-    }
-    /**
-     * 現在の進行回数を取得
-     *
-     * # Returns
-     * 進行回数
-     * @returns {number}
-     */
-    get get_advances() {
-        const ret = wasm.eggboottimingsearchresult_year(this.__wbg_ptr);
-        return ret >>> 0;
     }
     /**
      * 現在のSeed値を取得
@@ -2441,16 +2743,6 @@ export class OffsetCalculator {
         return BigInt.asUintN(64, ret);
     }
     /**
-     * 計算器をリセット
-     *
-     * # Arguments
-     * * `new_seed` - 新しいSeed値
-     * @param {bigint} new_seed
-     */
-    reset(new_seed) {
-        wasm.offsetcalculator_reset(this.__wbg_ptr, new_seed);
-    }
-    /**
      * TID/SID決定処理（リファレンス実装準拠）
      *
      * # Returns
@@ -2462,10 +2754,10 @@ export class OffsetCalculator {
         return TidSidResult.__wrap(ret);
     }
     /**
-     * 表住人決定処理（BW：固定10回乱数消費）
+     * 住人決定一括処理（BW専用）
      */
-    determine_front_residents() {
-        wasm.offsetcalculator_determine_front_residents(this.__wbg_ptr);
+    determine_all_residents() {
+        wasm.offsetcalculator_determine_all_residents(this.__wbg_ptr);
     }
     /**
      * 裏住人決定処理（BW：固定3回乱数消費）
@@ -2474,32 +2766,16 @@ export class OffsetCalculator {
         wasm.offsetcalculator_determine_back_residents(this.__wbg_ptr);
     }
     /**
-     * 住人決定一括処理（BW専用）
+     * 表住人決定処理（BW：固定10回乱数消費）
      */
-    determine_all_residents() {
-        wasm.offsetcalculator_determine_all_residents(this.__wbg_ptr);
+    determine_front_residents() {
+        wasm.offsetcalculator_determine_front_residents(this.__wbg_ptr);
     }
     /**
      * Probability Table処理（仕様書準拠の6段階テーブル処理）
      */
     probability_table_process() {
         wasm.offsetcalculator_probability_table_process(this.__wbg_ptr);
-    }
-    /**
-     * PT操作×n回
-     * @param {number} count
-     */
-    probability_table_process_multiple(count) {
-        wasm.offsetcalculator_probability_table_process_multiple(this.__wbg_ptr, count);
-    }
-    /**
-     * Extra処理（BW2専用：重複値回避ループ）
-     * 3つの値（0-14範囲）がすべて異なるまでループ
-     * @returns {ExtraResult}
-     */
-    extra_process() {
-        const ret = wasm.offsetcalculator_extra_process(this.__wbg_ptr);
-        return ExtraResult.__wrap(ret);
     }
     /**
      * ゲーム初期化処理の総合実行（仕様書準拠）
@@ -2514,6 +2790,47 @@ export class OffsetCalculator {
      */
     execute_game_initialization(mode) {
         const ret = wasm.offsetcalculator_execute_game_initialization(this.__wbg_ptr, mode);
+        return ret >>> 0;
+    }
+    /**
+     * PT操作×n回
+     * @param {number} count
+     */
+    probability_table_process_multiple(count) {
+        wasm.offsetcalculator_probability_table_process_multiple(this.__wbg_ptr, count);
+    }
+    /**
+     * 新しいOffsetCalculatorインスタンスを作成
+     *
+     * # Arguments
+     * * `seed` - 初期Seed値
+     * @param {bigint} seed
+     */
+    constructor(seed) {
+        const ret = wasm.offsetcalculator_new(seed);
+        this.__wbg_ptr = ret >>> 0;
+        OffsetCalculatorFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * 計算器をリセット
+     *
+     * # Arguments
+     * * `new_seed` - 新しいSeed値
+     * @param {bigint} new_seed
+     */
+    reset(new_seed) {
+        wasm.offsetcalculator_reset(this.__wbg_ptr, new_seed);
+    }
+    /**
+     * 次の32bit乱数値を取得（上位32bit）
+     *
+     * # Returns
+     * 32bit乱数値
+     * @returns {number}
+     */
+    next_rand() {
+        const ret = wasm.offsetcalculator_next_rand(this.__wbg_ptr);
         return ret >>> 0;
     }
 }
@@ -2534,13 +2851,22 @@ export class PIDCalculator {
         wasm.__wbg_pidcalculator_free(ptr, 0);
     }
     /**
-     * 新しいPIDCalculatorインスタンスを作成
+     * タマゴのPID生成
+     * 特殊な計算式を使用
+     *
+     * # Arguments
+     * * `r1` - 乱数値1
+     * * `r2` - 乱数値2
+     *
+     * # Returns
+     * 生成されたPID
+     * @param {number} r1
+     * @param {number} r2
+     * @returns {number}
      */
-    constructor() {
-        const ret = wasm.encountercalculator_new();
-        this.__wbg_ptr = ret >>> 0;
-        PIDCalculatorFinalization.register(this, this.__wbg_ptr, this);
-        return this;
+    static generate_egg_pid(r1, r2) {
+        const ret = wasm.pidcalculator_generate_egg_pid(r1, r2);
+        return ret >>> 0;
     }
     /**
      * BW/BW2準拠 統一PID生成
@@ -2555,6 +2881,60 @@ export class PIDCalculator {
      * @returns {number}
      */
     static generate_base_pid(r1) {
+        const ret = wasm.pidcalculator_generate_base_pid(r1);
+        return ret >>> 0;
+    }
+    /**
+     * ギフトポケモンのPID生成
+     * 特殊な計算式を使用
+     *
+     * # Arguments
+     * * `r1` - 乱数値1
+     * * `r2` - 乱数値2
+     *
+     * # Returns
+     * 生成されたPID
+     * @param {number} r1
+     * @param {number} r2
+     * @returns {number}
+     */
+    static generate_gift_pid(r1, r2) {
+        const ret = wasm.pidcalculator_generate_gift_pid(r1, r2);
+        return ret >>> 0;
+    }
+    /**
+     * BW/BW2準拠 野生ポケモンのPID生成
+     * 32bit乱数 ^ 0x10000 + ID補正処理
+     *
+     * # Arguments
+     * * `r1` - 乱数値1
+     * * `tid` - トレーナーID
+     * * `sid` - シークレットID
+     *
+     * # Returns
+     * 生成されたPID（ID補正適用後）
+     * @param {number} r1
+     * @param {number} tid
+     * @param {number} sid
+     * @returns {number}
+     */
+    static generate_wild_pid(r1, tid, sid) {
+        const ret = wasm.pidcalculator_generate_roamer_pid(r1, tid, sid);
+        return ret >>> 0;
+    }
+    /**
+     * BW/BW2準拠 イベントポケモンのPID生成
+     * 32bit乱数 ^ 0x10000（ID補正なし - 先頭特性無効）
+     *
+     * # Arguments
+     * * `r1` - 乱数値1
+     *
+     * # Returns
+     * 生成されたPID（ID補正なし）
+     * @param {number} r1
+     * @returns {number}
+     */
+    static generate_event_pid(r1) {
         const ret = wasm.pidcalculator_generate_base_pid(r1);
         return ret >>> 0;
     }
@@ -2579,7 +2959,7 @@ export class PIDCalculator {
         return ret >>> 0;
     }
     /**
-     * BW/BW2準拠 野生ポケモンのPID生成
+     * BW/BW2準拠 徘徊ポケモンのPID生成
      * 32bit乱数 ^ 0x10000 + ID補正処理
      *
      * # Arguments
@@ -2594,7 +2974,7 @@ export class PIDCalculator {
      * @param {number} sid
      * @returns {number}
      */
-    static generate_wild_pid(r1, tid, sid) {
+    static generate_roamer_pid(r1, tid, sid) {
         const ret = wasm.pidcalculator_generate_roamer_pid(r1, tid, sid);
         return ret >>> 0;
     }
@@ -2619,76 +2999,13 @@ export class PIDCalculator {
         return ret >>> 0;
     }
     /**
-     * BW/BW2準拠 徘徊ポケモンのPID生成
-     * 32bit乱数 ^ 0x10000 + ID補正処理
-     *
-     * # Arguments
-     * * `r1` - 乱数値1
-     * * `tid` - トレーナーID
-     * * `sid` - シークレットID
-     *
-     * # Returns
-     * 生成されたPID（ID補正適用後）
-     * @param {number} r1
-     * @param {number} tid
-     * @param {number} sid
-     * @returns {number}
+     * 新しいPIDCalculatorインスタンスを作成
      */
-    static generate_roamer_pid(r1, tid, sid) {
-        const ret = wasm.pidcalculator_generate_roamer_pid(r1, tid, sid);
-        return ret >>> 0;
-    }
-    /**
-     * BW/BW2準拠 イベントポケモンのPID生成
-     * 32bit乱数 ^ 0x10000（ID補正なし - 先頭特性無効）
-     *
-     * # Arguments
-     * * `r1` - 乱数値1
-     *
-     * # Returns
-     * 生成されたPID（ID補正なし）
-     * @param {number} r1
-     * @returns {number}
-     */
-    static generate_event_pid(r1) {
-        const ret = wasm.pidcalculator_generate_base_pid(r1);
-        return ret >>> 0;
-    }
-    /**
-     * ギフトポケモンのPID生成
-     * 特殊な計算式を使用
-     *
-     * # Arguments
-     * * `r1` - 乱数値1
-     * * `r2` - 乱数値2
-     *
-     * # Returns
-     * 生成されたPID
-     * @param {number} r1
-     * @param {number} r2
-     * @returns {number}
-     */
-    static generate_gift_pid(r1, r2) {
-        const ret = wasm.pidcalculator_generate_gift_pid(r1, r2);
-        return ret >>> 0;
-    }
-    /**
-     * タマゴのPID生成
-     * 特殊な計算式を使用
-     *
-     * # Arguments
-     * * `r1` - 乱数値1
-     * * `r2` - 乱数値2
-     *
-     * # Returns
-     * 生成されたPID
-     * @param {number} r1
-     * @param {number} r2
-     * @returns {number}
-     */
-    static generate_egg_pid(r1, r2) {
-        const ret = wasm.pidcalculator_generate_egg_pid(r1, r2);
-        return ret >>> 0;
+    constructor() {
+        const ret = wasm.encountercalculator_new();
+        this.__wbg_ptr = ret >>> 0;
+        PIDCalculatorFinalization.register(this, this.__wbg_ptr, this);
+        return this;
     }
 }
 if (Symbol.dispose) PIDCalculator.prototype[Symbol.dispose] = PIDCalculator.prototype.free;
@@ -2707,6 +3024,14 @@ export class ParentsIVsJs {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_parentsivsjs_free(ptr, 0);
     }
+    /**
+     * @param {Uint8Array} ivs
+     */
+    set female(ivs) {
+        const ptr0 = passArray8ToWasm0(ivs, wasm.__wbindgen_export3);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.parentsivsjs_set_female(this.__wbg_ptr, ptr0, len0);
+    }
     constructor() {
         const ret = wasm.parentsivsjs_new();
         this.__wbg_ptr = ret >>> 0;
@@ -2720,14 +3045,6 @@ export class ParentsIVsJs {
         const ptr0 = passArray8ToWasm0(ivs, wasm.__wbindgen_export3);
         const len0 = WASM_VECTOR_LEN;
         wasm.parentsivsjs_set_male(this.__wbg_ptr, ptr0, len0);
-    }
-    /**
-     * @param {Uint8Array} ivs
-     */
-    set female(ivs) {
-        const ptr0 = passArray8ToWasm0(ivs, wasm.__wbindgen_export3);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.parentsivsjs_set_female(this.__wbg_ptr, ptr0, len0);
     }
 }
 if (Symbol.dispose) ParentsIVsJs.prototype[Symbol.dispose] = ParentsIVsJs.prototype.free;
@@ -2746,6 +3063,49 @@ export class PersonalityRNG {
     free() {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_personalityrng_free(ptr, 0);
+    }
+    /**
+     * 現在のSeed値を取得
+     *
+     * # Returns
+     * 現在の内部Seed値
+     * @returns {bigint}
+     */
+    get current_seed() {
+        const ret = wasm.eggboottimingsearchresult_advance(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * 指定Seedから現在のSeedまでの距離
+     *
+     * # Arguments
+     * * `source_seed` - 開始Seed
+     *
+     * # Returns
+     * source_seedから現在のSeedまでの距離
+     * @param {bigint} source_seed
+     * @returns {bigint}
+     */
+    distance_from(source_seed) {
+        const ret = wasm.personalityrng_distance_from(this.__wbg_ptr, source_seed);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * 2つのSeed間の距離を計算
+     *
+     * # Arguments
+     * * `from_seed` - 開始Seed
+     * * `to_seed` - 終了Seed
+     *
+     * # Returns
+     * from_seedからto_seedまでの距離
+     * @param {bigint} from_seed
+     * @param {bigint} to_seed
+     * @returns {bigint}
+     */
+    static distance_between(from_seed, to_seed) {
+        const ret = wasm.personalityrng_distance_between(from_seed, to_seed);
+        return BigInt.asUintN(64, ret);
     }
     /**
      * 新しいPersonalityRNGインスタンスを作成
@@ -2772,36 +3132,14 @@ export class PersonalityRNG {
         return ret >>> 0;
     }
     /**
-     * 次の64bit乱数値を取得
-     *
-     * # Returns
-     * 64bit乱数値（内部状態そのもの）
-     * @returns {bigint}
-     */
-    next_u64() {
-        const ret = wasm.personalityrng_next_u64(this.__wbg_ptr);
-        return BigInt.asUintN(64, ret);
-    }
-    /**
-     * 現在のSeed値を取得
-     *
-     * # Returns
-     * 現在の内部Seed値
-     * @returns {bigint}
-     */
-    get current_seed() {
-        const ret = wasm.eggboottimingsearchresult_advance(this.__wbg_ptr);
-        return BigInt.asUintN(64, ret);
-    }
-    /**
-     * Seed値を設定
+     * Seedをリセット
      *
      * # Arguments
-     * * `new_seed` - 新しいSeed値
-     * @param {bigint} new_seed
+     * * `initial_seed` - リセット後のSeed値
+     * @param {bigint} initial_seed
      */
-    set seed(new_seed) {
-        wasm.personalityrng_reset(this.__wbg_ptr, new_seed);
+    reset(initial_seed) {
+        wasm.personalityrng_reset(this.__wbg_ptr, initial_seed);
     }
     /**
      * 指定回数だけ乱数を進める
@@ -2814,14 +3152,25 @@ export class PersonalityRNG {
         wasm.personalityrng_advance(this.__wbg_ptr, advances);
     }
     /**
-     * Seedをリセット
+     * 次の64bit乱数値を取得
+     *
+     * # Returns
+     * 64bit乱数値（内部状態そのもの）
+     * @returns {bigint}
+     */
+    next_u64() {
+        const ret = wasm.personalityrng_next_u64(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * Seed値を設定
      *
      * # Arguments
-     * * `initial_seed` - リセット後のSeed値
-     * @param {bigint} initial_seed
+     * * `new_seed` - 新しいSeed値
+     * @param {bigint} new_seed
      */
-    reset(initial_seed) {
-        wasm.personalityrng_reset(this.__wbg_ptr, initial_seed);
+    set seed(new_seed) {
+        wasm.personalityrng_reset(this.__wbg_ptr, new_seed);
     }
     /**
      * 0x0からの進行度を計算
@@ -2836,38 +3185,6 @@ export class PersonalityRNG {
      */
     static get_index(seed) {
         const ret = wasm.personalityrng_get_index(seed);
-        return BigInt.asUintN(64, ret);
-    }
-    /**
-     * 2つのSeed間の距離を計算
-     *
-     * # Arguments
-     * * `from_seed` - 開始Seed
-     * * `to_seed` - 終了Seed
-     *
-     * # Returns
-     * from_seedからto_seedまでの距離
-     * @param {bigint} from_seed
-     * @param {bigint} to_seed
-     * @returns {bigint}
-     */
-    static distance_between(from_seed, to_seed) {
-        const ret = wasm.personalityrng_distance_between(from_seed, to_seed);
-        return BigInt.asUintN(64, ret);
-    }
-    /**
-     * 指定Seedから現在のSeedまでの距離
-     *
-     * # Arguments
-     * * `source_seed` - 開始Seed
-     *
-     * # Returns
-     * source_seedから現在のSeedまでの距離
-     * @param {bigint} source_seed
-     * @returns {bigint}
-     */
-    distance_from(source_seed) {
-        const ret = wasm.personalityrng_distance_from(this.__wbg_ptr, source_seed);
         return BigInt.asUintN(64, ret);
     }
 }
@@ -2886,33 +3203,6 @@ export class PokemonGenerator {
     free() {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_pokemongenerator_free(ptr, 0);
-    }
-    /**
-     * 新しいPokemonGeneratorインスタンスを作成
-     */
-    constructor() {
-        const ret = wasm.encountercalculator_new();
-        this.__wbg_ptr = ret >>> 0;
-        PokemonGeneratorFinalization.register(this, this.__wbg_ptr, this);
-        return this;
-    }
-    /**
-     * BW/BW2準拠 単体ポケモン生成（統括関数）
-     *
-     * # Arguments
-     * * `seed` - 初期Seed値
-     * * `config` - BW準拠設定
-     *
-     * # Returns
-     * 生成されたポケモンデータ
-     * @param {bigint} seed
-     * @param {BWGenerationConfig} config
-     * @returns {RawPokemonData}
-     */
-    static generate_single_pokemon_bw(seed, config) {
-        _assertClass(config, BWGenerationConfig);
-        const ret = wasm.pokemongenerator_generate_single_pokemon_bw(seed, config.__wbg_ptr);
-        return RawPokemonData.__wrap(ret);
     }
     /**
      * オフセット適用後の生成開始Seedを計算
@@ -2955,6 +3245,33 @@ export class PokemonGenerator {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
     }
+    /**
+     * BW/BW2準拠 単体ポケモン生成（統括関数）
+     *
+     * # Arguments
+     * * `seed` - 初期Seed値
+     * * `config` - BW準拠設定
+     *
+     * # Returns
+     * 生成されたポケモンデータ
+     * @param {bigint} seed
+     * @param {BWGenerationConfig} config
+     * @returns {RawPokemonData}
+     */
+    static generate_single_pokemon_bw(seed, config) {
+        _assertClass(config, BWGenerationConfig);
+        const ret = wasm.pokemongenerator_generate_single_pokemon_bw(seed, config.__wbg_ptr);
+        return RawPokemonData.__wrap(ret);
+    }
+    /**
+     * 新しいPokemonGeneratorインスタンスを作成
+     */
+    constructor() {
+        const ret = wasm.encountercalculator_new();
+        this.__wbg_ptr = ret >>> 0;
+        PokemonGeneratorFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
 }
 if (Symbol.dispose) PokemonGenerator.prototype[Symbol.dispose] = PokemonGenerator.prototype.free;
 
@@ -2980,25 +3297,17 @@ export class RawPokemonData {
         wasm.__wbg_rawpokemondata_free(ptr, 0);
     }
     /**
-     * getter methods for JavaScript access
-     * @returns {bigint}
-     */
-    get get_seed() {
-        const ret = wasm.eggboottimingsearchresult_advance(this.__wbg_ptr);
-        return BigInt.asUintN(64, ret);
-    }
-    /**
-     * @returns {number}
-     */
-    get get_pid() {
-        const ret = wasm.eggboottimingsearchresult_year(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
      * @returns {number}
      */
     get get_nature() {
         const ret = wasm.rawpokemondata_get_nature(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_shiny_type() {
+        const ret = wasm.rawpokemondata_get_shiny_type(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -3016,27 +3325,6 @@ export class RawPokemonData {
         return ret;
     }
     /**
-     * @returns {number}
-     */
-    get get_encounter_slot_value() {
-        const ret = wasm.rawpokemondata_get_encounter_slot_value(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * @returns {bigint}
-     */
-    get get_level_rand_value() {
-        const ret = wasm.rawpokemondata_get_level_rand_value(this.__wbg_ptr);
-        return BigInt.asUintN(64, ret);
-    }
-    /**
-     * @returns {number}
-     */
-    get get_shiny_type() {
-        const ret = wasm.rawpokemondata_get_shiny_type(this.__wbg_ptr);
-        return ret;
-    }
-    /**
      * @returns {boolean}
      */
     get get_sync_applied() {
@@ -3049,6 +3337,35 @@ export class RawPokemonData {
     get get_encounter_type() {
         const ret = wasm.rawpokemondata_get_encounter_type(this.__wbg_ptr);
         return ret;
+    }
+    /**
+     * @returns {bigint}
+     */
+    get get_level_rand_value() {
+        const ret = wasm.rawpokemondata_get_level_rand_value(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * @returns {number}
+     */
+    get get_encounter_slot_value() {
+        const ret = wasm.rawpokemondata_get_encounter_slot_value(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_pid() {
+        const ret = wasm.eggboottimingsearchresult_year(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * getter methods for JavaScript access
+     * @returns {bigint}
+     */
+    get get_seed() {
+        const ret = wasm.eggboottimingsearchresult_advance(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
     }
 }
 if (Symbol.dispose) RawPokemonData.prototype[Symbol.dispose] = RawPokemonData.prototype.free;
@@ -3066,6 +3383,27 @@ export class SearchRangeParamsJs {
     free() {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_searchrangeparamsjs_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get start_year() {
+        const ret = wasm.extraresult_get_advances(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get start_month() {
+        const ret = wasm.extraresult_get_value1(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get range_seconds() {
+        const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
+        return ret >>> 0;
     }
     /**
      * @param {number} start_year
@@ -3093,29 +3431,8 @@ export class SearchRangeParamsJs {
     /**
      * @returns {number}
      */
-    get start_year() {
-        const ret = wasm.extraresult_get_advances(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get start_month() {
-        const ret = wasm.extraresult_get_value1(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
     get start_day() {
         const ret = wasm.extraresult_get_value2(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get range_seconds() {
-        const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
         return ret >>> 0;
     }
 }
@@ -3136,6 +3453,14 @@ export class SeedEnumerator {
         wasm.__wbg_seedenumerator_free(ptr, 0);
     }
     /**
+     * 次のポケモンを生成（残数0なら undefined を返す）
+     * @returns {EnumeratedPokemonData | undefined}
+     */
+    next_pokemon() {
+        const ret = wasm.seedenumerator_next_pokemon(this.__wbg_ptr);
+        return ret === 0 ? undefined : EnumeratedPokemonData.__wrap(ret);
+    }
+    /**
      * 列挙器を作成
      * @param {bigint} base_seed
      * @param {bigint} user_offset
@@ -3149,14 +3474,6 @@ export class SeedEnumerator {
         this.__wbg_ptr = ret >>> 0;
         SeedEnumeratorFinalization.register(this, this.__wbg_ptr, this);
         return this;
-    }
-    /**
-     * 次のポケモンを生成（残数0なら undefined を返す）
-     * @returns {EnumeratedPokemonData | undefined}
-     */
-    next_pokemon() {
-        const ret = wasm.seedenumerator_next_pokemon(this.__wbg_ptr);
-        return ret === 0 ? undefined : EnumeratedPokemonData.__wrap(ret);
     }
     /**
      * 残数を取得
@@ -3233,32 +3550,19 @@ export class ShinyChecker {
         wasm.__wbg_shinychecker_free(ptr, 0);
     }
     /**
-     * 新しいShinyCheckerインスタンスを作成
-     */
-    constructor() {
-        const ret = wasm.encountercalculator_new();
-        this.__wbg_ptr = ret >>> 0;
-        ShinyCheckerFinalization.register(this, this.__wbg_ptr, this);
-        return this;
-    }
-    /**
-     * 色違い判定
+     * 色違いタイプの判定
      *
      * # Arguments
-     * * `tid` - トレーナーID
-     * * `sid` - シークレットID
-     * * `pid` - ポケモンのPID
+     * * `shiny_value` - 色違い値
      *
      * # Returns
-     * 色違いかどうか
-     * @param {number} tid
-     * @param {number} sid
-     * @param {number} pid
-     * @returns {boolean}
+     * 色違いタイプ
+     * @param {number} shiny_value
+     * @returns {ShinyType}
      */
-    static is_shiny(tid, sid, pid) {
-        const ret = wasm.shinychecker_is_shiny(tid, sid, pid);
-        return ret !== 0;
+    static get_shiny_type(shiny_value) {
+        const ret = wasm.shinychecker_get_shiny_type(shiny_value);
+        return ret;
     }
     /**
      * 色違い値の計算
@@ -3278,21 +3582,6 @@ export class ShinyChecker {
      */
     static get_shiny_value(tid, sid, pid) {
         const ret = wasm.shinychecker_get_shiny_value(tid, sid, pid);
-        return ret;
-    }
-    /**
-     * 色違いタイプの判定
-     *
-     * # Arguments
-     * * `shiny_value` - 色違い値
-     *
-     * # Returns
-     * 色違いタイプ
-     * @param {number} shiny_value
-     * @returns {ShinyType}
-     */
-    static get_shiny_type(shiny_value) {
-        const ret = wasm.shinychecker_get_shiny_type(shiny_value);
         return ret;
     }
     /**
@@ -3340,6 +3629,34 @@ export class ShinyChecker {
     static shiny_probability_with_charm(has_shiny_charm) {
         const ret = wasm.shinychecker_shiny_probability_with_charm(has_shiny_charm);
         return ret >>> 0;
+    }
+    /**
+     * 新しいShinyCheckerインスタンスを作成
+     */
+    constructor() {
+        const ret = wasm.encountercalculator_new();
+        this.__wbg_ptr = ret >>> 0;
+        ShinyCheckerFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * 色違い判定
+     *
+     * # Arguments
+     * * `tid` - トレーナーID
+     * * `sid` - シークレットID
+     * * `pid` - ポケモンのPID
+     *
+     * # Returns
+     * 色違いかどうか
+     * @param {number} tid
+     * @param {number} sid
+     * @param {number} pid
+     * @returns {boolean}
+     */
+    static is_shiny(tid, sid, pid) {
+        const ret = wasm.shinychecker_is_shiny(tid, sid, pid);
+        return ret !== 0;
     }
 }
 if (Symbol.dispose) ShinyChecker.prototype[Symbol.dispose] = ShinyChecker.prototype.free;
@@ -3443,6 +3760,27 @@ export class TidSidResult {
         wasm.__wbg_tidsidresult_free(ptr, 0);
     }
     /**
+     * @returns {number}
+     */
+    get get_advances_used() {
+        const ret = wasm.extraresult_get_advances(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_sid() {
+        const ret = wasm.tidsidresult_get_sid(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get get_tid() {
+        const ret = wasm.tidsidresult_get_tid(this.__wbg_ptr);
+        return ret;
+    }
+    /**
      * TID（トレーナーID下位16bit）
      * @returns {number}
      */
@@ -3487,27 +3825,6 @@ export class TidSidResult {
     set advances_used(arg0) {
         wasm.__wbg_set_extraresult_advances(this.__wbg_ptr, arg0);
     }
-    /**
-     * @returns {number}
-     */
-    get get_tid() {
-        const ret = wasm.tidsidresult_get_tid(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * @returns {number}
-     */
-    get get_sid() {
-        const ret = wasm.tidsidresult_get_sid(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * @returns {number}
-     */
-    get get_advances_used() {
-        const ret = wasm.extraresult_get_advances(this.__wbg_ptr);
-        return ret >>> 0;
-    }
 }
 if (Symbol.dispose) TidSidResult.prototype[Symbol.dispose] = TidSidResult.prototype.free;
 
@@ -3524,6 +3841,41 @@ export class TimeRangeParamsJs {
     free() {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_timerangeparamsjs_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get hour_start() {
+        const ret = wasm.extraresult_get_advances(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get minute_end() {
+        const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get second_end() {
+        const ret = wasm.idadjustmentsearchresult_hour(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get minute_start() {
+        const ret = wasm.extraresult_get_value2(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get second_start() {
+        const ret = wasm.eggboottimingsearchresult_month(this.__wbg_ptr);
+        return ret >>> 0;
     }
     /**
      * @param {number} hour_start
@@ -3553,43 +3905,8 @@ export class TimeRangeParamsJs {
     /**
      * @returns {number}
      */
-    get hour_start() {
-        const ret = wasm.extraresult_get_advances(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
     get hour_end() {
         const ret = wasm.extraresult_get_value1(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get minute_start() {
-        const ret = wasm.extraresult_get_value2(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get minute_end() {
-        const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get second_start() {
-        const ret = wasm.eggboottimingsearchresult_month(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get second_end() {
-        const ret = wasm.mtseedboottimingsearchresult_day(this.__wbg_ptr);
         return ret >>> 0;
     }
 }
@@ -3605,6 +3922,16 @@ export class TrainerIds {
     free() {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_trainerids_free(ptr, 0);
+    }
+    /**
+     * @param {number} tid
+     * @param {number} sid
+     */
+    constructor(tid, sid) {
+        const ret = wasm.trainerids_new(tid, sid);
+        this.__wbg_ptr = ret >>> 0;
+        TrainerIdsFinalization.register(this, this.__wbg_ptr, this);
+        return this;
     }
     /**
      * @returns {number}
@@ -3645,16 +3972,6 @@ export class TrainerIds {
     set tsv(arg0) {
         wasm.__wbg_set_trainerids_tsv(this.__wbg_ptr, arg0);
     }
-    /**
-     * @param {number} tid
-     * @param {number} sid
-     */
-    constructor(tid, sid) {
-        const ret = wasm.trainerids_new(tid, sid);
-        this.__wbg_ptr = ret >>> 0;
-        TrainerIdsFinalization.register(this, this.__wbg_ptr, this);
-        return this;
-    }
 }
 if (Symbol.dispose) TrainerIds.prototype[Symbol.dispose] = TrainerIds.prototype.free;
 
@@ -3673,21 +3990,6 @@ export class ValidationUtils {
         wasm.__wbg_validationutils_free(ptr, 0);
     }
     /**
-     * TIDの妥当性チェック
-     *
-     * # Arguments
-     * * `tid` - トレーナーID
-     *
-     * # Returns
-     * 妥当性
-     * @param {number} _tid
-     * @returns {boolean}
-     */
-    static is_valid_tid(_tid) {
-        const ret = wasm.validationutils_is_valid_sid(_tid);
-        return ret !== 0;
-    }
-    /**
      * SIDの妥当性チェック
      *
      * # Arguments
@@ -3703,6 +4005,36 @@ export class ValidationUtils {
         return ret !== 0;
     }
     /**
+     * TIDの妥当性チェック
+     *
+     * # Arguments
+     * * `tid` - トレーナーID
+     *
+     * # Returns
+     * 妥当性
+     * @param {number} _tid
+     * @returns {boolean}
+     */
+    static is_valid_tid(_tid) {
+        const ret = wasm.validationutils_is_valid_sid(_tid);
+        return ret !== 0;
+    }
+    /**
+     * Seed値の妥当性チェック
+     *
+     * # Arguments
+     * * `seed` - Seed値
+     *
+     * # Returns
+     * 妥当性
+     * @param {bigint} seed
+     * @returns {boolean}
+     */
+    static is_valid_seed(seed) {
+        const ret = wasm.validationutils_is_valid_seed(seed);
+        return ret !== 0;
+    }
+    /**
      * 性格値の妥当性チェック
      *
      * # Arguments
@@ -3715,21 +4047,6 @@ export class ValidationUtils {
      */
     static is_valid_nature(nature) {
         const ret = wasm.validationutils_is_valid_nature(nature);
-        return ret !== 0;
-    }
-    /**
-     * 特性スロットの妥当性チェック
-     *
-     * # Arguments
-     * * `ability_slot` - 特性スロット
-     *
-     * # Returns
-     * 妥当性
-     * @param {number} ability_slot
-     * @returns {boolean}
-     */
-    static is_valid_ability_slot(ability_slot) {
-        const ret = wasm.validationutils_is_valid_ability_slot(ability_slot);
         return ret !== 0;
     }
     /**
@@ -3750,18 +4067,18 @@ export class ValidationUtils {
         return ret !== 0;
     }
     /**
-     * Seed値の妥当性チェック
+     * 特性スロットの妥当性チェック
      *
      * # Arguments
-     * * `seed` - Seed値
+     * * `ability_slot` - 特性スロット
      *
      * # Returns
      * 妥当性
-     * @param {bigint} seed
+     * @param {number} ability_slot
      * @returns {boolean}
      */
-    static is_valid_seed(seed) {
-        const ret = wasm.validationutils_is_valid_seed(seed);
+    static is_valid_ability_slot(ability_slot) {
+        const ret = wasm.validationutils_is_valid_ability_slot(ability_slot);
         return ret !== 0;
     }
 }
@@ -3962,6 +4279,10 @@ function __wbg_get_imports() {
     };
     imports.wbg.__wbg_eggboottimingsearchresult_new = function(arg0) {
         const ret = EggBootTimingSearchResult.__wrap(arg0);
+        return addHeapObject(ret);
+    };
+    imports.wbg.__wbg_idadjustmentsearchresult_new = function(arg0) {
+        const ret = IdAdjustmentSearchResult.__wrap(arg0);
         return addHeapObject(ret);
     };
     imports.wbg.__wbg_mtseedboottimingsearchresult_new = function(arg0) {
