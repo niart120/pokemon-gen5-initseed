@@ -42,14 +42,13 @@ export const MiscPanel: React.FC = () => {
 
       {/* メインコンテンツ: 3列グリッド */}
       <div className={`grid grid-cols-3 ${sizes.gap} flex-1 min-h-0 overflow-hidden`}>
-        {/* Column 1: MT Seed 検索 */}
-        <div className="flex flex-col min-h-0 overflow-y-auto">
-          <MtSeedSearchCard />
-        </div>
-
-        {/* Column 2: ID調整 */}
+        {/* Column 1: ID調整 */}
         <div className="flex flex-col min-h-0 overflow-y-auto">
           <IdAdjustmentCard />
+        </div>
+        {/* Column 2: MT Seed 検索 */}
+        <div className="flex flex-col min-h-0 overflow-y-auto">
+          <MtSeedSearchCard />
         </div>
 
         {/* Column 3: その他機能 */}
