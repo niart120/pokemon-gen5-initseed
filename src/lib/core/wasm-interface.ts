@@ -32,6 +32,10 @@ import type {
   MtSeedBootTimingSearchIterator as WasmMtSeedBootTimingSearchIterator,
   MtSeedBootTimingSearchResult as WasmMtSeedBootTimingSearchResult,
   MtSeedBootTimingSearchResults as WasmMtSeedBootTimingSearchResults,
+  // ID Adjustment search types
+  IdAdjustmentSearchIterator as WasmIdAdjustmentSearchIterator,
+  IdAdjustmentSearchResult as WasmIdAdjustmentSearchResult,
+  IdAdjustmentSearchResults as WasmIdAdjustmentSearchResults,
 } from '../../wasm/wasm_pkg';
 
 // Init arg for wasm-bindgen init function
@@ -73,6 +77,11 @@ export interface WasmModule {
   MtSeedBootTimingSearchIterator: typeof WasmMtSeedBootTimingSearchIterator;
   MtSeedBootTimingSearchResult: typeof WasmMtSeedBootTimingSearchResult;
   MtSeedBootTimingSearchResults: typeof WasmMtSeedBootTimingSearchResults;
+
+  // 追加: ID調整検索API
+  IdAdjustmentSearchIterator: typeof WasmIdAdjustmentSearchIterator;
+  IdAdjustmentSearchResult: typeof WasmIdAdjustmentSearchResult;
+  IdAdjustmentSearchResults: typeof WasmIdAdjustmentSearchResults;
 
   calculate_game_offset(initial_seed: bigint, mode: number): number;
   sha1_hash_batch(messages: Uint32Array): Uint32Array;
@@ -151,6 +160,10 @@ export async function initWasm(): Promise<WasmModule> {
         MtSeedBootTimingSearchIterator: module.MtSeedBootTimingSearchIterator,
         MtSeedBootTimingSearchResult: module.MtSeedBootTimingSearchResult,
         MtSeedBootTimingSearchResults: module.MtSeedBootTimingSearchResults,
+        // ID調整検索API
+        IdAdjustmentSearchIterator: module.IdAdjustmentSearchIterator,
+        IdAdjustmentSearchResult: module.IdAdjustmentSearchResult,
+        IdAdjustmentSearchResults: module.IdAdjustmentSearchResults,
         calculate_game_offset: module.calculate_game_offset,
         sha1_hash_batch: module.sha1_hash_batch,
         // MT Seed 32bit全探索API
@@ -201,3 +214,8 @@ export type SearchRangeParamsJs = WasmSearchRangeParamsJs;
 export type MtSeedBootTimingSearchIterator = WasmMtSeedBootTimingSearchIterator;
 export type MtSeedBootTimingSearchResult = WasmMtSeedBootTimingSearchResult;
 export type MtSeedBootTimingSearchResults = WasmMtSeedBootTimingSearchResults;
+
+// ID Adjustment Search 型を公開
+export type IdAdjustmentSearchIterator = WasmIdAdjustmentSearchIterator;
+export type IdAdjustmentSearchResult = WasmIdAdjustmentSearchResult;
+export type IdAdjustmentSearchResults = WasmIdAdjustmentSearchResults;

@@ -10,6 +10,7 @@ mod egg_boot_timing_search;
 mod egg_iv;
 mod egg_seed_enumerator;
 mod encounter_calculator;
+mod id_adjustment_search;
 mod mt_seed_boot_timing_search;
 mod mt_seed_search;
 mod mt19937;
@@ -29,6 +30,9 @@ mod tests;
 // Re-export main functionality - 統合検索のみ（内部でsha1/sha1_simdは使用）
 pub use datetime_codes::{DateCodeGenerator, TimeCodeGenerator};
 pub use egg_boot_timing_search::{EggBootTimingSearchIterator, EggBootTimingSearchResult};
+pub use id_adjustment_search::{
+    IdAdjustmentSearchIterator, IdAdjustmentSearchResult, IdAdjustmentSearchResults,
+};
 pub use mt_seed_boot_timing_search::{
     MtSeedBootTimingSearchIterator, MtSeedBootTimingSearchResult, MtSeedBootTimingSearchResults,
 };

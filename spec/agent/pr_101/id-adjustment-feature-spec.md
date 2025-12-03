@@ -122,6 +122,7 @@ export interface IdAdjustmentSearchParams {
 
 ```typescript
 import type { BootCondition } from '@/types/search';
+import type { DomainShinyType } from '@/types/domain';
 
 /**
  * ID調整検索結果1件
@@ -139,8 +140,13 @@ export interface IdAdjustmentSearchResult {
   /** 算出された裏ID */
   sid: number;
 
-  /** 指定PIDが色違いになるか（shinyPid指定時のみ有効） */
-  isShiny?: boolean;
+  /** 
+   * 色違いタイプ（shinyPid指定時のみ有効）
+   * - 0: Normal（色違いではない）
+   * - 1: Square（四角い色違い、最レア）
+   * - 2: Star（星形色違い）
+   */
+  shinyType?: DomainShinyType;
 }
 ```
 
@@ -155,13 +161,13 @@ export interface IdAdjustmentSearchResult {
 | カラム名 | 説明 |
 |---------|------|
 | 日時 | 起動日時 |
-| Timer0 | Timer0値（16進表示） |
-| VCount | VCount値（16進表示） |
-| キー入力 | キー入力名の一覧 |
 | 初期Seed | LCG Seed（16進数） |
 | 表ID | TID |
 | 裏ID | SID |
-| 色違い | 色違い判定結果（shinyPid指定時のみ） |
+| 色違い | 色違いタイプ表示（shinyPid指定時のみ、◇=Square/☆=Star/-=Normal） |
+| Timer0 | Timer0値（16進表示） |
+| VCount | VCount値（16進表示） |
+| キー入力 | キー入力名の一覧 |
 
 ## 4. アーキテクチャ設計
 
@@ -313,6 +319,7 @@ CPUコア数に応じてWorkerを生成・管理する。
 
 ```typescript
 // id-adjustment-worker-manager.ts
+// 既存の MtSeedBootTimingMultiWorkerManager / EggBootTimingMultiWorkerManager と同様の構造
 
 interface IdAdjustmentWorkerManager {
   startSearch(params: IdAdjustmentSearchParams): Promise<void>;
@@ -325,8 +332,8 @@ interface IdAdjustmentWorkerManager {
 ```
 
 検索空間の分割方式:
-- Timer0 × VCount × KeyCode のセグメント単位で分割
-- 各Workerに均等にセグメントを割り当て
+- 日時範囲を Worker 数で均等に分割（既存の `calculateTimeChunks` を流用）
+- 各 Worker は割り当てられた日時範囲内で timer0 × vcount × keyCode のループを実行
 
 ### 6.2 Worker通信プロトコル
 
@@ -436,22 +443,24 @@ export type IdAdjustmentErrorCategory =
 
 ### 6.3 Worker内部処理フロー
 
+各Workerは割り当てられた日時範囲（TimeChunk）に対して検索を実行する。
+
 ```
 1. WASM 初期化
 2. 検索パラメータ解析
-3. 自WorkerIDに基づくセグメント割り当て計算
-4. セグメントループ開始
-   ├── timer0 範囲をイテレート
+3. 割り当てられた日時チャンク（rangeSeconds）の処理開始
+4. WASM IdAdjustmentSearchIterator 作成
+5. 日時範囲ループ（秒単位）
+   ├── 各秒に対して timer0 範囲をイテレート
    │   ├── vcount 範囲をイテレート
    │   │   ├── keyCode 一覧をイテレート
-   │   │   │   ├── WASM IdAdjustmentSearchIterator 作成
-   │   │   │   ├── 時刻範囲を走査
-   │   │   │   │   ├── LCG Seed 計算
-   │   │   │   │   ├── TID/SID 算出
-   │   │   │   │   ├── フィルタ条件マッチ判定
-   │   │   │   │   └── マッチ時: 結果をバッファに追加
-   │   │   │   └── 定期的に結果をメインスレッドへ送信
-5. 完了通知
+   │   │   │   ├── LCG Seed 計算
+   │   │   │   ├── TID/SID 算出
+   │   │   │   ├── フィルタ条件マッチ判定
+   │   │   │   │   └── shinyPid指定時: ShinyChecker.check_shiny_type() で色違いタイプ判定
+   │   │   │   └── マッチ時（Square または Star）: 結果をバッファに追加
+   │   │   └── 定期的に結果をメインスレッドへ送信
+6. 完了通知
 ```
 
 ## 7. Rust/WASM API設計
@@ -504,7 +513,9 @@ pub struct IdAdjustmentSearchResult {
     pub lcg_seed_hex: String,
     pub tid: u16,
     pub sid: u16,
-    pub is_shiny: bool,  // shinyPid指定時のみ有効
+    /// 色違いタイプ（shinyPid指定時のみ有効）
+    /// 0: Normal（色違いではない）、1: Square（四角い色違い）、2: Star（星形色違い）
+    pub shiny_type: u8,
 }
 
 /// ID調整検索イテレータ
@@ -559,7 +570,11 @@ impl IdAdjustmentSearchIterator {
 
 ### 7.3 検索アルゴリズム
 
+既存の `ShinyChecker` (`wasm-pkg/src/pid_shiny_checker.rs`) を使用して色違い判定を行う。
+
 ```rust
+use crate::pid_shiny_checker::{ShinyChecker, ShinyType};
+
 impl IdAdjustmentSearchIterator {
     fn search_single_datetime(&self, datetime: DateTime) -> Option<IdAdjustmentSearchResult> {
         // 1. HashValues 計算
@@ -583,26 +598,32 @@ impl IdAdjustmentSearchIterator {
             }
         }
         
-        // 6. 色違い判定（shinyPid 指定時）
-        let is_shiny = if let Some(pid) = self.shiny_pid {
-            check_shiny(pid, tid_sid.tid, tid_sid.sid)
+        // 6. 色違いタイプ判定（shinyPid 指定時）
+        // 既存の ShinyChecker を使用
+        let shiny_type = if let Some(pid) = self.shiny_pid {
+            ShinyChecker::check_shiny_type(tid_sid.tid, tid_sid.sid, pid)
         } else {
-            false
+            ShinyType::Normal
         };
+        
+        // 7. 色違いフィルタ（shinyPid指定時はSquareまたはStarのみ結果に含める）
+        if self.shiny_pid.is_some() && shiny_type == ShinyType::Normal {
+            return None;
+        }
         
         Some(IdAdjustmentSearchResult {
             // 結果構築
+            shiny_type: shiny_type as u8, // 0=Normal, 1=Square, 2=Star
             ...
         })
     }
 }
 
-fn check_shiny(pid: u32, tid: u16, sid: u16) -> bool {
-    // 色違い判定式: (pid_upper ^ pid_lower ^ tid ^ sid) < 8
-    let pid_upper = (pid >> 16) as u16;
-    let pid_lower = (pid & 0xFFFF) as u16;
-    (pid_upper ^ pid_lower ^ tid ^ sid) < 8
-}
+// ShinyChecker の既存実装を使用（pid_shiny_checker.rs より）:
+// - ShinyChecker::check_shiny_type(tid, sid, pid) -> ShinyType
+// - ShinyType::Normal = 0（色違いではない）
+// - ShinyType::Square = 1（四角い色違い、shiny_value == 0）
+// - ShinyType::Star = 2（星形色違い、shiny_value 1..=7）
 ```
 
 ## 8. 状態管理設計
@@ -800,27 +821,30 @@ IdAdjustmentCard
 
 ### 13.1 Worker数の決定
 
-```typescript
-// 設定可能な定数として定義
-const ID_ADJUSTMENT_CONFIG = {
-  MIN_WORKERS: 1,
-  MAX_WORKERS: 8,  // メモリ使用量考慮: 1 Worker あたり約 50MB
-  RESERVED_THREADS: 1,  // UIスレッド確保用
-};
+既存の `getDefaultWorkerCount()` 関数（`@/lib/search/chunk-calculator.ts`）を使用する。
 
-const workerCount = Math.max(
-  ID_ADJUSTMENT_CONFIG.MIN_WORKERS, 
-  Math.min(
-    navigator.hardwareConcurrency - ID_ADJUSTMENT_CONFIG.RESERVED_THREADS, 
-    ID_ADJUSTMENT_CONFIG.MAX_WORKERS
-  )
-);
+```typescript
+import { getDefaultWorkerCount } from '@/lib/search/chunk-calculator';
+
+// 既存実装を流用
+export function getDefaultWorkerCount(): number {
+  return typeof navigator !== 'undefined'
+    ? navigator.hardwareConcurrency || 4
+    : 4;
+}
+
+// WorkerManager のコンストラクタで使用
+class IdAdjustmentMultiWorkerManager {
+  constructor(private maxWorkers: number = getDefaultWorkerCount()) {}
+  
+  setMaxWorkers(count: number): void {
+    const maxHwConcurrency = getDefaultWorkerCount();
+    this.maxWorkers = Math.max(1, Math.min(count, maxHwConcurrency));
+  }
+}
 ```
 
-Worker数上限の根拠:
-- 各Workerは WASM インスタンスを保持するため、約 50MB のメモリを消費
-- 8 Worker × 50MB = 400MB が上限目安
-- 実装時にプロファイリングを行い、必要に応じて調整可能とする
+既存の `MtSeedBootTimingMultiWorkerManager` / `EggBootTimingMultiWorkerManager` と同じ方式を採用し、特別な上限設定は行わない。
 
 ### 13.2 バッチ処理
 
@@ -899,14 +923,30 @@ const BATCH_CONFIG = {
 
 ## 16. 参考資料
 
-- 既存実装: `mt-seed-boot-timing-worker.ts`
-- 既存実装: `offset_calculator.rs` (`calculate_tid_sid_from_seed`)
+### 16.1 既存実装（流用対象）
+
+- Worker管理: `src/lib/mt-seed/mt-seed-boot-timing-multi-worker-manager.ts`
+- Worker管理: `src/lib/egg/boot-timing-egg-multi-worker-manager.ts`
+- チャンク分割: `src/lib/search/chunk-calculator.ts` (`getDefaultWorkerCount`, `calculateTimeChunks`)
+- 色違い判定: `wasm-pkg/src/pid_shiny_checker.rs` (`ShinyChecker`, `ShinyType`)
+- TID/SID計算: `wasm-pkg/src/offset_calculator.rs` (`calculate_tid_sid_from_seed`)
+- ドメイン型: `src/types/domain.ts` (`DomainShinyType`, `DomainGameMode`)
+
+### 16.2 仕様書
+
 - 既存仕様書: `spec/implementation/02-algorithms.md`
 - 既存仕様書: `spec/implementation/algorithms/offset-calculator.md`
 
 ---
 
 **作成日**: 2025年12月3日  
-**バージョン**: 1.0  
+**バージョン**: 1.1  
 **作成者**: GitHub Copilot  
 **関連PR**: #101
+
+### 変更履歴
+
+| バージョン | 日付 | 変更内容 |
+|-----------|------|----------|
+| 1.1 | 2025-12-03 | Worker数決定ロジックを既存実装の流用に変更、色違い判定をShinyType (Square/Star)ベースに変更、検索空間分割を日時範囲のみに変更、結果テーブルカラム順序を変更 |
+| 1.0 | 2025-12-03 | 初版作成 |
