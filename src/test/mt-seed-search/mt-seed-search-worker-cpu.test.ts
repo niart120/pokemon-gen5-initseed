@@ -228,7 +228,7 @@ if (typeof Worker === 'undefined') {
         const elapsedMs = performance.now() - startTime;
 
         if (complete.type === 'COMPLETE') {
-          const payload = complete.payload as MtSeedSearchCompletion;
+          const _payload = complete.payload as MtSeedSearchCompletion;
           const throughput = calculateThroughput(searchRange, elapsedMs);
 
           console.log(

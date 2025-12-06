@@ -17,12 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { EggResultDetailsDialog } from './EggResultDetailsDialog';
 import { useEggBootTimingSearchStore } from '@/store/egg-boot-timing-search-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useTableVirtualization } from '@/hooks/use-table-virtualization';
@@ -80,10 +75,6 @@ export function EggSearchResultsCard() {
 
   const formatIv = (iv: number): string => {
     return iv === IV_UNKNOWN ? '?' : String(iv);
-  };
-
-  const formatIVs = (ivs: readonly [number, number, number, number, number, number]): string => {
-    return ivs.map(formatIv).join('-');
   };
 
   const getShinyDisplay = (shiny: number): { text: string; className: string } => {
@@ -266,81 +257,11 @@ export function EggSearchResultsCard() {
       </PanelCard>
 
       {/* 詳細ダイアログ */}
-      <Dialog open={selectedResult !== null} onOpenChange={(open) => !open && setSelectedResult(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{eggSearchResultsTableHeaders.detail[locale]}</DialogTitle>
-          </DialogHeader>
-          {selectedResult && (
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground">{eggSearchResultsTableHeaders.bootTime[locale]}:</span>
-                  <span className="ml-2 font-mono">{formatDatetime(selectedResult.boot.datetime)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{eggSearchResultsTableHeaders.timer0[locale]}:</span>
-                  <span className="ml-2 font-mono">{formatTimer0(selectedResult.boot.timer0)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{eggSearchResultsTableHeaders.vcount[locale]}:</span>
-                  <span className="ml-2 font-mono">{formatVCount(selectedResult.boot.vcount)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">MT Seed:</span>
-                  <span className="ml-2 font-mono">{selectedResult.egg.egg.mtSeedHex ?? '-'}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{eggSearchResultsTableHeaders.lcgSeed[locale]}:</span>
-                  <span className="ml-2 font-mono">{selectedResult.lcgSeedHex}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{eggSearchResultsTableHeaders.advance[locale]}:</span>
-                  <span className="ml-2 font-mono">{selectedResult.egg.advance}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{eggSearchResultsTableHeaders.ability[locale]}:</span>
-                  <span className="ml-2">{getAbilityDisplay(selectedResult.egg.egg.ability)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{eggSearchResultsTableHeaders.gender[locale]}:</span>
-                  <span className="ml-2">{getGenderDisplay(selectedResult.egg.egg.gender)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{eggSearchResultsTableHeaders.nature[locale]}:</span>
-                  <span className="ml-2">{natureName(selectedResult.egg.egg.nature, locale)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{eggSearchResultsTableHeaders.shiny[locale]}:</span>
-                  <span className={`ml-2 ${getShinyDisplay(selectedResult.egg.egg.shiny).className}`}>
-                    {getShinyDisplay(selectedResult.egg.egg.shiny).text}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{eggSearchResultsTableHeaders.ivs[locale]}:</span>
-                  <span className="ml-2 font-mono">{formatIVs(selectedResult.egg.egg.ivs)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{eggSearchResultsTableHeaders.hiddenPower[locale]}:</span>
-                  <span className="ml-2">{getHiddenPowerDisplay(selectedResult)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{eggSearchResultsTableHeaders.keys[locale]}:</span>
-                  <span className="ml-2">{formatKeyInputForDisplay(selectedResult.boot.keyCode, selectedResult.boot.keyInputNames)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{eggSearchResultsTableHeaders.stable[locale]}:</span>
-                  <span className="ml-2">{selectedResult.isStable ? '○' : '×'}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">PID:</span>
-                  <span className="ml-2 font-mono">0x{selectedResult.egg.egg.pid.toString(16).toUpperCase().padStart(8, '0')}</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <EggResultDetailsDialog
+        result={selectedResult}
+        isOpen={selectedResult !== null}
+        onOpenChange={(open) => !open && setSelectedResult(null)}
+      />
     </>
   );
 }
