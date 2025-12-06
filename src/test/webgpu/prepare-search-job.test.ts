@@ -15,11 +15,12 @@ function createSearchConditions(
   dateRange: SearchConditions['dateRange'],
   options?: { timeRange?: SearchConditions['timeRange'] }
 ): SearchConditions {
-  const timeRange = options?.timeRange ?? {
-    hour: { start: dateRange.startHour, end: dateRange.endHour },
-    minute: { start: dateRange.startMinute, end: dateRange.endMinute },
-    second: { start: dateRange.startSecond, end: dateRange.endSecond },
-  };
+  const timeRange =
+    options?.timeRange ?? {
+      hour: { start: 0, end: 23 },
+      minute: { start: 0, end: 59 },
+      second: { start: 0, end: 59 },
+    };
   return {
     romVersion: 'B',
     romRegion: 'JPN',
@@ -83,28 +84,27 @@ describe('prepareSearchJob', () => {
     startYear: 2000,
     startMonth: 1,
     startDay: 1,
-    startHour: 0,
-    startMinute: 0,
-    startSecond: 0,
     endYear: 2000,
     endMonth: 1,
     endDay: 1,
-    endHour: 0,
-    endMinute: 0,
-    endSecond: 0,
+  };
+  const singleDayTimeRange: SearchConditions['timeRange'] = {
+    hour: { start: 0, end: 0 },
+    minute: { start: 0, end: 0 },
+    second: { start: 0, end: 0 },
   };
 
   it('computes start timestamp using local timezone information', () => {
     withMockedLocalTimezone(-540, () => {
-      const conditions = createSearchConditions(singleDayRange);
+      const conditions = createSearchConditions(singleDayRange, { timeRange: singleDayTimeRange });
       const job = prepareJob(conditions);
       const expectedLocalTimestamp = new Date(
         singleDayRange.startYear,
         singleDayRange.startMonth - 1,
         singleDayRange.startDay,
-        singleDayRange.startHour,
-        singleDayRange.startMinute,
-        singleDayRange.startSecond
+        singleDayTimeRange.hour.start,
+        singleDayTimeRange.minute.start,
+        singleDayTimeRange.second.start
       ).getTime();
 
       expect(job.timePlan.startDayTimestampMs).toBe(expectedLocalTimestamp);
@@ -119,7 +119,7 @@ describe('prepareSearchJob', () => {
     };
 
     withMockedLocalTimezone(-540, () => {
-      const conditions = createSearchConditions(futureRange);
+      const conditions = createSearchConditions(futureRange, { timeRange: singleDayTimeRange });
       const job = prepareJob(conditions);
 
       const expectedEpoch = new Date(2000, 0, 1, 0, 0, 0).getTime();
@@ -139,16 +139,15 @@ describe('prepareSearchJob', () => {
       endMonth: 5,
       startDay: 10,
       endDay: 10,
-      startHour: 12,
-      endHour: 12,
-      startMinute: 0,
-      endMinute: 0,
-      startSecond: 0,
-      endSecond: 5,
+    };
+    const multiSecondTimeRange: SearchConditions['timeRange'] = {
+      hour: { start: 12, end: 12 },
+      minute: { start: 0, end: 0 },
+      second: { start: 0, end: 5 },
     };
 
     const job = withMockedLocalTimezone(-540, () => {
-      const conditions = createSearchConditions(multiSecondRange);
+      const conditions = createSearchConditions(multiSecondRange, { timeRange: multiSecondTimeRange });
       return prepareJob(conditions);
     });
 

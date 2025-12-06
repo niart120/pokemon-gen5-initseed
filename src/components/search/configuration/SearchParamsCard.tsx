@@ -40,16 +40,10 @@ export function SearchParamsCard() {
       nextDateRange.startYear = value.year;
       nextDateRange.startMonth = value.month;
       nextDateRange.startDay = value.day;
-      nextDateRange.startHour = 0;
-      nextDateRange.startMinute = 0;
-      nextDateRange.startSecond = 0;
     } else {
       nextDateRange.endYear = value.year;
       nextDateRange.endMonth = value.month;
       nextDateRange.endDay = value.day;
-      nextDateRange.endHour = 23;
-      nextDateRange.endMinute = 59;
-      nextDateRange.endSecond = 59;
     }
     setSearchConditions({ dateRange: nextDateRange });
   };

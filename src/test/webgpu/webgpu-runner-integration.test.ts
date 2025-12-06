@@ -43,12 +43,6 @@ describeWebGpu('webgpu seed search runner integration', () => {
           endMonth: 6,
           startDay: 12,
           endDay: 12,
-          startHour: 10,
-          endHour: 10,
-          startMinute: 15,
-          endMinute: 15,
-          startSecond: 0,
-          endSecond: 5,
         },
         timeRange: {
           hour: { start: 10, end: 10 },

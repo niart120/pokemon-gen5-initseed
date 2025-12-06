@@ -16,9 +16,6 @@ export interface DailyTimeRange {
   second: TimeFieldRange;
 }
 
-/**
- * 日付範囲（Boot Timing検索共通）
- */
 export interface DateRange {
   startYear: number;
   startMonth: number;
@@ -80,20 +77,7 @@ export interface SearchConditions {
   };
   timeRange: DailyTimeRange;
   
-  dateRange: {
-    startYear: number;
-    endYear: number;
-    startMonth: number;
-    endMonth: number;
-    startDay: number;
-    endDay: number;
-    startHour: number;
-    endHour: number;
-    startMinute: number;
-    endMinute: number;
-    startSecond: number;
-    endSecond: number;
-  };
+  dateRange: DateRange;
   
   keyInput: number;
   macAddress: number[];

@@ -38,19 +38,22 @@ export function calculateIdAdjustmentTimeChunks(
   params: IdAdjustmentSearchParams,
   maxWorkers: number = getDefaultWorkerCount()
 ): TimeChunk[] {
-  const { dateRange } = params;
+  const { dateRange, timeRange } = params;
   const startDateTime = new Date(
     dateRange.startYear,
     dateRange.startMonth - 1,
-    dateRange.startDay
+    dateRange.startDay,
+    timeRange.hour.start,
+    timeRange.minute.start,
+    timeRange.second.start
   );
   const endDateTime = new Date(
     dateRange.endYear,
     dateRange.endMonth - 1,
     dateRange.endDay,
-    23,
-    59,
-    59
+    timeRange.hour.end,
+    timeRange.minute.end,
+    timeRange.second.end
   );
 
   const operationsPerSecond = calculateIdAdjustmentOperationsPerSecond(params);
