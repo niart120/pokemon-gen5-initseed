@@ -286,7 +286,7 @@ describeWebGpu('MT Seed Search GPU Worker', () => {
       }
 
       if (complete.type === 'COMPLETE') {
-        const payload = complete.payload as MtSeedSearchCompletion;
+        const _payload = complete.payload as MtSeedSearchCompletion;
         const throughput = calculateThroughput(searchRange, elapsedMs);
 
         console.log(
