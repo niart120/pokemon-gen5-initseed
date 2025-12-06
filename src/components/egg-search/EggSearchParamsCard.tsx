@@ -9,22 +9,25 @@
  */
 
 import React, { useMemo } from 'react';
-import { Sliders, GameController } from '@phosphor-icons/react';
+import { Sliders } from '@phosphor-icons/react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { KeyInputDialog } from '@/components/keys';
+import { RangeKeySection } from '@/components/shared/RangeKeySection';
+import type { TimeFieldKey } from '@/components/shared/RangeKeySection';
 import { useEggBootTimingSearchStore } from '@/store/egg-boot-timing-search-store';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import { natureName } from '@/lib/utils/format-display';
 import { DOMAIN_NATURE_COUNT } from '@/types/domain';
-import { KEY_INPUT_DEFAULT, keyMaskToNames, toggleKeyInMask, type KeyName } from '@/lib/utils/key-input';
 import type { IvSet } from '@/types/egg';
+import {
+  rangeKeyDialogLabels,
+  rangeKeySectionLabels,
+} from '@/lib/i18n/strings/range-key-section';
 import {
   eggSearchParamsCardTitle,
   eggSearchParamsSectionTitles,
@@ -49,9 +52,6 @@ export function EggSearchParamsCard() {
   
   const isRunning = status === 'running' || status === 'starting' || status === 'stopping';
 
-  const [isKeyDialogOpen, setIsKeyDialogOpen] = React.useState(false);
-  const [tempKeyInput, setTempKeyInput] = React.useState(KEY_INPUT_DEFAULT);
-
   const statNames = resolveLocaleValue(eggSearchStatNames, locale);
   const femaleAbilityOptions = resolveLocaleValue(eggSearchFemaleAbilityOptions, locale);
 
@@ -64,121 +64,48 @@ export function EggSearchParamsCard() {
     return preset ? `${preset.threshold}-${preset.genderless}` : 'custom';
   }, [draftParams.conditions.genderRatio]);
 
-  // 日付フォーマット
-  const formatDate = (year: number, month: number, day: number): string => {
-    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  };
-
-  const parseDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return {
-      year: date.getFullYear(),
-      month: date.getMonth() + 1,
-      day: date.getDate(),
-    };
-  };
-
-  const startDate = formatDate(
-    draftParams.dateRange.startYear,
-    draftParams.dateRange.startMonth,
-    draftParams.dateRange.startDay,
-  );
-
-  const endDate = formatDate(
-    draftParams.dateRange.endYear,
-    draftParams.dateRange.endMonth,
-    draftParams.dateRange.endDay,
-  );
-
-  const handleStartDateChange = (dateString: string) => {
-    if (!dateString) return;
-    const { year, month, day } = parseDate(dateString);
-    updateDateRange({
-      startYear: year,
-      startMonth: month,
-      startDay: day,
-    });
-  };
-
-  const handleEndDateChange = (dateString: string) => {
-    if (!dateString) return;
-    const { year, month, day } = parseDate(dateString);
-    updateDateRange({
-      endYear: year,
-      endMonth: month,
-      endDay: day,
-    });
-  };
-
-  // 時刻範囲フィールド設定
-  const timeFieldConfigs = [
-    { key: 'hour' as const, label: eggSearchParamsLabels.hour[locale], min: 0, max: 23 },
-    { key: 'minute' as const, label: eggSearchParamsLabels.minute[locale], min: 0, max: 59 },
-    { key: 'second' as const, label: eggSearchParamsLabels.second[locale], min: 0, max: 59 },
-  ];
-
-  const handleTimeRangeChange = (
-    field: 'hour' | 'minute' | 'second',
-    edge: 'start' | 'end',
-    rawValue: string,
-  ) => {
-    // 入力中はバリデーションせず、そのまま保存
-    const currentRange = draftParams.timeRange[field];
-    const nextRange = { ...currentRange, [edge]: rawValue };
-    updateTimeRange({ [field]: nextRange });
-  };
-
-  const handleTimeRangeBlur = (
-    field: 'hour' | 'minute' | 'second',
-    edge: 'start' | 'end',
-  ) => {
-    const range = draftParams.timeRange[field];
-    const config = timeFieldConfigs.find(c => c.key === field)!;
-
-    // 空の場合やNaNの場合はminに補正
-    const startValue = typeof range.start === 'string' ? parseInt(range.start as string, 10) : range.start;
-    const endValue = typeof range.end === 'string' ? parseInt(range.end as string, 10) : range.end;
-    
-    const clampedStart = Number.isNaN(startValue) ? config.min : Math.min(Math.max(startValue, config.min), config.max);
-    const clampedEnd = Number.isNaN(endValue) ? config.min : Math.min(Math.max(endValue, config.min), config.max);
-
-    // start > end の場合は補正
-    let finalStart = clampedStart;
-    let finalEnd = clampedEnd;
-    if (finalStart > finalEnd) {
-      if (edge === 'start') {
-        finalEnd = finalStart;
-      } else {
-        finalStart = finalEnd;
-      }
+  const handleDateChange = (edge: 'start' | 'end', value: { year: number; month: number; day: number }) => {
+    if (edge === 'start') {
+      updateDateRange({
+        startYear: value.year,
+        startMonth: value.month,
+        startDay: value.day,
+      });
+    } else {
+      updateDateRange({
+        endYear: value.year,
+        endMonth: value.month,
+        endDay: value.day,
+      });
     }
-
-    updateTimeRange({ [field]: { start: finalStart, end: finalEnd } });
   };
 
-  // キー入力
-  const availableKeys = useMemo(() => keyMaskToNames(draftParams.keyInputMask), [draftParams.keyInputMask]);
-  const tempAvailableKeys = useMemo(() => keyMaskToNames(tempKeyInput), [tempKeyInput]);
-
-  const handleToggleKey = (key: KeyName) => {
-    setTempKeyInput(toggleKeyInMask(tempKeyInput, key));
+  const handleTimeRangeChange = (field: TimeFieldKey, edge: 'start' | 'end', rawValue: string) => {
+    const currentRange = draftParams.timeRange[field];
+    updateTimeRange({ [field]: { ...currentRange, [edge]: rawValue } });
   };
 
-  const handleResetKeys = () => {
-    setTempKeyInput(KEY_INPUT_DEFAULT);
+  const handleTimeRangeCommit = (field: TimeFieldKey, range: { start: number; end: number }) => {
+    updateTimeRange({ [field]: range });
   };
 
-  const handleApplyKeys = () => {
-    updateDraftParams({ keyInputMask: tempKeyInput });
-    setIsKeyDialogOpen(false);
+  const handleKeyMaskChange = (mask: number) => {
+    updateDraftParams({ keyInputMask: mask });
   };
 
-  const openKeyDialog = () => {
-    setTempKeyInput(draftParams.keyInputMask);
-    setIsKeyDialogOpen(true);
+  const labels = {
+    startDate: resolveLocaleValue(rangeKeySectionLabels.startDate, locale),
+    endDate: resolveLocaleValue(rangeKeySectionLabels.endDate, locale),
+    timeRange: resolveLocaleValue(rangeKeySectionLabels.timeRange, locale),
+    hour: resolveLocaleValue(rangeKeySectionLabels.hour, locale),
+    minute: resolveLocaleValue(rangeKeySectionLabels.minute, locale),
+    second: resolveLocaleValue(rangeKeySectionLabels.second, locale),
+    keyInput: resolveLocaleValue(rangeKeySectionLabels.keyInput, locale),
+    configure: resolveLocaleValue(rangeKeySectionLabels.configure, locale),
+    dialogTitle: resolveLocaleValue(rangeKeyDialogLabels.title, locale),
+    reset: resolveLocaleValue(rangeKeyDialogLabels.reset, locale),
+    apply: resolveLocaleValue(rangeKeyDialogLabels.apply, locale),
   };
-
-  const keyJoiner = locale === 'ja' ? '、' : ', ';
 
   // 親IV変更ハンドラ（入力中はバリデーションなし）
   const handleIvChange = (
@@ -251,8 +178,6 @@ export function EggSearchParamsCard() {
     }
   };
 
-  const timeInputClassName = 'h-8 w-11 px-0 text-center text-sm';
-
   return (
     <>
       <PanelCard
@@ -268,93 +193,18 @@ export function EggSearchParamsCard() {
               {eggSearchParamsSectionTitles.range[locale]}
             </h4>
             
-            {/* 日付範囲 */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label htmlFor="start-date" className="text-xs">{eggSearchParamsLabels.startDate[locale]}</Label>
-                <Input
-                  id="start-date"
-                  type="date"
-                  min="2000-01-01"
-                  max="2099-12-31"
-                  className="h-8 text-xs"
-                  value={startDate}
-                  onChange={(e) => handleStartDateChange(e.target.value)}
-                  disabled={isRunning}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="end-date" className="text-xs">{eggSearchParamsLabels.endDate[locale]}</Label>
-                <Input
-                  id="end-date"
-                  type="date"
-                  min="2000-01-01"
-                  max="2099-12-31"
-                  className="h-8 text-xs"
-                  value={endDate}
-                  onChange={(e) => handleEndDateChange(e.target.value)}
-                  disabled={isRunning}
-                />
-              </div>
-            </div>
-
-            {/* 時刻範囲 */}
-            <div className="space-y-1">
-              <Label className="text-xs">{eggSearchParamsLabels.timeRange[locale]}</Label>
-              <div className="flex items-center gap-0 overflow-x-auto">
-                {timeFieldConfigs.map((config) => {
-                  const range = draftParams.timeRange[config.key];
-                  return (
-                    <div key={config.key} className="flex items-center gap-0 whitespace-nowrap">
-                      <span className="text-xs text-muted-foreground w-8 text-right">
-                        {config.label}
-                      </span>
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        min={config.min}
-                        max={config.max}
-                        value={range.start}
-                        aria-label={`${config.label} min`}
-                        className={timeInputClassName}
-                        onChange={(e) => handleTimeRangeChange(config.key, 'start', e.target.value)}
-                        onBlur={() => handleTimeRangeBlur(config.key, 'start')}
-                        disabled={isRunning}
-                      />
-                      <span className="text-xs text-muted-foreground">~</span>
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        min={config.min}
-                        max={config.max}
-                        value={range.end}
-                        aria-label={`${config.label} max`}
-                        className={timeInputClassName}
-                        onChange={(e) => handleTimeRangeChange(config.key, 'end', e.target.value)}
-                        onBlur={() => handleTimeRangeBlur(config.key, 'end')}
-                        disabled={isRunning}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* キー入力 */}
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-muted-foreground">
-                {eggSearchParamsLabels.keyInput[locale]}
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div className="flex-1 min-h-[2.25rem] rounded-md border bg-muted/40 px-3 py-2 text-xs font-mono">
-                  {availableKeys.length > 0 ? availableKeys.join(keyJoiner) : '—'}
-                </div>
-                <Button variant="outline" size="sm" onClick={openKeyDialog} className="gap-2" disabled={isRunning}>
-                  <GameController size={14} />
-                  {eggSearchParamsLabels.keyInputConfigure[locale]}
-                </Button>
-              </div>
-            </div>
+            <RangeKeySection
+              locale={locale}
+              dateRange={draftParams.dateRange}
+              timeRange={draftParams.timeRange}
+              keyMask={draftParams.keyInputMask}
+              labels={labels}
+              isDisabled={isRunning}
+              onDateChange={handleDateChange}
+              onTimeChange={handleTimeRangeChange}
+              onTimeCommit={handleTimeRangeCommit}
+              onKeyMaskChange={handleKeyMaskChange}
+            />
 
             {/* 消費範囲 */}
             <div className="grid grid-cols-2 gap-2">
@@ -620,21 +470,6 @@ export function EggSearchParamsCard() {
           </section>
         </div>
       </PanelCard>
-
-      {/* キー入力ダイアログ */}
-      <KeyInputDialog
-        isOpen={isKeyDialogOpen}
-        onOpenChange={setIsKeyDialogOpen}
-        availableKeys={tempAvailableKeys}
-        onToggleKey={handleToggleKey}
-        onReset={handleResetKeys}
-        onApply={handleApplyKeys}
-        labels={{
-          dialogTitle: eggSearchParamsLabels.keyInput[locale],
-          reset: 'Reset',
-          apply: 'Apply',
-        }}
-      />
     </>
   );
 }
