@@ -4,6 +4,8 @@ import { DEFAULT_GENERATION_DRAFT_PARAMS } from '@/store/generation-store';
 import type { BootTimingDraft } from '@/types/generation';
 import { keyMaskToNames, keyNamesToMask, KEY_INPUT_DEFAULT, formatKeyInputForDisplay, type KeyName } from '@/lib/utils/key-input';
 
+const DEFAULT_TIME_VALUE = '00:00:00';
+
 interface UseBootTimingDraftOptions {
   disabled: boolean;
   isActive: boolean;
@@ -22,7 +24,8 @@ export interface BootTimingDialogState {
 }
 
 export interface BootTimingSnapshot {
-  bootTimestampValue: string;
+  bootDateValue: string;
+  bootTimeValue: string;
   keyDisplay: string;
   timer0RangeDisplay: string;
   vcountRangeDisplay: string;
@@ -36,7 +39,8 @@ export interface BootTimingDraftController {
   isActive: boolean;
   dialog: BootTimingDialogState;
   snapshot: BootTimingSnapshot;
-  handleTimestampInput: (value: string) => void;
+  handleDateInput: (value: string) => void;
+  handleTimeInput: (value: string) => void;
 }
 
 export function useBootTimingDraft({ disabled, isActive }: UseBootTimingDraftOptions): BootTimingDraftController {
@@ -63,16 +67,23 @@ export function useBootTimingDraft({ disabled, isActive }: UseBootTimingDraftOpt
     setDraftParams({ bootTiming: { ...bootTiming, ...partial } });
   }, [bootTiming, setDraftParams]);
 
-  const handleBootTimestampInput = React.useCallback((value: string) => {
-    if (!value) {
-      updateBootTiming({ timestampIso: undefined });
-      return;
-    }
-    const isoString = toIsoStringFromLocal(value);
-    if (isoString) {
-      updateBootTiming({ timestampIso: isoString });
-    }
+  const { dateValue, timeValue } = React.useMemo(() => toLocalDateTimeParts(bootTiming.timestampIso), [bootTiming.timestampIso]);
+
+  const applyBootTimestamp = React.useCallback((dateValueNext: string, timeValueNext: string) => {
+    const isoString = toIsoStringFromLocal(dateValueNext, timeValueNext);
+    updateBootTiming({ timestampIso: isoString });
   }, [updateBootTiming]);
+
+  const handleBootDateInput = React.useCallback((value: string) => {
+    if (!value) return;
+    const nextTime = timeValue || DEFAULT_TIME_VALUE;
+    applyBootTimestamp(value, nextTime);
+  }, [applyBootTimestamp, timeValue]);
+
+  const handleBootTimeInput = React.useCallback((value: string) => {
+    if (!dateValue) return;
+    applyBootTimestamp(dateValue, value);
+  }, [applyBootTimestamp, dateValue]);
 
   const bootKeyDisplay = React.useMemo(() => {
     const names = keyMaskToNames(bootTiming.keyMask);
@@ -120,8 +131,6 @@ export function useBootTimingDraft({ disabled, isActive }: UseBootTimingDraftOpt
     setIsKeyDialogOpen(true);
   }, [bootTiming.keyMask, disabled, isActive]);
 
-  const bootTimestampValue = React.useMemo(() => formatDateTimeLocalValue(bootTiming.timestampIso), [bootTiming.timestampIso]);
-
   const timer0RangeDisplay = formatHexRange(bootTiming.timer0Range, 4);
   const vcountRangeDisplay = formatHexRange(bootTiming.vcountRange, 2);
   const macDisplay = formatMacAddress(bootTiming.macAddress);
@@ -151,21 +160,23 @@ export function useBootTimingDraft({ disabled, isActive }: UseBootTimingDraftOpt
     isActive,
     dialog: dialogState,
     snapshot: {
-      bootTimestampValue,
+      bootDateValue: dateValue,
+      bootTimeValue: timeValue,
       keyDisplay: bootKeyDisplay,
       timer0RangeDisplay,
       vcountRangeDisplay,
       macDisplay,
       profileSummaryLines,
     },
-    handleTimestampInput: handleBootTimestampInput,
+    handleDateInput: handleBootDateInput,
+    handleTimeInput: handleBootTimeInput,
   };
 }
 
-function formatDateTimeLocalValue(iso?: string): string {
-  if (!iso) return '';
+function toLocalDateTimeParts(iso?: string): { dateValue: string; timeValue: string } {
+  if (!iso) return { dateValue: '', timeValue: '' };
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
+  if (Number.isNaN(date.getTime())) return { dateValue: '', timeValue: '' };
   const pad = (value: number) => value.toString().padStart(2, '0');
   const year = date.getFullYear();
   const month = pad(date.getMonth() + 1);
@@ -173,11 +184,24 @@ function formatDateTimeLocalValue(iso?: string): string {
   const hours = pad(date.getHours());
   const minutes = pad(date.getMinutes());
   const seconds = pad(date.getSeconds());
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  return {
+    dateValue: `${year}-${month}-${day}`,
+    timeValue: `${hours}:${minutes}:${seconds}`,
+  };
 }
 
-function toIsoStringFromLocal(value: string): string | undefined {
-  const date = new Date(value);
+function normalizeTimeValue(value: string): string | null {
+  if (!value) return null;
+  if (/^\d{2}:\d{2}:\d{2}$/.test(value)) return value;
+  if (/^\d{2}:\d{2}$/.test(value)) return `${value}:00`;
+  return null;
+}
+
+function toIsoStringFromLocal(dateValue: string, timeValue: string): string | undefined {
+  const normalizedTime = normalizeTimeValue(timeValue);
+  if (!dateValue || !normalizedTime) return undefined;
+  const combined = `${dateValue}T${normalizedTime}`;
+  const date = new Date(combined);
   if (Number.isNaN(date.getTime())) {
     return undefined;
   }

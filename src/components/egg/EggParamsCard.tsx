@@ -13,7 +13,8 @@ import { useLocale } from '@/lib/i18n/locale-context';
 import { natureName } from '@/lib/utils/format-display';
 import { DOMAIN_NATURE_COUNT } from '@/types/domain';
 import type { IvSet, EggSeedSourceMode } from '@/types/egg';
-import { EggBootTimingControls, type EggBootTimingLabels } from './EggBootTimingControls';
+import { type EggBootTimingLabels } from './EggBootTimingControls';
+import { EggBootTimingSection } from './EggBootTimingSection';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
 import {
   eggParamsPanelTitle,
@@ -259,55 +260,16 @@ export const EggParamsCard: React.FC = () => {
 
           {/* Boot-Timingモード: 起動時間パラメータ入力 */}
           {draftParams.seedSourceMode === 'boot-timing' && (
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              <EggBootTimingControls
-                disabled={disabled}
-                isActive={draftParams.seedSourceMode === 'boot-timing'}
-                labels={bootTimingLabelsResolved}
-              />
-              <div className="flex flex-col gap-1 min-w-0">
-                <Label className="text-xs" htmlFor="egg-user-offset-bt">{eggParamsUserOffsetLabel[locale]}</Label>
-                <Input
-                  id="egg-user-offset-bt"
-                  data-testid="egg-user-offset-bt"
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  value={parseInt(draftParams.userOffsetHex, 16) || 0}
-                  onChange={(e) => {
-                    updateDraftParams({ userOffsetHex: e.target.value });
-                  }}
-                  onBlur={(e) => {
-                    const num = Math.max(0, parseInt(e.target.value) || 0);
-                    updateDraftParams({ userOffsetHex: num.toString(16).toUpperCase() });
-                  }}
-                  disabled={disabled}
-                  className="h-9"
-                />
-              </div>
-              <div className="flex flex-col gap-1 min-w-0">
-                <Label className="text-xs" htmlFor="egg-count-bt">{eggParamsCountLabel[locale]}</Label>
-                <Input
-                  id="egg-count-bt"
-                  data-testid="egg-count-bt"
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={100000}
-                  value={draftParams.count}
-                  onChange={(e) => {
-                    const v = parseInt(e.target.value, 10);
-                    updateDraftParams({ count: Number.isNaN(v) ? 0 : v });
-                  }}
-                  onBlur={() => {
-                    const num = Math.max(1, Math.min(100000, draftParams.count || 1));
-                    updateDraftParams({ count: num });
-                  }}
-                  disabled={disabled}
-                  className="h-9"
-                />
-              </div>
-            </div>
+            <EggBootTimingSection
+              disabled={disabled}
+              labels={bootTimingLabelsResolved}
+              userOffsetLabel={eggParamsUserOffsetLabel[locale]}
+              countLabel={eggParamsCountLabel[locale]}
+              userOffsetHex={draftParams.userOffsetHex}
+              count={draftParams.count}
+              onUserOffsetHexChange={hex => updateDraftParams({ userOffsetHex: hex })}
+              onCountChange={value => updateDraftParams({ count: value })}
+            />
           )}
         </div>
       </section>

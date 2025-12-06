@@ -8,7 +8,8 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
-import { BootTimingControls, type BootTimingLabels } from '@/components/generation/boot-timing/BootTimingControls';
+import { type BootTimingLabels } from '@/components/generation/boot-timing/BootTimingControls';
+import { GenerationBootTimingSection } from '@/components/generation/boot-timing/BootTimingSection';
 import { useGenerationParamsForm } from '@/hooks/generation/useGenerationParamsForm';
 import { useLocale } from '@/lib/i18n/locale-context';
 import {
@@ -217,14 +218,19 @@ export const GenerationParamsCard: React.FC = () => {
               ))}
             </ToggleGroup>
           </div>
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {isBootTimingMode ? (
-              <BootTimingControls
-                disabled={disabled}
-                isActive={isBootTimingMode}
-                labels={bootTimingLabels}
-              />
-            ) : (
+          {isBootTimingMode ? (
+            <GenerationBootTimingSection
+              disabled={disabled}
+              labels={bootTimingLabels}
+              minAdvanceLabel={localized.labels.minAdvance}
+              maxAdvanceLabel={localized.labels.maxAdvance}
+              offsetHex={hexDraft.offsetHex}
+              maxAdvances={draftParams.maxAdvances}
+              onOffsetHexChange={hex => updateDraft({ offsetHex: hex })}
+              onMaxAdvancesChange={value => updateDraft({ maxAdvances: value })}
+            />
+          ) : (
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               <div className="flex flex-col gap-1 min-w-0">
                 <Label className="text-xs" htmlFor="base-seed">{localized.labels.baseSeed}</Label>
                 {baseSeedTooltipEntries && baseSeedTooltipEntries.length > 0 ? (
@@ -266,51 +272,51 @@ export const GenerationParamsCard: React.FC = () => {
                   />
                 )}
               </div>
-            )}
-            {/* Min Advance (offset) */}
-            <div className="flex flex-col gap-1 min-w-0">
-              <Label className="text-xs" htmlFor="min-advance">{localized.labels.minAdvance}</Label>
-              <Input
-                id="min-advance"
-                type="number"
-                inputMode="numeric"
-                className="h-9"
-                disabled={disabled}
-                value={parseInt(hexDraft.offsetHex ?? '0', 16)}
-                onChange={e => {
-                  const v = Number(e.target.value);
-                  updateDraft({ offsetHex: (Number.isNaN(v) ? 0 : v).toString(16) });
-                }}
-                onBlur={() => {
-                  const current = parseInt(hexDraft.offsetHex ?? '0', 16);
-                  const clamped = Math.max(0, current);
-                  updateDraft({ offsetHex: clamped.toString(16) });
-                }}
-                placeholder="0"
-              />
+              {/* Min Advance (offset) */}
+              <div className="flex flex-col gap-1 min-w-0">
+                <Label className="text-xs" htmlFor="min-advance">{localized.labels.minAdvance}</Label>
+                <Input
+                  id="min-advance"
+                  type="number"
+                  inputMode="numeric"
+                  className="h-9"
+                  disabled={disabled}
+                  value={parseInt(hexDraft.offsetHex ?? '0', 16)}
+                  onChange={e => {
+                    const v = Number(e.target.value);
+                    updateDraft({ offsetHex: (Number.isNaN(v) ? 0 : v).toString(16) });
+                  }}
+                  onBlur={() => {
+                    const current = parseInt(hexDraft.offsetHex ?? '0', 16);
+                    const clamped = Math.max(0, current);
+                    updateDraft({ offsetHex: clamped.toString(16) });
+                  }}
+                  placeholder="0"
+                />
+              </div>
+              {/* Max Advances */}
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs" htmlFor="max-adv">{localized.labels.maxAdvance}</Label>
+                <Input
+                  id="max-adv"
+                  type="number"
+                  inputMode="numeric"
+                  className="h-9"
+                  disabled={disabled}
+                  value={draftParams.maxAdvances ?? 0}
+                  onChange={e => {
+                    const v = Number(e.target.value);
+                    updateDraft({ maxAdvances: Number.isNaN(v) ? 0 : v });
+                  }}
+                  onBlur={() => {
+                    const current = draftParams.maxAdvances ?? 0;
+                    const clamped = Math.max(0, current);
+                    updateDraft({ maxAdvances: clamped });
+                  }}
+                />
+              </div>
             </div>
-            {/* Max Advances */}
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs" htmlFor="max-adv">{localized.labels.maxAdvance}</Label>
-              <Input
-                id="max-adv"
-                type="number"
-                inputMode="numeric"
-                className="h-9"
-                disabled={disabled}
-                value={draftParams.maxAdvances ?? 0}
-                onChange={e => {
-                  const v = Number(e.target.value);
-                  updateDraft({ maxAdvances: Number.isNaN(v) ? 0 : v });
-                }}
-                onBlur={() => {
-                  const current = draftParams.maxAdvances ?? 0;
-                  const clamped = Math.max(0, current);
-                  updateDraft({ maxAdvances: clamped });
-                }}
-              />
-            </div>
-          </div>
+          )}
         </div>
       </section>
       <Separator />

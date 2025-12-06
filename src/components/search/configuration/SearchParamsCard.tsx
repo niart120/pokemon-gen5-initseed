@@ -2,6 +2,7 @@ import React from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
+import { DATE_INPUT_MAX, DATE_INPUT_MIN } from '@/components/ui/date-input-constraints';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { KeyInputDialog } from '@/components/keys';
@@ -204,8 +205,8 @@ export function SearchParamsCard() {
               <Input
                 id="start-date"
                 type="date"
-                min="2000-01-01"
-                max="2099-12-31"
+                min={DATE_INPUT_MIN}
+                max={DATE_INPUT_MAX}
                 className="h-9 w-1/2"
                 value={startDate}
                 onChange={(event) => handleStartDateChange(event.target.value)}
@@ -218,8 +219,8 @@ export function SearchParamsCard() {
               <Input
                 id="end-date"
                 type="date"
-                min="2000-01-01"
-                max="2099-12-31"
+                min={DATE_INPUT_MIN}
+                max={DATE_INPUT_MAX}
                 className="h-9 w-1/2"
                 value={endDate}
                 onChange={(event) => handleEndDateChange(event.target.value)}

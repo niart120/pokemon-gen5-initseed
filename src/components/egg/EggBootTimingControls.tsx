@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { KeyInputDialog } from '@/components/keys';
 import { GameController } from '@phosphor-icons/react';
 import { useEggBootTimingDraft } from '@/hooks/egg/useEggBootTimingDraft';
+import { TimeInputHms } from '@/components/ui/time-input-hms';
+import { DATE_INPUT_MAX, DATE_INPUT_MIN } from '@/components/ui/date-input-constraints';
 
 export interface EggBootTimingLabels {
   timestamp: string;
@@ -32,22 +34,31 @@ interface EggBootTimingControlsProps {
 
 export const EggBootTimingControls: React.FC<EggBootTimingControlsProps> = ({ disabled, isActive, labels }) => {
   const controller = useEggBootTimingDraft({ disabled, isActive });
-  const { snapshot, dialog, handleTimestampInput } = controller;
+  const { snapshot, dialog, handleDateInput, handleTimeInput } = controller;
 
   return (
     <>
       <div className="flex flex-col gap-1 min-w-0">
-        <Label className="text-xs" htmlFor="egg-boot-timestamp">{labels.timestamp}</Label>
-        <Input
-          id="egg-boot-timestamp"
-          type="datetime-local"
-          step={1}
-          className="h-9"
-          disabled={disabled}
-          value={snapshot.bootTimestampValue}
-          onChange={e => handleTimestampInput(e.target.value)}
-          placeholder={labels.timestampPlaceholder}
-        />
+        <Label className="text-xs" htmlFor="egg-boot-date">{labels.timestamp}</Label>
+        <div className="flex flex-col gap-2 min-[420px]:flex-row">
+          <Input
+            id="egg-boot-date"
+            type="date"
+            className="h-9 w-1/2 min-w-[8rem]"
+            min={DATE_INPUT_MIN}
+            max={DATE_INPUT_MAX}
+            disabled={disabled}
+            placeholder={labels.timestampPlaceholder}
+            value={snapshot.bootDateValue}
+            onChange={e => handleDateInput(e.target.value)}
+          />
+          <TimeInputHms
+            idPrefix="egg-boot-time"
+            value={snapshot.bootTimeValue}
+            disabled={disabled}
+            onCommit={handleTimeInput}
+          />
+        </div>
       </div>
       <div className="flex flex-col gap-1 min-w-0 lg:col-span-3">
         <Label className="text-xs text-muted-foreground" id="lbl-egg-boot-keys" htmlFor="egg-boot-keys-display">{labels.keyInput}</Label>
