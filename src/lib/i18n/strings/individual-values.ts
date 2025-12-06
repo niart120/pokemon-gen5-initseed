@@ -5,8 +5,8 @@ export type IvTooltipContextKey = 'wild' | 'roamer' | 'bw2';
 
 const ivTooltipLabels: Record<IvTooltipContextKey, LocaleText> = {
   wild: {
-    ja: 'BW/BW2 固定・野生 (消費0)',
-    en: 'BW/BW2 Stationary/Wild (offset 0)',
+    ja: 'BW 固定・野生 (消費0)',
+    en: 'BW Stationary/Wild (offset 0)',
   },
   roamer: {
     ja: 'BW 徘徊 (消費1)',
