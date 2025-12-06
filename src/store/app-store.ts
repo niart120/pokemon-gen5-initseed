@@ -133,12 +133,6 @@ const defaultSearchConditions: SearchConditions = {
     endMonth: 12,
     startDay: 1,
     endDay: 31,
-    startHour: 0,
-    endHour: 23,
-    startMinute: 0,
-    endMinute: 59,
-    startSecond: 0,
-    endSecond: 59,
   },
 
   timeRange: createFullDayTimeRange(),

@@ -85,15 +85,9 @@ describe('WebAssembly計算ロジックテスト', () => {
         startYear: 2011,
         startMonth: 3,
         startDay: 6,
-        startHour: 0,
-        startMinute: 0,
-        startSecond: 0,
         endYear: 2011,
         endMonth: 3,
         endDay: 6,
-        endHour: 0,
-        endMinute: 0,
-        endSecond: 0
       },
       timeRange: {
         hour: { start: 0, end: 0 },

@@ -64,12 +64,6 @@ function buildSearchConditions(rangeSeconds: number, timer0Range: { min: number;
       endMonth: endDateForRange.getMonth() + 1,
       startDay: perDayStart.getDate(),
       endDay: endDateForRange.getDate(),
-      startHour: perDayStart.getHours(),
-      endHour: perDayStart.getHours(),
-      startMinute: perDayStart.getMinutes(),
-      endMinute: perDayStart.getMinutes(),
-      startSecond: perDayStart.getSeconds(),
-      endSecond: perDayStart.getSeconds(),
     },
     timeRange: {
       hour: { start: perDayStart.getHours(), end: perDayEnd.getHours() },

@@ -27,12 +27,6 @@ const mockConditions: SearchConditions = {
     endMonth: 1,
     startDay: 1,
     endDay: 2,
-    startHour: 0,
-    endHour: 23,
-    startMinute: 0,
-    endMinute: 59,
-    startSecond: 0,
-    endSecond: 59
   },
   timeRange: {
     hour: { start: 0, end: 23 },
@@ -63,18 +57,18 @@ function buildTimeChunkInput(conditions: SearchConditions) {
     conditions.dateRange.startYear,
     conditions.dateRange.startMonth - 1,
     conditions.dateRange.startDay,
-    conditions.dateRange.startHour,
-    conditions.dateRange.startMinute,
-    conditions.dateRange.startSecond
+    conditions.timeRange.hour.start,
+    conditions.timeRange.minute.start,
+    conditions.timeRange.second.start
   );
 
   const endDateTime = new Date(
     conditions.dateRange.endYear,
     conditions.dateRange.endMonth - 1,
     conditions.dateRange.endDay,
-    conditions.dateRange.endHour,
-    conditions.dateRange.endMinute,
-    conditions.dateRange.endSecond
+    conditions.timeRange.hour.end,
+    conditions.timeRange.minute.end,
+    conditions.timeRange.second.end
   );
 
   return { startDateTime, endDateTime, operationsPerSecond };

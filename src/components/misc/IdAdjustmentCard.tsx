@@ -11,21 +11,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { KeyInputDialog } from '@/components/keys';
+import { RangeKeySection } from '@/components/shared/RangeKeySection';
+import type { TimeFieldKey } from '@/components/shared/RangeKeySection';
 import {
-  GameController,
   IdentificationCard,
   Play,
   Square,
   Pause,
   Warning,
 } from '@phosphor-icons/react';
-import {
-  KEY_INPUT_DEFAULT,
-  keyMaskToNames,
-  toggleKeyInMask,
-  type KeyName,
-} from '@/lib/utils/key-input';
 import { useIdAdjustmentSearchStore } from '@/store/id-adjustment-search-store';
 import { useAppStore } from '@/store/app-store';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -44,9 +38,12 @@ import {
   idAdjustmentBasicSettingLabel,
   idAdjustmentIdSettingLabel,
   idAdjustmentParamLabels,
-  idAdjustmentKeyDialogLabels,
   getIdAdjustmentStatusLabel,
 } from '@/lib/i18n/strings/id-adjustment-search';
+import {
+  rangeKeyDialogLabels,
+  rangeKeySectionLabels,
+} from '@/lib/i18n/strings/range-key-section';
 
 export const IdAdjustmentCard: React.FC = () => {
   const locale = useLocale();
@@ -79,107 +76,24 @@ export const IdAdjustmentCard: React.FC = () => {
       applyProfile(profile);
     }
   }, [profiles, activeProfileId, applyProfile]);
-
-  const [isKeyDialogOpen, setIsKeyDialogOpen] = React.useState(false);
-  const [tempKeyInput, setTempKeyInput] = React.useState(KEY_INPUT_DEFAULT);
-
-  const formatDate = (year: number, month: number, day: number): string => {
-    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const handleDateChange = (edge: 'start' | 'end', value: { year: number; month: number; day: number }) => {
+    if (edge === 'start') {
+      updateDateRange({
+        startYear: value.year,
+        startMonth: value.month,
+        startDay: value.day,
+      });
+    } else {
+      updateDateRange({
+        endYear: value.year,
+        endMonth: value.month,
+        endDay: value.day,
+      });
+    }
   };
-
-  const parseDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return {
-      year: date.getFullYear(),
-      month: date.getMonth() + 1,
-      day: date.getDate(),
-    };
-  };
-
-  const startDate = formatDate(
-    draftParams.dateRange.startYear,
-    draftParams.dateRange.startMonth,
-    draftParams.dateRange.startDay
-  );
-
-  const endDate = formatDate(
-    draftParams.dateRange.endYear,
-    draftParams.dateRange.endMonth,
-    draftParams.dateRange.endDay
-  );
-
-  const handleStartDateChange = (dateString: string) => {
-    if (!dateString) return;
-    const { year, month, day } = parseDate(dateString);
-    updateDateRange({
-      startYear: year,
-      startMonth: month,
-      startDay: day,
-    });
-  };
-
-  const handleEndDateChange = (dateString: string) => {
-    if (!dateString) return;
-    const { year, month, day } = parseDate(dateString);
-    updateDateRange({
-      endYear: year,
-      endMonth: month,
-      endDay: day,
-    });
-  };
-
-  const availableKeys = React.useMemo(
-    () => keyMaskToNames(draftParams.keyInputMask),
-    [draftParams.keyInputMask]
-  );
-  const tempAvailableKeys = React.useMemo(
-    () => keyMaskToNames(tempKeyInput),
-    [tempKeyInput]
-  );
-
-  const handleToggleKey = (key: KeyName) => {
-    setTempKeyInput(toggleKeyInMask(tempKeyInput, key));
-  };
-
-  const handleResetKeys = () => {
-    setTempKeyInput(KEY_INPUT_DEFAULT);
-  };
-
-  const handleApplyKeys = () => {
-    updateDraftParams({ keyInputMask: tempKeyInput });
-    setIsKeyDialogOpen(false);
-  };
-
-  const openKeyDialog = () => {
-    setTempKeyInput(draftParams.keyInputMask);
-    setIsKeyDialogOpen(true);
-  };
-
-  const keyJoiner = locale === 'ja' ? '、' : ', ';
-
-  const timeFieldConfigs = [
-    {
-      key: 'hour' as const,
-      label: locale === 'ja' ? '時' : 'Hour',
-      min: 0,
-      max: 23,
-    },
-    {
-      key: 'minute' as const,
-      label: locale === 'ja' ? '分' : 'Min',
-      min: 0,
-      max: 59,
-    },
-    {
-      key: 'second' as const,
-      label: locale === 'ja' ? '秒' : 'Sec',
-      min: 0,
-      max: 59,
-    },
-  ];
 
   const handleTimeRangeChange = (
-    field: (typeof timeFieldConfigs)[number]['key'],
+    field: TimeFieldKey,
     edge: 'start' | 'end',
     rawValue: string
   ) => {
@@ -192,43 +106,27 @@ export const IdAdjustmentCard: React.FC = () => {
     });
   };
 
-  const handleTimeRangeBlur = (
-    field: (typeof timeFieldConfigs)[number]['key'],
-    edge: 'start' | 'end'
-  ) => {
-    const range = draftParams.timeRange[field];
-    const { min, max } = timeFieldConfigs.find(
-      (config) => config.key === field
-    )!;
-
-    const startValue =
-      typeof range.start === 'string' ? parseInt(range.start, 10) : range.start;
-    const endValue =
-      typeof range.end === 'string' ? parseInt(range.end, 10) : range.end;
-
-    const clampedStart = Number.isNaN(startValue)
-      ? min
-      : Math.min(Math.max(startValue, min), max);
-    const clampedEnd = Number.isNaN(endValue)
-      ? min
-      : Math.min(Math.max(endValue, min), max);
-
-    let finalStart = clampedStart;
-    let finalEnd = clampedEnd;
-    if (finalStart > finalEnd) {
-      if (edge === 'start') {
-        finalEnd = finalStart;
-      } else {
-        finalStart = finalEnd;
-      }
-    }
-
-    updateTimeRange({
-      [field]: { start: finalStart, end: finalEnd },
-    });
+  const handleTimeRangeCommit = (field: TimeFieldKey, range: { start: number; end: number }) => {
+    updateTimeRange({ [field]: range });
   };
 
-  const timeInputClassName = 'h-8 w-11 px-0 text-center text-sm';
+  const handleKeyMaskChange = (mask: number) => {
+    updateDraftParams({ keyInputMask: mask });
+  };
+
+  const labels = {
+    startDate: rangeKeySectionLabels.startDate[locale],
+    endDate: rangeKeySectionLabels.endDate[locale],
+    timeRange: rangeKeySectionLabels.timeRange[locale],
+    hour: rangeKeySectionLabels.hour[locale],
+    minute: rangeKeySectionLabels.minute[locale],
+    second: rangeKeySectionLabels.second[locale],
+    keyInput: rangeKeySectionLabels.keyInput[locale],
+    configure: rangeKeySectionLabels.configure[locale],
+    dialogTitle: rangeKeyDialogLabels.title[locale],
+    reset: rangeKeyDialogLabels.reset[locale],
+    apply: rangeKeyDialogLabels.apply[locale],
+  };
 
   const handleTidChange = (value: string) => {
     const numValue = parseInt(value, 10);
@@ -397,114 +295,20 @@ export const IdAdjustmentCard: React.FC = () => {
 
       {/* パラメータ入力セクション */}
       <Label className="text-xs text-muted-foreground">{idAdjustmentBasicSettingLabel[locale]}</Label>
-      <div className="space-y-4">
-          {/* Date Range */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="start-date" className="text-xs">
-                {idAdjustmentParamLabels.startDate[locale]}
-              </Label>
-              <Input
-                id="start-date"
-                type="date"
-                min="2000-01-01"
-                max="2099-12-31"
-                className="h-9"
-                value={startDate}
-                onChange={(event) => handleStartDateChange(event.target.value)}
-                disabled={isSearchActive}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="end-date" className="text-xs">
-                {idAdjustmentParamLabels.endDate[locale]}
-              </Label>
-              <Input
-                id="end-date"
-                type="date"
-                min="2000-01-01"
-                max="2099-12-31"
-                className="h-9"
-                value={endDate}
-                onChange={(event) => handleEndDateChange(event.target.value)}
-                disabled={isSearchActive}
-              />
-            </div>
+          <div className="space-y-4">
+            <RangeKeySection
+              locale={locale}
+              dateRange={draftParams.dateRange}
+              timeRange={draftParams.timeRange}
+              keyMask={draftParams.keyInputMask}
+              labels={labels}
+              isDisabled={isSearchActive}
+              onDateChange={handleDateChange}
+              onTimeChange={handleTimeRangeChange}
+              onTimeCommit={handleTimeRangeCommit}
+              onKeyMaskChange={handleKeyMaskChange}
+            />
           </div>
-
-          {/* Time Range */}
-          <div className="space-y-2">
-            <Label className="text-xs">
-              {idAdjustmentParamLabels.timeRange[locale]}
-            </Label>
-            <div className="flex items-center gap-0 overflow-x-auto">
-              {timeFieldConfigs.map((config) => {
-                const range = draftParams.timeRange[config.key];
-                return (
-                  <div
-                    key={config.key}
-                    className="flex items-center gap-0 whitespace-nowrap"
-                  >
-                    <span className="text-xs text-muted-foreground w-8 text-right">
-                      {config.label}
-                    </span>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      min={config.min}
-                      max={config.max}
-                      value={range.start}
-                      aria-label={`${config.label} ${locale === 'ja' ? '最小' : 'min'}`}
-                      className={timeInputClassName}
-                      onChange={(event) =>
-                        handleTimeRangeChange(config.key, 'start', event.target.value)
-                      }
-                      onBlur={() => handleTimeRangeBlur(config.key, 'start')}
-                      disabled={isSearchActive}
-                    />
-                    <span className="text-xs text-muted-foreground">~</span>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      min={config.min}
-                      max={config.max}
-                      value={range.end}
-                      aria-label={`${config.label} ${locale === 'ja' ? '最大' : 'max'}`}
-                      className={timeInputClassName}
-                      onChange={(event) =>
-                        handleTimeRangeChange(config.key, 'end', event.target.value)
-                      }
-                      onBlur={() => handleTimeRangeBlur(config.key, 'end')}
-                      disabled={isSearchActive}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Key Input */}
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground">
-              {idAdjustmentParamLabels.keyInput[locale]}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="flex-1 min-h-[2.25rem] rounded-md border bg-muted/40 px-3 py-2 text-xs font-mono">
-                {availableKeys.length > 0 ? availableKeys.join(keyJoiner) : '—'}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={openKeyDialog}
-                className="gap-2"
-                disabled={isSearchActive}
-              >
-              <GameController size={16} />
-              {idAdjustmentParamLabels.configure[locale]}
-            </Button>
-          </div>
-        </div>
-      </div>
         <Label className="text-xs text-muted-foreground">{idAdjustmentIdSettingLabel[locale]}</Label>
         {/* Target TID/SID + Shiny PID Filter (4-column grid) */}
         <div className="grid grid-cols-4 gap-2">
@@ -578,20 +382,6 @@ export const IdAdjustmentCard: React.FC = () => {
 
       {/* 結果テーブル（常に表示） */}
       <IdAdjustmentResultsTable />
-
-      <KeyInputDialog
-        isOpen={isKeyDialogOpen}
-        onOpenChange={setIsKeyDialogOpen}
-        availableKeys={tempAvailableKeys}
-        onToggleKey={handleToggleKey}
-        onReset={handleResetKeys}
-        onApply={handleApplyKeys}
-        labels={{
-          dialogTitle: idAdjustmentKeyDialogLabels.title[locale],
-          reset: idAdjustmentKeyDialogLabels.reset[locale],
-          apply: idAdjustmentKeyDialogLabels.apply[locale],
-        }}
-      />
     </PanelCard>
   );
 };

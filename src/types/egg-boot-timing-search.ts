@@ -435,7 +435,7 @@ export function createDefaultEggBootTimingSearchParams(): EggBootTimingSearchPar
     considerNpcConsumption: false,
     gameMode: EggGameMode.BwContinue,
     userOffset: 0,
-    advanceCount: 50,
+    advanceCount: 10,
     maxResults: 1000,
   };
 }
