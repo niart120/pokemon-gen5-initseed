@@ -195,6 +195,7 @@ export class IdAdjustmentMultiWorkerManager {
         endMonth: chunkEndDateTime.getMonth() + 1,
         endDay: chunkEndDateTime.getDate(),
       },
+      startDateTimeMs: chunkStartDateTime.getTime(),
       // チャンク分割時はrangeSecondsを明示的に指定（Worker側での再計算を防止）
       rangeSeconds: chunk.rangeSeconds,
     };

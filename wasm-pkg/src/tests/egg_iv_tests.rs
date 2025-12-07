@@ -37,8 +37,17 @@ fn resolve_egg_iv_propagates_unknown_values() {
     let female: IvSet = [0, 1, IV_VALUE_UNKNOWN, 3, 4, 5];
     let rng: IvSet = [1, 2, 3, 4, 5, 6];
 
-    let resolved = resolve_egg_iv(&pending, &IVResolutionConditions { male, female, rng, mt_seed: 0 }, 0)
-        .expect("resolve succeeds");
+    let resolved = resolve_egg_iv(
+        &pending,
+        &IVResolutionConditions {
+            male,
+            female,
+            rng,
+            mt_seed: 0,
+        },
+        0,
+    )
+    .expect("resolve succeeds");
 
     assert_eq!(resolved.ivs[StatIndex::Hp.as_usize()], 1);
     assert_eq!(resolved.ivs[StatIndex::Attack.as_usize()], IV_VALUE_UNKNOWN);
@@ -56,8 +65,17 @@ fn matches_filter_handles_unknown_ranges() {
     let female: IvSet = [IV_VALUE_UNKNOWN; 6];
     let rng: IvSet = [10, 11, 12, 13, 14, 15];
 
-    let resolved = resolve_egg_iv(&pending, &IVResolutionConditions { male, female, rng, mt_seed: 0 }, 0)
-        .expect("resolve succeeds");
+    let resolved = resolve_egg_iv(
+        &pending,
+        &IVResolutionConditions {
+            male,
+            female,
+            rng,
+            mt_seed: 0,
+        },
+        0,
+    )
+    .expect("resolve succeeds");
 
     let mut loose_filter = IndividualFilter::default();
     loose_filter.iv_ranges[StatIndex::Attack.as_usize()] = StatRange {

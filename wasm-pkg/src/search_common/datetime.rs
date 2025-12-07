@@ -35,7 +35,10 @@ pub struct DateTimeCode {
 impl DateTimeCode {
     #[inline]
     pub fn new(date_code: u32, time_code: u32) -> Self {
-        Self { date_code, time_code }
+        Self {
+            date_code,
+            time_code,
+        }
     }
 
     /// 表示用日時に変換（BCDデコード）
@@ -79,7 +82,10 @@ pub type RangedTimeCodeTable = Box<[Option<u32>; 86400]>;
 /// 範囲制限タイムコードテーブルを構築
 ///
 /// 許可秒に対応する time_code を事前計算し、O(1)でアクセス可能にする。
-pub fn build_ranged_time_code_table(range: &TimeRangeParams, hardware: HardwareType) -> RangedTimeCodeTable {
+pub fn build_ranged_time_code_table(
+    range: &TimeRangeParams,
+    hardware: HardwareType,
+) -> RangedTimeCodeTable {
     let mut table: RangedTimeCodeTable = Box::new([None; 86400]);
     let hardware_str = hardware.as_str();
 
@@ -184,7 +190,6 @@ impl DateTimeCodeEnumerator {
     }
 }
 
-
 impl Iterator for DateTimeCodeEnumerator {
     type Item = DateTimeCode;
 
@@ -210,22 +215,19 @@ impl Iterator for DateTimeCodeEnumerator {
     }
 }
 
-
-
 // =============================================================================
 // テスト
 // =============================================================================
 
 #[cfg(test)]
 mod tests {
-    use crate::search_common::EPOCH_2000_UNIX;
     use super::*;
-    
+    use crate::search_common::EPOCH_2000_UNIX;
+
     // =============================================================================
     // ユーティリティ関数
     // =============================================================================
 
-    
     use chrono::{Datelike, NaiveDate, Timelike};
 
     /// 結果表示用の日時を生成
@@ -461,7 +463,11 @@ mod tests {
         let mut total_days = 0;
         let mut y = 2000;
         while y < year {
-            total_days += if DateCodeGenerator::is_leap_year(y) { 366 } else { 365 };
+            total_days += if DateCodeGenerator::is_leap_year(y) {
+                366
+            } else {
+                365
+            };
             y += 1;
         }
         let mut m = 1;
@@ -562,7 +568,8 @@ mod tests {
         for hour in test_hours {
             for hardware in hardwares {
                 let seconds_of_day = hour * 3600 + 30 * 60 + 45; // HH:30:45
-                let time_code = TimeCodeGenerator::get_time_code_for_hardware(seconds_of_day, hardware);
+                let time_code =
+                    TimeCodeGenerator::get_time_code_for_hardware(seconds_of_day, hardware);
                 let dtc = DateTimeCode::new(0, time_code);
                 let display = dtc.to_display_datetime();
 
@@ -584,5 +591,4 @@ mod tests {
             }
         }
     }
-
 }

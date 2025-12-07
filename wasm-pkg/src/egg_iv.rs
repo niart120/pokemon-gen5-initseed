@@ -30,7 +30,7 @@ pub enum EggIvError {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShinyFilterMode {
     All = 0,
-    Shiny = 1,      // Star OR Square
+    Shiny = 1, // Star OR Square
     Star = 2,
     Square = 3,
     NonShiny = 4,
@@ -153,7 +153,10 @@ pub struct GenderRatio {
 impl GenderRatio {
     #[wasm_bindgen(constructor)]
     pub fn new(threshold: u8, genderless: bool) -> Self {
-        GenderRatio { threshold, genderless }
+        GenderRatio {
+            threshold,
+            genderless,
+        }
     }
 
     pub fn resolve(&self, gender_value: u8) -> u8 {
@@ -338,11 +341,15 @@ pub struct EverstonePlanJs {
 impl EverstonePlanJs {
     #[wasm_bindgen(getter = None)]
     pub fn none() -> EverstonePlanJs {
-        EverstonePlanJs { inner: EverstonePlan::None }
+        EverstonePlanJs {
+            inner: EverstonePlan::None,
+        }
     }
 
     pub fn fixed(nature_index: u8) -> EverstonePlanJs {
-        EverstonePlanJs { inner: EverstonePlan::Fixed(Nature::from_index(nature_index)) }
+        EverstonePlanJs {
+            inner: EverstonePlan::Fixed(Nature::from_index(nature_index)),
+        }
     }
 }
 
@@ -513,7 +520,9 @@ pub struct IndividualFilterJs {
 impl IndividualFilterJs {
     #[wasm_bindgen(constructor)]
     pub fn new() -> IndividualFilterJs {
-        IndividualFilterJs { inner: IndividualFilter::default() }
+        IndividualFilterJs {
+            inner: IndividualFilter::default(),
+        }
     }
 
     pub fn set_iv_range(&mut self, stat_index: u8, min: u8, max: u8) {

@@ -101,10 +101,15 @@ function buildSearchRangeParams(
   searchStartDate: Date,
   rangeSeconds: number
 ): SearchRangeParamsJs {
+  const startOffsetSeconds =
+    searchStartDate.getHours() * 3600 +
+    searchStartDate.getMinutes() * 60 +
+    searchStartDate.getSeconds();
   return new wasmAny.SearchRangeParamsJs(
     searchStartDate.getFullYear(),
     searchStartDate.getMonth() + 1,
     searchStartDate.getDate(),
+    startOffsetSeconds,
     rangeSeconds
   );
 }
@@ -325,11 +330,17 @@ async function executeSearch(
 
   // dateRangeから検索期間を計算
   const { dateRange } = params;
-  const searchStartDate = new Date(
-    dateRange.startYear,
-    dateRange.startMonth - 1,
-    dateRange.startDay
-  );
+  const searchStartDate =
+    params.startDateTimeMs !== undefined
+      ? new Date(params.startDateTimeMs)
+      : new Date(
+          dateRange.startYear,
+          dateRange.startMonth - 1,
+          dateRange.startDay,
+          params.timeRange.hour.start,
+          params.timeRange.minute.start,
+          params.timeRange.second.start
+        );
 
   // rangeSecondsを計算
   let rangeSeconds: number;
@@ -369,9 +380,11 @@ async function executeSearch(
   let lastProgressTime = startTime;
 
   // shinyPid を JS の数値として渡す（-1 で None）
-  const shinyPidValue = params.shinyPid !== null ? params.shinyPid : -1;
+  const shinyPidValue = params.shinyPid ?? -1;
   // targetSid を JS の数値として渡す（-1 で None）
-  const targetSidValue = params.targetSid !== null ? params.targetSid : -1;
+  const targetSidValue = params.targetSid ?? -1;
+  // targetTid を JS の数値として渡す（-1 で None）
+  const targetTidValue = params.targetTid ?? -1;
 
   // セグメントループ: timer0 × vcount × keyCode
   for (
@@ -419,7 +432,7 @@ async function executeSearch(
             segmentParams,
             timeRangeParams,
             searchRangeParams,
-            params.targetTid,
+            targetTidValue,
             targetSidValue,
             shinyPidValue,
             params.gameMode

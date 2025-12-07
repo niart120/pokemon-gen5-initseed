@@ -109,10 +109,15 @@ function buildSearchRangeParams(
   searchStartDate: Date,
   rangeSeconds: number
 ): SearchRangeParamsJs {
+  const startOffsetSeconds =
+    searchStartDate.getHours() * 3600 +
+    searchStartDate.getMinutes() * 60 +
+    searchStartDate.getSeconds();
   return new wasmAny.SearchRangeParamsJs(
     searchStartDate.getFullYear(),
     searchStartDate.getMonth() + 1,
     searchStartDate.getDate(),
+    startOffsetSeconds,
     rangeSeconds
   );
 }

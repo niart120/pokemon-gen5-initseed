@@ -212,7 +212,7 @@ export function IdAdjustmentCard() {
     if (!isNaN(numValue) && numValue >= 0 && numValue <= 65535) {
       updateDraftParams({ targetTid: numValue });
     } else if (value === '') {
-      updateDraftParams({ targetTid: 0 });
+      updateDraftParams({ targetTid: null });
     }
   };
 
@@ -221,13 +221,13 @@ export function IdAdjustmentCard() {
     if (!isNaN(numValue) && numValue >= 0 && numValue <= 65535) {
       updateDraftParams({ targetSid: numValue });
     } else if (value === '') {
-      updateDraftParams({ targetSid: 0 });
+      updateDraftParams({ targetSid: null });
     }
   };
 
   const handleShinyPidChange = (value: string) => {
     if (value === '') {
-      updateDraftParams({ shinyPid: undefined });
+      updateDraftParams({ shinyPid: null });
     } else {
       const numValue = parseInt(value, 16);
       if (!isNaN(numValue)) {
@@ -286,7 +286,7 @@ export function IdAdjustmentCard() {
                 inputMode="numeric"
                 min={0}
                 max={65535}
-                value={draftParams.targetTid}
+                value={draftParams.targetTid ?? ''}
                 onChange={(e) => handleTidChange(e.target.value)}
                 className="h-9"
               />
@@ -314,12 +314,12 @@ export function IdAdjustmentCard() {
             <div className="flex items-center gap-2">
               <Checkbox
                 id="use-shiny-pid"
-                checked={draftParams.shinyPid !== undefined}
+                checked={draftParams.shinyPid !== null}
                 onCheckedChange={(checked) => {
                   if (checked) {
                     updateDraftParams({ shinyPid: 0 });
                   } else {
-                    updateDraftParams({ shinyPid: undefined });
+                    updateDraftParams({ shinyPid: null });
                   }
                 }}
               />
@@ -327,7 +327,7 @@ export function IdAdjustmentCard() {
                 {locale === 'ja' ? '色違いPIDでフィルタ' : 'Filter by Shiny PID'}
               </Label>
             </div>
-            {draftParams.shinyPid !== undefined && (
+            {draftParams.shinyPid !== null && (
               <div className="space-y-1">
                 <Label htmlFor="shiny-pid" className="text-xs text-muted-foreground">
                   {locale === 'ja' ? 'PID (16進数)' : 'PID (hex)'}

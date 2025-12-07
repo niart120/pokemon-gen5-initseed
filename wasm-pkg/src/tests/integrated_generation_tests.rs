@@ -32,12 +32,8 @@ fn test_integrated_generation_pattern1_bw2_continue_no_memory_link() {
 
     // Step 2: オフセット後のSeed値計算
     let generation_seed = PersonalityRNG::jump_seed(initial_seed, offset as u64);
-    println!(
-        "Pattern1 Debug: Generation seed: 0x{generation_seed:016X}"
-    );
-    println!(
-        "Pattern1 Debug: Expected seed: 0x{expected_generation_seed:016X}"
-    );
+    println!("Pattern1 Debug: Generation seed: 0x{generation_seed:016X}");
+    println!("Pattern1 Debug: Expected seed: 0x{expected_generation_seed:016X}");
 
     // Step 3: 計算されたSeed値が期待値と一致することを確認
     assert_eq!(
@@ -153,12 +149,8 @@ fn test_integrated_generation_pattern2_bw_continue_surfing() {
 
     // Step 2: オフセット後のSeed値計算
     let generation_seed = PersonalityRNG::jump_seed(initial_seed, offset as u64);
-    println!(
-        "Pattern2 Debug: Generation seed: 0x{generation_seed:016X}"
-    );
-    println!(
-        "Pattern2 Debug: Expected seed: 0x{expected_generation_seed:016X}"
-    );
+    println!("Pattern2 Debug: Generation seed: 0x{generation_seed:016X}");
+    println!("Pattern2 Debug: Expected seed: 0x{expected_generation_seed:016X}");
 
     // Step 3: 計算されたSeed値が期待値と一致することを確認
     assert_eq!(
@@ -272,12 +264,8 @@ fn test_integrated_generation_pattern3_bw2_continue_with_memory_link_static() {
 
     // Step 2: オフセット後のSeed値計算
     let generation_seed = PersonalityRNG::jump_seed(initial_seed, offset as u64);
-    println!(
-        "Pattern3 Debug: Generation seed: 0x{generation_seed:016X}"
-    );
-    println!(
-        "Pattern3 Debug: Expected seed: 0x{expected_generation_seed:016X}"
-    );
+    println!("Pattern3 Debug: Generation seed: 0x{generation_seed:016X}");
+    println!("Pattern3 Debug: Expected seed: 0x{expected_generation_seed:016X}");
 
     // Step 3: 計算されたSeed値が期待値と一致することを確認
     assert_eq!(
@@ -378,12 +366,8 @@ fn test_integrated_generation_pattern4_bw2_continue_no_memory_link_static_starte
 
     // Step 2: オフセット後のSeed値計算
     let generation_seed = PersonalityRNG::jump_seed(initial_seed, offset as u64);
-    println!(
-        "Pattern4 Debug: Generation seed: 0x{generation_seed:016X}"
-    );
-    println!(
-        "Pattern4 Debug: Expected seed: 0x{expected_generation_seed:016X}"
-    );
+    println!("Pattern4 Debug: Generation seed: 0x{generation_seed:016X}");
+    println!("Pattern4 Debug: Expected seed: 0x{expected_generation_seed:016X}");
 
     // Step 3: 計算されたSeed値が期待値と一致することを確認
     assert_eq!(

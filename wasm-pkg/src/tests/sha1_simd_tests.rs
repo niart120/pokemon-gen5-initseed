@@ -64,11 +64,26 @@ mod tests {
 
             let expected = crate::sha1::calculate_pokemon_sha1(&message);
 
-            assert_eq!(simd_results[i].h0, expected.h0, "h0 mismatch for message {i}");
-            assert_eq!(simd_results[i].h1, expected.h1, "h1 mismatch for message {i}");
-            assert_eq!(simd_results[i].h2, expected.h2, "h2 mismatch for message {i}");
-            assert_eq!(simd_results[i].h3, expected.h3, "h3 mismatch for message {i}");
-            assert_eq!(simd_results[i].h4, expected.h4, "h4 mismatch for message {i}");
+            assert_eq!(
+                simd_results[i].h0, expected.h0,
+                "h0 mismatch for message {i}"
+            );
+            assert_eq!(
+                simd_results[i].h1, expected.h1,
+                "h1 mismatch for message {i}"
+            );
+            assert_eq!(
+                simd_results[i].h2, expected.h2,
+                "h2 mismatch for message {i}"
+            );
+            assert_eq!(
+                simd_results[i].h3, expected.h3,
+                "h3 mismatch for message {i}"
+            );
+            assert_eq!(
+                simd_results[i].h4, expected.h4,
+                "h4 mismatch for message {i}"
+            );
         }
     }
 
@@ -135,9 +150,7 @@ mod tests {
             "通常実装が10秒以上かかっている"
         );
 
-        println!(
-            "SIMD基本性能テスト完了 - SIMD: {simd_duration:?}, Normal: {normal_duration:?}"
-        );
+        println!("SIMD基本性能テスト完了 - SIMD: {simd_duration:?}, Normal: {normal_duration:?}");
     }
 
     #[test]

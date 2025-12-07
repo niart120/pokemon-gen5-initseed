@@ -24,6 +24,13 @@ export interface IdAdjustmentSearchParams {
   dateRange: DateRange;
 
   /**
+   * 検索開始日時（epoch ms）
+   * 並列チャンク実行時に Worker へ絶対時刻を伝搬するために使用。
+   * 未指定の場合は dateRange + timeRange から計算する。
+   */
+  startDateTimeMs?: number;
+
+  /**
    * 検索範囲（秒）
    * チャンク分割時にManagerが設定。
    * 指定されている場合、dateRangeからの再計算をスキップする。
@@ -62,8 +69,8 @@ export interface IdAdjustmentSearchParams {
 
   // === ID調整固有パラメータ ===
 
-  /** 検索対象の表ID（必須、0〜65535） */
-  targetTid: number;
+  /** 検索対象の表ID（任意、0〜65535 または null） */
+  targetTid: number | null;
 
   /** 検索対象の裏ID（任意、0〜65535 または null） */
   targetSid: number | null;
@@ -316,19 +323,21 @@ export function validateIdAdjustmentSearchParams(
   }
 
   // 表ID検証
-  if (!Number.isInteger(params.targetTid) || params.targetTid < 0 || params.targetTid > 65535) {
-    errors.push('表IDは0〜65535の範囲で入力してください');
+  if (params.targetTid != null) {
+    if (!Number.isInteger(params.targetTid) || params.targetTid < 0 || params.targetTid > 65535) {
+      errors.push('表IDは0〜65535の範囲で入力してください');
+    }
   }
 
   // 裏ID検証（任意）
-  if (params.targetSid !== null) {
+  if (params.targetSid != null) {
     if (!Number.isInteger(params.targetSid) || params.targetSid < 0 || params.targetSid > 65535) {
       errors.push('裏IDは0〜65535の範囲で入力してください');
     }
   }
 
   // PID検証（任意）
-  if (params.shinyPid !== null) {
+  if (params.shinyPid != null) {
     if (!Number.isInteger(params.shinyPid) || params.shinyPid < 0 || params.shinyPid > 0xffffffff) {
       errors.push('PIDは0〜FFFFFFFFの16進数で入力してください');
     }
@@ -391,7 +400,7 @@ export function createDefaultIdAdjustmentSearchParams(): IdAdjustmentSearchParam
       minute: { start: 0, end: 59 },
       second: { start: 0, end: 59 },
     },
-    targetTid: 0,
+    targetTid: null,
     targetSid: null,
     shinyPid: null,
     gameMode: 1, // BwNewGameNoSave

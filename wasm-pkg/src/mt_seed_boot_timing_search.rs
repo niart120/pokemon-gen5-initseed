@@ -236,8 +236,12 @@ impl MtSeedBootTimingSearchIterator {
         let target_seeds_set: BTreeSet<u32> = target_seeds.iter().copied().collect();
 
         // HashValuesEnumerator構築
-        let hash_enumerator =
-            HashValuesEnumerator::new(base_message_builder, time_code_table, start_seconds, range_seconds);
+        let hash_enumerator = HashValuesEnumerator::new(
+            base_message_builder,
+            time_code_table,
+            start_seconds,
+            range_seconds,
+        );
 
         Ok(MtSeedBootTimingSearchIterator {
             hash_enumerator,
@@ -284,7 +288,11 @@ impl MtSeedBootTimingSearchIterator {
     /// - chunk_seconds秒分処理したら結果がなくても一旦return
     /// - 検索範囲を全て処理したらfinished=trueになる
     #[wasm_bindgen]
-    pub fn next_batch(&mut self, max_results: u32, chunk_seconds: u32) -> MtSeedBootTimingSearchResults {
+    pub fn next_batch(
+        &mut self,
+        max_results: u32,
+        chunk_seconds: u32,
+    ) -> MtSeedBootTimingSearchResults {
         if self.finished {
             return MtSeedBootTimingSearchResults {
                 results: Vec::new(),
@@ -387,7 +395,7 @@ mod tests {
 
     fn create_test_search_range() -> SearchRangeParamsJs {
         // 2024年1月1日から1時間
-        SearchRangeParamsJs::new(2024, 1, 1, 3600).unwrap()
+        SearchRangeParamsJs::new(2024, 1, 1, 0, 3600).unwrap()
     }
 
     #[test]
@@ -466,7 +474,7 @@ mod tests {
         let segment = create_test_segment();
         let time_range = create_test_time_range();
         // 10秒だけ検索
-        let search_range = SearchRangeParamsJs::new(2024, 1, 1, 10).unwrap();
+        let search_range = SearchRangeParamsJs::new(2024, 1, 1, 0, 10).unwrap();
         let target_seeds = [0x12345678u32];
 
         let mut iterator = MtSeedBootTimingSearchIterator::new(

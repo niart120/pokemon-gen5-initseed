@@ -1,6 +1,5 @@
 /// ポケモンBW/BW2特化SHA-1のSIMD実装
 /// WebAssembly SIMD命令を使用して4つのメッセージを並列処理
-
 use crate::sha1::HashValues;
 
 #[cfg(target_arch = "wasm32")]

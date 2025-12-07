@@ -194,7 +194,7 @@ pub struct IdAdjustmentSearchIterator {
     key_code: u32,
 
     // 検索条件
-    target_tid: u16,
+    target_tid: Option<u16>,
     target_sid: Option<u16>,
     shiny_pid: Option<u32>,
     game_mode: GameMode,
@@ -231,7 +231,7 @@ impl IdAdjustmentSearchIterator {
     /// - `segment`: セグメントパラメータ (Timer0/VCount/KeyCode)
     /// - `time_range`: 時刻範囲パラメータ
     /// - `search_range`: 検索範囲パラメータ
-    /// - `target_tid`: 検索対象の表ID
+    /// - `target_tid`: 検索対象の表ID（-1で指定なし）
     /// - `target_sid`: 検索対象の裏ID（-1で指定なし）
     /// - `shiny_pid`: 色違いにしたい個体のPID（-1で指定なし）
     /// - `game_mode`: ゲームモード (0-7)
@@ -242,9 +242,9 @@ impl IdAdjustmentSearchIterator {
         segment: &SegmentParamsJs,
         time_range: &TimeRangeParamsJs,
         search_range: &SearchRangeParamsJs,
-        target_tid: u16,
-        target_sid: i32,  // -1 for None
-        shiny_pid: f64,   // -1 for None, use f64 to handle u32 range
+        target_tid: i32, // -1 for None
+        target_sid: i32, // -1 for None
+        shiny_pid: f64,  // -1 for None, use f64 to handle u32 range
         game_mode: u8,
     ) -> Result<IdAdjustmentSearchIterator, String> {
         // GameModeの変換と検証
@@ -253,7 +253,9 @@ impl IdAdjustmentSearchIterator {
         // 「続きから」モードはID調整不可
         if matches!(
             game_mode,
-            GameMode::BwContinue | GameMode::Bw2ContinueWithMemoryLink | GameMode::Bw2ContinueNoMemoryLink
+            GameMode::BwContinue
+                | GameMode::Bw2ContinueWithMemoryLink
+                | GameMode::Bw2ContinueNoMemoryLink
         ) {
             return Err("ID調整には「始めから」モードを選択してください".to_string());
         }
@@ -275,6 +277,13 @@ impl IdAdjustmentSearchIterator {
         let start_seconds = search_range.start_seconds_since_2000();
         let range_seconds = search_range.range_seconds();
 
+        // target_tidの変換
+        let target_tid = if target_tid < 0 {
+            None
+        } else {
+            Some(target_tid as u16)
+        };
+
         // target_sidの変換
         let target_sid = if target_sid < 0 {
             None
@@ -290,8 +299,12 @@ impl IdAdjustmentSearchIterator {
         };
 
         // HashValuesEnumerator構築
-        let hash_enumerator =
-            HashValuesEnumerator::new(base_message_builder, time_code_table, start_seconds, range_seconds);
+        let hash_enumerator = HashValuesEnumerator::new(
+            base_message_builder,
+            time_code_table,
+            start_seconds,
+            range_seconds,
+        );
 
         Ok(IdAdjustmentSearchIterator {
             hash_enumerator,
@@ -341,7 +354,11 @@ impl IdAdjustmentSearchIterator {
     /// - chunk_seconds秒分処理したら結果がなくても一旦return
     /// - 検索範囲を全て処理したらfinished=trueになる
     #[wasm_bindgen]
-    pub fn next_batch(&mut self, max_results: u32, chunk_seconds: u32) -> IdAdjustmentSearchResults {
+    pub fn next_batch(
+        &mut self,
+        max_results: u32,
+        chunk_seconds: u32,
+    ) -> IdAdjustmentSearchResults {
         if self.finished {
             return IdAdjustmentSearchResults {
                 results: Vec::new(),
@@ -370,9 +387,11 @@ impl IdAdjustmentSearchIterator {
                 // TID/SIDを計算
                 let tid_sid_result = calculate_tid_sid_from_seed(lcg_seed, self.game_mode);
 
-                // TIDフィルタ
-                if tid_sid_result.tid != self.target_tid {
-                    continue;
+                // TIDフィルタ（指定時のみ）
+                if let Some(target_tid) = self.target_tid {
+                    if tid_sid_result.tid != target_tid {
+                        continue;
+                    }
                 }
 
                 // SIDフィルタ（指定時のみ）
@@ -395,7 +414,12 @@ impl IdAdjustmentSearchIterator {
                 }
 
                 // 結果を追加
-                results.push(self.create_result(entry, tid_sid_result.tid, tid_sid_result.sid, shiny_type));
+                results.push(self.create_result(
+                    entry,
+                    tid_sid_result.tid,
+                    tid_sid_result.sid,
+                    shiny_type,
+                ));
             }
 
             // max_results到達チェック（バッチ処理完了後）
@@ -479,7 +503,7 @@ mod tests {
 
     fn create_test_search_range() -> SearchRangeParamsJs {
         // 2024年1月1日から1時間
-        SearchRangeParamsJs::new(2024, 1, 1, 3600).unwrap()
+        SearchRangeParamsJs::new(2024, 1, 1, 0, 3600).unwrap()
     }
 
     #[test]
@@ -495,10 +519,10 @@ mod tests {
             &segment,
             &time_range,
             &search_range,
-            12345,  // target_tid
-            -1,     // target_sid (None)
-            -1.0,   // shiny_pid (None)
-            1,      // game_mode (BwNewGameNoSave)
+            12345, // target_tid
+            -1,    // target_sid (None)
+            -1.0,  // shiny_pid (None)
+            1,     // game_mode (BwNewGameNoSave)
         );
 
         assert!(iterator.is_ok());
@@ -523,7 +547,7 @@ mod tests {
             12345,
             -1,
             -1.0,
-            2,  // BwContinue
+            2, // BwContinue
         );
 
         assert!(iterator.is_err());
@@ -535,10 +559,19 @@ mod tests {
 
     #[test]
     fn test_game_mode_conversion() {
-        assert!(matches!(game_mode_from_u8(0), Ok(GameMode::BwNewGameWithSave)));
-        assert!(matches!(game_mode_from_u8(1), Ok(GameMode::BwNewGameNoSave)));
+        assert!(matches!(
+            game_mode_from_u8(0),
+            Ok(GameMode::BwNewGameWithSave)
+        ));
+        assert!(matches!(
+            game_mode_from_u8(1),
+            Ok(GameMode::BwNewGameNoSave)
+        ));
         assert!(matches!(game_mode_from_u8(2), Ok(GameMode::BwContinue)));
-        assert!(matches!(game_mode_from_u8(5), Ok(GameMode::Bw2NewGameNoSave)));
+        assert!(matches!(
+            game_mode_from_u8(5),
+            Ok(GameMode::Bw2NewGameNoSave)
+        ));
         assert!(game_mode_from_u8(8).is_err());
     }
 
@@ -554,7 +587,7 @@ mod tests {
             &segment,
             &time_range,
             &search_range,
-            0,      // target_tid = 0 (unlikely to match)
+            0, // target_tid = 0 (unlikely to match)
             -1,
             -1.0,
             1,

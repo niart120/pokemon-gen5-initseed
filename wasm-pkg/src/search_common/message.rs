@@ -158,7 +158,10 @@ impl BaseMessageBuilder {
     /// base_messageのコピーをスキップし、date/timeのみを書き換える。
     #[inline(always)]
     pub fn write_datetime_only(&self, date_code: u32, time_code: u32, dest: &mut [u32]) {
-        debug_assert!(dest.len() >= 16, "destination buffer must be at least 16 elements");
+        debug_assert!(
+            dest.len() >= 16,
+            "destination buffer must be at least 16 elements"
+        );
         dest[8] = date_code;
         dest[9] = time_code;
     }
