@@ -37,11 +37,12 @@ pub struct RawPokemonData {
 pub struct EnumeratedPokemonData {
     advance: u64,
     pokemon: RawPokemonData,
+    report_needle_direction: u8,
 }
 
 impl EnumeratedPokemonData {
-    fn new(advance: u64, pokemon: RawPokemonData) -> EnumeratedPokemonData {
-        EnumeratedPokemonData { advance, pokemon }
+    fn new(advance: u64, pokemon: RawPokemonData, report_needle_direction: u8) -> EnumeratedPokemonData {
+        EnumeratedPokemonData { advance, pokemon, report_needle_direction }
     }
 }
 
@@ -60,6 +61,11 @@ impl EnumeratedPokemonData {
     #[wasm_bindgen(getter)]
     pub fn get_pid(&self) -> u32 {
         self.pokemon.pid
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_report_needle_direction(&self) -> u8 {
+        self.report_needle_direction
     }
 
     #[wasm_bindgen(getter)]
@@ -825,7 +831,8 @@ impl SeedEnumerator {
             return None;
         }
         let result = PokemonGenerator::generate_single_pokemon_bw(self.current_seed, &self.config);
-        let enumerated = EnumeratedPokemonData::new(self.next_advance, result);
+        let report_needle_direction = PersonalityRNG::calc_report_needle_direction(self.current_seed);
+        let enumerated = EnumeratedPokemonData::new(self.next_advance, result, report_needle_direction);
         self.remaining -= 1;
         self.next_advance = self.next_advance.saturating_add(1);
         self.current_seed = PersonalityRNG::next_seed(self.current_seed);
@@ -935,6 +942,16 @@ mod tests {
         assert!(pokemon.encounter_slot_value < 12); // Normal encounter has 12 slots
         assert_eq!(pokemon.encounter_type, 0); // Normal encounter type
         assert!(!pokemon.sync_applied); // シンクロ無効設定
+    }
+
+    #[test]
+    fn seed_enumerator_reports_needle_direction_from_current_seed() {
+        let config = create_bw_test_config();
+        let mut enumerator = SeedEnumerator::new(0x1234_5678_9ABC_DEF0, 0, 1, &config, GameMode::BwContinue);
+
+        let raw = enumerator.next_pokemon().expect("should produce pokemon");
+        let expected = PersonalityRNG::calc_report_needle_direction(0x1234_5678_9ABC_DEF0);
+        assert_eq!(raw.get_report_needle_direction(), expected);
     }
 
     #[test]

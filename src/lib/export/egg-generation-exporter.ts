@@ -4,7 +4,7 @@
  */
 
 import type { EnumeratedEggDataWithBootTiming, IvSet, HiddenPowerInfo } from '@/types/egg';
-import { natureName, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
+import { natureName, needleDirectionArrow } from '@/lib/utils/format-display';
 import type { ExportFormat } from './file-utils';
 import type { SupportedLocale } from '@/types/i18n';
 import {
@@ -83,21 +83,8 @@ function adaptEggResults(
   const { locale, isBootTimingMode } = context;
 
   return results.map((row) => {
-    let directionValue = -1;
-    let directionArrow = '?';
-
-    // Calculate needle direction from LCG seed
-    const seedHex = row.egg.lcgSeedHex;
-    if (seedHex) {
-      try {
-        const seed = BigInt(seedHex);
-        directionValue = calculateNeedleDirection(seed);
-        directionArrow = needleDirectionArrow(directionValue);
-      } catch {
-        directionValue = -1;
-        directionArrow = '?';
-      }
-    }
+    const directionValue = row.reportNeedleDirection ?? -1;
+    const directionArrow = needleDirectionArrow(directionValue);
 
     const adapted: AdaptedEggResult = {
       advance: row.advance,

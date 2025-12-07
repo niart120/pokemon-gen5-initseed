@@ -15,7 +15,7 @@ import { useResponsiveLayout } from '@/hooks/use-mobile';
 import { useTableVirtualization } from '@/hooks/use-table-virtualization';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { resolveLocaleValue } from '@/lib/i18n/strings/types';
-import { natureName, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
+import { natureName, needleDirectionArrow } from '@/lib/utils/format-display';
 import { IV_UNKNOWN, type EnumeratedEggDataWithBootTiming } from '@/types/egg';
 import {
   eggResultsPanelTitle,
@@ -97,17 +97,10 @@ export const EggResultsCard: React.FC = () => {
 
   // Seedから方向を計算
   const getDirection = (row: EnumeratedEggDataWithBootTiming): { arrow: string; value: number } | null => {
-    // egg.lcgSeedHexを使用（各個体生成時のLCG Seed）
-    const seedHex = row.egg.lcgSeedHex;
-    if (!seedHex) return null;
-    try {
-      const seed = BigInt(seedHex);
-      const value = calculateNeedleDirection(seed);
-      const arrow = needleDirectionArrow(value);
-      return { arrow, value };
-    } catch {
-      return null;
-    }
+    const value = row.reportNeedleDirection;
+    if (value == null) return null;
+    const arrow = needleDirectionArrow(value);
+    return { arrow, value };
   };
 
   return (

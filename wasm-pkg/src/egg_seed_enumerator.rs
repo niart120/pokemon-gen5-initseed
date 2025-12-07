@@ -22,14 +22,16 @@ pub struct EnumeratedEggData {
     pub advance: u64,
     pub egg: ResolvedEgg,
     pub is_stable: bool,
+    pub report_needle_direction: u8,
 }
 
 impl EnumeratedEggData {
-    fn new(advance: u64, egg: ResolvedEgg, is_stable: bool) -> Self {
+    fn new(advance: u64, egg: ResolvedEgg, is_stable: bool, report_needle_direction: u8) -> Self {
         EnumeratedEggData {
             advance,
             egg,
             is_stable,
+            report_needle_direction,
         }
     }
 }
@@ -104,6 +106,7 @@ impl EggSeedEnumerator {
 
             let (pending, _) = derive_pending_egg_with_state(seed_after_npc, &self.conditions);
             let resolved = resolve_egg_iv(&pending, &self.iv_sources, rng)?;
+            let report_needle_direction = PersonalityRNG::calc_report_needle_direction(rng);
 
             self.produced = self.produced.saturating_add(1);
 
@@ -121,6 +124,7 @@ impl EggSeedEnumerator {
                     current_advance,
                     resolved,
                     is_stable,
+                    report_needle_direction,
                 )));
             }
 
@@ -277,6 +281,12 @@ impl EggSeedEnumeratorJs {
                     &obj,
                     &"advance".into(),
                     &JsValue::from_f64(data.advance as f64),
+                )
+                .ok();
+                js_sys::Reflect::set(
+                    &obj,
+                    &"report_needle_direction".into(),
+                    &JsValue::from_f64(data.report_needle_direction as f64),
                 )
                 .ok();
                 js_sys::Reflect::set(

@@ -20,6 +20,7 @@ function makeDummy(i: number): GenerationResult {
     encounter_type: i % 5,
     level_rand_value: BigInt(5000 + i),
     shiny_type: i % 3,
+    report_needle_direction: i % 8,
   };
 }
 

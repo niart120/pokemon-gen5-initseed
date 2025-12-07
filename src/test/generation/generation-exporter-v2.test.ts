@@ -6,7 +6,20 @@ const dummyEncounterTable = { slots: [ { speciesId: 1, levelRange: { min: 5, max
 const dummyAbilityCatalog = new Map<number, string[]>([[1, ['Overgrow', 'Chlorophyll', '']]]);
 
 function make(i:number): GenerationResult {
-  return { seed: BigInt(i+1), pid: 100+i, nature: i%25, sync_applied: false, ability_slot: 0, gender_value: 0, encounter_slot_value: 0, encounter_type: 0, level_rand_value: 1234n, shiny_type: 0, advance: i };
+  return {
+    seed: BigInt(i+1),
+    pid: 100+i,
+    nature: i%25,
+    sync_applied: false,
+    ability_slot: 0,
+    gender_value: 0,
+    encounter_slot_value: 0,
+    encounter_type: 0,
+    level_rand_value: 1234n,
+    shiny_type: 0,
+    advance: i,
+    report_needle_direction: (i % 8),
+  };
 }
 
 describe('generation-exporter v2', () => {

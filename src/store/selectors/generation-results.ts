@@ -95,7 +95,10 @@ function computeFilteredRowsCache(s: GenerationSlice, locale: 'ja' | 'en'): NonN
     const resolvedData = resolved[i];
     if (!resolvedData) continue;
     const perRowBaseSeed = raw.baseSeed ?? baseSeed;
-    const uiData = toUiReadyPokemon(resolvedData, { locale, version, baseSeed: perRowBaseSeed });
+    const uiData = {
+      ...toUiReadyPokemon(resolvedData, { locale, version, baseSeed: perRowBaseSeed }),
+      reportNeedleDirection: raw.report_needle_direction,
+    } as UiReadyPokemonData;
 
     const shinyType = uiData.shinyType ?? DomainShinyType.Normal;
     if (shinyMode === 'shiny' && shinyType === DomainShinyType.Normal) continue;

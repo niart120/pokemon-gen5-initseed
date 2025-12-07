@@ -122,3 +122,26 @@ fn egg_seed_enumerator_reports_npc_stability() {
         .expect("should produce egg");
     assert_eq!(produced.is_stable, expected_stable);
 }
+
+#[test]
+fn egg_seed_enumerator_reports_needle_direction() {
+    let base_seed = 0x0F0F_0F0F_0F0F_0F0F;
+    let mut enumerator = EggSeedEnumerator::new(
+        base_seed,
+        0,
+        1,
+        sample_conditions(),
+        sample_parents(),
+        None,
+        false,
+        GameMode::BwContinue,
+    );
+
+    let produced = enumerator
+        .next_egg()
+        .expect("resolve succeeds")
+        .expect("should produce egg");
+
+    let expected = PersonalityRNG::calc_report_needle_direction(base_seed);
+    assert_eq!(produced.report_needle_direction, expected);
+}

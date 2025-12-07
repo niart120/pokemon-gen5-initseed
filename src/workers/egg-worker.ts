@@ -208,6 +208,12 @@ function parseEnumeratedEggData(raw: any): EnumeratedEggData | null {
 
   try {
     const advance = Number(raw.advance);
+    const reportNeedleDirection = (() => {
+      const value = raw.report_needle_direction ?? raw.reportNeedleDirection;
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      if (typeof value === 'bigint') return Number(value);
+      return -1;
+    })();
     const egg = raw.egg;
     const lcgSeedHex = egg.lcg_seed_hex ?? egg.lcgSeedHex ?? '0x0';
     const mtSeedHex = egg.mt_seed_hex ?? egg.mtSeedHex ?? '00000000';
@@ -231,6 +237,7 @@ function parseEnumeratedEggData(raw: any): EnumeratedEggData | null {
       advance,
       egg: resolvedEgg,
       isStable: raw.is_stable ?? raw.isStable ?? false,
+      reportNeedleDirection,
     };
   } catch {
     return null;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { TableRow, TableCell } from '@/components/ui/table';
 import type { UiReadyPokemonData } from '@/types/pokemon-resolved';
-import { shinyLabel, genderLabel, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
+import { shinyLabel, genderLabel, needleDirectionArrow } from '@/lib/utils/format-display';
 import {
   formatTimer0Hex,
   formatVCountHex,
@@ -30,7 +30,7 @@ export const GenerationResultRow: React.FC<GenerationResultRowProps> = ({
   const spdDisplay = stats ? stats.specialDefense : '--';
   const speDisplay = stats ? stats.speed : '--';
   const natureDisplay = row.natureName;
-  const needleDir = calculateNeedleDirection(row.seed);
+  const needleDir = row.reportNeedleDirection ?? null;
   const showBootTimingMeta = row.seedSourceMode === 'boot-timing';
   const timer0Display = showBootTimingMeta ? formatTimer0Hex(row.timer0) : '--';
   const vcountDisplay = showBootTimingMeta ? formatVCountHex(row.vcount) : '--';
@@ -42,8 +42,8 @@ export const GenerationResultRow: React.FC<GenerationResultRowProps> = ({
       className="odd:bg-background even:bg-muted/30 border-0"
     >
       <TableCell className="px-2 py-1 text-xs font-mono tabular-nums">{row.advance}</TableCell>
-      <TableCell className="px-2 py-1 text-xs text-center font-arrows">{needleDirectionArrow(needleDir)}</TableCell>
-      <TableCell className="px-2 py-1 text-xs font-mono tabular-nums text-center">{needleDir}</TableCell>
+      <TableCell className="px-2 py-1 text-xs text-center font-arrows">{needleDirectionArrow(needleDir ?? -1)}</TableCell>
+      <TableCell className="px-2 py-1 text-xs font-mono tabular-nums text-center">{needleDir ?? '-'}</TableCell>
       <TableCell className="px-2 py-1 text-xs truncate max-w-[100px]" title={row.speciesName || unknownLabel}>
         {row.speciesName || unknownLabel}
       </TableCell>

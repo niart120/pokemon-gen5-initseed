@@ -4,7 +4,6 @@ import {
   seedHex,
   natureName,
   shinyLabel,
-  calculateNeedleDirection,
   needleDirectionArrow,
 } from '@/lib/utils/format-display';
 import { resolveBatch, toUiReadyPokemon, type ResolutionContext } from '@/lib/generation/pokemon-resolver';
@@ -121,15 +120,8 @@ export function adaptGenerationResults(results: GenerationResult[], opts?: {
     } catch { /* fail soft; keep legacy fields */ }
   }
   return results.map((r, idx) => {
-    let needleValue = -1;
-    let needleArrow = '?';
-    try {
-      needleValue = calculateNeedleDirection(r.seed);
-      needleArrow = needleDirectionArrow(needleValue);
-    } catch {
-      needleValue = -1;
-      needleArrow = '?';
-    }
+    const needleValue = r.report_needle_direction ?? -1;
+    const needleArrow = needleDirectionArrow(needleValue);
     const uiEntry = resolvedUi?.[idx];
     const stats = uiEntry?.stats;
     const timer0Value = typeof r.timer0 === 'number' ? r.timer0 >>> 0 : undefined;

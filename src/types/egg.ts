@@ -120,6 +120,7 @@ export interface EnumeratedEggData {
   advance: number;        // bigint → number に変換
   egg: ResolvedEgg;
   isStable: boolean;      // NPC消費考慮時の安定性
+  reportNeedleDirection: number; // 0-7
 }
 
 // === パラメータ型 ===

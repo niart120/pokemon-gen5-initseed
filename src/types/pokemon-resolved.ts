@@ -41,6 +41,7 @@ export interface UiReadyPokemonData {
   seedHex: string;
   pid: number;
   pidHex: string;
+  reportNeedleDirection?: number;
   speciesId?: number;
   speciesName: string;
   natureId: number;

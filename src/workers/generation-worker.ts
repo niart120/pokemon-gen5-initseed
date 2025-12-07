@@ -192,7 +192,11 @@ function executeEnumeration(params: GenerationParams, totalAdvances: number) {
         break;
       }
       const advanceVal = readAdvanceOrFallback(raw, offsetFallbackBase + i);
-      const result: GenerationResult = { ...unresolved, advance: advanceVal };
+      const result: GenerationResult = {
+        ...unresolved,
+        advance: advanceVal,
+        report_needle_direction: readReportNeedleDirection(raw),
+      };
       const isShiny = (result.shiny_type ?? 0) !== 0;
       if (isShiny) shinyFound = true;
 
@@ -259,6 +263,24 @@ function readAdvanceOrFallback(raw: unknown, fallback: number): number {
     }
   }
   return fallback;
+}
+
+function readReportNeedleDirection(raw: unknown): number | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const getter = (raw as Record<string, unknown>).get_report_needle_direction;
+  if (typeof getter === 'function') {
+    try {
+      const value = getter.call(raw);
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      if (typeof value === 'bigint') return Number(value);
+    } catch {
+      return undefined;
+    }
+  }
+  const direct = (raw as Record<string, unknown>).report_needle_direction;
+  if (typeof direct === 'number' && Number.isFinite(direct)) return direct;
+  if (typeof direct === 'bigint') return Number(direct);
+  return undefined;
 }
 
 function hydrateResolutionContext(serialized?: SerializedResolutionContext): ResolutionContext {

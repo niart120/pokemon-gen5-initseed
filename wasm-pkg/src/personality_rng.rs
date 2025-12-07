@@ -212,6 +212,15 @@ impl PersonalityRNG {
             .wrapping_add(LCG_INCREMENT)
     }
 
+    /// Report needle direction (0-7) based on seed advanced by one step.
+    #[inline]
+    pub fn calc_report_needle_direction(seed: u64) -> u8 {
+        let next = Self::next_seed(seed);
+        let upper = next >> 32;
+        let dir = (upper.wrapping_mul(8)) >> 32;
+        (dir & 7) as u8
+    }
+
     /// 線形合同法のアフィン変換をsteps分まとめて計算
     pub fn lcg_affine_for_steps(steps: u64) -> (u64, u64) {
         let (mut mul, mut add) = (1u64, 0u64);
