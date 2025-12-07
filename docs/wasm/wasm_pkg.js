@@ -1910,7 +1910,7 @@ export class IdAdjustmentSearchIterator {
      * - `segment`: セグメントパラメータ (Timer0/VCount/KeyCode)
      * - `time_range`: 時刻範囲パラメータ
      * - `search_range`: 検索範囲パラメータ
-     * - `target_tid`: 検索対象の表ID
+     * - `target_tid`: 検索対象の表ID（-1で指定なし）
      * - `target_sid`: 検索対象の裏ID（-1で指定なし）
      * - `shiny_pid`: 色違いにしたい個体のPID（-1で指定なし）
      * - `game_mode`: ゲームモード (0-7)
@@ -2327,7 +2327,7 @@ export class MtSeedBootTimingSearchIterator {
      * @returns {number}
      */
     get processedSeconds() {
-        const ret = wasm.idadjustmentsearchiterator_processed_seconds(this.__wbg_ptr);
+        const ret = wasm.idadjustmentsearchiterator_total_seconds(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -2335,7 +2335,7 @@ export class MtSeedBootTimingSearchIterator {
      * @returns {number}
      */
     get totalSeconds() {
-        const ret = wasm.idadjustmentsearchiterator_total_seconds(this.__wbg_ptr);
+        const ret = wasm.mtseedboottimingsearchiterator_total_seconds(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -2343,7 +2343,7 @@ export class MtSeedBootTimingSearchIterator {
      * @returns {number}
      */
     get progress() {
-        const ret = wasm.idadjustmentsearchiterator_progress(this.__wbg_ptr);
+        const ret = wasm.mtseedboottimingsearchiterator_progress(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -3388,12 +3388,13 @@ export class SearchRangeParamsJs {
      * @param {number} start_year
      * @param {number} start_month
      * @param {number} start_day
+     * @param {number} start_second_offset
      * @param {number} range_seconds
      */
-    constructor(start_year, start_month, start_day, range_seconds) {
+    constructor(start_year, start_month, start_day, start_second_offset, range_seconds) {
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.searchrangeparamsjs_new(retptr, start_year, start_month, start_day, range_seconds);
+            wasm.searchrangeparamsjs_new(retptr, start_year, start_month, start_day, start_second_offset, range_seconds);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
@@ -3431,8 +3432,15 @@ export class SearchRangeParamsJs {
     /**
      * @returns {number}
      */
-    get range_seconds() {
+    get start_second_offset() {
         const ret = wasm.extraresult_get_value3(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get range_seconds() {
+        const ret = wasm.eggboottimingsearchresult_month(this.__wbg_ptr);
         return ret >>> 0;
     }
 }

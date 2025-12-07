@@ -555,7 +555,7 @@ export class IdAdjustmentSearchIterator {
    * - `segment`: セグメントパラメータ (Timer0/VCount/KeyCode)
    * - `time_range`: 時刻範囲パラメータ
    * - `search_range`: 検索範囲パラメータ
-   * - `target_tid`: 検索対象の表ID
+   * - `target_tid`: 検索対象の表ID（-1で指定なし）
    * - `target_sid`: 検索対象の裏ID（-1で指定なし）
    * - `shiny_pid`: 色違いにしたい個体のPID（-1で指定なし）
    * - `game_mode`: ゲームモード (0-7)
@@ -1132,10 +1132,11 @@ export class RawPokemonData {
 export class SearchRangeParamsJs {
   free(): void;
   [Symbol.dispose](): void;
-  constructor(start_year: number, start_month: number, start_day: number, range_seconds: number);
+  constructor(start_year: number, start_month: number, start_day: number, start_second_offset: number, range_seconds: number);
   readonly start_year: number;
   readonly start_month: number;
   readonly start_day: number;
+  readonly start_second_offset: number;
   readonly range_seconds: number;
 }
 
@@ -1565,6 +1566,8 @@ export interface InitOutput {
   readonly __wbg_mtseedboottimingsearchiterator_free: (a: number, b: number) => void;
   readonly mtseedboottimingsearchiterator_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
   readonly mtseedboottimingsearchiterator_is_finished: (a: number) => number;
+  readonly mtseedboottimingsearchiterator_total_seconds: (a: number) => number;
+  readonly mtseedboottimingsearchiterator_progress: (a: number) => number;
   readonly mtseedboottimingsearchiterator_next_batch: (a: number, b: number, c: number) => number;
   readonly mt_seed_search_segment: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
   readonly derive_iv_set_wasm: (a: number, b: number, c: number) => void;
@@ -1670,7 +1673,7 @@ export interface InitOutput {
   readonly segmentparamsjs_new: (a: number, b: number, c: number) => number;
   readonly __wbg_timerangeparamsjs_free: (a: number, b: number) => void;
   readonly timerangeparamsjs_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-  readonly searchrangeparamsjs_new: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly searchrangeparamsjs_new: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
   readonly sha1_hash_batch: (a: number, b: number, c: number) => void;
   readonly endianutils_swap_bytes_16: (a: number) => number;
   readonly endianutils_swap_bytes_64: (a: bigint) => bigint;
@@ -1699,7 +1702,6 @@ export interface InitOutput {
   readonly validationutils_is_valid_ability_slot: (a: number) => number;
   readonly validationutils_is_valid_hex_string: (a: number, b: number) => number;
   readonly validationutils_is_valid_seed: (a: bigint) => number;
-  readonly mtseedboottimingsearchiterator_progress: (a: number) => number;
   readonly pidcalculator_new: () => number;
   readonly shinychecker_new: () => number;
   readonly pokemongenerator_new: () => number;
@@ -1728,7 +1730,6 @@ export interface InitOutput {
   readonly mtseedboottimingsearchresult_vcount: (a: number) => number;
   readonly mtseedboottimingsearchresults_processed_in_chunk: (a: number) => number;
   readonly mtseedboottimingsearchiterator_processed_seconds: (a: number) => number;
-  readonly mtseedboottimingsearchiterator_total_seconds: (a: number) => number;
   readonly tidsidresult_get_advances_used: (a: number) => number;
   readonly idadjustmentsearchresult_lcg_seed_high: (a: number) => number;
   readonly idadjustmentsearchresult_lcg_seed_low: (a: number) => number;
@@ -1754,6 +1755,7 @@ export interface InitOutput {
   readonly searchrangeparamsjs_start_year: (a: number) => number;
   readonly searchrangeparamsjs_start_month: (a: number) => number;
   readonly searchrangeparamsjs_start_day: (a: number) => number;
+  readonly searchrangeparamsjs_start_second_offset: (a: number) => number;
   readonly searchrangeparamsjs_range_seconds: (a: number) => number;
   readonly __wbg_set_statrange_max: (a: number, b: number) => void;
   readonly __wbg_get_statrange_max: (a: number) => number;
