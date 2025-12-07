@@ -417,6 +417,44 @@ fn test_integrated_generation_pattern4_bw2_continue_no_memory_link_static_starte
     );
 }
 
+/// BW 続きから / 野生 / シンクロあり(いじっぱり)
+/// 初期Seedからオフセット計算を経た最初の個体が期待PID/性格になることを検証
+#[test]
+fn test_integrated_generation_bw_continue_wild_sync_adamant_expected_pid() {
+    let initial_seed = 0x1C40524D87E80030u64;
+    let game_mode = GameMode::BwContinue;
+    let encounter_type = EncounterType::Normal;
+    let tid = 0u16;
+    let sid = 0u16;
+
+    let expected_pid = 0xDF8FECE9u32;
+    let expected_nature = 14u8; // むじゃき (Naive)
+
+    // オフセット計算 → 生成開始Seedへジャンプ
+    let offset = calculate_game_offset(initial_seed, game_mode);
+    let generation_seed = PersonalityRNG::jump_seed(initial_seed, offset as u64);
+
+    // シンクロいじっぱり指定（ID=3）。今回のケースではシンクロ失敗で乱数性格が採用される想定。
+    let config = BWGenerationConfig::new(
+        GameVersion::B,
+        encounter_type,
+        tid,
+        sid,
+        true,  // sync_enabled
+        3,     // いじっぱり
+        false,
+        false,
+    );
+
+    let pokemon = PokemonGenerator::generate_single_pokemon_bw(generation_seed, &config);
+
+    assert_eq!(pokemon.get_pid(), expected_pid, "PID mismatch after offset jump");
+    assert_eq!(pokemon.get_nature(), expected_nature, "Nature mismatch (expected Naive)");
+    assert_eq!(pokemon.get_encounter_type(), 0, "Encounter type should be Normal");
+    assert_eq!(pokemon.get_shiny_type(), 0, "Should not be shiny");
+    assert!(!pokemon.get_sync_applied(), "Sync should fail so Naive nature is kept");
+}
+
 /// 複数パターンの統合テスト（バッチ処理）
 #[test]
 fn test_integrated_generation_multiple_patterns() {

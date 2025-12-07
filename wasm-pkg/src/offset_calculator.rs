@@ -330,7 +330,8 @@ impl OffsetCalculator {
             }
 
             GameMode::BwContinue => {
-                // BW 続きから - リファレンス実装準拠（Rand×1なし）
+                // BW 続きから - リファレンス実装非準拠（Rand×1あり）
+                self.consume_random(1); // Rand×1
                 self.probability_table_process_multiple(5); // PT×5
             }
 
