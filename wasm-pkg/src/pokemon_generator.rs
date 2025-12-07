@@ -674,7 +674,8 @@ impl PokemonGenerator {
     /// シンクロ判定結果（true: シンクロ成功, false: シンクロ失敗）
     fn sync_check(rng: &mut PersonalityRNG) -> bool {
         let rand = rng.next();
-        ((rand as u64 * 2) >> 32) == 0
+        // ゲーム実機仕様に合わせ、最上位bitが1ならシンクロ成功とみなす
+        ((rand as u64 * 2) >> 32) == 1
     }
 
     /// 内部使用：性格決定処理
@@ -1039,6 +1040,22 @@ mod tests {
             assert_eq!(expected_raw.nature, enumerated_raw.nature);
             assert_eq!(expected_raw.seed, enumerated_raw.seed);
         }
+    }
+
+    #[test]
+    fn sync_check_false_when_high_bit_zero() {
+        // seed=0 → next() 上位ビット0
+        let mut rng = PersonalityRNG::new(0);
+        let success = PokemonGenerator::sync_check(&mut rng);
+        assert!(!success);
+    }
+
+    #[test]
+    fn sync_check_true_when_high_bit_one() {
+        // このSeedで最初の next() が 0xC83FB970 (上位ビット1)
+        let mut rng = PersonalityRNG::new(0x0A8B4E34C910A194);
+        let success = PokemonGenerator::sync_check(&mut rng);
+        assert!(success);
     }
 
     // ...existing code (その他のテスト群)...
