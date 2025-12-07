@@ -277,6 +277,10 @@ function readReportNeedleDirection(raw: unknown): number | undefined {
       return undefined;
     }
   }
+  // wasm-bindgen exposes readonly accessors as properties; accept number/bigint directly
+  if (typeof getter === 'number' && Number.isFinite(getter)) return getter;
+  if (typeof getter === 'bigint') return Number(getter);
+
   const direct = (raw as Record<string, unknown>).report_needle_direction;
   if (typeof direct === 'number' && Number.isFinite(direct)) return direct;
   if (typeof direct === 'bigint') return Number(direct);
