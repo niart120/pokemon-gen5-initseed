@@ -430,6 +430,7 @@ export class EnumeratedPokemonData {
   readonly get_advance: bigint;
   readonly get_seed: bigint;
   readonly get_pid: number;
+  readonly get_report_needle_direction: number;
   readonly get_nature: number;
   readonly get_sync_applied: boolean;
   readonly get_ability_slot: number;
@@ -1633,6 +1634,7 @@ export interface InitOutput {
   readonly __wbg_rawpokemondata_free: (a: number, b: number) => void;
   readonly __wbg_enumeratedpokemondata_free: (a: number, b: number) => void;
   readonly enumeratedpokemondata_get_seed: (a: number) => bigint;
+  readonly enumeratedpokemondata_get_report_needle_direction: (a: number) => number;
   readonly enumeratedpokemondata_get_nature: (a: number) => number;
   readonly enumeratedpokemondata_get_sync_applied: (a: number) => number;
   readonly enumeratedpokemondata_get_ability_slot: (a: number) => number;
@@ -1663,6 +1665,7 @@ export interface InitOutput {
   readonly pokemongenerator_generate_single_pokemon_bw: (a: bigint, b: number) => number;
   readonly pokemongenerator_calculate_generation_seed: (a: bigint, b: bigint) => bigint;
   readonly pokemongenerator_generate_pokemon_batch_bw: (a: number, b: bigint, c: bigint, d: number, e: number) => void;
+  readonly __wbg_seedenumerator_free: (a: number, b: number) => void;
   readonly seedenumerator_new: (a: bigint, b: bigint, c: number, d: number, e: number) => number;
   readonly seedenumerator_next_pokemon: (a: number) => number;
   readonly __wbg_dsconfigjs_free: (a: number, b: number) => void;
@@ -1768,7 +1771,6 @@ export interface InitOutput {
   readonly __wbg_shinychecker_free: (a: number, b: number) => void;
   readonly __wbg_parentsivsjs_free: (a: number, b: number) => void;
   readonly __wbg_pokemongenerator_free: (a: number, b: number) => void;
-  readonly __wbg_seedenumerator_free: (a: number, b: number) => void;
   readonly __wbg_segmentparamsjs_free: (a: number, b: number) => void;
   readonly __wbg_searchrangeparamsjs_free: (a: number, b: number) => void;
   readonly __wbg_endianutils_free: (a: number, b: number) => void;

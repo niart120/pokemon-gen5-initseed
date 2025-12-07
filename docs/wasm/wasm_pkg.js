@@ -1434,6 +1434,13 @@ export class EnumeratedPokemonData {
     /**
      * @returns {number}
      */
+    get get_report_needle_direction() {
+        const ret = wasm.enumeratedpokemondata_get_report_needle_direction(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
     get get_nature() {
         const ret = wasm.enumeratedpokemondata_get_nature(this.__wbg_ptr);
         return ret;
