@@ -73,7 +73,11 @@ pub struct DSConfig {
 
 impl DSConfig {
     pub fn new(mac: [u8; 6], nazo: [u32; 5], hardware: HardwareType) -> Self {
-        Self { mac, nazo, hardware }
+        Self {
+            mac,
+            nazo,
+            hardware,
+        }
     }
 
     /// frame値を取得
@@ -451,7 +455,9 @@ impl SearchRangeParamsJs {
         }
 
         if start_second_offset >= 24 * 60 * 60 {
-            return Err(format!("start_second_offset must be within a day, got {start_second_offset}"));
+            return Err(format!(
+                "start_second_offset must be within a day, got {start_second_offset}"
+            ));
         }
 
         Ok(SearchRangeParamsJs {
@@ -576,7 +582,7 @@ mod tests {
 
     #[test]
     fn test_search_range_params() {
-        let params = SearchRangeParams::new(2024, 1, 15, 86400).unwrap();
+        let params = SearchRangeParams::new(2024, 1, 15, 0, 86400).unwrap();
         assert_eq!(params.start_year, 2024);
         assert_eq!(params.start_month, 1);
         assert_eq!(params.start_day, 15);
@@ -586,8 +592,8 @@ mod tests {
 
     #[test]
     fn test_search_range_params_invalid() {
-        assert!(SearchRangeParams::new(2024, 13, 1, 86400).is_err());
-        assert!(SearchRangeParams::new(2024, 2, 30, 86400).is_err());
+        assert!(SearchRangeParams::new(2024, 13, 1, 0, 86400).is_err());
+        assert!(SearchRangeParams::new(2024, 2, 30, 0, 86400).is_err());
     }
 
     #[test]

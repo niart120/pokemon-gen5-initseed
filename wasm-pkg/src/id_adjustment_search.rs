@@ -242,9 +242,9 @@ impl IdAdjustmentSearchIterator {
         segment: &SegmentParamsJs,
         time_range: &TimeRangeParamsJs,
         search_range: &SearchRangeParamsJs,
-        target_tid: i32,  // -1 for None
-        target_sid: i32,  // -1 for None
-        shiny_pid: f64,   // -1 for None, use f64 to handle u32 range
+        target_tid: i32, // -1 for None
+        target_sid: i32, // -1 for None
+        shiny_pid: f64,  // -1 for None, use f64 to handle u32 range
         game_mode: u8,
     ) -> Result<IdAdjustmentSearchIterator, String> {
         // GameModeの変換と検証
@@ -253,7 +253,9 @@ impl IdAdjustmentSearchIterator {
         // 「続きから」モードはID調整不可
         if matches!(
             game_mode,
-            GameMode::BwContinue | GameMode::Bw2ContinueWithMemoryLink | GameMode::Bw2ContinueNoMemoryLink
+            GameMode::BwContinue
+                | GameMode::Bw2ContinueWithMemoryLink
+                | GameMode::Bw2ContinueNoMemoryLink
         ) {
             return Err("ID調整には「始めから」モードを選択してください".to_string());
         }
@@ -297,8 +299,12 @@ impl IdAdjustmentSearchIterator {
         };
 
         // HashValuesEnumerator構築
-        let hash_enumerator =
-            HashValuesEnumerator::new(base_message_builder, time_code_table, start_seconds, range_seconds);
+        let hash_enumerator = HashValuesEnumerator::new(
+            base_message_builder,
+            time_code_table,
+            start_seconds,
+            range_seconds,
+        );
 
         Ok(IdAdjustmentSearchIterator {
             hash_enumerator,
@@ -348,7 +354,11 @@ impl IdAdjustmentSearchIterator {
     /// - chunk_seconds秒分処理したら結果がなくても一旦return
     /// - 検索範囲を全て処理したらfinished=trueになる
     #[wasm_bindgen]
-    pub fn next_batch(&mut self, max_results: u32, chunk_seconds: u32) -> IdAdjustmentSearchResults {
+    pub fn next_batch(
+        &mut self,
+        max_results: u32,
+        chunk_seconds: u32,
+    ) -> IdAdjustmentSearchResults {
         if self.finished {
             return IdAdjustmentSearchResults {
                 results: Vec::new(),
@@ -404,7 +414,12 @@ impl IdAdjustmentSearchIterator {
                 }
 
                 // 結果を追加
-                results.push(self.create_result(entry, tid_sid_result.tid, tid_sid_result.sid, shiny_type));
+                results.push(self.create_result(
+                    entry,
+                    tid_sid_result.tid,
+                    tid_sid_result.sid,
+                    shiny_type,
+                ));
             }
 
             // max_results到達チェック（バッチ処理完了後）
@@ -504,10 +519,10 @@ mod tests {
             &segment,
             &time_range,
             &search_range,
-            12345,  // target_tid
-            -1,     // target_sid (None)
-            -1.0,   // shiny_pid (None)
-            1,      // game_mode (BwNewGameNoSave)
+            12345, // target_tid
+            -1,    // target_sid (None)
+            -1.0,  // shiny_pid (None)
+            1,     // game_mode (BwNewGameNoSave)
         );
 
         assert!(iterator.is_ok());
@@ -532,7 +547,7 @@ mod tests {
             12345,
             -1,
             -1.0,
-            2,  // BwContinue
+            2, // BwContinue
         );
 
         assert!(iterator.is_err());
@@ -544,10 +559,19 @@ mod tests {
 
     #[test]
     fn test_game_mode_conversion() {
-        assert!(matches!(game_mode_from_u8(0), Ok(GameMode::BwNewGameWithSave)));
-        assert!(matches!(game_mode_from_u8(1), Ok(GameMode::BwNewGameNoSave)));
+        assert!(matches!(
+            game_mode_from_u8(0),
+            Ok(GameMode::BwNewGameWithSave)
+        ));
+        assert!(matches!(
+            game_mode_from_u8(1),
+            Ok(GameMode::BwNewGameNoSave)
+        ));
         assert!(matches!(game_mode_from_u8(2), Ok(GameMode::BwContinue)));
-        assert!(matches!(game_mode_from_u8(5), Ok(GameMode::Bw2NewGameNoSave)));
+        assert!(matches!(
+            game_mode_from_u8(5),
+            Ok(GameMode::Bw2NewGameNoSave)
+        ));
         assert!(game_mode_from_u8(8).is_err());
     }
 
@@ -563,7 +587,7 @@ mod tests {
             &segment,
             &time_range,
             &search_range,
-            0,      // target_tid = 0 (unlikely to match)
+            0, // target_tid = 0 (unlikely to match)
             -1,
             -1.0,
             1,

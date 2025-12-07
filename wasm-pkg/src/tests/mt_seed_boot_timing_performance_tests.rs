@@ -12,7 +12,9 @@ wasm_bindgen_test_configure!(run_in_browser);
 mod wasm_tests {
     use super::*;
     use crate::mt_seed_boot_timing_search::MtSeedBootTimingSearchIterator;
-    use crate::search_common::{DSConfigJs, SearchRangeParamsJs, SegmentParamsJs, TimeRangeParamsJs};
+    use crate::search_common::{
+        DSConfigJs, SearchRangeParamsJs, SegmentParamsJs, TimeRangeParamsJs,
+    };
     use js_sys::Date;
     use std::collections::HashSet;
 
@@ -52,8 +54,8 @@ mod wasm_tests {
         let ds_config =
             DSConfigJs::new(&TEST_MAC, &TEST_NAZO, "DS").expect("Failed to create DSConfigJs");
         let segment = SegmentParamsJs::new(TEST_TIMER0, TEST_VCOUNT, TEST_KEY_CODE);
-        let time_range =
-            TimeRangeParamsJs::new(0, 23, 0, 59, 0, 59).expect("Failed to create TimeRangeParamsJs");
+        let time_range = TimeRangeParamsJs::new(0, 23, 0, 59, 0, 59)
+            .expect("Failed to create TimeRangeParamsJs");
         let search_range = SearchRangeParamsJs::new(2024, 1, 1, 0, range_seconds)
             .expect("Failed to create SearchRangeParamsJs");
 
@@ -95,7 +97,11 @@ mod wasm_tests {
 
         let duration = Date::now() - start;
 
-        log_performance("MtSeedBootTimingIterator (1 segment)", total_processed as u64, duration);
+        log_performance(
+            "MtSeedBootTimingIterator (1 segment)",
+            total_processed as u64,
+            duration,
+        );
 
         // 複数セグメントテスト（セグメントループをシミュレート）
         let timer0_count = 3u32;
@@ -178,7 +184,11 @@ mod wasm_tests {
             }
 
             let duration = Date::now() - start;
-            log_performance("HashValuesEnumerator iteration", iterations as u64, duration);
+            log_performance(
+                "HashValuesEnumerator iteration",
+                iterations as u64,
+                duration,
+            );
         }
 
         // 2. SHA-1計算（直接比較用）
@@ -200,7 +210,9 @@ mod wasm_tests {
                 let mut msg = test_message;
                 msg[8] = msg[8].wrapping_add(i);
                 let hash = calculate_pokemon_sha1(&msg);
-                checksum = checksum.wrapping_add(hash.h0 as u64).wrapping_add(hash.h1 as u64);
+                checksum = checksum
+                    .wrapping_add(hash.h0 as u64)
+                    .wrapping_add(hash.h1 as u64);
             }
             let duration = Date::now() - start;
             log_performance("SHA-1 scalar", scalar_iterations as u64, duration);
@@ -323,15 +335,15 @@ mod native_tests {
     #[test]
     fn test_hash_values_enumerator_performance() {
         use crate::search_common::{
-            build_ranged_time_code_table, BaseMessageBuilder, HashValuesEnumerator,
-            DSConfig, HardwareType, SegmentParams, TimeRangeParams,
+            build_ranged_time_code_table, BaseMessageBuilder, DSConfig, HardwareType,
+            HashValuesEnumerator, SegmentParams, TimeRangeParams,
         };
 
         let mac = [0x00, 0x09, 0xBF, 0xAA, 0xBB, 0xCC];
         let nazo = [0x02215F10, 0x02215F30, 0x02215F20, 0x02761008, 0x00000000];
         let ds_config = DSConfig::new(mac, nazo, HardwareType::DS);
         let segment = SegmentParams::new(0x1000, 0x60, 0x2FFF);
-        
+
         let time_range = TimeRangeParams::new(0, 23, 0, 59, 0, 59).unwrap();
         let iterations = 86400u32; // 1日分
 
@@ -356,8 +368,11 @@ mod native_tests {
             }
             let duration = start.elapsed();
             let rate = count as f64 / duration.as_secs_f64();
-            
-            println!("Iterator API: {:?} ({} entries, {:.0} iter/sec)", duration, count, rate);
+
+            println!(
+                "Iterator API: {:?} ({} entries, {:.0} iter/sec)",
+                duration, count, rate
+            );
             println!("  checksum: 0x{:016X}", checksum);
         }
     }
@@ -365,8 +380,8 @@ mod native_tests {
     #[test]
     fn test_hash_enumerator_performance_comparison() {
         use crate::search_common::{
-            build_ranged_time_code_table, BaseMessageBuilder, HashValuesEnumerator,
-            DSConfig, HardwareType, SegmentParams, TimeRangeParams,
+            build_ranged_time_code_table, BaseMessageBuilder, DSConfig, HardwareType,
+            HashValuesEnumerator, SegmentParams, TimeRangeParams,
         };
 
         let mac = [0x00, 0x09, 0xBF, 0xAA, 0xBB, 0xCC];
@@ -403,8 +418,11 @@ mod native_tests {
             }
             let duration = start.elapsed();
             let rate = range_seconds as f64 / duration.as_secs_f64();
-            
-            println!("Iterator API (with lookup): {:?} ({:.0} iter/sec, {} found)", duration, rate, found);
+
+            println!(
+                "Iterator API (with lookup): {:?} ({:.0} iter/sec, {} found)",
+                duration, rate, found
+            );
         }
 
         println!("=== 比較完了 ===\n");

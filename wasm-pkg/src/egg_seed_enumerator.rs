@@ -93,7 +93,7 @@ impl EggSeedEnumerator {
             }
 
             let rng = self.current_seed;
-            
+
             let (seed_after_npc, is_stable) = if self.consider_npc_consumption {
                 let (next_seed, _consumed, stable) =
                     resolve_npc_advance(rng, NPC_FRAME_THRESHOLD, NPC_FRAME_SLACK);
@@ -102,8 +102,7 @@ impl EggSeedEnumerator {
                 (rng, false)
             };
 
-            let (pending, _) =
-                derive_pending_egg_with_state(seed_after_npc, &self.conditions);
+            let (pending, _) = derive_pending_egg_with_state(seed_after_npc, &self.conditions);
             let resolved = resolve_egg_iv(&pending, &self.iv_sources, rng)?;
 
             self.produced = self.produced.saturating_add(1);
@@ -274,27 +273,62 @@ impl EggSeedEnumeratorJs {
             Ok(Some(data)) => {
                 // Convert EnumeratedEggData to JS-compatible object
                 let obj = js_sys::Object::new();
-                js_sys::Reflect::set(&obj, &"advance".into(), &JsValue::from_f64(data.advance as f64)).ok();
-                js_sys::Reflect::set(&obj, &"is_stable".into(), &JsValue::from_bool(data.is_stable)).ok();
+                js_sys::Reflect::set(
+                    &obj,
+                    &"advance".into(),
+                    &JsValue::from_f64(data.advance as f64),
+                )
+                .ok();
+                js_sys::Reflect::set(
+                    &obj,
+                    &"is_stable".into(),
+                    &JsValue::from_bool(data.is_stable),
+                )
+                .ok();
 
                 // Create egg object
                 let egg_obj = js_sys::Object::new();
                 // lcg_seed as hex string (BigInt互換)
                 let lcg_seed_hex = format!("0x{:016X}", data.egg.lcg_seed);
-                js_sys::Reflect::set(&egg_obj, &"lcg_seed_hex".into(), &JsValue::from_str(&lcg_seed_hex)).ok();
+                js_sys::Reflect::set(
+                    &egg_obj,
+                    &"lcg_seed_hex".into(),
+                    &JsValue::from_str(&lcg_seed_hex),
+                )
+                .ok();
                 let ivs = js_sys::Array::new();
                 for iv in &data.egg.ivs {
                     ivs.push(&JsValue::from(*iv));
                 }
                 js_sys::Reflect::set(&egg_obj, &"ivs".into(), &ivs).ok();
-                js_sys::Reflect::set(&egg_obj, &"nature".into(), &JsValue::from(data.egg.nature as u8)).ok();
-                js_sys::Reflect::set(&egg_obj, &"gender".into(), &JsValue::from(match data.egg.gender {
-                    crate::egg_iv::Gender::Male => 0u8,
-                    crate::egg_iv::Gender::Female => 1u8,
-                    crate::egg_iv::Gender::Genderless => 2u8,
-                })).ok();
-                js_sys::Reflect::set(&egg_obj, &"ability".into(), &JsValue::from(data.egg.ability as u8)).ok();
-                js_sys::Reflect::set(&egg_obj, &"shiny".into(), &JsValue::from(data.egg.shiny as u8)).ok();
+                js_sys::Reflect::set(
+                    &egg_obj,
+                    &"nature".into(),
+                    &JsValue::from(data.egg.nature as u8),
+                )
+                .ok();
+                js_sys::Reflect::set(
+                    &egg_obj,
+                    &"gender".into(),
+                    &JsValue::from(match data.egg.gender {
+                        crate::egg_iv::Gender::Male => 0u8,
+                        crate::egg_iv::Gender::Female => 1u8,
+                        crate::egg_iv::Gender::Genderless => 2u8,
+                    }),
+                )
+                .ok();
+                js_sys::Reflect::set(
+                    &egg_obj,
+                    &"ability".into(),
+                    &JsValue::from(data.egg.ability as u8),
+                )
+                .ok();
+                js_sys::Reflect::set(
+                    &egg_obj,
+                    &"shiny".into(),
+                    &JsValue::from(data.egg.shiny as u8),
+                )
+                .ok();
                 js_sys::Reflect::set(&egg_obj, &"pid".into(), &JsValue::from(data.egg.pid)).ok();
 
                 // Hidden power
@@ -302,7 +336,8 @@ impl EggSeedEnumeratorJs {
                     crate::egg_iv::HiddenPowerInfo::Known { r#type, power } => {
                         let hp = js_sys::Object::new();
                         js_sys::Reflect::set(&hp, &"type".into(), &"known".into()).ok();
-                        js_sys::Reflect::set(&hp, &"hp_type".into(), &JsValue::from(r#type as u8)).ok();
+                        js_sys::Reflect::set(&hp, &"hp_type".into(), &JsValue::from(r#type as u8))
+                            .ok();
                         js_sys::Reflect::set(&hp, &"power".into(), &JsValue::from(power)).ok();
                         hp
                     }

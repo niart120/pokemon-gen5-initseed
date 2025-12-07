@@ -23,7 +23,10 @@ pub struct HashEntry {
 impl HashEntry {
     #[inline]
     pub fn new(hash: HashValues, datetime_code: DateTimeCode) -> Self {
-        Self { hash, datetime_code }
+        Self {
+            hash,
+            datetime_code,
+        }
     }
 }
 
@@ -98,7 +101,8 @@ impl HashValuesEnumerator {
 
         // バッファをbase_messageで初期化（全スロット）
         let mut message_buffer = [0u32; 64];
-        self.base_message_builder.init_message_buffer(&mut message_buffer);
+        self.base_message_builder
+            .init_message_buffer(&mut message_buffer);
 
         // date/timeのみを書き込み（base_messageのコピーをスキップ）
         for i in 0..len as usize {
@@ -130,7 +134,7 @@ impl HashValuesEnumerator {
 mod tests {
     use super::*;
     use crate::search_common::datetime::build_ranged_time_code_table;
-    use crate::search_common::params::{HardwareType, DSConfig, SegmentParams, TimeRangeParams};
+    use crate::search_common::params::{DSConfig, HardwareType, SegmentParams, TimeRangeParams};
 
     fn create_test_ds_config() -> DSConfig {
         let mac = [0x00, 0x09, 0xBF, 0xAA, 0xBB, 0xCC];

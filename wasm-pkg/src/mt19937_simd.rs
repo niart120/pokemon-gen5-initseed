@@ -52,18 +52,10 @@ impl Mt19937x4 {
             ];
 
             state[i] = u32x4(
-                1812433253u32
-                    .wrapping_mul(vals[0])
-                    .wrapping_add(i as u32),
-                1812433253u32
-                    .wrapping_mul(vals[1])
-                    .wrapping_add(i as u32),
-                1812433253u32
-                    .wrapping_mul(vals[2])
-                    .wrapping_add(i as u32),
-                1812433253u32
-                    .wrapping_mul(vals[3])
-                    .wrapping_add(i as u32),
+                1812433253u32.wrapping_mul(vals[0]).wrapping_add(i as u32),
+                1812433253u32.wrapping_mul(vals[1]).wrapping_add(i as u32),
+                1812433253u32.wrapping_mul(vals[2]).wrapping_add(i as u32),
+                1812433253u32.wrapping_mul(vals[3]).wrapping_add(i as u32),
             );
         }
 
