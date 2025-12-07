@@ -19,6 +19,7 @@ import {
   IdAdjustmentMultiWorkerManager,
   type AggregatedIdAdjustmentProgress,
 } from '@/lib/id-adjustment';
+import { deriveDomainGameMode } from '@/types/generation';
 import { DomainShinyType } from '@/types/domain';
 
 /**
@@ -203,6 +204,13 @@ export const useIdAdjustmentSearchStore = create<IdAdjustmentSearchStore>(
     },
 
     applyProfile: (profile) => {
+      const gameMode = deriveDomainGameMode({
+        version: profile.romVersion,
+        newGame: profile.newGame,
+        withSave: profile.withSave,
+        memoryLink: profile.memoryLink,
+      });
+
       set((state) => ({
         draftParams: {
           ...state.draftParams,
@@ -218,6 +226,7 @@ export const useIdAdjustmentSearchStore = create<IdAdjustmentSearchStore>(
             min: profile.vcountRange.min,
             max: profile.vcountRange.max,
           },
+          gameMode,
         },
       }));
     },
