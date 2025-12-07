@@ -54,12 +54,12 @@ mod wasm_tests {
         let segment = SegmentParamsJs::new(TEST_TIMER0, TEST_VCOUNT, TEST_KEY_CODE);
         let time_range =
             TimeRangeParamsJs::new(0, 23, 0, 59, 0, 59).expect("Failed to create TimeRangeParamsJs");
-        let search_range = SearchRangeParamsJs::new(2024, 1, 1, range_seconds)
+        let search_range = SearchRangeParamsJs::new(2024, 1, 1, 0, range_seconds)
             .expect("Failed to create SearchRangeParamsJs");
 
         // ウォームアップ
         {
-            let warmup_range = SearchRangeParamsJs::new(2024, 1, 1, 1000).unwrap();
+            let warmup_range = SearchRangeParamsJs::new(2024, 1, 1, 0, 1000).unwrap();
             let mut warmup_iter = MtSeedBootTimingSearchIterator::new(
                 &ds_config,
                 &segment,
@@ -156,7 +156,7 @@ mod wasm_tests {
             let ds_config = DSConfigJs::new(&TEST_MAC, &TEST_NAZO, "DS").unwrap();
             let segment = SegmentParamsJs::new(TEST_TIMER0, TEST_VCOUNT, TEST_KEY_CODE);
             let time_range = TimeRangeParamsJs::new(0, 23, 0, 59, 0, 59).unwrap();
-            let search_range = SearchRangeParamsJs::new(2024, 1, 1, iterations).unwrap();
+            let search_range = SearchRangeParamsJs::new(2024, 1, 1, 0, iterations).unwrap();
 
             // NOTE: MtSeedBootTimingSearchIteratorは空のtarget_seedsを拒否するため、
             // ダミーseedを使う

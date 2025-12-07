@@ -194,7 +194,7 @@ pub struct IdAdjustmentSearchIterator {
     key_code: u32,
 
     // 検索条件
-    target_tid: u16,
+    target_tid: Option<u16>,
     target_sid: Option<u16>,
     shiny_pid: Option<u32>,
     game_mode: GameMode,
@@ -231,7 +231,7 @@ impl IdAdjustmentSearchIterator {
     /// - `segment`: セグメントパラメータ (Timer0/VCount/KeyCode)
     /// - `time_range`: 時刻範囲パラメータ
     /// - `search_range`: 検索範囲パラメータ
-    /// - `target_tid`: 検索対象の表ID
+    /// - `target_tid`: 検索対象の表ID（-1で指定なし）
     /// - `target_sid`: 検索対象の裏ID（-1で指定なし）
     /// - `shiny_pid`: 色違いにしたい個体のPID（-1で指定なし）
     /// - `game_mode`: ゲームモード (0-7)
@@ -242,7 +242,7 @@ impl IdAdjustmentSearchIterator {
         segment: &SegmentParamsJs,
         time_range: &TimeRangeParamsJs,
         search_range: &SearchRangeParamsJs,
-        target_tid: u16,
+        target_tid: i32,  // -1 for None
         target_sid: i32,  // -1 for None
         shiny_pid: f64,   // -1 for None, use f64 to handle u32 range
         game_mode: u8,
@@ -274,6 +274,13 @@ impl IdAdjustmentSearchIterator {
         // 開始秒を計算
         let start_seconds = search_range.start_seconds_since_2000();
         let range_seconds = search_range.range_seconds();
+
+        // target_tidの変換
+        let target_tid = if target_tid < 0 {
+            None
+        } else {
+            Some(target_tid as u16)
+        };
 
         // target_sidの変換
         let target_sid = if target_sid < 0 {
@@ -370,9 +377,11 @@ impl IdAdjustmentSearchIterator {
                 // TID/SIDを計算
                 let tid_sid_result = calculate_tid_sid_from_seed(lcg_seed, self.game_mode);
 
-                // TIDフィルタ
-                if tid_sid_result.tid != self.target_tid {
-                    continue;
+                // TIDフィルタ（指定時のみ）
+                if let Some(target_tid) = self.target_tid {
+                    if tid_sid_result.tid != target_tid {
+                        continue;
+                    }
                 }
 
                 // SIDフィルタ（指定時のみ）
@@ -479,7 +488,7 @@ mod tests {
 
     fn create_test_search_range() -> SearchRangeParamsJs {
         // 2024年1月1日から1時間
-        SearchRangeParamsJs::new(2024, 1, 1, 3600).unwrap()
+        SearchRangeParamsJs::new(2024, 1, 1, 0, 3600).unwrap()
     }
 
     #[test]

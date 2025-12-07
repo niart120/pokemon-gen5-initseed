@@ -133,7 +133,7 @@ export const IdAdjustmentCard: React.FC = () => {
     if (!isNaN(numValue) && numValue >= 0 && numValue <= 65535) {
       updateDraftParams({ targetTid: numValue });
     } else if (value === '') {
-      updateDraftParams({ targetTid: 0 });
+      updateDraftParams({ targetTid: null });
     }
   };
 
@@ -142,7 +142,7 @@ export const IdAdjustmentCard: React.FC = () => {
     if (!isNaN(numValue) && numValue >= 0 && numValue <= 65535) {
       updateDraftParams({ targetSid: numValue });
     } else if (value === '') {
-      updateDraftParams({ targetSid: 0 });
+      updateDraftParams({ targetSid: null });
     }
   };
 
@@ -322,7 +322,7 @@ export const IdAdjustmentCard: React.FC = () => {
             inputMode="numeric"
             min={0}
             max={65535}
-            value={draftParams.targetTid}
+            value={draftParams.targetTid ?? ''}
             onChange={(e) => handleTidChange(e.target.value)}
             className="h-9"
             disabled={isSearchActive}

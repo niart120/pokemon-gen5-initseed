@@ -387,7 +387,7 @@ mod tests {
 
     fn create_test_search_range() -> SearchRangeParamsJs {
         // 2024年1月1日から1時間
-        SearchRangeParamsJs::new(2024, 1, 1, 3600).unwrap()
+        SearchRangeParamsJs::new(2024, 1, 1, 0, 3600).unwrap()
     }
 
     #[test]
@@ -466,7 +466,7 @@ mod tests {
         let segment = create_test_segment();
         let time_range = create_test_time_range();
         // 10秒だけ検索
-        let search_range = SearchRangeParamsJs::new(2024, 1, 1, 10).unwrap();
+        let search_range = SearchRangeParamsJs::new(2024, 1, 1, 0, 10).unwrap();
         let target_seeds = [0x12345678u32];
 
         let mut iterator = MtSeedBootTimingSearchIterator::new(

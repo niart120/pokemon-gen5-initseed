@@ -172,6 +172,7 @@ pub struct SearchRangeParams {
     pub start_year: u32,
     pub start_month: u32,
     pub start_day: u32,
+    pub start_second_offset: u32,
     pub range_seconds: u32,
 }
 
@@ -181,6 +182,7 @@ impl SearchRangeParams {
         start_year: u32,
         start_month: u32,
         start_day: u32,
+        start_second_offset: u32,
         range_seconds: u32,
     ) -> Result<Self, &'static str> {
         // 日付の検証
@@ -188,10 +190,15 @@ impl SearchRangeParams {
             return Err("Invalid date");
         }
 
+        if start_second_offset >= 24 * 60 * 60 {
+            return Err("start_second_offset must be within a day (0-86399)");
+        }
+
         Ok(SearchRangeParams {
             start_year,
             start_month,
             start_day,
+            start_second_offset,
             range_seconds,
         })
     }
@@ -199,6 +206,7 @@ impl SearchRangeParams {
     /// 開始秒（2000年からの経過秒）を計算
     pub fn start_seconds_since_2000(&self) -> i64 {
         date_to_seconds_since_2000_local(self.start_year, self.start_month, self.start_day).unwrap()
+            + self.start_second_offset as i64
     }
 }
 
@@ -422,6 +430,7 @@ pub struct SearchRangeParamsJs {
     start_year: u32,
     start_month: u32,
     start_day: u32,
+    start_second_offset: u32,
     range_seconds: u32,
 }
 
@@ -432,6 +441,7 @@ impl SearchRangeParamsJs {
         start_year: u32,
         start_month: u32,
         start_day: u32,
+        start_second_offset: u32,
         range_seconds: u32,
     ) -> Result<SearchRangeParamsJs, String> {
         if date_to_seconds_since_2000_local(start_year, start_month, start_day).is_none() {
@@ -440,10 +450,15 @@ impl SearchRangeParamsJs {
             ));
         }
 
+        if start_second_offset >= 24 * 60 * 60 {
+            return Err(format!("start_second_offset must be within a day, got {start_second_offset}"));
+        }
+
         Ok(SearchRangeParamsJs {
             start_year,
             start_month,
             start_day,
+            start_second_offset,
             range_seconds,
         })
     }
@@ -464,6 +479,11 @@ impl SearchRangeParamsJs {
     }
 
     #[wasm_bindgen(getter)]
+    pub fn start_second_offset(&self) -> u32 {
+        self.start_second_offset
+    }
+
+    #[wasm_bindgen(getter)]
     pub fn range_seconds(&self) -> u32 {
         self.range_seconds
     }
@@ -475,12 +495,14 @@ impl SearchRangeParamsJs {
             start_year: self.start_year,
             start_month: self.start_month,
             start_day: self.start_day,
+            start_second_offset: self.start_second_offset,
             range_seconds: self.range_seconds,
         }
     }
 
     pub fn start_seconds_since_2000(&self) -> i64 {
         date_to_seconds_since_2000_local(self.start_year, self.start_month, self.start_day).unwrap()
+            + self.start_second_offset as i64
     }
 }
 
@@ -627,17 +649,18 @@ mod tests {
 
     #[test]
     fn test_search_range_params_js_valid() {
-        let params = SearchRangeParamsJs::new(2024, 1, 15, 86400).unwrap();
+        let params = SearchRangeParamsJs::new(2024, 1, 15, 3600, 86400).unwrap();
         assert_eq!(params.start_year(), 2024);
         assert_eq!(params.start_month(), 1);
         assert_eq!(params.start_day(), 15);
+        assert_eq!(params.start_second_offset(), 3600);
         assert_eq!(params.range_seconds(), 86400);
         assert!(params.start_seconds_since_2000() > 0);
     }
 
     #[test]
     fn test_search_range_params_js_invalid_date() {
-        assert!(SearchRangeParamsJs::new(2024, 13, 1, 86400).is_err());
-        assert!(SearchRangeParamsJs::new(2024, 2, 30, 86400).is_err());
+        assert!(SearchRangeParamsJs::new(2024, 13, 1, 0, 86400).is_err());
+        assert!(SearchRangeParamsJs::new(2024, 2, 30, 0, 86400).is_err());
     }
 }
