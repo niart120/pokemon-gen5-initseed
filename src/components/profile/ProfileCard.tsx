@@ -19,7 +19,6 @@ const ROM_REGIONS: ROMRegion[] = ['JPN', 'KOR', 'USA', 'GER', 'FRA', 'SPA', 'ITA
 const HARDWARE_OPTIONS: { value: Hardware; label: string }[] = [
   { value: 'DS', label: 'DS' },
   { value: 'DS_LITE', label: 'DS Lite' },
-  { value: '3DS', label: '3DS' },
 ];
 
 export function ProfileCard() {
