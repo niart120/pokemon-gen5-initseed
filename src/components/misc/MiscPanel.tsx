@@ -10,6 +10,7 @@ import { ProfileCard } from '@/components/profile/ProfileCard';
 import { MtSeedSearchCard } from './MtSeedSearchCard';
 import { IdAdjustmentCard } from './IdAdjustmentCard';
 import { getResponsiveSizes } from '@/lib/utils/responsive-sizes';
+import { ReportNeedleSearchCard } from './ReportNeedleSearchCard';
 
 export const MiscPanel: React.FC = () => {
   const { isStack, uiScale } = useResponsiveLayout();
@@ -53,7 +54,7 @@ export const MiscPanel: React.FC = () => {
 
         {/* Column 3: その他機能 */}
         <div className="flex flex-col min-h-0 overflow-y-auto">
-          {/* Add other miscellaneous components here */}
+          <ReportNeedleSearchCard />
         </div>
       </div>
     </div>
