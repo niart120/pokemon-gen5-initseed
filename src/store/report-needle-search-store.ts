@@ -10,6 +10,10 @@ import type {
   ReportNeedleSearchMode,
   ReportNeedleSearchResult,
   ReportNeedleSearchStatus,
+  ReportNeedleWorkerRequest,
+  ReportNeedleWorkerResponse,
+  ReportNeedleSearchParams,
+  ReportNeedleProfileParams,
 } from '@/types/report-needle-search';
 import { KEY_INPUT_DEFAULT, normalizeKeyMask } from '@/lib/utils/key-input';
 
@@ -81,6 +85,24 @@ function createDefaultDraft(): ReportNeedleSearchDraft {
   };
 }
 
+// Worker管理用
+let worker: Worker | null = null;
+let currentProfile: DeviceProfile | null = null;
+
+function createWorker(): Worker {
+  return new Worker(
+    new URL('../workers/report-needle-search-worker.ts', import.meta.url),
+    { type: 'module' }
+  );
+}
+
+function terminateWorker(): void {
+  if (worker) {
+    worker.terminate();
+    worker = null;
+  }
+}
+
 interface ReportNeedleSearchState {
   draft: ReportNeedleSearchDraft;
   validationErrors: string[];
@@ -100,6 +122,7 @@ interface ReportNeedleSearchActions {
   setStartupKeyMask: (value: number) => void;
   setInitialSeedHex: (value: string) => void;
   applyProfileRanges: (profile: DeviceProfile) => void;
+  setCurrentProfile: (profile: DeviceProfile) => void;
   validateDraft: () => boolean;
   startSearch: () => Promise<void>;
   pauseSearch: () => void;
@@ -229,6 +252,7 @@ export const useReportNeedleSearchStore = create<ReportNeedleSearchStore>((set, 
   },
 
   applyProfileRanges: (profile) => {
+    currentProfile = profile;
     set((state) => ({
       draft: {
         ...state.draft,
@@ -237,6 +261,10 @@ export const useReportNeedleSearchStore = create<ReportNeedleSearchStore>((set, 
       },
       validationErrors: [],
     }));
+  },
+
+  setCurrentProfile: (profile) => {
+    currentProfile = profile;
   },
 
   validateDraft: () => {
@@ -300,32 +328,108 @@ export const useReportNeedleSearchStore = create<ReportNeedleSearchStore>((set, 
     const isValid = get().validateDraft();
     if (!isValid) return;
 
-    set({ status: 'running', results: [], errorMessage: null });
+    set({ status: 'starting', results: [], errorMessage: null });
 
-    // TODO: 検索エンジン接続後に置き換える
-    set({ status: 'completed' });
+    // 既存のWorkerを終了
+    terminateWorker();
+
+    // 新しいWorkerを作成
+    worker = createWorker();
+
+    const { draft } = get();
+
+    // Workerメッセージハンドラ
+    worker.onmessage = (ev: MessageEvent<ReportNeedleWorkerResponse>) => {
+      const msg = ev.data;
+      switch (msg.type) {
+        case 'READY':
+          // Workerが準備完了したら検索開始
+          if (worker) {
+            const params: ReportNeedleSearchParams = {
+              mode: draft.mode,
+              needleValue: draft.needleValue,
+              timer0Range: draft.timer0Range,
+              vcountRange: draft.vcountRange,
+              advanceRange: draft.advanceRange,
+              seedHex: draft.mode === 'initial-seed' ? draft.initialSeed.seedHex : undefined,
+              timestampIso: draft.mode === 'startup' ? draft.startup.timestampIso : undefined,
+              keyMask: draft.mode === 'startup' ? draft.startup.keyMask : undefined,
+              profile: draft.mode === 'startup' && currentProfile
+                ? {
+                    romVersion: currentProfile.romVersion,
+                    romRegion: currentProfile.romRegion,
+                    hardware: currentProfile.hardware,
+                    macAddress: [...currentProfile.macAddress],
+                  } as ReportNeedleProfileParams
+                : undefined,
+            };
+            const request: ReportNeedleWorkerRequest = { type: 'START', params };
+            worker.postMessage(request);
+            set({ status: 'running' });
+          }
+          break;
+        case 'RESULTS':
+          set((state) => ({
+            results: [...state.results, ...msg.results],
+          }));
+          break;
+        case 'COMPLETE':
+          set({ status: 'completed' });
+          terminateWorker();
+          break;
+        case 'ERROR':
+          set({ status: 'error', errorMessage: msg.message });
+          terminateWorker();
+          break;
+        case 'PAUSED':
+          set({ status: 'paused' });
+          break;
+        case 'RESUMED':
+          set({ status: 'running' });
+          break;
+        default:
+          break;
+      }
+    };
+
+    worker.onerror = (ev) => {
+      set({ status: 'error', errorMessage: ev.message || 'Worker error' });
+      terminateWorker();
+    };
   },
 
   pauseSearch: () => {
     const status = get().status;
     if (status !== 'running') return;
-    set({ status: 'paused' });
+    if (worker) {
+      const request: ReportNeedleWorkerRequest = { type: 'PAUSE' };
+      worker.postMessage(request);
+    }
   },
 
   resumeSearch: () => {
     const status = get().status;
     if (status !== 'paused') return;
-    set({ status: 'running' });
+    if (worker) {
+      const request: ReportNeedleWorkerRequest = { type: 'RESUME' };
+      worker.postMessage(request);
+    }
   },
 
   stopSearch: () => {
     const status = get().status;
     if (status !== 'running' && status !== 'paused') return;
     set({ status: 'stopping' });
+    if (worker) {
+      const request: ReportNeedleWorkerRequest = { type: 'STOP' };
+      worker.postMessage(request);
+    }
+    terminateWorker();
     set({ status: 'idle' });
   },
 
   reset: () => {
+    terminateWorker();
     set((state) => ({
       draft: {
         ...createDefaultDraft(),

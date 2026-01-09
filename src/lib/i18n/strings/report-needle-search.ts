@@ -98,16 +98,26 @@ export const reportNeedleResultsSearching: LocaleText = {
   en: 'Searching...',
 };
 
-export const reportNeedleTableHeaders: LocaleMap<{ position: string; timer0: string; vcount: string }> = {
+export const reportNeedleTableHeaders: LocaleMap<{
+  position: string;
+  timer0: string;
+  vcount: string;
+  initialSeed: string;
+  currentSeed: string;
+}> = {
   ja: {
     position: '消費位置',
     timer0: 'Timer0',
     vcount: 'VCount',
+    initialSeed: '初期Seed',
+    currentSeed: '現在Seed',
   },
   en: {
     position: 'Advance',
     timer0: 'Timer0',
     vcount: 'VCount',
+    initialSeed: 'Initial Seed',
+    currentSeed: 'Current Seed',
   },
 };
 

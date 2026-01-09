@@ -171,7 +171,9 @@ export const ReportNeedleSearchCard: React.FC = () => {
 
   const handleCopyResults = () => {
     if (!results.length) return;
-    const lines = results.map((r) => `${r.consumptionIndex}\t${formatTimer0Hex(r.timer0)}\t${formatVCountHex(r.vcount)}`);
+    const lines = results.map((r) =>
+      `${r.consumptionIndex}\t${formatTimer0Hex(r.timer0)}\t${formatVCountHex(r.vcount)}\t${r.initialSeed}\t${r.currentSeed}`
+    );
     navigator.clipboard.writeText(lines.join('\n'));
   };
 
@@ -196,7 +198,7 @@ export const ReportNeedleSearchCard: React.FC = () => {
 
     return (
       <div className="overflow-auto max-h-64">
-        <Table className="min-w-[320px] text-xs">
+        <Table className="min-w-[520px] text-xs">
           <TableHeader className="sticky top-0 bg-muted text-xs">
             <TableRow className="text-left border-0">
               <TableHead scope="col" className="px-2 py-1 font-medium select-none">
@@ -208,11 +210,17 @@ export const ReportNeedleSearchCard: React.FC = () => {
               <TableHead scope="col" className="px-2 py-1 font-medium select-none">
                 {headers.vcount}
               </TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                {headers.initialSeed}
+              </TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                {headers.currentSeed}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {results.map((result) => (
-              <TableRow key={`${result.consumptionIndex}-${result.timer0}-${result.vcount}`} className="border-0 odd:bg-background even:bg-muted/30">
+            {results.map((result, idx) => (
+              <TableRow key={`${result.consumptionIndex}-${result.timer0}-${result.vcount}-${idx}`} className="border-0 odd:bg-background even:bg-muted/30">
                 <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                   {result.consumptionIndex}
                 </TableCell>
@@ -221,6 +229,12 @@ export const ReportNeedleSearchCard: React.FC = () => {
                 </TableCell>
                 <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
                   {formatVCountHex(result.vcount)}
+                </TableCell>
+                <TableCell className="px-2 py-1 font-mono whitespace-nowrap text-[10px]">
+                  {result.initialSeed}
+                </TableCell>
+                <TableCell className="px-2 py-1 font-mono whitespace-nowrap text-[10px]">
+                  {result.currentSeed}
                 </TableCell>
               </TableRow>
             ))}
