@@ -147,6 +147,7 @@ async function handleStart(params: ReportNeedleSearchParams): Promise<void> {
 
 /**
  * LCG Seedモードでの検索
+ * 単一のLCG Seedに対して針列マッチングを実行する
  */
 async function searchWithInitialSeed(
   params: ReportNeedleSearchParams,
@@ -161,31 +162,24 @@ async function searchWithInitialSeed(
     return;
   }
 
-  // Timer0/VCountの範囲をループ
-  for (let timer0 = params.timer0Range.min; timer0 <= params.timer0Range.max; timer0++) {
-    for (let vcount = params.vcountRange.min; vcount <= params.vcountRange.max; vcount++) {
-      await waitWhilePaused();
-      if (state.stopRequested) return;
+  await waitWhilePaused();
+  if (state.stopRequested) return;
 
-      const matches = findNeedleMatches(
-        baseSeed,
-        needles,
-        params.advanceRange.start,
-        params.advanceRange.end
-      );
+  const matches = findNeedleMatches(
+    baseSeed,
+    needles,
+    params.advanceRange.start,
+    params.advanceRange.end
+  );
 
-      for (const match of matches) {
-        const result: ReportNeedleSearchResult = {
-          consumptionIndex: match.consumptionIndex,
-          timer0,
-          vcount,
-          initialSeed: match.initialSeed,
-          currentSeed: match.currentSeed,
-        };
-        allResults.push(result);
-        post({ type: 'RESULTS', results: [result] });
-      }
-    }
+  for (const match of matches) {
+    const result: ReportNeedleSearchResult = {
+      consumptionIndex: match.consumptionIndex,
+      initialSeed: match.initialSeed,
+      currentSeed: match.currentSeed,
+    };
+    allResults.push(result);
+    post({ type: 'RESULTS', results: [result] });
   }
 }
 

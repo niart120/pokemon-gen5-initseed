@@ -38,7 +38,7 @@ import {
   reportNeedleKeyLabels,
   reportNeedleStartupPlaceholders,
 } from '@/lib/i18n/strings/report-needle-search';
-import { formatTimer0Hex, formatVCountHex } from '@/lib/generation/result-formatters';
+import { needleDirectionArrow } from '@/lib/utils/format-display';
 import { useReportNeedleSearchStore } from '@/store/report-needle-search-store';
 import { useAppStore } from '@/store/app-store';
 import { formatKeyInputForDisplay, keyMaskToNames, toggleKeyInMask, KEY_INPUT_DEFAULT, type KeyName } from '@/lib/utils/key-input';
@@ -72,7 +72,6 @@ export const ReportNeedleSearchCard: React.FC = () => {
     setMode,
     updateNeedleValue,
     appendNeedleDigit,
-    updateRange,
     updateAdvanceRange,
     setStartupDate,
     setStartupTime,
@@ -325,8 +324,6 @@ export const ReportNeedleSearchCard: React.FC = () => {
         )}
         <div className="text-xs text-muted-foreground ml-auto">
           {reportNeedleStatusPrefix[locale]}: {statusDisplay}
-          {' / '}
-          {getReportNeedleModeLabel(draft.mode, locale)}
         </div>
       </div>
 
@@ -345,114 +342,6 @@ export const ReportNeedleSearchCard: React.FC = () => {
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-xs">{reportNeedleParamLabels.needleValue[locale]}</Label>
-          <span className="text-[11px] text-muted-foreground">{reportNeedleParamLabels.needleHelper[locale]}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Input
-            value={draft.needleValue}
-            onChange={(e) => updateNeedleValue(e.target.value)}
-            placeholder="0425"
-            className="font-mono h-9"
-            disabled={isSearchActive}
-          />
-          <div className="grid grid-cols-4 gap-1">
-            {[0, 1, 2, 3, 4, 5, 6, 7].map((digit) => (
-              <Button
-                key={digit}
-                type="button"
-                size="icon"
-                variant="secondary"
-                className="h-8 w-8"
-                disabled={isSearchActive}
-                onClick={() => appendNeedleDigit(String(digit))}
-              >
-                {digit}
-              </Button>
-            ))}
-          </div>
-        </div>
-        <div className="text-[11px] text-muted-foreground font-mono break-all">
-          {combinedNeedle || '--'}
-        </div>
-      </div>
-
-      <Separator />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs">{reportNeedleParamLabels.timer0Range[locale]}</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              inputMode="numeric"
-              value={draft.timer0Range.min}
-              onChange={(e) => updateRange('timer0Range', 'min', parseInt(e.target.value, 10) || 0)}
-              disabled={isSearchActive}
-              className="h-8"
-            />
-            <span className="text-xs text-muted-foreground">~</span>
-            <Input
-              type="number"
-              inputMode="numeric"
-              value={draft.timer0Range.max}
-              onChange={(e) => updateRange('timer0Range', 'max', parseInt(e.target.value, 10) || 0)}
-              disabled={isSearchActive}
-              className="h-8"
-            />
-          </div>
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">{reportNeedleParamLabels.vcountRange[locale]}</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              inputMode="numeric"
-              value={draft.vcountRange.min}
-              onChange={(e) => updateRange('vcountRange', 'min', parseInt(e.target.value, 10) || 0)}
-              disabled={isSearchActive}
-              className="h-8"
-            />
-            <span className="text-xs text-muted-foreground">~</span>
-            <Input
-              type="number"
-              inputMode="numeric"
-              value={draft.vcountRange.max}
-              onChange={(e) => updateRange('vcountRange', 'max', parseInt(e.target.value, 10) || 0)}
-              disabled={isSearchActive}
-              className="h-8"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-1">
-        <Label className="text-xs">{reportNeedleParamLabels.advanceRange[locale]}</Label>
-        <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            inputMode="numeric"
-            value={draft.advanceRange.start}
-            onChange={(e) => updateAdvanceRange('start', parseInt(e.target.value, 10) || 0)}
-            disabled={isSearchActive}
-            className="h-9"
-          />
-          <span className="text-xs text-muted-foreground">~</span>
-          <Input
-            type="number"
-            inputMode="numeric"
-            value={draft.advanceRange.end}
-            onChange={(e) => updateAdvanceRange('end', parseInt(e.target.value, 10) || 0)}
-            disabled={isSearchActive}
-            className="h-9"
-          />
-        </div>
-      </div>
-
-      <Separator />
 
       {draft.mode === 'startup' ? (
         <div className="space-y-3">
@@ -531,15 +420,70 @@ export const ReportNeedleSearchCard: React.FC = () => {
         </div>
       )}
 
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">{reportNeedleParamLabels.needleValue[locale]}</Label>
+          <span className="text-[11px] text-muted-foreground">{reportNeedleParamLabels.needleHelper[locale]}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Input
+            value={draft.needleValue}
+            onChange={(e) => updateNeedleValue(e.target.value)}
+            placeholder="0425"
+            className="font-mono h-9"
+            disabled={isSearchActive}
+          />
+          <div className="grid grid-cols-4 gap-1">
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((digit) => (
+              <Button
+                key={digit}
+                type="button"
+                size="icon"
+                variant="secondary"
+                className="h-8 w-8 font-arrows"
+                disabled={isSearchActive}
+                onClick={() => appendNeedleDigit(String(digit))}
+                title={String(digit)}
+              >
+                {needleDirectionArrow(digit)}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div className="text-[11px] text-muted-foreground font-mono break-all">
+          {combinedNeedle || '--'}
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-1">
+        <Label className="text-xs">{reportNeedleParamLabels.advanceRange[locale]}</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            inputMode="numeric"
+            value={draft.advanceRange.start}
+            onChange={(e) => updateAdvanceRange('start', parseInt(e.target.value, 10) || 0)}
+            disabled={isSearchActive}
+            className="h-9"
+          />
+          <span className="text-xs text-muted-foreground">~</span>
+          <Input
+            type="number"
+            inputMode="numeric"
+            value={draft.advanceRange.end}
+            onChange={(e) => updateAdvanceRange('end', parseInt(e.target.value, 10) || 0)}
+            disabled={isSearchActive}
+            className="h-9"
+          />
+        </div>
+      </div>
+
       <Separator />
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-xs">{reportNeedleResultsLabel[locale]} ({results.length})</Label>
-          <div className="text-[11px] text-muted-foreground font-mono">
-            {combinedNeedle || '--'}
-          </div>
-        </div>
+        <Label className="text-xs">{reportNeedleResultsLabel[locale]} ({results.length})</Label>
         {renderResultsTable()}
       </div>
     </PanelCard>

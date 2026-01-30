@@ -348,8 +348,9 @@ export const useReportNeedleSearchStore = create<ReportNeedleSearchStore>((set, 
             const params: ReportNeedleSearchParams = {
               mode: draft.mode,
               needleValue: draft.needleValue,
-              timer0Range: draft.timer0Range,
-              vcountRange: draft.vcountRange,
+              // timer0Range/vcountRangeはBoot-Timingモードでのみ使用
+              timer0Range: draft.mode === 'startup' ? draft.timer0Range : { min: 0, max: 0 },
+              vcountRange: draft.mode === 'startup' ? draft.vcountRange : { min: 0, max: 0 },
               advanceRange: draft.advanceRange,
               seedHex: draft.mode === 'initial-seed' ? draft.initialSeed.seedHex : undefined,
               timestampIso: draft.mode === 'startup' ? draft.startup.timestampIso : undefined,
