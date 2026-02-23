@@ -5,6 +5,7 @@
 > 機能・UI・内部構成を全面的に見直した新バージョンを公開しています。
 >
 > - アプリ: [**5genSearch-web**](https://niart120.github.io/5genSearch-web/)
+> - リポジトリ: [**niart120/5genSearch-web**](https://github.com/niart120/5genSearch-web)
 > - 記事: [**第五世代乱数調整webアプリを再構築した話**](https://hackmd.io/@niart/rJ3NkfdObg)
 
 第5世代（ブラック・ホワイト/ブラック2・ホワイト2）向けの初期 Seed 探索と結果検証を行う Web アプリケーションです。Rust + WebAssembly による SIMD 最適化検索と、React 製 UI による検索条件管理・結果可視化を提供します。
