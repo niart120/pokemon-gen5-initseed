@@ -8,31 +8,48 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import {
+  deprecationNoticeTitle,
+  deprecationNoticeBody,
+  deprecationNoticeNewVersion,
+  deprecationNoticeGuide,
+  deprecationNoticeAppLabel,
+  deprecationNoticeArticleLabel,
+  deprecationNoticeArticleTitle,
+  deprecationNoticeClose,
+} from '@/lib/i18n/strings/deprecation-notice';
 
 /**
  * アプリが非推奨であることをユーザに通知するダイアログ。
- * 初回訪問時に自動表示し、新バージョンへの誘導を行う。
+ * ページ訪問時に自動表示し、新バージョンへの誘導を行う。
  */
 export function DeprecationNoticeDialog() {
   const [open, setOpen] = React.useState(true);
+  const locale = useLocale();
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>メンテナンス終了のお知らせ</AlertDialogTitle>
+          <AlertDialogTitle>
+            {resolveLocaleValue(deprecationNoticeTitle, locale)}
+          </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-3 text-sm text-muted-foreground">
               <p>
-                本アプリは現在メンテナンスされていません。
+                {resolveLocaleValue(deprecationNoticeBody, locale)}
               </p>
               <p>
-                機能・UI・内部構成を全面的に見直した新バージョンのアプリを公開しています。
-                新規利用の方は以下をご覧ください。
+                {resolveLocaleValue(deprecationNoticeNewVersion, locale)}
+              </p>
+              <p>
+                {resolveLocaleValue(deprecationNoticeGuide, locale)}
               </p>
               <ul className="list-disc list-inside space-y-1">
                 <li>
-                  アプリ:{' '}
+                  {resolveLocaleValue(deprecationNoticeAppLabel, locale)}{' '}
                   <a
                     href="https://niart120.github.io/5genSearch-web/"
                     target="_blank"
@@ -43,14 +60,14 @@ export function DeprecationNoticeDialog() {
                   </a>
                 </li>
                 <li>
-                  記事:{' '}
+                  {resolveLocaleValue(deprecationNoticeArticleLabel, locale)}{' '}
                   <a
                     href="https://hackmd.io/@niart/rJ3NkfdObg"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-semibold text-primary underline underline-offset-4 hover:text-primary/80"
                   >
-                    第五世代乱数調整webアプリを再構築した話
+                    {resolveLocaleValue(deprecationNoticeArticleTitle, locale)}
                   </a>
                 </li>
               </ul>
@@ -59,7 +76,7 @@ export function DeprecationNoticeDialog() {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogAction onClick={() => setOpen(false)}>
-            閉じる
+            {resolveLocaleValue(deprecationNoticeClose, locale)}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
