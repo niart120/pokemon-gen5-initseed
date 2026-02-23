@@ -1,78 +1,32 @@
 import { describe, it, expect } from 'vitest';
 import { SeedCalculator } from '@/lib/core/seed-calculator';
 import { SHA1 } from '@/lib/core/sha1';
-import { buildSearchContext } from '@/lib/webgpu/seed-search/message-encoder';
+import { prepareSearchJob } from '@/lib/webgpu/seed-search/prepare-search-job';
+import { getDateFromTimePlan } from '@/lib/search/time/time-plan';
+import type { SeedSearchJobSegment } from '@/lib/webgpu/seed-search/types';
 import type { SearchConditions } from '@/types/search';
-import type { WebGpuSegment } from '@/lib/webgpu/seed-search/types';
+import { createTestSeedSearchJobLimits } from './seed-search-job-limit-helpers';
 
-function isLeapYear(year: number): boolean {
-  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+const TEST_LIMITS = createTestSeedSearchJobLimits();
+
+interface SimulatedIndices {
+  timer0: number;
+  vcount: number;
+  timeCombinationIndex: number;
+  datetime: Date;
 }
 
-function monthDayFromDayOfYear(dayOfYear: number, leap: boolean): { month: number; day: number } {
-  const monthLengths = leap
-    ? [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    : [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  let remaining = dayOfYear;
-  for (let index = 0; index < monthLengths.length; index += 1) {
-    const length = monthLengths[index]!;
-    if (remaining <= length) {
-      return { month: index + 1, day: remaining };
-    }
-    remaining -= length;
-  }
-  return { month: 12, day: 31 };
-}
+function simulateGpuIndices(
+  segment: SeedSearchJobSegment,
+  messageIndex: number,
+  timePlanStart: (timeIndex: number) => Date
+): SimulatedIndices {
+  const timeCombinationIndex = segment.baseSecondOffset + messageIndex;
+  const timer0 = segment.timer0;
+  const vcount = segment.vcount;
+  const datetime = timePlanStart(timeCombinationIndex);
 
-function simulateGpuIndices(segment: WebGpuSegment, messageIndex: number) {
-  const safeRangeSeconds = Math.max(segment.rangeSeconds, 1);
-  const safeVcountCount = Math.max(segment.config.vcountCount, 1);
-  const messagesPerVcount = safeRangeSeconds;
-  const messagesPerTimer0 = messagesPerVcount * safeVcountCount;
-
-  const timer0Index = Math.floor(messageIndex / messagesPerTimer0);
-  const remainderAfterTimer0 = messageIndex - timer0Index * messagesPerTimer0;
-  const vcountIndex = Math.floor(remainderAfterTimer0 / messagesPerVcount);
-  const secondOffset = remainderAfterTimer0 - vcountIndex * messagesPerVcount;
-
-  const timer0 = segment.config.timer0Min + timer0Index;
-  const vcount = segment.config.vcountMin + vcountIndex;
-
-  const totalSeconds = segment.config.startSecondOfDay + secondOffset;
-  const dayOffset = Math.floor(totalSeconds / 86400);
-  const secondsOfDay = totalSeconds - dayOffset * 86400;
-
-  const hour = Math.floor(secondsOfDay / 3600);
-  const minute = Math.floor((secondsOfDay % 3600) / 60);
-  const second = secondsOfDay % 60;
-
-  let year = segment.config.startYear;
-  let dayOfYear = segment.config.startDayOfYear + dayOffset;
-  while (true) {
-    const yearLength = isLeapYear(year) ? 366 : 365;
-    if (dayOfYear <= yearLength) {
-      break;
-    }
-    dayOfYear -= yearLength;
-    year += 1;
-  }
-
-  const leap = isLeapYear(year);
-  const { month, day } = monthDayFromDayOfYear(dayOfYear, leap);
-  const dayOfWeek = (segment.config.startDayOfWeek + dayOffset) % 7;
-
-  return {
-    timer0,
-    vcount,
-    secondOffset,
-    year,
-    month,
-    day,
-    hour,
-    minute,
-    second,
-    dayOfWeek,
-  };
+  return { timer0, vcount, timeCombinationIndex, datetime };
 }
 
 function swap32(value: number): number {
@@ -123,27 +77,39 @@ function toBcd(value: number): number {
   return ((tens << 4) | ones) >>> 0;
 }
 
+function decodeSegmentConstants(segment: SeedSearchJobSegment) {
+  const words = segment.getUniformWords();
+  return {
+    macLower: words[1] >>> 0,
+    data7Swapped: words[2] >>> 0,
+    keyInputSwapped: words[3] >>> 0,
+    nazoSwapped: words.slice(14, 19),
+  };
+}
+
 function buildGpuMessage(
-  segment: WebGpuSegment,
-  simulated: ReturnType<typeof simulateGpuIndices>,
+  segment: SeedSearchJobSegment,
+  simulated: SimulatedIndices,
   hardware: SearchConditions['hardware']
 ): number[] {
-  const dateYear = simulated.year % 100;
+  const config = decodeSegmentConstants(segment);
+  const datetime = simulated.datetime;
+  const dateYear = datetime.getFullYear() % 100;
   const dateWord =
     (toBcd(dateYear) << 24) |
-    (toBcd(simulated.month) << 16) |
-    (toBcd(simulated.day) << 8) |
-    toBcd(simulated.dayOfWeek);
+    (toBcd(datetime.getMonth() + 1) << 16) |
+    (toBcd(datetime.getDate()) << 8) |
+    toBcd(datetime.getDay());
 
   const isPmHardware = hardware === 'DS' || hardware === 'DS_LITE';
-  const pmFlag = isPmHardware && simulated.hour >= 12 ? 1 : 0;
+  const pmFlag = isPmHardware && datetime.getHours() >= 12 ? 1 : 0;
   const timeWord =
     (pmFlag << 30) |
-    (toBcd(simulated.hour) << 24) |
-    (toBcd(simulated.minute) << 16) |
-    (toBcd(simulated.second) << 8);
+    (toBcd(datetime.getHours()) << 24) |
+    (toBcd(datetime.getMinutes()) << 16) |
+    (toBcd(datetime.getSeconds()) << 8);
 
-  const nazo = segment.config.nazoSwapped;
+  const nazo = config.nazoSwapped;
 
   return [
     nazo[0]!,
@@ -152,13 +118,13 @@ function buildGpuMessage(
     nazo[3]!,
     nazo[4]!,
     swap32(((simulated.vcount << 16) | simulated.timer0) >>> 0),
-    segment.config.macLower >>> 0,
-    segment.config.data7Swapped >>> 0,
+    config.macLower >>> 0,
+    config.data7Swapped >>> 0,
     dateWord >>> 0,
     timeWord >>> 0,
     0,
     0,
-    segment.config.keyInputSwapped >>> 0,
+    config.keyInputSwapped >>> 0,
     0x80000000,
     0,
     0x000001a0,
@@ -184,55 +150,49 @@ describe('webgpu seed search message mapping', () => {
       endMonth: 6,
       startDay: 12,
       endDay: 12,
-      startHour: 10,
-      endHour: 10,
-      startMinute: 15,
-      endMinute: 15,
-      startSecond: 0,
-      endSecond: 4,
+    },
+    timeRange: {
+      hour: { start: 10, end: 10 },
+      minute: { start: 15, end: 15 },
+      second: { start: 0, end: 4 },
     },
     keyInput: 0x0000,
     macAddress: [0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e],
   };
 
-  const context = buildSearchContext(conditions);
+  const job = prepareSearchJob(conditions, undefined, { limits: TEST_LIMITS });
+  const primarySegment = job.segments[0]!;
+  const timePlanResolver = (timeIndex: number) => getDateFromTimePlan(job.timePlan, timeIndex);
 
   it('matches CPU enumeration order', () => {
-    const segment = context.segments[0];
-    const expectedOrder: Array<{ timer0: number; vcount: number; secondOffset: number }> = [];
+    const expectedOrder = Array.from({ length: primarySegment.messageCount }, (_, index) => ({
+      timer0: primarySegment.timer0,
+      vcount: primarySegment.vcount,
+      timeIndex: primarySegment.baseSecondOffset + index,
+    }));
 
-    for (let timer0 = segment.timer0Min; timer0 <= segment.timer0Max; timer0 += 1) {
-      for (let secondOffset = 0; secondOffset < segment.rangeSeconds; secondOffset += 1) {
-        expectedOrder.push({
-          timer0,
-          vcount: segment.vcount,
-          secondOffset,
-        });
-      }
-    }
-
-    for (let index = 0; index < segment.totalMessages; index += 1) {
+    for (let index = 0; index < primarySegment.messageCount; index += 1) {
       const expected = expectedOrder[index]!;
-      const simulated = simulateGpuIndices(segment, index);
+      const simulated = simulateGpuIndices(primarySegment, index, timePlanResolver);
 
       expect(simulated.timer0).toBe(expected.timer0);
       expect(simulated.vcount).toBe(expected.vcount);
-      expect(simulated.secondOffset).toBe(expected.secondOffset);
+      expect(simulated.timeCombinationIndex).toBe(expected.timeIndex);
 
-      const expectedDatetime = new Date(context.startTimestampMs + simulated.secondOffset * 1000);
-      expect(expectedDatetime.getFullYear()).toBe(simulated.year);
-      expect(expectedDatetime.getMonth() + 1).toBe(simulated.month);
-      expect(expectedDatetime.getDate()).toBe(simulated.day);
-      expect(expectedDatetime.getHours()).toBe(simulated.hour);
-      expect(expectedDatetime.getMinutes()).toBe(simulated.minute);
-      expect(expectedDatetime.getSeconds()).toBe(simulated.second);
-      expect(expectedDatetime.getDay()).toBe(simulated.dayOfWeek);
+      const expectedDatetime = timePlanResolver(expected.timeIndex);
+      expect(simulated.datetime.getTime()).toBe(expectedDatetime.getTime());
 
-  const message = calculator.generateMessage(conditions, simulated.timer0, simulated.vcount, expectedDatetime, segment.keyCode);
-  const gpuMessage = buildGpuMessage(segment, simulated, conditions.hardware);
-  expect(gpuMessage).toEqual(message);
-  const hash = sha1.calculateHash(message);
-  const seedCpu = calculator.calculateSeed(message).seed;
+      const message = calculator.generateMessage(
+        conditions,
+        simulated.timer0,
+        simulated.vcount,
+        expectedDatetime,
+        primarySegment.keyCode
+      );
+      const gpuMessage = buildGpuMessage(primarySegment, simulated, conditions.hardware);
+      expect(gpuMessage).toEqual(message);
+      const hash = sha1.calculateHash(message);
+      const seedCpu = calculator.calculateSeed(message).seed;
       const seedGpu = computeGpuSeed(hash.h0, hash.h1);
       expect(seedGpu).toBe(seedCpu);
     }
@@ -248,20 +208,21 @@ describe('webgpu seed search message mapping', () => {
         endMonth: 6,
         startDay: 12,
         endDay: 13,
-        startHour: 23,
-        endHour: 0,
-        startMinute: 59,
-        endMinute: 0,
-        startSecond: 58,
-        endSecond: 2,
+      },
+      timeRange: {
+        hour: { start: 23, end: 23 },
+        minute: { start: 59, end: 59 },
+        second: { start: 58, end: 59 },
       },
     };
 
-    const rolloverContext = buildSearchContext(rolloverConditions);
-    const rolloverSegment = rolloverContext.segments[0];
-    for (let index = 0; index < rolloverSegment.totalMessages; index += 1) {
-      const simulated = simulateGpuIndices(rolloverSegment, index);
-      const expectedDatetime = new Date(rolloverContext.startTimestampMs + simulated.secondOffset * 1000);
+    const rolloverJob = prepareSearchJob(rolloverConditions, undefined, { limits: TEST_LIMITS });
+    const rolloverSegment = rolloverJob.segments[0]!;
+    const resolveRolloverTime = (timeIndex: number) => getDateFromTimePlan(rolloverJob.timePlan, timeIndex);
+
+    for (let index = 0; index < rolloverSegment.messageCount; index += 1) {
+      const simulated = simulateGpuIndices(rolloverSegment, index, resolveRolloverTime);
+      const expectedDatetime = simulated.datetime;
       const message = calculator.generateMessage(
         rolloverConditions,
         simulated.timer0,

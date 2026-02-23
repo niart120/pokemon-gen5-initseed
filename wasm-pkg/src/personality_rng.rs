@@ -1,6 +1,9 @@
 /// PersonalityRNG - BW/BW2仕様64bit線形合同法乱数生成器
-/// ポケモンBW/BW2の性格・能力・遭遇判定に使用される乱数エンジン
+/// ポケモンBW/BW2の性格・能力・エンカウント判定に使用される乱数エンジン
 use wasm_bindgen::prelude::*;
+
+const LCG_MULTIPLIER: u64 = 0x5D588B656C078965;
+const LCG_INCREMENT: u64 = 0x269EC3;
 
 /// PersonalityRNG構造体
 /// BW仕様64bit線形合同法: S[n+1] = S[n] * 0x5D588B656C078965 + 0x269EC3
@@ -15,7 +18,7 @@ impl PersonalityRNG {
     /// 新しいPersonalityRNGインスタンスを作成
     ///
     /// # Arguments
-    /// * `seed` - 初期シード値（64bit）
+    /// * `seed` - 初期Seed値（64bit）
     #[wasm_bindgen(constructor)]
     pub fn new(seed: u64) -> PersonalityRNG {
         PersonalityRNG { seed }
@@ -30,8 +33,8 @@ impl PersonalityRNG {
         // BW仕様線形合同法
         self.seed = self
             .seed
-            .wrapping_mul(0x5D588B656C078965)
-            .wrapping_add(0x269EC3);
+            .wrapping_mul(LCG_MULTIPLIER)
+            .wrapping_add(LCG_INCREMENT);
         (self.seed >> 32) as u32
     }
 
@@ -43,24 +46,24 @@ impl PersonalityRNG {
     pub fn next_u64(&mut self) -> u64 {
         self.seed = self
             .seed
-            .wrapping_mul(0x5D588B656C078965)
-            .wrapping_add(0x269EC3);
+            .wrapping_mul(LCG_MULTIPLIER)
+            .wrapping_add(LCG_INCREMENT);
         self.seed
     }
 
-    /// 現在のシード値を取得
+    /// 現在のSeed値を取得
     ///
     /// # Returns
-    /// 現在の内部シード値
+    /// 現在の内部Seed値
     #[wasm_bindgen(getter)]
     pub fn current_seed(&self) -> u64 {
         self.seed
     }
 
-    /// シード値を設定
+    /// Seed値を設定
     ///
     /// # Arguments
-    /// * `new_seed` - 新しいシード値
+    /// * `new_seed` - 新しいSeed値
     #[wasm_bindgen(setter)]
     pub fn set_seed(&mut self, new_seed: u64) {
         self.seed = new_seed;
@@ -76,10 +79,10 @@ impl PersonalityRNG {
         }
     }
 
-    /// シードをリセット
+    /// Seedをリセット
     ///
     /// # Arguments
-    /// * `initial_seed` - リセット後のシード値
+    /// * `initial_seed` - リセット後のSeed値
     pub fn reset(&mut self, initial_seed: u64) {
         self.seed = initial_seed;
     }
@@ -87,19 +90,19 @@ impl PersonalityRNG {
     /// 0x0からの進行度を計算
     ///
     /// # Arguments
-    /// * `seed` - 計算対象のシード値
+    /// * `seed` - 計算対象のSeed値
     ///
     /// # Returns
     /// 0x0からの進行度
     pub fn get_index(seed: u64) -> u64 {
-        Self::calc_index(seed, 0x5D588B656C078965, 0x269EC3, 64)
+        Self::calc_index(seed, LCG_MULTIPLIER, LCG_INCREMENT, 64)
     }
 
-    /// 2つのシード間の距離を計算
+    /// 2つのSeed間の距離を計算
     ///
     /// # Arguments
-    /// * `from_seed` - 開始シード
-    /// * `to_seed` - 終了シード
+    /// * `from_seed` - 開始Seed
+    /// * `to_seed` - 終了Seed
     ///
     /// # Returns
     /// from_seedからto_seedまでの距離
@@ -107,13 +110,13 @@ impl PersonalityRNG {
         Self::get_index(to_seed) - Self::get_index(from_seed)
     }
 
-    /// 指定シードから現在のシードまでの距離
+    /// 指定Seedから現在のSeedまでの距離
     ///
     /// # Arguments
-    /// * `source_seed` - 開始シード
+    /// * `source_seed` - 開始Seed
     ///
     /// # Returns
-    /// source_seedから現在のシードまでの距離
+    /// source_seedから現在のSeedまでの距離
     pub fn distance_from(&self, source_seed: u64) -> u64 {
         Self::distance_between(source_seed, self.seed)
     }
@@ -121,7 +124,7 @@ impl PersonalityRNG {
     /// C#実装の移植：再帰的インデックス計算
     ///
     /// # Arguments
-    /// * `seed` - 計算対象のシード
+    /// * `seed` - 計算対象のSeed
     /// * `a` - 乗算定数
     /// * `b` - 加算定数
     /// * `order` - 再帰深度
@@ -153,7 +156,7 @@ impl PersonalityRNG {
 }
 
 impl PersonalityRNG {
-    /// 内部使用用：現在のシード値を取得（impl block内での使用）
+    /// 内部使用用：現在のSeed値を取得（impl block内での使用）
     pub fn seed(&self) -> u64 {
         self.seed
     }
@@ -174,36 +177,71 @@ impl PersonalityRNG {
         results
     }
 
-    /// 内部使用用：シード値から指定ステップ後の値を計算
+    /// 指定した分率 (n * rand >> 32) を計算するユーティリティ。
+    /// 主にBW系の「n分率」計算で使用する。
+    pub fn roll_fraction(&mut self, numerator: u32) -> u32 {
+        debug_assert!(numerator > 0, "fraction numerator must be positive");
+        (((self.next() as u64).wrapping_mul(numerator as u64)) >> 32) as u32
+    }
+
+    /// 内部使用用：Seed値から指定ステップ後の値を計算
     /// ジャンプテーブルを使用した高速計算（将来的な最適化用）
     ///
     /// # Arguments
-    /// * `seed` - 初期シード値
+    /// * `seed` - 初期Seed値
     /// * `steps` - ジャンプするステップ数
     ///
     /// # Returns
-    /// ジャンプ後のシード値
+    /// ジャンプ後のSeed値
     pub fn jump_seed(seed: u64, steps: u64) -> u64 {
         // 単純実装（将来的にマトリックス演算で最適化可能）
-        let mut current_seed = seed;
-        for _ in 0..steps {
-            current_seed = current_seed
-                .wrapping_mul(0x5D588B656C078965)
-                .wrapping_add(0x269EC3);
-        }
-        current_seed
+        let (mul, add) = Self::lcg_affine_for_steps(steps);
+        Self::lcg_apply(seed, mul, add)
     }
 
-    /// 内部使用用：シードを1ステップだけ進める純関数
+    /// 内部使用用：Seedを1ステップだけ進める純関数
     ///
     /// # Arguments
-    /// * `seed` - 現在のシード
+    /// * `seed` - 現在のSeed
     ///
     /// # Returns
-    /// 1ステップ進めた後のシード
+    /// 1ステップ進めた後のSeed
     #[inline]
     pub fn next_seed(seed: u64) -> u64 {
-        seed.wrapping_mul(0x5D588B656C078965).wrapping_add(0x269EC3)
+        seed.wrapping_mul(LCG_MULTIPLIER)
+            .wrapping_add(LCG_INCREMENT)
+    }
+
+    /// Report needle direction (0-7) based on seed advanced by one step.
+    #[inline]
+    pub fn calc_report_needle_direction(seed: u64) -> u8 {
+        let next = Self::next_seed(seed);
+        let upper = next >> 32;
+        let dir = (upper.wrapping_mul(8)) >> 32;
+        (dir & 7) as u8
+    }
+
+    /// 線形合同法のアフィン変換をsteps分まとめて計算
+    pub fn lcg_affine_for_steps(steps: u64) -> (u64, u64) {
+        let (mut mul, mut add) = (1u64, 0u64);
+        let (mut cur_mul, mut cur_add) = (LCG_MULTIPLIER, LCG_INCREMENT);
+        let mut k = steps;
+        while k > 0 {
+            if (k & 1) == 1 {
+                add = add.wrapping_mul(cur_mul).wrapping_add(cur_add);
+                mul = mul.wrapping_mul(cur_mul);
+            }
+            cur_add = cur_add.wrapping_mul(cur_mul).wrapping_add(cur_add);
+            cur_mul = cur_mul.wrapping_mul(cur_mul);
+            k >>= 1;
+        }
+        (mul, add)
+    }
+
+    /// 線形合同法のアフィン変換を適用
+    #[inline]
+    pub fn lcg_apply(seed: u64, mul: u64, add: u64) -> u64 {
+        seed.wrapping_mul(mul).wrapping_add(add)
     }
 }
 
@@ -223,9 +261,9 @@ mod tests {
 
         // 期待値の計算: 0 * 0x5D588B656C078965 + 0x269EC3 = 0x269EC3
         // 上位32bit: 0x269EC3 >> 32 = 0
-        assert_eq!(first, 0); // シード0の場合、最初の乱数値は0
+        assert_eq!(first, 0); // Seed0の場合、最初の乱数値は0
 
-        // しかしシードは更新されている
+        // しかしSeedは更新されている
         assert_eq!(rng.current_seed(), 0x269EC3);
 
         // 次の乱数値は0以外になる
@@ -237,8 +275,10 @@ mod tests {
     fn test_bw_lcg_calculation() {
         let mut rng = PersonalityRNG::new(1);
 
-        // 既知のシード値での計算結果を検証
-        let expected_seed = 1u64.wrapping_mul(0x5D588B656C078965).wrapping_add(0x269EC3);
+        // 既知のSeed値での計算結果を検証
+        let expected_seed = 1u64
+            .wrapping_mul(LCG_MULTIPLIER)
+            .wrapping_add(LCG_INCREMENT);
         let actual_value = rng.next();
         let expected_value = (expected_seed >> 32) as u32;
 
@@ -252,7 +292,7 @@ mod tests {
         let mut rng1 = PersonalityRNG::new(seed);
         let mut rng2 = PersonalityRNG::new(seed);
 
-        // 同じシードから同じ値が生成されることを確認
+        // 同じSeedから同じ値が生成されることを確認
         for _ in 0..10 {
             assert_eq!(rng1.next(), rng2.next());
         }
@@ -359,7 +399,7 @@ mod tests {
         let seed = 0x123456789ABCDEF0;
         let index1 = PersonalityRNG::get_index(seed);
 
-        // 同じシードからは同じインデックス
+        // 同じSeedからは同じインデックス
         let index2 = PersonalityRNG::get_index(seed);
         assert_eq!(index1, index2);
 

@@ -1,150 +1,220 @@
-import { ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
+import { Table as TableIcon } from '@phosphor-icons/react';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { PanelCard } from '@/components/ui/panel-card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
+import { LazyTooltip } from '@/components/ui/lazy-tooltip';
+import { SearchExportButton } from './SearchExportButton';
 import { useAppStore } from '../../../store/app-store';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
-import { lcgSeedToHex } from '@/lib/utils/lcg-seed';
-import type { InitialSeedResult } from '../../../types/search';
-import type { SortField } from './ResultsControlCard';
+import { useTableVirtualization } from '@/hooks/use-table-virtualization';
+import { lcgSeedToHex, lcgSeedToMtSeed } from '@/lib/utils/lcg-seed';
+import { getIvTooltipEntries } from '@/lib/utils/individual-values-display';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import {
+  formatResultCount,
+  formatProcessingDuration,
+  searchResultsEmptyMessage,
+  searchResultsHeaders,
+  searchResultsTitle,
+  viewDetailsAriaLabel,
+  viewDetailsLabel,
+} from '@/lib/i18n/strings/search-results';
+import {
+  formatBootTimestampDisplay,
+  formatTimer0Hex,
+  formatVCountHex,
+} from '@/lib/generation/result-formatters';
+import { formatKeyInputForDisplay } from '@/lib/utils/key-input';
+import type { InitialSeedResult, SearchResult } from '../../../types/search';
 
 interface ResultsCardProps {
-  filteredAndSortedResults: InitialSeedResult[];
-  searchResultsLength: number;
-  sortField: SortField;
-  sortOrder: 'asc' | 'desc';
-  onSort: (field: SortField) => void;
+  sortedResults: InitialSeedResult[];
+  convertedResults: SearchResult[];
   onShowDetails: (result: InitialSeedResult) => void;
 }
 
+const SEARCH_RESULTS_COLUMN_COUNT = 7;
+const SEARCH_RESULTS_ROW_HEIGHT = 34;
+
 export function ResultsCard({
-  filteredAndSortedResults,
-  searchResultsLength,
-  sortField,
-  sortOrder,
-  onSort,
+  sortedResults,
+  convertedResults,
   onShowDetails,
 }: ResultsCardProps) {
   const { lastSearchDuration } = useAppStore();
   const { isStack } = useResponsiveLayout();
-  const formatDateTime = (date: Date): string => {
-    return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-  };
+  const locale = useLocale();
+  const virtualization = useTableVirtualization({
+    rowCount: sortedResults.length,
+    defaultRowHeight: SEARCH_RESULTS_ROW_HEIGHT,
+    overscan: 8,
+  });
+  const virtualRows = virtualization.virtualRows;
 
-  const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return null;
-    return sortOrder === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
-  };
-
-  const handleSort = (field: SortField) => {
-    onSort(field);
-  };
-
-  const filteredResultsCount = filteredAndSortedResults.length;
+  const resultsCount = sortedResults.length;
 
   return (
-    <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full min-h-96'}`}>
-      <CardHeader className="pb-0 flex-shrink-0">
-        <CardTitle className="flex items-center gap-2 flex-wrap">
-          <Eye size={20} className="flex-shrink-0 opacity-80" />
-          <span className="flex-shrink-0">Search Results</span>
+    <PanelCard
+      icon={<TableIcon size={20} className="opacity-80" />}
+      title={resolveLocaleValue(searchResultsTitle, locale)}
+      headerActions={
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="secondary" className="flex-shrink-0">
-            {filteredResultsCount} result{filteredResultsCount !== 1 ? 's' : ''}
+            {formatResultCount(resultsCount, locale)}
           </Badge>
           {lastSearchDuration !== null && (
             <Badge variant="outline" className="flex-shrink-0 text-xs">
-              Search completed in {(lastSearchDuration / 1000).toFixed(1)}s
+              {formatProcessingDuration(lastSearchDuration)}
             </Badge>
           )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col flex-1 min-h-0 p-0 overflow-y-auto">
-        {filteredAndSortedResults.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            {searchResultsLength === 0 
-              ? "No search results yet. Run a search to see results here."
-              : "No results match the current filter criteria."
-            }
-          </div>
-        ) : (
-          <div className="overflow-y-auto flex-1">
-            <Table className="table-auto min-w-full text-xs leading-tight">
-              <TableHeader>
-                <TableRow className="h-9">
-                  <TableHead className="w-12 px-1 text-center"></TableHead>
-                  <TableHead className="px-2 font-mono text-[11px] whitespace-nowrap min-w-[120px]">LCG Seed</TableHead>
-                  <TableHead 
-                    className="px-2 cursor-pointer select-none"
-                    onClick={() => handleSort('datetime')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Date/Time {getSortIcon('datetime')}
-                    </div>
+          <SearchExportButton
+            results={convertedResults}
+            disabled={resultsCount === 0}
+          />
+        </div>
+      }
+      className={isStack ? 'max-h-96' : 'min-h-96'}
+      fullHeight={!isStack}
+      padding="none"
+      spacing="none"
+    >
+        <div
+          ref={virtualization.containerRef}
+          className="flex-1 min-h-0 overflow-auto"
+        >
+          {sortedResults.length === 0 ? (
+            <div className="flex h-full items-center justify-center px-6 text-center text-muted-foreground">
+              {resolveLocaleValue(searchResultsEmptyMessage, locale)}
+            </div>
+          ) : (
+            <Table className="min-w-max text-xs">
+              <TableHeader className="sticky top-0 bg-muted text-xs">
+                <TableRow className="text-left border-0">
+                  <TableHead scope="col" className="px-2 py-1 font-medium w-12 text-center">
+                    {resolveLocaleValue(searchResultsHeaders.action, locale)}
                   </TableHead>
-                  <TableHead 
-                    className="px-2 cursor-pointer select-none"
-                    onClick={() => handleSort('seed')}
-                  >
-                    <div className="flex items-center gap-1">
-                      MT Seed {getSortIcon('seed')}
-                    </div>
+                  <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                    {resolveLocaleValue(searchResultsHeaders.lcgSeed, locale)}
                   </TableHead>
-                  <TableHead 
-                    className="px-2 cursor-pointer select-none"
-                    onClick={() => handleSort('timer0')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Timer0 {getSortIcon('timer0')}
-                    </div>
+                  <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                    {resolveLocaleValue(searchResultsHeaders.dateTime, locale)}
                   </TableHead>
-                  <TableHead 
-                    className="px-2 cursor-pointer select-none"
-                    onClick={() => handleSort('vcount')}
-                  >
-                    <div className="flex items-center gap-1">
-                      VCount {getSortIcon('vcount')}
-                    </div>
+                  <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                    {resolveLocaleValue(searchResultsHeaders.mtSeed, locale)}
+                  </TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                    {resolveLocaleValue(searchResultsHeaders.timer0, locale)}
+                  </TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                    {resolveLocaleValue(searchResultsHeaders.vcount, locale)}
+                  </TableHead>
+                  <TableHead scope="col" className="px-2 py-1 font-medium select-none">
+                    {resolveLocaleValue(searchResultsHeaders.keyInput, locale)}
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAndSortedResults.map((result, index) => (
-                  <TableRow key={index} className="h-9">
-                    <TableCell className="px-1 py-1 text-center">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => onShowDetails(result)}
-                        className="h-7 w-7 p-0"
-                        title="View Details"
-                        aria-label="View search result details"
-                      >
-                        <Eye size={14} />
-                      </Button>
-                    </TableCell>
-                    <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-nowrap min-w-[120px]">
-                      {lcgSeedToHex(result.lcgSeed)}
-                    </TableCell>
-                    <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-normal">
-                      {formatDateTime(result.datetime)}
-                    </TableCell>
-                    <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-normal">
-                      0x{result.seed.toString(16).toUpperCase().padStart(8, '0')}
-                    </TableCell>
-                    <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-normal">
-                      0x{result.timer0.toString(16).toUpperCase().padStart(4, '0')}
-                    </TableCell>
-                    <TableCell className="px-2 py-1 font-mono text-[11px] leading-tight whitespace-normal">
-                      0x{result.vcount.toString(16).toUpperCase().padStart(2, '0')}
-                    </TableCell>
+                {virtualization.paddingTop > 0 ? (
+                  <TableRow aria-hidden="true" className="border-0 pointer-events-none">
+                    <TableCell
+                      colSpan={SEARCH_RESULTS_COLUMN_COUNT}
+                      className="p-0 border-0"
+                      style={{ height: virtualization.paddingTop }}
+                    />
                   </TableRow>
-                ))}
+                ) : null}
+                {virtualRows.map(virtualRow => {
+                  const result = sortedResults[virtualRow.index];
+                  if (!result) {
+                    return null;
+                  }
+                  const entryKey = `${result.lcgSeed}-${result.seed}`;
+                  return (
+                    <TableRow
+                      key={entryKey}
+                      ref={virtualization.measureRow}
+                      data-index={virtualRow.index}
+                      className="odd:bg-background even:bg-muted/30 border-0"
+                    >
+                      <TableCell className="px-2 py-1 text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onShowDetails(result)}
+                          className="h-7 w-7 p-0"
+                          title={resolveLocaleValue(viewDetailsLabel, locale)}
+                          aria-label={resolveLocaleValue(viewDetailsAriaLabel, locale)}
+                        >
+                          <Eye size={14} />
+                        </Button>
+                      </TableCell>
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap min-w-[120px]">
+                        <LazyTooltip
+                          trigger={<span>{lcgSeedToHex(result.lcgSeed)}</span>}
+                          renderContent={() => (
+                            <>
+                              {getIvTooltipEntries(lcgSeedToMtSeed(result.lcgSeed), locale).map(entry => (
+                                <div key={entry.label} className="space-y-0.5">
+                                  <div className="font-semibold leading-tight">{entry.label}</div>
+                                  <div className="font-mono leading-tight">{entry.spread}</div>
+                                  <div className="font-mono text-[10px] text-muted-foreground leading-tight">{entry.pattern}</div>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                          side="bottom"
+                          className="space-y-1 text-left"
+                        />
+                      </TableCell>
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
+                        {formatBootTimestampDisplay(result.datetime, locale)}
+                      </TableCell>
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
+                        <LazyTooltip
+                          trigger={<span>0x{result.seed.toString(16).toUpperCase().padStart(8, '0')}</span>}
+                          renderContent={() => (
+                            <>
+                              {getIvTooltipEntries(result.seed, locale).map(entry => (
+                                <div key={entry.label} className="space-y-0.5">
+                                  <div className="font-semibold leading-tight">{entry.label}</div>
+                                  <div className="font-mono leading-tight">{entry.spread}</div>
+                                  <div className="font-mono text-[10px] text-muted-foreground leading-tight">{entry.pattern}</div>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                          side="bottom"
+                          className="space-y-1 text-left"
+                        />
+                      </TableCell>
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
+                        {formatTimer0Hex(result.timer0)}
+                      </TableCell>
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
+                        {formatVCountHex(result.vcount)}
+                      </TableCell>
+                      <TableCell className="px-2 py-1 font-mono whitespace-nowrap">
+                        {formatKeyInputForDisplay(result.keyCode, result.keyInputNames)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {virtualization.paddingBottom > 0 ? (
+                  <TableRow aria-hidden="true" className="border-0 pointer-events-none">
+                    <TableCell
+                      colSpan={SEARCH_RESULTS_COLUMN_COUNT}
+                      className="p-0 border-0"
+                      style={{ height: virtualization.paddingBottom }}
+                    />
+                  </TableRow>
+                ) : null}
               </TableBody>
             </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          )}
+        </div>
+    </PanelCard>
   );
 }

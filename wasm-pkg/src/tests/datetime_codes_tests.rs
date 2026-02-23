@@ -49,7 +49,7 @@ mod tests {
     fn test_date_code_generation() {
         // 2000年1月1日のテスト (土曜日) - 新しいAPIを使用
         let result_2000_01_01 = DateCodeGenerator::get_date_code(0);
-        println!("2000/1/1 result: 0x{:08X}", result_2000_01_01);
+        println!("2000/1/1 result: 0x{result_2000_01_01:08X}");
 
         // 手動でBCD計算を確認
         // year=2000: year%100=0 → yy_bcd=((0/10)<<4)|(0%10)=0x00
@@ -62,7 +62,7 @@ mod tests {
         // 2024年12月31日のテスト (火曜日) - 日数インデックス計算が必要
         let days_2024_12_31 = days_since_2000(2024, 12, 31);
         let result_2024_12_31 = DateCodeGenerator::get_date_code(days_2024_12_31);
-        println!("2024/12/31 result: 0x{:08X}", result_2024_12_31);
+        println!("2024/12/31 result: 0x{result_2024_12_31:08X}");
 
         // 手動でBCD計算を確認
         // year=2024: year%100=24 → yy_bcd=((24/10)<<4)|(24%10)=(2<<4)|4=0x24
@@ -75,7 +75,7 @@ mod tests {
         // 2023年12月31日のテスト (日曜日) - TypeScript実装のテストケースと一致確認
         let days_2023_12_31 = days_since_2000(2023, 12, 31);
         let result_2023_12_31 = DateCodeGenerator::get_date_code(days_2023_12_31);
-        println!("2023/12/31 result: 0x{:08X}", result_2023_12_31);
+        println!("2023/12/31 result: 0x{result_2023_12_31:08X}");
 
         // 手動でBCD計算を確認
         // year=2023: year%100=23 → yy_bcd=((23/10)<<4)|(23%10)=(2<<4)|3=0x23

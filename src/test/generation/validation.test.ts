@@ -17,7 +17,6 @@ function baseParams(overrides: Partial<GenerationParams> = {}): GenerationParams
     isShinyLocked: false,
     stopAtFirstShiny: false,
     stopOnCap: true,
-    batchSize: 5000,
     newGame: true,
     withSave: true,
     memoryLink: false,
@@ -46,14 +45,6 @@ describe('validateGenerationParams', () => {
   it('rejects offset >= maxAdvances', () => {
     const errs = validateGenerationParams(baseParams({ offset: 5000n }));
     expect(errs.some(e => e.includes('offset must be < maxAdvances'))).toBe(true);
-  });
-  it('allows large batchSize values', () => {
-    const errs = validateGenerationParams(baseParams({ batchSize: 20_000 }));
-    expect(errs).not.toContainEqual(expect.stringContaining('batchSize'));
-  });
-  it('allows batchSize larger than maxAdvances', () => {
-    const errs = validateGenerationParams(baseParams({ batchSize: 6000 }));
-    expect(errs).not.toContainEqual(expect.stringContaining('batchSize'));
   });
   it('rejects invalid encounterType', () => {
     const errs = validateGenerationParams(baseParams({ encounterType: 99 }));

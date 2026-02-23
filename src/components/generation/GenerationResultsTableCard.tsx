@@ -1,76 +1,191 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
-import { StandardCardHeader, StandardCardContent } from '@/components/ui/card-helpers';
-import { Table } from '@phosphor-icons/react';
+import { PanelCard } from '@/components/ui/panel-card';
+import { Badge } from '@/components/ui/badge';
+import { Table as TableIcon } from '@phosphor-icons/react';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { GenerationExportButton } from './GenerationExportButton';
 import { useAppStore } from '@/store/app-store';
-import { selectFilteredSortedResults, selectUiReadyResults, type GenerationSlice } from '@/store/generation-store';
-import { pidHex, natureName, shinyLabel, seedHex, calculateNeedleDirection, needleDirectionArrow } from '@/lib/utils/format-display';
+import { selectFilteredDisplayRows, selectFilteredSortedResults } from '@/store/generation-store';
 import { useResponsiveLayout } from '@/hooks/use-mobile';
+import { useTableVirtualization } from '@/hooks/use-table-virtualization';
 import { useLocale } from '@/lib/i18n/locale-context';
+import {
+  formatGenerationResultsTableTitle,
+  formatGenerationResultsCount,
+  formatGenerationProcessingDuration,
+  generationResultsTableCaption,
+  generationResultsTableUnknownLabel,
+  generationResultsTableEmptyMessage,
+  generationResultsTableInitialMessage,
+  resolveGenerationResultsTableHeaders,
+} from '@/lib/i18n/strings/generation-results-table';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import { GenerationResultRow } from '@/components/generation/results/GenerationResultRow';
+import { buildGenerationResultRowKey } from '@/lib/generation/result-formatters';
 
-interface GenerationResultsTableCardProps { parentManagesScroll?: boolean; }
 type AppStoreState = ReturnType<typeof useAppStore.getState>;
-export const GenerationResultsTableCard: React.FC<GenerationResultsTableCardProps> = ({ parentManagesScroll }) => {
+const GENERATION_RESULTS_COLUMN_COUNT = 19;
+const GENERATION_TABLE_ROW_HEIGHT = 34;
+
+export const GenerationResultsTableCard: React.FC = () => {
   const locale = useLocale();
-  // 元の生結果 (フィルタ/ソート適用済み GenerationResult)
-  const rawResults = useAppStore(selectFilteredSortedResults);
+  const rows = useAppStore((state: AppStoreState) => selectFilteredDisplayRows(state, locale));
+  const filteredRawRows = useAppStore((state: AppStoreState) => selectFilteredSortedResults(state, locale));
   const total = useAppStore(s => s.results.length);
-  // UI表示用解決結果（ロケール依存）
-  const uiResults = useAppStore((state: AppStoreState) => {
-    const generationState: GenerationSlice = state;
-    const overrideState: GenerationSlice = { ...generationState, results: rawResults };
-    return selectUiReadyResults(overrideState, locale);
+  const lastCompletion = useAppStore(s => s.lastCompletion);
+  const encounterTable = useAppStore((state) => state.encounterTable);
+  const genderRatios = useAppStore((state) => state.genderRatios);
+  const abilityCatalog = useAppStore((state) => state.abilityCatalog);
+  const version = useAppStore((state) => (state.params?.version ?? state.draftParams.version ?? 'B') as 'B' | 'W' | 'B2' | 'W2');
+  const baseSeed = useAppStore((state) => {
+    if (state.params?.baseSeed !== undefined) return state.params.baseSeed;
+    const hex = state.draftParams.baseSeedHex;
+    if (typeof hex === 'string') {
+      const normalized = hex.trim();
+      if (normalized !== '') {
+        try {
+          return BigInt('0x' + normalized.replace(/^0x/i, ''));
+        } catch {
+          return undefined;
+        }
+      }
+    }
+    return undefined;
   });
   const { isStack } = useResponsiveLayout();
+  const headers = React.useMemo(() => resolveGenerationResultsTableHeaders(locale), [locale]);
+  const panelTitle = formatGenerationResultsTableTitle(rows.length, total, locale);
+  const resultsCount = formatGenerationResultsCount(rows.length, locale);
+  const caption = resolveLocaleValue(generationResultsTableCaption, locale);
+  const unknownLabel = resolveLocaleValue(generationResultsTableUnknownLabel, locale);
+  const virtualization = useTableVirtualization({
+    rowCount: rows.length,
+    defaultRowHeight: GENERATION_TABLE_ROW_HEIGHT,
+    overscan: 12,
+  });
+  const virtualRows = virtualization.virtualRows;
   // スクロール方針
   // - モバイル(isStack): カード内でスクロール(overflow-y-auto)にして、ドキュメント高さの膨張を防ぐ
   // - デスクトップ: 呼び出し元の指定を尊重（既定はfalseでカード内スクロール）
-  const effectiveParentManages = isStack ? false : !!parentManagesScroll;
   return (
-    <Card className={`py-2 flex flex-col ${isStack ? '' : 'h-full min-h-64'}`} aria-labelledby="gen-results-table-title" role="region">
-  <StandardCardHeader icon={<Table size={20} className="opacity-80" />} title={<span id="gen-results-table-title">Results ({rawResults.length}) / Total {total}</span>} />
-      <StandardCardContent className="p-0" noScroll={effectiveParentManages}>
-        <table className="min-w-full text-xs" aria-describedby="gen-results-table-desc">
-          <caption id="gen-results-table-desc" className="sr-only">Filtered generation results list.</caption>
-          <thead className="sticky top-0 bg-muted text-[11px]">
-            <tr className="text-left">
-              <th scope="col" className="px-2 py-1 font-medium w-14">Adv<span className="sr-only">ance</span></th>
-              <th scope="col" className="px-2 py-1 font-medium w-10">dir</th>
-              <th scope="col" className="px-2 py-1 font-medium w-8">v</th>
-              <th scope="col" className="px-2 py-1 font-medium min-w-[90px] w-32">Species</th>
-              <th scope="col" className="px-2 py-1 font-medium w-32">PID</th>
-              <th scope="col" className="px-2 py-1 font-medium w-24">Nature</th>
-              <th scope="col" className="px-2 py-1 font-medium min-w-[90px] w-32 hidden md:table-cell">Ability</th>
-              <th scope="col" className="px-2 py-1 font-medium w-8">G<span className="sr-only">ender</span></th>
-              <th scope="col" className="px-2 py-1 font-medium w-10">Lv</th>
-              <th scope="col" className="px-2 py-1 font-medium w-16">Shiny</th>
-              <th scope="col" className="px-2 py-1 font-medium min-w-[120px] w-36">Seed</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rawResults.map((r, idx) => {
-              const u = uiResults[idx];
-              const needleDir = calculateNeedleDirection(r.seed);
-              return (
-                <tr key={r.advance} className="odd:bg-background even:bg-muted/30">
-                  <td className="px-2 py-1 font-mono tabular-nums">{r.advance}</td>
-                  <td className="px-2 py-1 text-center">{needleDirectionArrow(needleDir)}</td>
-                  <td className="px-2 py-1 font-mono tabular-nums">{needleDir}</td>
-                  <td className="px-2 py-1 truncate max-w-[120px]" title={u?.speciesName || 'Unknown'}>{u?.speciesName || 'Unknown'}</td>
-                  <td className="px-2 py-1 font-mono whitespace-nowrap">{pidHex(r.pid)}</td>
-                  <td className="px-2 py-1 whitespace-nowrap">{natureName(r.nature, locale)}</td>
-                  <td className="px-2 py-1 truncate max-w-[120px] hidden md:table-cell" title={u?.abilityName || 'Unknown'}>{u?.abilityName || 'Unknown'}</td>
-                  <td className="px-2 py-1">{u?.gender || '?'}</td>
-                  <td className="px-2 py-1 tabular-nums">{u?.level ?? ''}</td>
-                  <td className="px-2 py-1">{shinyLabel(r.shiny_type, locale)}</td>
-                  <td className="px-2 py-1 font-mono whitespace-nowrap">{seedHex(r.seed)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <div className="sr-only" aria-live="polite">{rawResults.length} filtered results shown of {total} total.</div>
-      </StandardCardContent>
-    </Card>
+    <PanelCard
+      icon={<TableIcon size={20} className="opacity-80" />}
+      title={<span id="gen-results-table-title">{panelTitle}</span>}
+      headerActions={
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className="flex-shrink-0">
+            {resultsCount}
+          </Badge>
+          {lastCompletion !== null && (
+            <Badge variant="outline" className="flex-shrink-0 text-xs">
+              {formatGenerationProcessingDuration(lastCompletion.elapsedMs)}
+            </Badge>
+          )}
+          <GenerationExportButton
+            rows={filteredRawRows}
+            encounterTable={encounterTable}
+            genderRatios={genderRatios}
+            abilityCatalog={abilityCatalog}
+            version={version}
+            baseSeed={baseSeed}
+            disabled={filteredRawRows.length === 0}
+          />
+        </div>
+      }
+      className={isStack ? 'max-h-96' : 'min-h-96'}
+      fullHeight={!isStack}
+      scrollMode="parent"
+      padding="none"
+      spacing="none"
+      contentClassName="p-0"
+      aria-labelledby="gen-results-table-title"
+      role="region"
+    >
+      <div
+        ref={virtualization.containerRef}
+        className="flex-1 min-h-0 overflow-auto"
+      >
+        {rows.length === 0 ? (
+          <div className="flex h-full items-center justify-center px-6 text-center text-muted-foreground py-8">
+            {resolveLocaleValue(
+              total === 0 ? generationResultsTableInitialMessage : generationResultsTableEmptyMessage,
+              locale,
+            )}
+          </div>
+        ) : (
+        <Table className="min-w-max text-xs" aria-describedby="gen-results-table-desc">
+          <TableCaption id="gen-results-table-desc">
+            {caption}
+          </TableCaption>
+          <TableHeader className="sticky top-0 bg-muted text-xs">
+            <TableRow className="text-left border-0">
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">
+                {headers.advance.label}
+                {headers.advance.sr ? <span className="sr-only">{headers.advance.sr}</span> : null}
+              </TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-center">{headers.direction.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-center">{headers.directionValue.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.species.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.ability.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-center">
+                {headers.gender.label}
+                {headers.gender.sr ? <span className="sr-only">{headers.gender.sr}</span> : null}
+              </TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.nature.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-center">{headers.shiny.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.level.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.hp.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.attack.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.defense.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.specialAttack.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.specialDefense.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap text-right">{headers.speed.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.seed.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.pid.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.timer0.label}</TableHead>
+              <TableHead scope="col" className="px-2 py-1 font-medium text-xs whitespace-nowrap">{headers.vcount.label}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {virtualization.paddingTop > 0 ? (
+              <TableRow aria-hidden="true" className="border-0 pointer-events-none">
+                <TableCell
+                  colSpan={GENERATION_RESULTS_COLUMN_COUNT}
+                  className="p-0 border-0"
+                  style={{ height: virtualization.paddingTop }}
+                />
+              </TableRow>
+            ) : null}
+          {virtualRows.map(virtualRow => {
+            const row = rows[virtualRow.index];
+            if (!row) {
+              return null;
+            }
+            const rowKey = buildGenerationResultRowKey(row.advance, row.timer0, row.vcount);
+            return (
+              <GenerationResultRow
+                key={rowKey}
+                row={row}
+                locale={locale}
+                unknownLabel={unknownLabel}
+                measureRow={virtualization.measureRow}
+                virtualIndex={virtualRow.index}
+              />
+            );
+          })}
+            {virtualization.paddingBottom > 0 ? (
+              <TableRow aria-hidden="true" className="border-0 pointer-events-none">
+                <TableCell
+                  colSpan={GENERATION_RESULTS_COLUMN_COUNT}
+                  className="p-0 border-0"
+                  style={{ height: virtualization.paddingBottom }}
+                />
+              </TableRow>
+            ) : null}
+          </TableBody>
+        </Table>
+        )}
+      </div>
+    </PanelCard>
   );
 };

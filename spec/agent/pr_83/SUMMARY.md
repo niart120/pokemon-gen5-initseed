@@ -103,7 +103,7 @@ Adv → needle → Species → PID → Nature → Ability → G → Lv → Shiny
 ```
 direction = ((seed >> 32) * 8) >> 32
 ```
-この手法により、64ビットシードの上位32ビットを8等分し、0-7の値に均等にマッピングします。
+この手法により、64ビットSeedの上位32ビットを8等分し、0-7の値に均等にマッピングします。
 
 ### コード品質
 - TypeScript strict mode準拠

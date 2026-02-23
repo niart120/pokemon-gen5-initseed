@@ -2,7 +2,7 @@
  * Pokemon Black/White and Black2/White2 encounter tables
  * 
  * Data sources and retrieval dates:
- * - ポケモンの友 (BW/BW2 遭遇テーブル):
+ * - ポケモンの友 (BW/BW2 エンカウントテーブル):
  *   - B: https://pokebook.jp/data/sp5/enc_b (Retrieved: 2025-08-10)
  *   - W: https://pokebook.jp/data/sp5/enc_w (Retrieved: 2025-08-10)
  *   - B2: https://pokebook.jp/data/sp5/enc_b2 (Retrieved: 2025-08-10)

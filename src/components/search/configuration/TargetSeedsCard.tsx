@@ -1,14 +1,28 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PanelCard } from '@/components/ui/panel-card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Trash, Upload, Download, Warning, Target, FileText } from '@phosphor-icons/react';
+import { Trash, Warning, Target, FileText } from '@phosphor-icons/react';
 import { useAppStore } from '../../../store/app-store';
 import { SeedCalculator } from '../../../lib/core/seed-calculator';
 import { useResponsiveLayout } from '../../../hooks/use-mobile';
 import { TemplateSelectionDialog } from './TemplateSelectionDialog';
+import { useLocale } from '@/lib/i18n/locale-context';
+import { resolveLocaleValue } from '@/lib/i18n/strings/types';
+import {
+  formatTargetSeedsErrorBadge,
+  formatTargetSeedsErrorLine,
+  formatTargetSeedsPlaceholder,
+  targetSeedsAriaLabel,
+  targetSeedsClearButtonLabel,
+  targetSeedsPanelTitle,
+  targetSeedsParseErrorSummary,
+  targetSeedsSupportsHexHint,
+  targetSeedsTemplateButtonLabel,
+  targetSeedsValidSeedsLabel,
+} from '@/lib/i18n/strings/search-target-seeds';
 
 export function TargetSeedsCard() {
   const {
@@ -20,6 +34,7 @@ export function TargetSeedsCard() {
   } = useAppStore();
 
   const { isStack } = useResponsiveLayout();
+  const locale = useLocale();
   const [parseErrors, setParseErrors] = React.useState<{ line: number; value: string; error: string }[]>([]);
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = React.useState(false);
 
@@ -45,37 +60,6 @@ export function TargetSeedsCard() {
     setParseErrors([]);
   };
 
-  const handleImportFromFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      setTargetSeedInput(content);
-    };
-    reader.readAsText(file);
-    
-    // Reset file input
-    event.target.value = '';
-  };
-
-  const handleExportToFile = () => {
-    if (targetSeeds.seeds.length === 0) return;
-
-    const content = targetSeeds.seeds.map(seed => `0x${seed.toString(16).toUpperCase().padStart(8, '0')}`).join('\n');
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'target-seeds.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   const handleApplyTemplate = (seeds: number[]) => {
     // Convert seeds to hex format and set as input
     const seedsText = seeds.map(seed => `0x${seed.toString(16).toUpperCase().padStart(8, '0')}`).join('\n');
@@ -87,82 +71,64 @@ export function TargetSeedsCard() {
     'ABCDEF00', 
     '0xDEADBEEF',
   ];
+  const placeholderText = formatTargetSeedsPlaceholder(exampleSeeds, locale);
+  const operationsLabel = resolveLocaleValue(targetSeedsAriaLabel, locale);
+  const colon = locale === 'ja' ? '：' : ':';
 
   return (
-    <Card className={`py-2 flex flex-col ${isStack ? 'max-h-96' : 'h-full min-h-64'}`}>
-      <CardHeader className="pb-0 flex-shrink-0">
-        {/* タイトルのみを表示し、その下に操作ボタンをまとめて配置 */}
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Target size={20} className="opacity-80" />
-          Target Seeds
-        </CardTitle>
+    <>
+      <PanelCard
+        icon={<Target size={20} className="opacity-80" />}
+        title={resolveLocaleValue(targetSeedsPanelTitle, locale)}
+        headerActions={
         <div
-          className="mt-2 grid grid-cols-4 gap-2"
+          className="flex gap-2"
           role="group"
-          aria-label="Target Seeds operations"
+          aria-label={operationsLabel}
         >
-          <Button className="w-full" variant="outline" size="sm" onClick={() => setIsTemplateDialogOpen(true)}>
+          <Button className="flex-1" variant="outline" size="sm" onClick={() => setIsTemplateDialogOpen(true)}>
             <FileText size={14} className="mr-2" />
-            Template
-          </Button>
-          <Button className="w-full" variant="outline" size="sm" onClick={() => document.getElementById('target-file-input')?.click()}>
-            <Upload size={14} className="mr-2" />
-            Import
+            {resolveLocaleValue(targetSeedsTemplateButtonLabel, locale)}
           </Button>
           <Button
-            className="w-full"
-            variant="outline"
-            size="sm"
-            onClick={handleExportToFile}
-            disabled={targetSeeds.seeds.length === 0}
-          >
-            <Download size={14} className="mr-2" />
-            Export
-          </Button>
-          <Button
-            className="w-full"
+            className="flex-1"
             variant="outline"
             size="sm"
             onClick={handleClearAll}
             disabled={targetSeeds.seeds.length === 0}
           >
             <Trash size={14} className="mr-2" />
-            Clear
+            {resolveLocaleValue(targetSeedsClearButtonLabel, locale)}
           </Button>
         </div>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col min-h-0 space-y-2 overflow-y-auto">
+      }
+        className={isStack ? 'max-h-96' : 'min-h-64'}
+        fullHeight={!isStack}
+      >
         <p className="text-xs text-muted-foreground flex-shrink-0">
-          Supports hex format with or without 0x prefix. One seed per line.
+          {resolveLocaleValue(targetSeedsSupportsHexHint, locale)}
         </p>
         <Textarea
           id="seed-input"
-          placeholder={`Enter seed values in hexadecimal format:\n${exampleSeeds.join('\n')}`}
+          placeholder={placeholderText}
           value={targetSeedInput}
           onChange={(e) => setTargetSeedInput(e.target.value)}
           className="flex-1 min-h-20 max-h-48 font-mono text-sm resize-none overflow-auto"
         />
 
-        {/* Hidden file input */}
-        <input
-          id="target-file-input"
-          type="file"
-          accept=".txt,.csv"
-          onChange={handleImportFromFile}
-          className="hidden"
-        />
-
         {/* Status */}
         <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Valid Seeds:</span>
+            <span className="text-sm font-medium">
+              {resolveLocaleValue(targetSeedsValidSeedsLabel, locale)}{colon}
+            </span>
             <Badge variant={targetSeeds.seeds.length > 0 ? "default" : "secondary"}>
               {targetSeeds.seeds.length}
             </Badge>
           </div>
           {parseErrors.length > 0 && (
             <Badge variant="destructive">
-              {parseErrors.length} error{parseErrors.length !== 1 ? 's' : ''}
+              {formatTargetSeedsErrorBadge(parseErrors.length, locale)}
             </Badge>
           )}
         </div>
@@ -173,11 +139,13 @@ export function TargetSeedsCard() {
             <Warning size={14} />
             <AlertDescription>
               <div className="space-y-1">
-                <p className="text-sm font-medium">Invalid seed format on the following lines:</p>
+                <p className="text-sm font-medium">
+                  {resolveLocaleValue(targetSeedsParseErrorSummary, locale)}
+                </p>
                 <ul className="text-xs space-y-1">
                   {parseErrors.map((error, index) => (
                     <li key={index} className="font-mono">
-                      Line {error.line}: "{error.value}" - {error.error}
+                      {formatTargetSeedsErrorLine(error.line, error.value, error.error, locale)}
                     </li>
                   ))}
                 </ul>
@@ -185,7 +153,7 @@ export function TargetSeedsCard() {
             </AlertDescription>
           </Alert>
         )}
-      </CardContent>
+      </PanelCard>
 
       {/* Template Selection Dialog */}
       <TemplateSelectionDialog
@@ -193,6 +161,6 @@ export function TargetSeedsCard() {
         onOpenChange={setIsTemplateDialogOpen}
         onApplyTemplate={handleApplyTemplate}
       />
-    </Card>
+    </>
   );
 }

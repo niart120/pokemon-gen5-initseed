@@ -109,7 +109,7 @@ impl OffsetCalculator {
     /// 新しいOffsetCalculatorインスタンスを作成
     ///
     /// # Arguments
-    /// * `seed` - 初期シード値
+    /// * `seed` - 初期Seed値
     #[wasm_bindgen(constructor)]
     pub fn new(seed: u64) -> OffsetCalculator {
         OffsetCalculator {
@@ -146,10 +146,10 @@ impl OffsetCalculator {
         self.advances
     }
 
-    /// 現在のシード値を取得
+    /// 現在のSeed値を取得
     ///
     /// # Returns
-    /// 現在のシード値
+    /// 現在のSeed値
     #[wasm_bindgen(getter)]
     pub fn get_current_seed(&self) -> u64 {
         self.rng.current_seed()
@@ -158,7 +158,7 @@ impl OffsetCalculator {
     /// 計算器をリセット
     ///
     /// # Arguments
-    /// * `new_seed` - 新しいシード値
+    /// * `new_seed` - 新しいSeed値
     pub fn reset(&mut self, new_seed: u64) {
         self.rng.reset(new_seed);
         self.advances = 0;
@@ -211,11 +211,11 @@ impl OffsetCalculator {
             [100, 100, 100, 100, 100], // L6
         ];
 
-        for level in 0..6 {
+        for thresholds in &PT_TABLES {
             // L1からL6まで
-            for j in 0..5 {
+            for &threshold in thresholds.iter().take(5) {
                 // 各レベルで最大5つの閾値をチェック
-                if PT_TABLES[level][j] == 100 {
+                if threshold == 100 {
                     // 確率が100なら、次のレベルへ
                     break;
                 }
@@ -224,7 +224,7 @@ impl OffsetCalculator {
                 // 仕様書の計算式: r = ((rand_value as u64 * 101) >> 32) as u32
                 let r = ((rand_value as u64 * 101) >> 32) as u32;
 
-                if r <= PT_TABLES[level][j] {
+                if r <= threshold {
                     // 取得した確率がテーブルの値以下なら次のレベルへ
                     break;
                 }
@@ -274,11 +274,10 @@ impl OffsetCalculator {
         }
     }
 
-    /// チラーミィPID決定（BW）
+    /// チラーミPID決定（BW）
     fn generate_chiramii_pid(&mut self) -> u32 {
-        let rand_value = self.next_rand();
         // BWではxor 0x00010000の分岐あり（実装詳細は要確認）
-        rand_value
+        self.next_rand()
     }
 
     /// チラーミィID決定（BW：0固定）
@@ -331,7 +330,8 @@ impl OffsetCalculator {
             }
 
             GameMode::BwContinue => {
-                // BW 続きから - リファレンス実装準拠（Rand×1なし）
+                // BW 続きから - リファレンス実装非準拠（Rand×1あり）
+                self.consume_random(1); // Rand×1
                 self.probability_table_process_multiple(5); // PT×5
             }
 
@@ -684,5 +684,80 @@ mod tests {
             tid_sid.advances_used, 21,
             "TID/SID決定時点でのoffsetが期待値と一致しません"
         );
+    }
+
+    #[test]
+    fn test_bw1_new_game_no_save_seed_0x96fd2cbd8a2263a3() {
+        let seed = 0x96FD2CBD8A2263A3;
+
+        let _offset = calculate_game_offset(seed, GameMode::BwNewGameNoSave);
+
+        let tid_sid = calculate_tid_sid_from_seed(seed, GameMode::BwNewGameNoSave);
+        assert_eq!(
+            tid_sid.tid, 42267,
+            "BW1 最初から（セーブデータなし）のTIDが一致しません"
+        );
+        assert_eq!(
+            tid_sid.sid, 29515,
+            "BW1 最初から（セーブデータなし）のSIDが一致しません"
+        );
+
+        let mut calculator = OffsetCalculator::new(seed);
+        calculator.probability_table_process_multiple(3);
+        let pid = calculator.next_rand();
+        calculator.next_rand();
+        calculator.calculate_tid_sid();
+        calculator.consume_random(1);
+        calculator.probability_table_process_multiple(4);
+
+        assert_eq!(
+            pid, 0xE1E3E8D5,
+            "BW1 最初から（セーブデータなし）のPIDが一致しません"
+        );
+    }
+
+    #[test]
+    fn test_bw1_new_game_with_save_seed_0x96fd2cbd8a2263a3() {
+        let seed = 0x96FD2CBD8A2263A3;
+
+        let _offset = calculate_game_offset(seed, GameMode::BwNewGameWithSave);
+
+        let tid_sid = calculate_tid_sid_from_seed(seed, GameMode::BwNewGameWithSave);
+        assert_eq!(
+            tid_sid.tid, 59747,
+            "BW1 最初から（セーブデータあり）のTIDが一致しません"
+        );
+        assert_eq!(
+            tid_sid.sid, 58421,
+            "BW1 最初から（セーブデータあり）のSIDが一致しません"
+        );
+
+        let mut calculator = OffsetCalculator::new(seed);
+        calculator.probability_table_process_multiple(2);
+        let pid = calculator.next_rand();
+        calculator.next_rand();
+        calculator.calculate_tid_sid();
+        calculator.probability_table_process_multiple(4);
+
+        assert_eq!(
+            pid, 0x05CA2877,
+            "BW1 最初から（セーブデータあり）のPIDが一致しません"
+        );
+    }
+
+    #[test]
+    fn test_bw1_continue_seed_0x96fd2cbd8a2263a3() {
+        let seed = 0x96FD2CBD8A2263A3;
+
+        let offset = calculate_game_offset(seed, GameMode::BwContinue);
+        assert_eq!(
+            offset, 48,
+            "BW1 続きからのオフセットが一致しません (seed 0x96FD2CBD8A2263A3)"
+        );
+
+        let tid_sid = calculate_tid_sid_from_seed(seed, GameMode::BwContinue);
+        assert_eq!(tid_sid.tid, 0);
+        assert_eq!(tid_sid.sid, 0);
+        assert_eq!(tid_sid.advances_used, 0);
     }
 }

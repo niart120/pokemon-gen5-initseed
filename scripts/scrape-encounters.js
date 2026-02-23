@@ -116,7 +116,7 @@ const NAME_ALIASES = new Map([
   // ['ヨーテリー', 'Lillipup'],
 ]);
 
-// 実URL: Pokebook 各バージョンの遭遇テーブル（各メソッドは同一ページ内セクションに存在）
+// 実URL: Pokebook 各バージョンのエンカウントテーブル（各メソッドは同一ページ内セクションに存在）
 const SOURCE_MAP = {
   B: {
     Normal: 'https://pokebook.jp/data/sp5/enc_b',

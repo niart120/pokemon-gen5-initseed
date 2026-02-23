@@ -43,13 +43,13 @@ impl PersonalityRNG {
         ((rand as u64 * 25) >> 32) as u32
     }
     
-    // 遭遇スロット決定（BW用）: (seed*0xFFFF/0x290)>>32
+    // エンカウントスロット決定（BW用）: (seed*0xFFFF/0x290)>>32
     pub fn encounter_slot_bw(&mut self) -> u32 {
         let rand = self.next();
         ((rand as u64 * 0xFFFF / 0x290) >> 32) as u32
     }
     
-    // 遭遇スロット決定（BW2用）: (seed*100)>>32
+    // エンカウントスロット決定（BW2用）: (seed*100)>>32
     pub fn encounter_slot_bw2(&mut self) -> u32 {
         let rand = self.next();
         ((rand as u64 * 100) >> 32) as u32
@@ -77,9 +77,9 @@ impl PersonalityRNG {
 ### 特殊用途乱数生成
 - **シンクロ判定**: (r1[n] * 2) >> 32 == 0 で判定
 - **性格決定**: (r1[n] * 25) >> 32 で0-24の値を生成
-- **遭遇スロット**: BW/BW2で異なる計算式を使用
+- **エンカウントスロット**: BW/BW2で異なる計算式を使用
 
 ### 実装上の注意点
 - WebAssembly環境での64bit整数演算を考慮
 - オーバーフロー対応として wrapping_mul/wrapping_add を使用
-- getter/setter でJavaScript側からのシード操作を可能にする
+- getter/setter でJavaScript側からのSeed操作を可能にする

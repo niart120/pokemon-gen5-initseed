@@ -14,34 +14,32 @@
 ## モジュール構成
 ```
 src/lib/webgpu/seed-search/
-  ├─ runner.ts                 // WebGPU Seed 検索ランナー公開API
-  ├─ device-context.ts         // Adapter/Device 取得とリミット情報
-  ├─ batch-planner.ts          // バッチ上限・チャンク分割ロジック
-  ├─ message-encoder.ts        // GPU-friendly チャンク記述子生成
-  ├─ buffers/
-  │    ├─ buffer-pool.ts       // 二重バッファ資源管理
-  ├─ pipelines/
-  │    ├─ sha1-generate.wgsl   // メッセージ生成 + SHA-1 計算シェーダ
-  │    ├─ pipeline-factory.ts  // ComputePipeline 構築
-  ├─ profiling.ts              // 計測構造体・統計整形
+   ├─ prepare-search-job.ts     // SearchConditions → SeedSearchJob 変換
+   ├─ seed-search-controller.ts // 進捗管理・CPU検証・コールバック集約
+   ├─ seed-search-engine.ts     // WebGPU Compute 実行とバッファ管理
+   ├─ device-context.ts         // Adapter/Device 取得とリミット情報
+   ├─ (shared) search/time/time-plan.ts // 日時レンジの正規化・オフセット取得
+   ├─ constants.ts / types.ts   // 共有定数と型定義
+   ├─ kernel/
+   │    ├─ sha1-generate.wgsl       // メッセージ生成 + SHA-1 計算シェーダ
+   │    └─ seed-search-kernel.ts    // Kernelモジュール生成と BindGroupLayout 定義
 ```
-- ランナーは `init`, `supports`, `runSearch`, `dispose` の4メソッドを公開する。
-- `runSearch` は `AbortSignal` を受け取り、中断指示や STOP メッセージに対応。
+- コントローラは `run` / `pause` / `resume` / `stop` を公開し、`SeedSearchJob` を逐次消化する。
+- `SeedSearchEngine` が GPU 実行とリソース確保を担当し、コントローラ経由で Web Worker コールバックへ結果を返す。
 
 ## ワーカー連携
-- `src/workers/search-worker-webgpu.ts` を新設し、上記ランナーをラップする。
-- `SearchWorkerManager` は設定ストアからモードを判定し、WebGPU モード時は専用 worker を初期化。
-- 既存 worker と同一メッセージ型 (`WorkerRequest`/`WorkerResponse`) を再利用する。
-- エラー発生時はメッセージ経由で通知し、マネージャ側で CPU/WASM パスにフォールバック。
+- `src/workers/search-worker-webgpu.ts` は `prepareSearchJob` で `SeedSearchJob` を構築し、`SeedSearchController` に委譲する。
+- `SearchWorkerManager` は設定ストアからモードを判定し、WebGPU モード時のみ専用 worker を初期化する設計を維持。
+- 既存 worker と同一メッセージ型 (`WorkerRequest`/`WorkerResponse`) を再利用し、進捗・結果・停止イベントを統一的に通知する。
+- エラー発生時はメッセージ経由で通知し、マネージャ側で CPU/WASM パスにフォールバックする。
 
 ## チャンク化・バッチ処理
-1. `prepareWorkload(conditions)` で Timer0×VCount×秒の検索範囲をチャンク列へ分割。
-   - チャンクは「連続 Timer0 範囲」「連続 VCount 範囲」「連続秒範囲」で構成。
-   - 各チャンクは GPU シェーダへ渡す `GeneratedConfig` と `baseOffset`・`messageCount` を保持。
-2. `BatchPlanner` がデバイスリミット (`maxStorageBufferBindingSize`, workgroup 上限) とホストメモリを参照し、
-   - 1ディスパッチ当たりの最大メッセージ数を算出。
-   - Double buffering が成立するよう、チャンク内 dispatch 件数 >= 2 を保証。
-3. 実行時は `computeGenerated` 相当のフローを踏襲し、各チャンクをストリーミング dispatch。
+1. `prepareSearchJob(conditions, targetSeeds)` が Timer0×VCount×日時レンジを `SeedSearchJobSegment` 配列へ分割。
+   - セグメントは keyCode / timer0 範囲 / vcount 範囲 / 時間オフセットを保持し、GPU へ渡す `configWords` を生成する。
+   - `SeedSearchJobSummary` と `SeedSearchJobLimits` により、UI とエンジン双方が同じメタ情報を参照可能。
+2. Dispatch 上限は `prepareSearchJob` 内で WebGPU リミット (`maxComputeWorkgroupsPerDimension`, `maxStorageBufferBindingSize`) とターゲット容量から決定。
+   - 値は `SeedSearchJobLimits` に格納され、エンジン初期化および進捗推定に利用される。
+3. コントローラはセグメントを順次実行し、各ディスパッチ後に `WorkerProgressMessage` を発行する。
 
 ## フォールバック戦略
 - Worker 初期化エラー、デバイス非対応、実行時 `GPUValidationError` が発生した場合、`ERROR` メッセージ送信後に自動で CPU/WASM パスへ切り替える。
@@ -53,10 +51,10 @@ src/lib/webgpu/seed-search/
 - 必要に応じて詳細ログをフラグで切り替えられるようにする。
 
 ## テスト計画
-- **ユニット**: BatchPlanner と message encoder の境界値テスト、フォールバック動作テスト。
+- **ユニット**: `prepare-search-job.test.ts` による時間計画・キー入力フィルタの検証、`gpu-message-mapping.test.ts` で GPU/CPU メッセージ整合性を担保。
 - **統合 (Vitest Browser)**: WebGPU worker 経由での検索実行ベンチを追加し、CPU/WASM 結果と比較。
-- **E2E**: `public/test-integration.html` に WebGPU ルートを追加し、UI からの検索・中断・再開を検証。
-- **非対応環境**: WebGPU 未対応ブラウザでのフォールバック確認。
+- **E2E**: `public/test-integration.html` で UI からの検索・中断・再開とフォールバック経路を検証。
+- **非対応環境**: WebGPU 未対応ブラウザでフォールバックが選択されることを確認。
 
 ## 実装ステップ
 1. 共通設定・ストアに WebGPU モード判定とフラグを追加。

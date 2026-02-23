@@ -2,17 +2,19 @@
  * Parallel worker related types
  */
 
-export interface WorkerChunk {
+/**
+ * 統一されたWorker用時間チャンク型
+ * 時間範囲に基づくチャンク分割の共通インターフェース
+ */
+export interface TimeChunk {
   workerId: number;
   startDateTime: Date;
   endDateTime: Date;
-  timer0Range: { min: number; max: number };
-  vcountRange: { min: number; max: number };
+  rangeSeconds: number;
   estimatedOperations: number;
 }
 
 export interface ParallelSearchSettings {
-  enabled: boolean;
   maxWorkers: number;
   chunkStrategy: 'time-based' | 'hybrid' | 'auto';
 }
@@ -26,6 +28,10 @@ export interface AggregatedProgress {
   activeWorkers: number;
   completedWorkers: number;
   workerProgresses: Map<number, WorkerProgress>;
+  /** 全体の進捗パーセント（0-100、秒数ベース） */
+  progressPercent?: number;
+  /** 全Worker合計の処理済み秒数（処理速度計算用） */
+  totalProcessedSeconds?: number;
 }
 
 export interface WorkerProgress {
@@ -37,6 +43,10 @@ export interface WorkerProgress {
   matchesFound: number;
   currentDateTime?: Date;
   status: 'initializing' | 'running' | 'paused' | 'completed' | 'error';
+  /** 進捗パーセント（0-100） */
+  progressPercent?: number;
+  /** 処理済み秒数（処理速度計算用） */
+  processedSeconds?: number;
 }
 
 export interface ParallelWorkerRequest {
@@ -44,7 +54,7 @@ export interface ParallelWorkerRequest {
   workerId: number;
   conditions?: import('./search').SearchConditions;
   targetSeeds?: number[];
-  chunk?: WorkerChunk;
+  chunk?: TimeChunk;
 }
 
 export interface ParallelWorkerResponse {

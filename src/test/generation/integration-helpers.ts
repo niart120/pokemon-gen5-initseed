@@ -3,7 +3,7 @@ import type { GenerationParams, GenerationCompletion } from '@/types/generation'
 
 export interface RunGenerationResult {
   completion: GenerationCompletion;
-  progressSamples: number;
+  totalResults: number;
 }
 
 export async function runGenerationScenario(
@@ -11,11 +11,11 @@ export async function runGenerationScenario(
   timeoutMs = 7000,
 ): Promise<RunGenerationResult> {
   const manager = new GenerationWorkerManager();
-  let progressSamples = 0;
+  let totalResults = 0;
   return await new Promise<RunGenerationResult>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
-    manager.onProgress(() => { progressSamples++; });
-    manager.onComplete(c => { clearTimeout(timer); resolve({ completion: c, progressSamples }); });
+    manager.onResults(payload => { totalResults += payload.results.length; });
+    manager.onComplete(c => { clearTimeout(timer); resolve({ completion: c, totalResults }); });
     manager.onError(e => { clearTimeout(timer); reject(new Error('worker-error:'+e)); });
     manager.start(params).catch(err => { clearTimeout(timer); reject(err); });
   });
@@ -37,7 +37,6 @@ export function baseParams(overrides: Partial<GenerationParams>): GenerationPara
     isShinyLocked: false,
     stopAtFirstShiny: false,
     stopOnCap: true,
-    batchSize: 500,
     newGame: true,
     withSave: true,
     memoryLink: false,

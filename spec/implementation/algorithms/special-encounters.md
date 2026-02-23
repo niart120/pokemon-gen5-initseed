@@ -41,7 +41,7 @@ pub fn process_special_encounter(&mut self, encounter_type: u32) -> EncounterRes
         self.rng.nature_roll() // r1[n+1] 消費
     };
     
-    // Step 3: 遭遇スロット決定
+    // Step 3: エンカウントスロット決定
     let slot_value = match self.game_version {
         GameVersion::B | GameVersion::W => self.rng.encounter_slot_bw(),   // r1[n+2] 消費
         GameVersion::B2 | GameVersion::W2 => self.rng.encounter_slot_bw2(), // r1[n+2] 消費
@@ -80,7 +80,7 @@ pub fn process_special_encounter(&mut self, encounter_type: u32) -> EncounterRes
 - 生の乱数値とエンカウントテーブルを組み合わせてレベル計算
 - エリア・バージョン・釣り竿タイプ等の詳細条件を考慮
 
-## 各特殊エンカウントの遭遇テーブル
+## 各特殊エンカウントのエンカウントテーブル
 
 ### 揺れる草むら（エンカウントタイプ3）
 ```rust
@@ -128,7 +128,7 @@ fn pokemon_shadow_slot(&self, slot: u32) -> usize {
 ```rust
 fn surfing_bubble_slot(&self, slot: u32) -> usize {
     // 水泡（なみのり版特殊エンカウント）
-    // なみのりエリアでの特殊遭遇
+    // なみのりエリアでの特殊エンカウント
     match slot {
         0..=49 => 0,   // 50%
         50..=79 => 1,  // 30%
@@ -142,7 +142,7 @@ fn surfing_bubble_slot(&self, slot: u32) -> usize {
 ```rust
 fn fishing_bubble_slot(&self, slot: u32) -> usize {
     // 水泡釣り（釣り版特殊エンカウント）
-    // 釣りエリアでの特殊遭遇
+    // 釣りエリアでの特殊エンカウント
     match slot {
         0..=59 => 0,   // 60%
         60..=84 => 1,  // 25%
@@ -156,7 +156,7 @@ fn fishing_bubble_slot(&self, slot: u32) -> usize {
 
 ### 乱数消費パターン
 - 特殊エンカウントは基本的に野生エンカウントと同じ乱数消費パターン
-- 遭遇スロットテーブルのみが通常エンカウントと異なる
+- エンカウントスロットテーブルのみが通常エンカウントと異なる
 - レベル計算は実際のエンカウントテーブル情報が必要なためTypeScript側で実行
 
 ### レベル決定方式

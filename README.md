@@ -1,5 +1,13 @@
 # ポケモンBW/BW2 初期Seed探索 Web アプリ
 
+> **本リポジトリはアーカイブ済みです。** 今後の機能追加・バグ修正は行われません。
+>
+> 機能・UI・内部構成を全面的に見直した新バージョンを公開しています。
+>
+> - アプリ: [**5genSearch-web**](https://niart120.github.io/5genSearch-web/)
+> - リポジトリ: [**niart120/5genSearch-web**](https://github.com/niart120/5genSearch-web)
+> - 記事: [**第五世代乱数調整webアプリを再構築した話**](https://hackmd.io/@niart/rJ3NkfdObg)
+
 第5世代（ブラック・ホワイト/ブラック2・ホワイト2）向けの初期 Seed 探索と結果検証を行う Web アプリケーションです。Rust + WebAssembly による SIMD 最適化検索と、React 製 UI による検索条件管理・結果可視化を提供します。
 
 ## Live
@@ -8,7 +16,7 @@
 ## 主な機能
 - Rust WebAssembly コアによる高速 SHA-1 初期 Seed 探索（SIMD128 対応）
 - Web Worker ベースの検索・世代引き離し処理と進捗監視
-- Encounter/Species データを利用した Generation 結果解析（シードから連続乱数の列挙）
+- Encounter/Species データを利用した Generation 結果解析（Seedから連続乱数の列挙）
 - Generation 結果のフィルタリング・ソート・エクスポート（CSV / JSON / TXT）
 - WebGPU ベースの検索ランナー（対応ブラウザでの実験的パス）
 - Vitest / wasm-pack / Playwright MCP を組み合わせた多層テスト
@@ -17,8 +25,8 @@
 | レイヤ | 主なモジュール | 概要 |
 | --- | --- | --- |
 | UI (React + Zustand) | `src/components`, `src/store` | 検索条件・結果 UI、Zustand ストア |
-| 検索コア | `src/lib/core`, `src/workers/search-worker*.ts` | wasm-bindgen 経由で `IntegratedSeedSearcher` を実行 |
-| Generation | `src/lib/generation`, `src/workers/generation-worker.ts` | シード列挙・Pokemon Resolver |
+| 検索コア | `src/lib/core`, `src/workers/parallel-search-worker.ts`, `src/workers/search-worker-webgpu.ts` | wasm-bindgen 経由で `IntegratedSeedSearcher` を実行 |
+| Generation | `src/lib/generation`, `src/workers/generation-worker.ts` | Seed列挙・Pokemon Resolver |
 | データ管理 | `src/data/encounters`, `src/data/species` | Encounter テーブル・種族データのローダ |
 | Rust / wasm | `wasm-pkg/src/*.rs` | SHA-1 SIMD、Encounter 計算、Pokemon Generator 等 |
 
@@ -60,7 +68,7 @@ npm run deploy            # dist → docs へコピー（GitHub Pages 用）
 
 ## データソース・参考
 - ポケモン第5世代乱数調整: https://rusted-coil.sakura.ne.jp/pokemon/ran/ran_5.htm
-- 遭遇テーブル: https://pokebook.jp/
+- エンカウントテーブル: https://pokebook.jp/
 - 補助資料: https://xxsakixx.com/
 
 ## ライセンス

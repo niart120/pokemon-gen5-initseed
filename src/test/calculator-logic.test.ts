@@ -29,7 +29,7 @@ describe('WebAssembly計算ロジックテスト', () => {
     expect(typeof hasWasm).toBe('boolean')
   })
 
-  test('基本的なシード計算が動作する', () => {
+  test('基本的なSeed計算が動作する', () => {
     // テスト用のメッセージ
     const testMessage = [
       0x12345678, 0x9ABCDEF0, 0x11111111, 0x22222222,
@@ -85,15 +85,14 @@ describe('WebAssembly計算ロジックテスト', () => {
         startYear: 2011,
         startMonth: 3,
         startDay: 6,
-        startHour: 0,
-        startMinute: 0,
-        startSecond: 0,
         endYear: 2011,
         endMonth: 3,
         endDay: 6,
-        endHour: 0,
-        endMinute: 0,
-        endSecond: 0
+      },
+      timeRange: {
+        hour: { start: 0, end: 0 },
+        minute: { start: 0, end: 0 },
+        second: { start: 0, end: 0 },
       },
       keyInput: 0,
       macAddress: [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB]

@@ -30,8 +30,9 @@ export const LocaleProvider: React.FC<LocaleProviderProps> = ({ children }) => {
 // eslint-disable-next-line react-refresh/only-export-components
 export function useLocale(): SupportedLocale {
   const ctx = useContext(LocaleContext);
+  const fallbackLocale = useAppStore((state) => state.locale);
   if (!ctx) {
-    throw new Error('useLocale must be used within LocaleProvider');
+    return fallbackLocale;
   }
   return ctx.locale;
 }
@@ -39,8 +40,10 @@ export function useLocale(): SupportedLocale {
 // eslint-disable-next-line react-refresh/only-export-components
 export function useLocaleControls(): LocaleContextValue {
   const ctx = useContext(LocaleContext);
+  const locale = useAppStore((state) => state.locale);
+  const setLocale = useAppStore((state) => state.setLocale);
   if (!ctx) {
-    throw new Error('useLocaleControls must be used within LocaleProvider');
+    return { locale, setLocale };
   }
   return ctx;
 }

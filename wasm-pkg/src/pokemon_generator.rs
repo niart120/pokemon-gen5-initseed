@@ -1,4 +1,5 @@
 use crate::encounter_calculator::{EncounterCalculator, EncounterType, GameVersion};
+use crate::offset_calculator::{calculate_game_offset, GameMode};
 use crate::personality_rng::PersonalityRNG;
 use crate::pid_shiny_checker::{PIDCalculator, ShinyChecker, ShinyType};
 /// PokemonGenerator - BW/BW2統合ポケモン生成エンジン
@@ -9,7 +10,7 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct RawPokemonData {
-    /// 初期シード値
+    /// 初期Seed値
     seed: u64,
     /// PID
     pid: u32,
@@ -21,7 +22,7 @@ pub struct RawPokemonData {
     ability_slot: u8,
     /// 性別値（0-255）
     gender_value: u8,
-    /// 遭遇スロット値
+    /// エンカウントスロット値
     encounter_slot_value: u8,
     /// エンカウントタイプ（数値保存）
     encounter_type: u8,
@@ -29,6 +30,88 @@ pub struct RawPokemonData {
     level_rand_value: u32,
     /// 色違いタイプ（0: NotShiny, 1: Square, 2: Star）
     shiny_type: u8,
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct EnumeratedPokemonData {
+    advance: u64,
+    pokemon: RawPokemonData,
+    report_needle_direction: u8,
+}
+
+impl EnumeratedPokemonData {
+    fn new(advance: u64, pokemon: RawPokemonData, report_needle_direction: u8) -> EnumeratedPokemonData {
+        EnumeratedPokemonData { advance, pokemon, report_needle_direction }
+    }
+}
+
+#[wasm_bindgen]
+impl EnumeratedPokemonData {
+    #[wasm_bindgen(getter)]
+    pub fn get_advance(&self) -> u64 {
+        self.advance
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_seed(&self) -> u64 {
+        self.pokemon.seed
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_pid(&self) -> u32 {
+        self.pokemon.pid
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_report_needle_direction(&self) -> u8 {
+        self.report_needle_direction
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_nature(&self) -> u8 {
+        self.pokemon.nature
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_sync_applied(&self) -> bool {
+        self.pokemon.sync_applied
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_ability_slot(&self) -> u8 {
+        self.pokemon.ability_slot
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_gender_value(&self) -> u8 {
+        self.pokemon.gender_value
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_encounter_slot_value(&self) -> u8 {
+        self.pokemon.encounter_slot_value
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_encounter_type(&self) -> u8 {
+        self.pokemon.encounter_type
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_level_rand_value(&self) -> u64 {
+        self.pokemon.level_rand_value as u64
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_shiny_type(&self) -> u8 {
+        self.pokemon.shiny_type
+    }
+
+    /// 任意: 元の RawPokemonData を複製して取得
+    pub fn into_raw(&self) -> RawPokemonData {
+        self.pokemon.clone()
+    }
 }
 
 #[wasm_bindgen]
@@ -91,7 +174,7 @@ impl RawPokemonData {
 pub struct BWGenerationConfig {
     /// ゲームバージョン
     version: GameVersion,
-    /// 遭遇タイプ
+    /// エンカウントタイプ
     encounter_type: EncounterType,
     /// トレーナーID
     tid: u16,
@@ -190,7 +273,7 @@ impl PokemonGenerator {
     /// BW/BW2準拠 単体ポケモン生成（統括関数）
     ///
     /// # Arguments
-    /// * `seed` - 初期シード値
+    /// * `seed` - 初期Seed値
     /// * `config` - BW準拠設定
     ///
     /// # Returns
@@ -201,7 +284,7 @@ impl PokemonGenerator {
             EncounterType::StaticSymbol => Self::generate_static_symbol(seed, config),
 
             // 徘徊
-            EncounterType::Roaming => Self::generate_roaming(seed, config),
+            EncounterType::Roamer => Self::generate_roamer(seed, config),
 
             // イベント系（御三家・化石）
             EncounterType::StaticStarter
@@ -226,14 +309,14 @@ impl PokemonGenerator {
         }
     }
 
-    /// オフセット適用後の生成開始シードを計算
+    /// オフセット適用後の生成開始Seedを計算
     #[wasm_bindgen]
     pub fn calculate_generation_seed(initial_seed: u64, offset: u64) -> u64 {
         if offset == 0 {
             return initial_seed;
         }
-        let (mul, add) = Self::lcg_affine_for_steps(offset);
-        Self::lcg_apply(initial_seed, mul, add)
+        let (mul, add) = PersonalityRNG::lcg_affine_for_steps(offset);
+        PersonalityRNG::lcg_apply(initial_seed, mul, add)
     }
 
     /// 固定シンボル生成
@@ -267,14 +350,14 @@ impl PokemonGenerator {
             pid,
             nature_id,
             sync_applied,
-            0, // 固定シンボルは遭遇スロット0
+            0, // 固定シンボルはエンカウントスロット0
             0, // レベル乱数なし
             config,
         )
     }
 
     /// 徘徊生成
-    fn generate_roaming(seed: u64, config: &BWGenerationConfig) -> RawPokemonData {
+    fn generate_roamer(seed: u64, config: &BWGenerationConfig) -> RawPokemonData {
         let mut rng = PersonalityRNG::new(seed);
 
         // 徘徊はシンクロ無効
@@ -282,7 +365,7 @@ impl PokemonGenerator {
         // PID生成（BW/BW2統一仕様: 32bit乱数 ^ 0x10000 + ID補正）
         let pid_base = rng.next();
         let pid = Self::finalize_pid_with_shiny_rules(&mut rng, config, pid_base, |base| {
-            PIDCalculator::generate_roaming_pid(base, config.tid, config.sid)
+            PIDCalculator::generate_roamer_pid(base, config.tid, config.sid)
         });
 
         // 性格生成（徘徊はシンクロ無効なので通常性格のみ）
@@ -290,7 +373,7 @@ impl PokemonGenerator {
 
         Self::build_pokemon_data(
             seed, pid, nature_id, false, // sync_applied = false
-            0,     // 徘徊は遭遇スロット0
+            0,     // 徘徊はエンカウントスロット0
             0,     // レベル乱数なし
             config,
         )
@@ -313,7 +396,7 @@ impl PokemonGenerator {
 
         Self::build_pokemon_data(
             seed, pid, nature_id, false, // sync_applied = false
-            0,     // イベント系は遭遇スロット0
+            0,     // イベント系はエンカウントスロット0
             0,     // レベル乱数なし
             config,
         )
@@ -327,7 +410,7 @@ impl PokemonGenerator {
         let sync_success =
             Self::perform_sync_check(&mut rng, config.encounter_type, config.sync_enabled);
 
-        // 遭遇スロット決定
+        // エンカウントスロット決定
         let encounter_slot_value = EncounterCalculator::calculate_encounter_slot(
             config.version,
             config.encounter_type,
@@ -376,7 +459,7 @@ impl PokemonGenerator {
         let sync_success =
             Self::perform_sync_check(&mut rng, config.encounter_type, config.sync_enabled);
 
-        // 遭遇スロット決定
+        // エンカウントスロット決定
         let encounter_slot_value = EncounterCalculator::calculate_encounter_slot(
             config.version,
             config.encounter_type,
@@ -426,7 +509,7 @@ impl PokemonGenerator {
         // 釣り成功判定
         let _fishing_success = rng.next();
 
-        // 遭遇スロット決定
+        // エンカウントスロット決定
         let encounter_slot_value = EncounterCalculator::calculate_encounter_slot(
             config.version,
             config.encounter_type,
@@ -531,41 +614,10 @@ impl PokemonGenerator {
         }
     }
 
-    /// 内部: LCG a,b 定数
-    #[inline]
-    fn lcg_constants() -> (u64, u64) {
-        (0x5D588B656C078965, 0x269EC3)
-    }
-
-    /// 内部: LCG を steps 回前進させるアフィン変換 (mul, add) を返す
-    /// seed' = mul * seed + add (mod 2^64)
-    fn lcg_affine_for_steps(steps: u64) -> (u64, u64) {
-        let (mut mul, mut add) = (1u64, 0u64);
-        let (mut cur_mul, mut cur_add) = Self::lcg_constants();
-        let mut k = steps;
-        while k > 0 {
-            if (k & 1) == 1 {
-                add = add.wrapping_mul(cur_mul).wrapping_add(cur_add);
-                mul = mul.wrapping_mul(cur_mul);
-            }
-            // square current transform
-            cur_add = cur_add.wrapping_mul(cur_mul).wrapping_add(cur_add);
-            cur_mul = cur_mul.wrapping_mul(cur_mul);
-            k >>= 1;
-        }
-        (mul, add)
-    }
-
-    /// 内部: アフィン適用
-    #[inline]
-    fn lcg_apply(seed: u64, mul: u64, add: u64) -> u64 {
-        seed.wrapping_mul(mul).wrapping_add(add)
-    }
-
     /// BW/BW2準拠 バッチ生成（offsetのみ）
     ///
     /// # Arguments
-    /// * `base_seed` - 列挙の基準シード（初期シード）
+    /// * `base_seed` - 列挙の初期Seed
     /// * `offset` - 最初の生成までの前進数（ゲーム内不定消費を含めた開始位置）
     /// * `count` - 生成数（0なら空）
     /// * `config` - BW準拠設定
@@ -589,14 +641,14 @@ impl PokemonGenerator {
         } as usize;
         let mut results = Vec::with_capacity(capped);
 
-        // 初期シード: base_seed を offset だけ前進
-        let (m_off, a_off) = Self::lcg_affine_for_steps(offset);
-        let mut cur_seed = Self::lcg_apply(base_seed, m_off, a_off);
+        // 初期Seed: base_seed を offset だけ前進
+        let (m_off, a_off) = PersonalityRNG::lcg_affine_for_steps(offset);
+        let mut cur_seed = PersonalityRNG::lcg_apply(base_seed, m_off, a_off);
 
         for _ in 0..capped {
             let pokemon = Self::generate_single_pokemon_bw(cur_seed, config);
             results.push(pokemon);
-            // 次のシードへ（1ステップ）
+            // 次のSeedへ（1ステップ）
             cur_seed = PersonalityRNG::next_seed(cur_seed);
         }
         results
@@ -628,7 +680,8 @@ impl PokemonGenerator {
     /// シンクロ判定結果（true: シンクロ成功, false: シンクロ失敗）
     fn sync_check(rng: &mut PersonalityRNG) -> bool {
         let rand = rng.next();
-        ((rand as u64 * 2) >> 32) == 0
+        // ゲーム実機仕様に合わせ、最上位bitが1ならシンクロ成功とみなす
+        ((rand as u64 * 2) >> 32) == 1
     }
 
     /// 内部使用：性格決定処理
@@ -648,7 +701,7 @@ impl PokemonGenerator {
     ///
     /// # Arguments
     /// * `rng` - 乱数生成器
-    /// * `encounter_type` - 遭遇タイプ
+    /// * `encounter_type` - エンカウントタイプ
     /// * `sync_enabled` - シンクロ有効フラグ
     ///
     /// # Returns
@@ -676,7 +729,7 @@ impl PokemonGenerator {
     /// # Arguments
     /// * `rng` - 乱数生成器
     /// * `sync_success` - シンクロ判定結果
-    /// * `encounter_type` - 遭遇タイプ
+    /// * `encounter_type` - エンカウントタイプ
     /// * `sync_enabled` - シンクロ有効フラグ
     /// * `sync_nature_id` - シンクロ性格ID
     ///
@@ -721,7 +774,7 @@ impl PokemonGenerator {
             EncounterType::StaticStarter => 11,
             EncounterType::StaticFossil => 12,
             EncounterType::StaticEvent => 13,
-            EncounterType::Roaming => 20,
+            EncounterType::Roamer => 20,
         }
     }
 
@@ -735,12 +788,13 @@ impl PokemonGenerator {
     }
 }
 
-/// 連続列挙用のシード列挙器（offsetのみ）
+/// 連続列挙用のSeed列挙器（offsetのみ）
 #[wasm_bindgen]
 pub struct SeedEnumerator {
     current_seed: u64,
     remaining: u32,
     config: BWGenerationConfig,
+    next_advance: u64,
 }
 
 #[wasm_bindgen]
@@ -749,28 +803,40 @@ impl SeedEnumerator {
     #[wasm_bindgen(constructor)]
     pub fn new(
         base_seed: u64,
-        offset: u64,
+        user_offset: u64,
         count: u32,
         config: &BWGenerationConfig,
+        game_mode: GameMode,
     ) -> SeedEnumerator {
-        let (m_off, a_off) = PokemonGenerator::lcg_affine_for_steps(offset);
-        let current_seed = PokemonGenerator::lcg_apply(base_seed, m_off, a_off);
+        let game_offset = calculate_game_offset(base_seed, game_mode) as u64;
+        let (combined_offset, overflowed) = game_offset.overflowing_add(user_offset);
+        let total_offset = if overflowed {
+            u64::MAX
+        } else {
+            combined_offset
+        };
+        let (m_off, a_off) = PersonalityRNG::lcg_affine_for_steps(total_offset);
+        let current_seed = PersonalityRNG::lcg_apply(base_seed, m_off, a_off);
         SeedEnumerator {
             current_seed,
             remaining: count,
             config: config.clone(),
+            next_advance: user_offset,
         }
     }
 
     /// 次のポケモンを生成（残数0なら undefined を返す）
-    pub fn next_pokemon(&mut self) -> Option<RawPokemonData> {
+    pub fn next_pokemon(&mut self) -> Option<EnumeratedPokemonData> {
         if self.remaining == 0 {
             return None;
         }
         let result = PokemonGenerator::generate_single_pokemon_bw(self.current_seed, &self.config);
+        let report_needle_direction = PersonalityRNG::calc_report_needle_direction(self.current_seed);
+        let enumerated = EnumeratedPokemonData::new(self.next_advance, result, report_needle_direction);
         self.remaining -= 1;
+        self.next_advance = self.next_advance.saturating_add(1);
         self.current_seed = PersonalityRNG::next_seed(self.current_seed);
-        Some(result)
+        Some(enumerated)
     }
 
     /// 残数を取得
@@ -879,6 +945,16 @@ mod tests {
     }
 
     #[test]
+    fn seed_enumerator_reports_needle_direction_from_current_seed() {
+        let config = create_bw_test_config();
+        let mut enumerator = SeedEnumerator::new(0x1234_5678_9ABC_DEF0, 0, 1, &config, GameMode::BwContinue);
+
+        let raw = enumerator.next_pokemon().expect("should produce pokemon");
+        let expected = PersonalityRNG::calc_report_needle_direction(0x1234_5678_9ABC_DEF0);
+        assert_eq!(raw.get_report_needle_direction(), expected);
+    }
+
+    #[test]
     fn test_bw_encounter_type_pid_generation() {
         let mut config = create_bw_test_config();
 
@@ -891,7 +967,7 @@ mod tests {
         let static_pokemon =
             PokemonGenerator::generate_single_pokemon_bw(0x123456789ABCDEF0, &config);
 
-        // 同じシードでも異なるPID生成方式で結果が変わることを確認
+        // 同じSeedでも異なるPID生成方式で結果が変わることを確認
         assert_ne!(wild.pid, static_pokemon.pid);
         assert_eq!(wild.encounter_type, 0);
         assert_eq!(static_pokemon.encounter_type, 10);
@@ -905,7 +981,7 @@ mod tests {
 
         assert_eq!(list.len(), 5);
 
-        // 各ポケモンが異なるシードから生成されていることを確認
+        // 各ポケモンが異なるSeedから生成されていることを確認
         for i in 1..list.len() {
             assert_ne!(list[i - 1].seed, list[i].seed);
         }
@@ -964,20 +1040,39 @@ mod tests {
         let offset = 5u64;
         let count = 20u32;
 
-        let batch = PokemonGenerator::generate_pokemon_batch_bw(base, offset, count, &config);
+        let game_offset = calculate_game_offset(base, GameMode::BwContinue) as u64;
+        let batch =
+            PokemonGenerator::generate_pokemon_batch_bw(base, game_offset + offset, count, &config);
 
-        let mut it = SeedEnumerator::new(base, offset, count, &config);
+        let mut it = SeedEnumerator::new(base, offset, count, &config, GameMode::BwContinue);
         let mut collected = Vec::new();
         while let Some(p) = it.next_pokemon() {
             collected.push(p);
         }
 
         assert_eq!(batch.len(), collected.len());
-        for (a, b) in batch.iter().zip(collected.iter()) {
-            assert_eq!(a.pid, b.pid);
-            assert_eq!(a.nature, b.nature);
-            assert_eq!(a.seed, b.seed);
+        for (expected_raw, enumerated) in batch.iter().zip(collected.iter()) {
+            let enumerated_raw = enumerated.into_raw();
+            assert_eq!(expected_raw.pid, enumerated_raw.pid);
+            assert_eq!(expected_raw.nature, enumerated_raw.nature);
+            assert_eq!(expected_raw.seed, enumerated_raw.seed);
         }
+    }
+
+    #[test]
+    fn sync_check_false_when_high_bit_zero() {
+        // seed=0 → next() 上位ビット0
+        let mut rng = PersonalityRNG::new(0);
+        let success = PokemonGenerator::sync_check(&mut rng);
+        assert!(!success);
+    }
+
+    #[test]
+    fn sync_check_true_when_high_bit_one() {
+        // このSeedで最初の next() が 0xC83FB970 (上位ビット1)
+        let mut rng = PersonalityRNG::new(0x0A8B4E34C910A194);
+        let success = PokemonGenerator::sync_check(&mut rng);
+        assert!(success);
     }
 
     // ...existing code (その他のテスト群)...

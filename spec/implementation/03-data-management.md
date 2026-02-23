@@ -6,10 +6,10 @@ Generation 機能で利用するデータセットを TypeScript 側でどのよ
 - **種族カタログ**: `src/data/species/generated/gen5-species.json`
   - 全国図鑑 ID をキーに能力値・特性・性別比などを収録。
   - `src/data/species/generated/index.ts` が型安全なアクセサを提供。
-- **遭遇テーブル（ロケーション別）**: `src/data/encounters/generated/v1/**/*.json`
-  - バージョン × 遭遇種別ごとに場所とスロット構成を定義。
+- **エンカウントテーブル（ロケーション別）**: `src/data/encounters/generated/v1/**/*.json`
+  - バージョン × エンカウント種別ごとに場所とスロット構成を定義。
   - `src/data/encounters/loader.ts` がレジストリを構築し、`src/data/encounter-tables.ts` から利用する。
-- **固定シンボル / イベント遭遇**: `src/data/encounters/static/v1/**/*.json`
+- **固定シンボル / イベントエンカウント**: `src/data/encounters/static/v1/**/*.json`
   - 固定シンボル・配布イベントなどをエントリ単位で管理。
 - **解決コンテキスト**: `src/lib/initialization/build-resolution-context.ts`
   - 上記データを束ね、Resolver へ渡す `ResolutionContext` を生成する。
@@ -34,10 +34,10 @@ Generation 機能で利用するデータセットを TypeScript 側でどのよ
 
 `GeneratedSpecies` は JSON 構造に対応する型を表し、Resolver の `enrichForSpecies` が性別閾値と特性名を `ResolutionContext` に取り込む際に利用する。
 
-## 2. 遭遇レジストリ（`src/data/encounters/loader.ts`）
+## 2. エンカウントレジストリ（`src/data/encounters/loader.ts`）
 
-### ロケーション別遭遇テーブル
-遭遇テーブルは `EncounterLocationsJson` として構造化される。
+### ロケーション別エンカウントテーブル
+エンカウントテーブルは `EncounterLocationsJson` として構造化される。
 
 ```ts
 interface EncounterLocationsJson {
@@ -59,8 +59,8 @@ interface EncounterSlotJson {
 
 Vite の `import.meta.glob('./generated/v1/**/**/*.json', { eager: true })` で一括読み込みし、`registry[`${version}_${method}`]` にマージする。ロケーションキーは `applyLocationAlias` と `normalizeLocationKey` で正規化し、表記揺れを吸収する。`displayNameKey` は UI の翻訳キーとして利用し、未指定の場合は正規化後のキーで補完する。
 
-### 固定遭遇カタログ
-固定シンボルやイベント遭遇は `EncounterSpeciesJson` で表現する。
+### 固定エンカウントカタログ
+固定シンボルやイベントエンカウントは `EncounterSpeciesJson` で表現する。
 
 ```ts
 interface EncounterSpeciesJson {
@@ -79,9 +79,9 @@ interface EncounterSpeciesJson {
 }
 ```
 
-`listStaticEncounterEntries` がバージョンと遭遇種別で絞り、Resolver には `staticEncounter` として渡す。`displayNameKey` が欠けている場合は ID で補完する。
+`listStaticEncounterEntries` がバージョンとエンカウント種別で絞り、Resolver には `staticEncounter` として渡す。`displayNameKey` が欠けている場合は ID で補完する。
 
-## 3. 遭遇テーブル API（`src/data/encounter-tables.ts`）
+## 3. エンカウントテーブル API（`src/data/encounter-tables.ts`）
 
 `loader.ts` が構築したレジストリを薄いユーティリティで公開する。
 
@@ -105,17 +105,17 @@ export interface EncounterTable {
 
 ## 4. 解決コンテキスト（`src/lib/initialization/build-resolution-context.ts`）
 
-`buildResolutionContext` は画面状態（ゲームバージョン、遭遇種別、ロケーション/固定遭遇情報）を入力に `ResolutionContext` を構築する。
+`buildResolutionContext` は画面状態（ゲームバージョン、エンカウント種別、ロケーション/固定エンカウント情報）を入力に `ResolutionContext` を構築する。
 
-- 通常遭遇: `getEncounterTable` でテーブルを取得し、結果をコンテキストへ格納する。
-- 固定遭遇: 単一スロットの疑似テーブルを生成し、固定レベルで Resolver に渡す。
+- 通常エンカウント: `getEncounterTable` でテーブルを取得し、結果をコンテキストへ格納する。
+- 固定エンカウント: 単一スロットの疑似テーブルを生成し、固定レベルで Resolver に渡す。
 - 生成結果は `(version, encounterType, location/static)` をキーにしたメモリキャッシュへ保存する。
 
 追加で `enrichForSpecies(ctx, speciesId)` を呼び出すと、種族データから性別閾値と特性名を遅延的に取り込み、`pokemon-resolver.ts` が性別および特性を決定できる状態を作る。
 
 ## 5. データ更新フロー
 
-1. **ソース取得**: `scripts/fetch-gen5-species.js` で種族データ、`scripts/scrape-encounters.js` で遭遇テーブルを収集する。
+1. **ソース取得**: `scripts/fetch-gen5-species.js` で種族データ、`scripts/scrape-encounters.js` でエンカウントテーブルを収集する。
 2. **整形/マイグレーション**: `scripts/migrate-encounter-display-names.js` 等でキー整合性を保つ。
 3. **配置**: 生成された JSON を `src/data/species/generated/` および `src/data/encounters/(generated|static)/` に配置する。
 4. **検証**: `npm run test`（Resolver 周辺の単体テスト）と `npm run test:rust`（WASM 側）で整合性を確認する。

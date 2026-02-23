@@ -1,18 +1,41 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { SearchConditions, InitialSeedResult, TargetSeedList, SearchProgress, SearchPreset } from '../types/search';
-import type { GenerationParamsHex } from '@/types/generation';
-import type { ROMVersion, ROMRegion, Hardware } from '../types/rom';
+import type {
+  SearchConditions,
+  InitialSeedResult,
+  TargetSeedList,
+  SearchProgress,
+  SearchPreset,
+  DailyTimeRange,
+} from '../types/search';
+import type { GenerationParamsHex, BootTimingDraft } from '@/types/generation';
 import type { ParallelSearchSettings, AggregatedProgress } from '../types/parallel';
+import type { DeviceProfile, DeviceProfileDraft } from '../types/profile';
+import { createDefaultDeviceProfile, createDeviceProfile, applyDeviceProfileDraft } from '../types/profile';
 import { DEMO_TARGET_SEEDS } from '../data/default-seeds';
 
-import type { GenerationSlice } from './generation-store';
-import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS } from './generation-store';
+import type { GenerationSlice, GenerationFilters, ShinyFilterMode } from './generation-store';
+import { createGenerationSlice, bindGenerationManager, DEFAULT_GENERATION_DRAFT_PARAMS, createDefaultGenerationDraftParams, createDefaultGenerationFilters } from './generation-store';
+import { bootTimingDraftFromProfile, normalizeBootTimingDraft } from '@/store/utils/boot-timing-draft';
 import { DEFAULT_LOCALE } from '@/types/i18n';
+import { DomainShinyType } from '@/types/domain';
 
-export type SearchExecutionMode = 'gpu' | 'cpu-parallel' | 'cpu-single';
+/**
+ * 検索実行モード
+ * - 'gpu': WebGPU による並列検索
+ * - 'cpu-parallel': MtSeedBootTimingMultiWorkerManager による CPU 並列検索
+ */
+export type SearchExecutionMode = 'gpu' | 'cpu-parallel';
 
 interface AppStore extends GenerationSlice {
+  profiles: DeviceProfile[];
+  activeProfileId: string | null;
+  setActiveProfile: (profileId: string | null) => void;
+  createProfile: (draft: DeviceProfileDraft) => DeviceProfile;
+  updateProfile: (profileId: string, draft: Partial<DeviceProfileDraft>) => void;
+  deleteProfile: (profileId: string) => void;
+  applyProfileToSearch: (profileId?: string) => void;
+  applyProfileToGeneration: (profileId?: string) => void;
   locale: 'ja' | 'en';
   setLocale: (locale: 'ja' | 'en') => void;
   // Search conditions
@@ -30,7 +53,6 @@ interface AppStore extends GenerationSlice {
   // Search results
   searchResults: InitialSeedResult[];
   setSearchResults: (results: InitialSeedResult[]) => void;
-  addSearchResult: (result: InitialSeedResult) => void;
   clearSearchResults: () => void;
 
   // Search progress
@@ -48,7 +70,6 @@ interface AppStore extends GenerationSlice {
 
   // Parallel search settings
   parallelSearchSettings: ParallelSearchSettings;
-  setParallelSearchEnabled: (enabled: boolean) => void;
   setMaxWorkers: (count: number) => void;
   setChunkStrategy: (strategy: ParallelSearchSettings['chunkStrategy']) => void;
 
@@ -80,23 +101,31 @@ interface AppStore extends GenerationSlice {
   loadPreset: (presetId: string) => void;
 }
 
+const defaultDeviceProfile = createDefaultDeviceProfile();
+
+const createFullDayTimeRange = (): DailyTimeRange => ({
+  hour: { start: 0, end: 23 },
+  minute: { start: 0, end: 59 },
+  second: { start: 0, end: 59 },
+});
+
 const defaultSearchConditions: SearchConditions = {
-  romVersion: 'B' as ROMVersion,
-  romRegion: 'JPN' as ROMRegion,
-  hardware: 'DS' as Hardware,
-  
+  romVersion: defaultDeviceProfile.romVersion,
+  romRegion: defaultDeviceProfile.romRegion,
+  hardware: defaultDeviceProfile.hardware,
+
   timer0VCountConfig: {
-    useAutoConfiguration: true,
+    useAutoConfiguration: defaultDeviceProfile.timer0Auto,
     timer0Range: {
-      min: 3193,
-      max: 3194,
+      min: defaultDeviceProfile.timer0Range.min,
+      max: defaultDeviceProfile.timer0Range.max,
     },
     vcountRange: {
-      min: 95,
-      max: 95,
+      min: defaultDeviceProfile.vcountRange.min,
+      max: defaultDeviceProfile.vcountRange.max,
     },
   },
-  
+
   dateRange: {
     startYear: 2000,
     endYear: 2099,
@@ -104,16 +133,12 @@ const defaultSearchConditions: SearchConditions = {
     endMonth: 12,
     startDay: 1,
     endDay: 31,
-    startHour: 0,
-    endHour: 23,
-    startMinute: 0,
-    endMinute: 59,
-    startSecond: 0,
-    endSecond: 59,
   },
+
+  timeRange: createFullDayTimeRange(),
   
   keyInput: 0x0000, // Default: no key input
-  macAddress: [0x00, 0x1B, 0x2C, 0x3D, 0x4E, 0x5F],
+  macAddress: Array.from(defaultDeviceProfile.macAddress),
 };
 
 const defaultSearchProgress: SearchProgress = {
@@ -137,15 +162,21 @@ const isWebGpuAvailable = typeof navigator !== 'undefined'
 
 const defaultSearchExecutionMode: SearchExecutionMode = isWebGpuAvailable
   ? 'gpu'
-  : detectedHardwareConcurrency > 1
-    ? 'cpu-parallel'
-    : 'cpu-single';
+  : 'cpu-parallel';
 
 const defaultParallelSearchSettings: ParallelSearchSettings = {
-  enabled: defaultSearchExecutionMode === 'cpu-parallel',
-  maxWorkers: navigator.hardwareConcurrency || 4,
+  maxWorkers: detectedHardwareConcurrency || 4,
   chunkStrategy: 'time-based',
 };
+
+function resolveProfile(state: Pick<AppStore, 'profiles' | 'activeProfileId'>, profileId?: string | null): DeviceProfile | undefined {
+  if (!state.profiles.length) return undefined;
+  const targetId = profileId ?? state.activeProfileId;
+  if (!targetId) {
+    return state.profiles[0];
+  }
+  return state.profiles.find((profile) => profile.id === targetId) ?? state.profiles[0];
+}
 
 // Use demo seeds for initial setup (development only)
 if (import.meta.env.DEV) {
@@ -157,11 +188,8 @@ interface PersistedGenerationMinimal {
   draftParams: AppStore['draftParams'];
   // NOTE: params には bigint を含むため永続化しない（JSON.stringify 失敗回避）
   validationErrors: string[];
-  status: AppStore['status'];
-  lastCompletion: AppStore['lastCompletion'];
-  error: string | null;
+  // NOTE: status は永続化しない（常に idle で開始、EggStore/EggSearchStoreと一貫性を保つ）
   filters: AppStore['filters'];
-  metrics: AppStore['metrics'];
   internalFlags: AppStore['internalFlags'];
   staticEncounterId: AppStore['staticEncounterId'];
 }
@@ -169,11 +197,7 @@ function extractGenerationForPersist(state: AppStore): PersistedGenerationMinima
   return {
     draftParams: state.draftParams,
     validationErrors: state.validationErrors,
-    status: state.status,
-    lastCompletion: state.lastCompletion,
-    error: state.error,
     filters: state.filters,
-    metrics: state.metrics,
     internalFlags: state.internalFlags,
     staticEncounterId: state.staticEncounterId ?? null,
   };
@@ -181,52 +205,197 @@ function extractGenerationForPersist(state: AppStore): PersistedGenerationMinima
 
 function mergeDraftParams(restored: Partial<GenerationSlice['draftParams']> | undefined): GenerationSlice['draftParams'] {
   const source = (restored ?? {}) as Partial<GenerationParamsHex>;
-  const merged: GenerationParamsHex = { ...DEFAULT_GENERATION_DRAFT_PARAMS };
+  const merged: GenerationParamsHex = createDefaultGenerationDraftParams();
   type DraftKey = keyof GenerationParamsHex;
   for (const key of Object.keys(DEFAULT_GENERATION_DRAFT_PARAMS) as DraftKey[]) {
+    if (key === 'bootTiming') continue;
     const value = source[key];
     if (value !== undefined) {
       (merged as Record<DraftKey, unknown>)[key] = value;
     }
   }
+  const restoredBootTiming = 'bootTiming' in source
+    ? (source.bootTiming as Partial<BootTimingDraft> | undefined)
+    : undefined;
+  merged.bootTiming = normalizeBootTimingDraft(restoredBootTiming, merged.bootTiming);
+  if (merged.seedSourceMode !== 'lcg' && merged.seedSourceMode !== 'boot-timing') {
+    merged.seedSourceMode = 'lcg';
+  }
   return merged;
+}
+
+const ALLOWED_SHINY_FILTER_MODES: ShinyFilterMode[] = ['all', 'shiny', 'star', 'square', 'non-shiny'];
+
+function normalizeRestoredFilters(input: unknown): GenerationFilters {
+  const defaults = createDefaultGenerationFilters();
+  if (!input || typeof input !== 'object') {
+    return defaults;
+  }
+
+  const candidate = input as Partial<GenerationFilters> & Record<string, unknown>;
+  if (typeof candidate.shinyMode === 'string') {
+    const normalizedShiny = ALLOWED_SHINY_FILTER_MODES.includes(candidate.shinyMode as ShinyFilterMode)
+      ? candidate.shinyMode as ShinyFilterMode
+      : 'all';
+    return {
+      sortField: typeof candidate.sortField === 'string' ? candidate.sortField : defaults.sortField,
+      sortOrder: candidate.sortOrder === 'desc' ? 'desc' : 'asc',
+      shinyMode: normalizedShiny,
+      speciesIds: Array.isArray(candidate.speciesIds) ? [...candidate.speciesIds] : [],
+      natureIds: Array.isArray(candidate.natureIds) ? [...candidate.natureIds] : [],
+      abilityIndices: Array.isArray(candidate.abilityIndices) ? [...candidate.abilityIndices] as (0 | 1 | 2)[] : [],
+      genders: Array.isArray(candidate.genders) ? [...candidate.genders] as ('M' | 'F' | 'N')[] : [],
+      levelRange: candidate.levelRange ? { ...candidate.levelRange } : undefined,
+      statRanges: candidate.statRanges ? { ...candidate.statRanges } : {},
+    };
+  }
+
+  const legacy = input as Record<string, unknown>;
+  const shinyOnly = Boolean(legacy.shinyOnly);
+  let shinyMode: ShinyFilterMode = shinyOnly ? 'shiny' : 'all';
+  const shinyTypes = Array.isArray(legacy.shinyTypes) ? legacy.shinyTypes as number[] : [];
+  if (shinyTypes.length === 1) {
+    const shinyValue = shinyTypes[0];
+    if (shinyValue === DomainShinyType.Normal) {
+      shinyMode = 'non-shiny';
+    } else if (shinyValue === DomainShinyType.Star) {
+      shinyMode = 'star';
+    } else if (shinyValue === DomainShinyType.Square) {
+      shinyMode = 'square';
+    } else {
+      shinyMode = 'shiny';
+    }
+  }
+
+  return {
+    sortField: typeof legacy.sortField === 'string' ? legacy.sortField as GenerationFilters['sortField'] : defaults.sortField,
+    sortOrder: legacy.sortOrder === 'desc' ? 'desc' : 'asc',
+    shinyMode,
+    speciesIds: Array.isArray(legacy.speciesIds) ? [...legacy.speciesIds as number[]] : [],
+    natureIds: Array.isArray(legacy.natureIds) ? [...legacy.natureIds as number[]] : [],
+    abilityIndices: Array.isArray(legacy.abilityIndices) ? [...legacy.abilityIndices as (0 | 1 | 2)[]] : [],
+    genders: Array.isArray(legacy.genders) ? [...legacy.genders as ('M' | 'F' | 'N')[]] : [],
+    levelRange: undefined,
+    statRanges: {},
+  };
 }
 
 function reviveGenerationMinimal(obj: unknown): Partial<GenerationSlice> {
   if (!obj || typeof obj !== 'object') return {};
   const o = obj as Partial<PersistedGenerationMinimal>;
-  const normalizedStatus = normalizeRestoredStatus(o.status);
   return {
     draftParams: mergeDraftParams(o.draftParams),
     // params は非永続化（draft から再生成する設計）
     params: null,
     validationErrors: o.validationErrors ?? [],
-    status: normalizedStatus,
-    lastCompletion: o.lastCompletion ?? null,
-    error: o.error ?? null,
-    filters: o.filters ?? { shinyOnly: false, natureIds: [] },
-    metrics: normalizedStatus === 'idle' ? {} : (o.metrics ?? {}),
-    internalFlags: normalizedStatus === 'idle'
-      ? { receivedAnyBatch: false }
-      : (o.internalFlags ?? { receivedAnyBatch: false }),
+    // status は永続化しない（常に idle で開始）
+    status: 'idle',
+    lastCompletion: null,
+    error: null,
+    filters: normalizeRestoredFilters(o.filters),
+    internalFlags: { receivedResults: false },
     staticEncounterId: o.staticEncounterId ?? null,
   };
-}
-
-function normalizeRestoredStatus(status: AppStore['status'] | undefined): AppStore['status'] {
-  if (!status) return 'idle';
-  if (status === 'running' || status === 'starting' || status === 'paused' || status === 'stopping') {
-    return 'idle';
-  }
-  return status;
 }
 
 export const useAppStore = create<AppStore>()(
   persist<AppStore>(
     (set, get) => ({
       // Generation slice 注入
-  ...createGenerationSlice(set, get),
-  locale: DEFAULT_LOCALE,
+      ...createGenerationSlice(set, get),
+      profiles: [defaultDeviceProfile],
+      activeProfileId: defaultDeviceProfile.id,
+      setActiveProfile: (profileId) => {
+        set({ activeProfileId: profileId });
+        const profile = resolveProfile(get(), profileId);
+        if (profile) {
+          get().applyProfileToSearch(profile.id);
+          get().applyProfileToGeneration(profile.id);
+        }
+      },
+      createProfile: (draft) => {
+        const profile = createDeviceProfile(draft);
+        set((state) => ({
+          profiles: [...state.profiles, profile],
+          activeProfileId: profile.id,
+        }));
+        get().applyProfileToSearch(profile.id);
+        get().applyProfileToGeneration(profile.id);
+        return profile;
+      },
+      updateProfile: (profileId, draft) => {
+        set((state) => {
+          const existing = state.profiles.find((p) => p.id === profileId);
+          if (!existing) return {};
+          const updated = applyDeviceProfileDraft(existing, draft);
+          const profiles = state.profiles.map((p) => (p.id === profileId ? updated : p));
+          return { profiles };
+        });
+        const profile = resolveProfile(get(), profileId);
+        if (profile) {
+          get().applyProfileToSearch(profile.id);
+          get().applyProfileToGeneration(profile.id);
+        }
+      },
+      deleteProfile: (profileId) => {
+        set((state) => {
+          const profiles = state.profiles.filter((p) => p.id !== profileId);
+          let activeProfileId = state.activeProfileId;
+          if (activeProfileId === profileId) {
+            activeProfileId = profiles[0]?.id ?? null;
+          }
+          return { profiles, activeProfileId };
+        });
+        const profile = resolveProfile(get());
+        if (profile) {
+          get().applyProfileToSearch(profile.id);
+          get().applyProfileToGeneration(profile.id);
+        }
+      },
+      applyProfileToSearch: (profileId) => {
+        const state = get();
+        const profile = resolveProfile(state, profileId);
+        if (!profile) return;
+        set((current) => ({
+          searchConditions: {
+            ...current.searchConditions,
+            romVersion: profile.romVersion,
+            romRegion: profile.romRegion,
+            hardware: profile.hardware,
+            timer0VCountConfig: {
+              ...current.searchConditions.timer0VCountConfig,
+              useAutoConfiguration: profile.timer0Auto,
+              timer0Range: {
+                min: profile.timer0Range.min,
+                max: profile.timer0Range.max,
+              },
+              vcountRange: {
+                min: profile.vcountRange.min,
+                max: profile.vcountRange.max,
+              },
+            },
+            macAddress: Array.from(profile.macAddress),
+          },
+        }));
+      },
+      applyProfileToGeneration: (profileId) => {
+        const state = get();
+        const profile = resolveProfile(state, profileId);
+        if (!profile) return;
+        const currentBootTiming = state.draftParams.bootTiming ?? DEFAULT_GENERATION_DRAFT_PARAMS.bootTiming;
+        const nextBootTiming = bootTimingDraftFromProfile(profile, currentBootTiming);
+        state.setDraftParams({
+          version: profile.romVersion,
+          tid: profile.tid,
+          sid: profile.sid,
+          shinyCharm: profile.shinyCharm,
+          newGame: profile.newGame,
+          withSave: profile.withSave,
+          memoryLink: profile.memoryLink,
+          bootTiming: nextBootTiming,
+        });
+      },
+      locale: DEFAULT_LOCALE,
       setLocale: (locale) => set({ locale }),
       // 元々の AppStore フィールド
       // Search conditions
@@ -258,13 +427,6 @@ export const useAppStore = create<AppStore>()(
       // Search results
       searchResults: [],
       setSearchResults: (results) => set({ searchResults: results }),
-      addSearchResult: (result) =>
-        set((state) => {
-          // 効率的な配列追加：スプレッド演算子による新配列作成を避ける
-          const newResults = state.searchResults.slice();
-          newResults.push(result);
-          return { searchResults: newResults };
-        }),
       clearSearchResults: () => set({ searchResults: [] }),
 
       // Search progress
@@ -315,18 +477,6 @@ export const useAppStore = create<AppStore>()(
 
       // Parallel search settings
       parallelSearchSettings: defaultParallelSearchSettings,
-      setParallelSearchEnabled: (enabled) =>
-        set((state) => {
-          const nextMode: SearchExecutionMode = enabled
-            ? 'cpu-parallel'
-            : state.searchExecutionMode === 'cpu-parallel'
-              ? 'cpu-single'
-              : state.searchExecutionMode;
-          return {
-            parallelSearchSettings: { ...state.parallelSearchSettings, enabled },
-            searchExecutionMode: nextMode,
-          };
-        }),
       setMaxWorkers: (count) =>
         set((state) => ({
           parallelSearchSettings: { ...state.parallelSearchSettings, maxWorkers: count },
@@ -342,7 +492,9 @@ export const useAppStore = create<AppStore>()(
 
       // UI state
       activeTab: 'search',
-      setActiveTab: (tab) => set({ activeTab: tab }),
+      setActiveTab: (tab) => {
+        set({ activeTab: tab });
+      },
       
       // Wake Lock settings for preventing screen sleep on mobile devices
       wakeLockEnabled: false,
@@ -351,13 +503,9 @@ export const useAppStore = create<AppStore>()(
       // Search execution mode
       searchExecutionMode: defaultSearchExecutionMode,
       setSearchExecutionMode: (mode) =>
-        set((state) => ({
+        set({
           searchExecutionMode: mode,
-          parallelSearchSettings: {
-            ...state.parallelSearchSettings,
-            enabled: mode === 'cpu-parallel',
-          },
-        })),
+        }),
       
       // Raw target seed input
       targetSeedInput: DEMO_TARGET_SEEDS.map(s => '0x' + s.toString(16).padStart(8, '0')).join('\n'),
@@ -433,6 +581,8 @@ export const useAppStore = create<AppStore>()(
       })(),
       partialize: (state: AppStore) => ({
         locale: state.locale,
+        profiles: state.profiles,
+        activeProfileId: state.activeProfileId,
         searchConditions: state.searchConditions,
         targetSeeds: state.targetSeeds,
         parallelSearchSettings: state.parallelSearchSettings,
@@ -447,7 +597,7 @@ export const useAppStore = create<AppStore>()(
         if (!persisted || typeof persisted !== 'object') return current;
         const { __generation, ...rest } = persisted as Partial<AppStore> & { __generation?: unknown };
         const revived = __generation ? reviveGenerationMinimal(__generation) : {};
-        return {
+        const merged = {
           ...current,
           ...rest,
           ...revived,
@@ -456,8 +606,25 @@ export const useAppStore = create<AppStore>()(
           parallelProgress: null,
           lastSearchDuration: null,
           results: current.results,
-          progress: current.progress,
         } as AppStore;
+        if (!merged.profiles || merged.profiles.length === 0) {
+          merged.profiles = current.profiles;
+          merged.activeProfileId = current.activeProfileId;
+        } else if (!merged.activeProfileId || !merged.profiles.some((p) => p.id === merged.activeProfileId)) {
+          merged.activeProfileId = merged.profiles[0]?.id ?? null;
+        }
+        if (!merged.searchConditions) {
+          merged.searchConditions = {
+            ...current.searchConditions,
+            timeRange: createFullDayTimeRange(),
+          } as SearchConditions;
+        } else if (!merged.searchConditions.timeRange) {
+          merged.searchConditions = {
+            ...merged.searchConditions,
+            timeRange: createFullDayTimeRange(),
+          } as SearchConditions;
+        }
+        return merged;
       },
       // migrate 不要（新キーで旧スキーマ非対応）
       migrate: (s) => s as AppStore,

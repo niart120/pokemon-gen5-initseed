@@ -1,6 +1,62 @@
 import { useSyncExternalStore, useMemo, useCallback, useRef } from 'react';
+import rawBreakpoints from '@/config/breakpoints.json';
 
-const MOBILE_BREAKPOINT = 768;
+const BREAKPOINTS = rawBreakpoints as Record<'sm' | 'md' | 'lg' | 'xl' | '2xl', number>;
+const BASE_BREAKPOINT = 'base' as const;
+const BREAKPOINT_SEQUENCE = [
+  BASE_BREAKPOINT,
+  'sm',
+  'md',
+  'lg',
+  'xl',
+  '2xl'
+] as const;
+
+type ResponsiveBreakpoint = (typeof BREAKPOINT_SEQUENCE)[number];
+
+const MOBILE_BREAKPOINT = BREAKPOINTS.md;
+
+const STACK_STATE_BY_BREAKPOINT: Record<ResponsiveBreakpoint, boolean> = {
+  base: true,
+  sm: true,
+  md: false,
+  lg: false,
+  xl: false,
+  '2xl': false
+};
+
+const UI_SCALE_BY_BREAKPOINT: Record<ResponsiveBreakpoint, number> = {
+  base: 0.85,
+  sm: 0.9,
+  md: 1.0,
+  lg: 1.0,
+  xl: 1.1,
+  '2xl': 1.33
+};
+
+const getMinWidth = (breakpoint: ResponsiveBreakpoint): number => {
+  if (breakpoint === BASE_BREAKPOINT) {
+    return 0;
+  }
+  return BREAKPOINTS[breakpoint];
+};
+
+const resolveBreakpoint = (width: number): ResponsiveBreakpoint => {
+  for (let index = BREAKPOINT_SEQUENCE.length - 1; index >= 0; index -= 1) {
+    const breakpoint = BREAKPOINT_SEQUENCE[index];
+    if (width >= getMinWidth(breakpoint)) {
+      return breakpoint;
+    }
+  }
+  return BASE_BREAKPOINT;
+};
+
+const getBreakpointMatches = (width: number): Record<ResponsiveBreakpoint, boolean> => {
+  return BREAKPOINT_SEQUENCE.reduce((acc, breakpoint) => {
+    acc[breakpoint] = width >= getMinWidth(breakpoint);
+    return acc;
+  }, {} as Record<ResponsiveBreakpoint, boolean>);
+};
 
 /**
  * モバイル検出フック
@@ -59,12 +115,7 @@ export function useResponsiveLayout() {
     // DOM読み取りは必要最小限に
     const currentWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
     const currentHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
-    
-    // 細かいサイズ変更を無視してパフォーマンス向上（10px単位で丸める）
-    const roundedWidth = Math.round(currentWidth / 10) * 10;
-    const roundedHeight = Math.round(currentHeight / 10) * 10;
-    
-    return `${roundedWidth}x${roundedHeight}`;
+    return `${currentWidth}x${currentHeight}`;
   }, []);
   
   // SSR用スナップショット
@@ -78,27 +129,19 @@ export function useResponsiveLayout() {
     const [widthStr, heightStr] = sizeString.split('x');
     const width = parseInt(widthStr, 10);
     const height = parseInt(heightStr, 10);
-    
-    // スタックレイアウト判定
-    const isStack = width < MOBILE_BREAKPOINT || (height > width && width < 1024);
-    
-    // UIスケール計算
-    let uiScale = 1.0;
-    if (width <= 1366) {
-      uiScale = 0.85;
-    } else if (width <= 1920) {
-      uiScale = 1.0;
-    } else if (width <= 2048) {
-      uiScale = 1.1;
-    } else if (width <= 2560) {
-      uiScale = 1.33;
-    } else if (width <= 3840) {
-      uiScale = 1.5;
-    } else {
-      uiScale = Math.min(2.0, width / 1920);
-    }
-    
-    return { isStack, uiScale };
+    const breakpoint = resolveBreakpoint(width);
+    const matches = getBreakpointMatches(width);
+
+    return {
+      breakpoint,
+      isStack: STACK_STATE_BY_BREAKPOINT[breakpoint],
+      uiScale: UI_SCALE_BY_BREAKPOINT[breakpoint],
+      matches,
+      dimensions: {
+        width,
+        height
+      }
+    };
   }, [sizeString]);
 }
 

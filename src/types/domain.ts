@@ -31,7 +31,7 @@ export const DomainEncounterType = {
   StaticFossil: 12,
   StaticEvent: 13,
   StaticLegendary: 14,
-  Roaming: 20,
+  Roamer: 20,
 } as const;
 export type DomainEncounterType = typeof DomainEncounterType[keyof typeof DomainEncounterType];
 
@@ -50,7 +50,7 @@ export const DomainEncounterTypeNames = [
   'StaticStarter',
   'StaticFossil',
   'StaticEvent',
-  'Roaming',
+  'Roamer',
 ] as const;
 export type DomainEncounterTypeName = typeof DomainEncounterTypeNames[number];
 
@@ -68,7 +68,7 @@ export const DomainEncounterTypeDisplayNames = {
   StaticStarter: 'Starter',
   StaticFossil: 'Fossil',
   StaticEvent: 'Event',
-  Roaming: 'Roaming',
+  Roamer: 'Roamer',
 } as const satisfies Record<DomainEncounterTypeName, string>;
 
 // 逆引き (数値 -> 名前) マップを事前構築
@@ -117,7 +117,7 @@ const STATIC_ENCOUNTER_TYPE_NAMES = [
   'StaticStarter',
   'StaticFossil',
   'StaticEvent',
-  'Roaming',
+  'Roamer',
 ] as const satisfies readonly DomainEncounterTypeName[];
 
 export const DomainEncounterCategoryOptions: readonly DomainEncounterCategoryOption[] = [

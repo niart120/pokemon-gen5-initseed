@@ -1,3 +1,2 @@
-export { ROMConfigurationCard } from './ROMConfigurationCard';
-export { ParameterConfigurationCard } from './ParameterConfigurationCard';
+export { SearchParamsCard } from './SearchParamsCard';
 export { TargetSeedsCard } from './TargetSeedsCard';

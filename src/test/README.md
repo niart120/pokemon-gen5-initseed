@@ -12,7 +12,7 @@ This directory contains unit and integration tests for the Gen5 seed searcher. K
 ## Conventions
 - File name: <feature>.test.ts (integration tests live under integration/)
 - Prefer realistic data paths (species/encounters) over re-implemented math
-- For sync rules: roaming must never allow sync; static starters/fossils are ineligible; static symbols may allow sync
+- For sync rules: roamer must never allow sync; static starters/fossils are ineligible; static symbols may allow sync
 - Avoid timing/performance thresholds in unit tests; use dev/test pages for perf
 
 ## WASM fallback (Node)

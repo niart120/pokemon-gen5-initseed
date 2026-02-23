@@ -4,14 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [package.metadata.wasm-pack.profile.release]
-# Disable wasm-opt to avoid bulk memory issues
-wasm-opt = false
+# Enable wasm-opt with required WASM features
+wasm-opt = ["-O3", "--enable-simd", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-wasm-bindgen = "0.2"
+wasm-bindgen = "0.2.106"
 byteorder = "1.5"
 js-sys = "0.3"
 chrono = { version = "0.4", features = ["wasm-bindgen"] }
@@ -28,13 +28,9 @@ wasm-bindgen-test = "0.3"
 
 # Performance optimization profile for WebAssembly
 [profile.release]
-# Maximum optimization level for speed
-opt-level = 3
-# Enable fat LTO for maximum optimization across crates
-lto = "fat"
-# Reduce code size while maintaining performance
-codegen-units = 1
-# Panic handling: abort instead of unwinding (smaller binary)
-panic = "abort"
-# Strip debug symbols from release build
-strip = true
+incremental = false  # Disable for consistent LTO optimization
+opt-level = 3        # Maximum speed optimization
+lto = "fat"          # Full cross-crate LTO (enables embed-bitcode, disables overflow-checks/debug-assertions)
+codegen-units = 1    # Single codegen unit for better optimization
+panic = "abort"      # Smaller binary (no unwinding)
+strip = true         # Remove debug symbols

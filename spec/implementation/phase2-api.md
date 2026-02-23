@@ -1,18 +1,18 @@
 # Phase 2 — TypeScript 統合 API ドキュメント（実装準拠・日本語版）
 
-本書は、WASM で生成した生ポケモンデータを遭遇テーブルと種族データで拡張し、表示・検証に適した形へ統合する Phase 2 の TypeScript API を実装準拠で説明します。
+本書は、WASM で生成した生ポケモンデータをエンカウントテーブルと種族データで拡張し、表示・検証に適した形へ統合する Phase 2 の TypeScript API を実装準拠で説明します。
 
 ## 全体像（正しい入口の明確化）
 
 ```
 WASM PokemonGenerator → RawPokemonData → Integration Service → EnhancedPokemonData
                                │                   │
-                               └─ parseRawPokemonData          └─ 遭遇テーブル + 生成種族データ
+                               └─ parseRawPokemonData          └─ エンカウントテーブル + 生成種族データ
 ```
 
 - 生成エントリは PokemonGenerator（WASM）です。IntegratedSeedSearcher は「初期Seed探索」用であり、生成パイプラインの入口ではありません。
 - 型・パーサは `src/types/pokemon-raw.ts`（WASM境界の snake_case Raw）と Resolver 一連（`src/lib/generation/raw-parser.ts`, `src/lib/generation/pokemon-resolver.ts`）を基準とします。
-- 遭遇テーブルは JSON データのみに依存し、統合サービスではフォールバックを行いません（テスト用途のサンプルは別途有り）。
+- エンカウントテーブルは JSON データのみに依存し、統合サービスではフォールバックを行いません（テスト用途のサンプルは別途有り）。
 - 種族データは生成済み JSON アダプタ（`src/data/species/generated`）を使用します。
 
 ## 1) RawPokemonData とパーサ（`src/types/pokemon-raw.ts` / `src/lib/generation/raw-parser.ts`）
@@ -56,7 +56,7 @@ WASM PokemonGenerator → RawPokemonData → Integration Service → EnhancedPok
 ## 3) 統合サービス（Resolverベース）
 
 役割
-- RawPokemonData + 遭遇テーブル + 生成種族データ を結合し EnhancedPokemonData を作成
+- RawPokemonData + エンカウントテーブル + 生成種族データ を結合し EnhancedPokemonData を作成
 
 公開型
 - IntegrationConfig: version/defaultLocation/applySynchronize/synchronizeNature
@@ -68,7 +68,7 @@ WASM PokemonGenerator → RawPokemonData → Integration Service → EnhancedPok
 エラー/方針
 - IntegrationError（code: MISSING_ENCOUNTER_TABLE など）
 - 統合サービスは JSON データのみを参照し「フォールバック無し」。テーブル未発見は例外。
-- 同期（Synchronize）は野生系遭遇（EncounterType 0..7）のみ対象。静的/イベント/ローミングは対象外。
+- 同期（Synchronize）は野生系エンカウント（EncounterType 0..7）のみ対象。静的/イベント/ローミングは対象外。
 
 EnhancedPokemonData へのマッピング注意
 - 現状の生成種族データには型や性別比の完全情報が未整備のため、以下は暫定値：
@@ -76,7 +76,7 @@ EnhancedPokemonData へのマッピング注意
   - species.genderRatio: genderless のとき -1、それ以外は 0
  追って生成データ拡充時に正値へ置換予定。
 
-## 4) 遭遇テーブル（`src/data/encounter-tables.ts`）
+## 4) エンカウントテーブル（`src/data/encounter-tables.ts`）
 
 役割
 - `getEncounterTable(version, location, method)` / `getEncounterSlot(table, slotValue)` を提供（レベル計算は Resolver 側に集約）
@@ -89,7 +89,7 @@ EnhancedPokemonData へのマッピング注意
 - レベル計算は `pokemon-resolver.ts` にて Raw の `level_rand_value` とスロットの `levelRange` を用いて実装（一元化）。
 
 出典（実装に合わせる）
-- 遭遇テーブル: pokebook.jp（BW/BW2 の各ページ）
+- エンカウントテーブル: pokebook.jp（BW/BW2 の各ページ）
 
 ## 5) 生成種族データ（`src/data/species/generated`）
 
@@ -109,7 +109,7 @@ EnhancedPokemonData へのマッピング注意
 - `src/lib/integration/pokemon-assembler.ts`
 
 役割
-- サンプル遭遇テーブル（`createSampleEncounterTables()`）や同期ルール検証（`validateSyncRules()`）を含むデモ/テスト支援 API。
+- サンプルエンカウントテーブル（`createSampleEncounterTables()`）や同期ルール検証（`validateSyncRules()`）を含むデモ/テスト支援 API。
 - 本番統合は `PokemonIntegrationService` を使用し、フォールバックは行いません。
 
 主な関数
@@ -148,8 +148,8 @@ async function generateEnhancedPokemon(seed: bigint) {
 
 ## データ出典（現行実装に準拠）
 
-- 技術資料: rusted-coil、xxsakixx（BW遭遇・乱数）
-- 遭遇テーブル: pokebook.jp（BW/BW2 各ページ）
+- 技術資料: rusted-coil、xxsakixx（BWエンカウント・乱数）
+- エンカウントテーブル: pokebook.jp（BW/BW2 各ページ）
 - 補助資料: 必要に応じて Bulbapedia など
 
 ## 付記（今後の拡張）

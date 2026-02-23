@@ -6,10 +6,38 @@
 
 import type { UnresolvedPokemonData } from './pokemon-raw';
 import { DomainGameMode } from '@/types/domain';
+import type { Hardware, ROMRegion } from '@/types/rom';
+import type {
+  ResolvedPokemonData,
+  SerializedResolutionContext,
+} from '@/types/pokemon-resolved';
+import type { KeyName } from '@/lib/utils/key-input';
 
 // --- Params ---
+export type SeedSourceMode = 'lcg' | 'boot-timing';
+
+export interface BootTimingDraft {
+  timestampIso?: string;
+  keyMask: number;
+  timer0Range: { min: number; max: number };
+  vcountRange: { min: number; max: number };
+  romRegion: ROMRegion;
+  hardware: Hardware;
+  macAddress: readonly [number, number, number, number, number, number];
+}
+
+const DEFAULT_BOOT_TIMING_PLACEHOLDER: BootTimingDraft = {
+  timestampIso: undefined,
+  keyMask: 0,
+  timer0Range: { min: 0, max: 0 },
+  vcountRange: { min: 0, max: 0 },
+  romRegion: 'JPN',
+  hardware: 'DS',
+  macAddress: [0, 0, 0, 0, 0, 0] as [number, number, number, number, number, number],
+};
+
 export interface GenerationParams {
-  baseSeed: bigint;        // 初期シード
+  baseSeed: bigint;        // 初期Seed
   offset: bigint;          // 開始advance (MVP: 0 既定)
   maxAdvances: number;     // 列挙上限 (≤ 1_000_000)
   maxResults: number;      // UI保持上限 (≤ 100_000)
@@ -20,10 +48,9 @@ export interface GenerationParams {
   syncEnabled: boolean;
   syncNatureId: number;    // 0-24
   shinyCharm: boolean;     // 光るお守り所持
-  isShinyLocked: boolean;  // 選択遭遇が色違いロック対象か
+  isShinyLocked: boolean;  // 選択エンカウントが色違いロック対象か
   stopAtFirstShiny: boolean;
   stopOnCap: boolean;      // maxResults 到達で終了するか（デフォルト true）
-  batchSize: number;       // 1バッチ生成数 (UI チューニング向け推奨値のみに留める)
   newGame: boolean;
   withSave: boolean;       // newGame 時に既存セーブを利用するか
   memoryLink: boolean;
@@ -43,11 +70,10 @@ export interface GenerationParamsHex {
   syncNatureId: number;
   /** 所持している場合 true (後続: 色違い確率計算に利用予定) */
   shinyCharm: boolean;
-  /** 選択遭遇が色違いロック対象か */
+  /** 選択エンカウントが色違いロック対象か */
   isShinyLocked: boolean;
   stopAtFirstShiny: boolean;
   stopOnCap: boolean;
-  batchSize: number;
   /**
    * UI 拡張: Ability 選択モード (Phase2 で syncEnabled との統合制御に使用)
    * 現行 WASM パラメータへは未伝播。syncEnabled との整合は UI 側で維持。
@@ -59,6 +85,8 @@ export interface GenerationParamsHex {
   newGame: boolean;
   /** True when starting with an existing save */
   withSave: boolean;
+  seedSourceMode: SeedSourceMode;
+  bootTiming: BootTimingDraft;
 }
 
 export function hexParamsToGenerationParams(h: GenerationParamsHex): GenerationParams {
@@ -77,7 +105,6 @@ export function hexParamsToGenerationParams(h: GenerationParamsHex): GenerationP
   isShinyLocked: Boolean(h.isShinyLocked),
     stopAtFirstShiny: h.stopAtFirstShiny,
     stopOnCap: h.stopOnCap,
-    batchSize: h.batchSize,
     newGame: h.newGame,
     withSave: h.withSave,
     memoryLink: h.memoryLink,
@@ -100,10 +127,11 @@ export function generationParamsToHex(p: GenerationParams): GenerationParamsHex 
     isShinyLocked: p.isShinyLocked,
     stopAtFirstShiny: p.stopAtFirstShiny,
     stopOnCap: p.stopOnCap,
-    batchSize: p.batchSize,
     memoryLink: p.memoryLink,
     newGame: p.newGame,
     withSave: p.withSave,
+    seedSourceMode: 'lcg',
+    bootTiming: { ...DEFAULT_BOOT_TIMING_PLACEHOLDER },
   };
 }
 
@@ -116,36 +144,25 @@ function normalizeHex(s: string): string {
 export type NormalizedGenerationParams = GenerationParams;
 
 // --- Result 型 ---
-// WASM生データ(UnresolvedPokemonData) に generation 文脈上の advance を付与した最小構造。
-// これを worker から直接送出し UI/store が保持する。重複構造を避けるため専用RawLikeは用意しない。
-export type GenerationResult = UnresolvedPokemonData & { advance: number };
+// UnresolvedPokemonData が advance を含むため、そのまま公開APIとして利用する。
+export type GenerationResult = UnresolvedPokemonData & {
+  baseSeed?: bigint;
+  /** report針の方向(0-7) - WASM列挙メタ */
+  report_needle_direction?: number;
+  seedSourceMode?: SeedSourceMode;
+  derivedSeedIndex?: number;
+  seedSourceSeedHex?: string;
+  timer0?: number;
+  vcount?: number;
+  bootTimestampIso?: string;
+  keyInputNames?: KeyName[];
+  macAddress?: readonly [number, number, number, number, number, number];
+};
 
-// --- Progress / Results ---
-export interface GenerationProgress {
-  processedAdvances: number;
-  totalAdvances: number;
-  resultsCount: number;
-  elapsedMs: number;
-  /** 生スループット (直近計算) */
-  throughput: number; // DEPRECATED: 後方互換 (raw と同値保持)。将来的除去予定。
-  /** 新: 生スループット */
-  throughputRaw?: number;
-  /** 新: EMA 平滑スループット */
-  throughputEma?: number;
-  /** 推定残り時間 (ms) */
-  etaMs: number;
-  status: 'idle' | 'running' | 'paused' | 'stopped' | 'completed' | 'error';
+export interface GenerationResultsPayload {
+  results: GenerationResult[];
+  resolved?: ResolvedPokemonData[];
 }
-
-export interface GenerationResultBatch {
-  batchIndex: number;
-  batchSize: number;
-  results: GenerationResult[]; // plain objects (postMessage structured clone OK / bigint)
-  cumulativeResults: number;
-}
-
-// 固定進捗通知間隔 (ms) - UI/worker 双方で参照
-export const FIXED_PROGRESS_INTERVAL_MS = 250 as const;
 
 export type GenerationCompletion = {
   reason: 'max-advances' | 'max-results' | 'first-shiny' | 'stopped' | 'error';
@@ -180,18 +197,17 @@ export function getGenerationCompletionLabel(reason: GenerationCompletion['reaso
 
 // --- Worker Messages ---
 export type GenerationWorkerRequest =
-  | { type: 'START_GENERATION'; params: GenerationParams; requestId?: string }
-  | { type: 'PAUSE'; requestId?: string }
-  | { type: 'RESUME'; requestId?: string }
+  | {
+      type: 'START_GENERATION';
+      params: GenerationParams;
+      requestId?: string;
+      resolutionContext?: SerializedResolutionContext;
+    }
   | { type: 'STOP'; requestId?: string; reason?: string };
 
 export type GenerationWorkerResponse =
   | { type: 'READY'; version: '1' }
-  | { type: 'PROGRESS'; payload: GenerationProgress }
-  | { type: 'RESULT_BATCH'; payload: GenerationResultBatch }
-  | { type: 'PAUSED'; message?: string }
-  | { type: 'RESUMED' }
-  | { type: 'STOPPED'; payload: Omit<GenerationCompletion, 'reason'> & { reason: 'stopped' } }
+  | { type: 'RESULTS'; payload: GenerationResultsPayload }
   | { type: 'COMPLETE'; payload: GenerationCompletion }
   | { type: 'ERROR'; message: string; category: GenerationErrorCategory; fatal: boolean };
 
@@ -200,16 +216,8 @@ export function isGenerationWorkerResponse(msg: unknown): msg is GenerationWorke
   if (!msg || typeof msg !== 'object') return false;
   const m = msg as { type?: unknown };
   if (typeof m.type !== 'string') return false;
-  const allowed: ReadonlySet<GenerationWorkerResponse['type']> = new Set(['READY','PROGRESS','RESULT_BATCH','PAUSED','RESUMED','STOPPED','COMPLETE','ERROR']);
+  const allowed: ReadonlySet<GenerationWorkerResponse['type']> = new Set(['READY','RESULTS','COMPLETE','ERROR']);
   return allowed.has(m.type as GenerationWorkerResponse['type']);
-}
-
-export function isResultBatch(msg: GenerationWorkerResponse): msg is Extract<GenerationWorkerResponse,{type:'RESULT_BATCH'}> {
-  return msg.type === 'RESULT_BATCH';
-}
-
-export function isProgress(msg: GenerationWorkerResponse): msg is Extract<GenerationWorkerResponse,{type:'PROGRESS'}> {
-  return msg.type === 'PROGRESS';
 }
 
 // --- Adapter Helper ---

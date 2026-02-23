@@ -6,51 +6,106 @@
 
 import type { SearchConditions, InitialSeedResult } from '../../types/search';
 import type { AggregatedProgress } from '../../types/parallel';
-import type { WorkerRequest, WorkerResponse } from '../../workers/search-worker';
-import { MultiWorkerSearchManager } from './multi-worker-manager';
+import type { WorkerRequest, WorkerResponse } from '@/types/worker';
+import {
+  MtSeedBootTimingMultiWorkerManager,
+  type AggregatedMtSeedBootTimingProgress,
+} from '../mt-seed/mt-seed-boot-timing-multi-worker-manager';
+import type {
+  MtSeedBootTimingSearchParams,
+  MtSeedBootTimingSearchResult,
+} from '@/types/mt-seed-boot-timing-search';
 import type { SingleWorkerSearchCallbacks } from '../../types/callbacks';
-import { shouldUseWebGpuSearch } from './search-mode';
 import { useAppStore } from '@/store/app-store';
 import type { SearchExecutionMode } from '@/store/app-store';
+import { getROMParameters } from '@/lib/utils/rom-parameter-helpers';
+import { SeedCalculator } from '@/lib/core/seed-calculator';
+
+/**
+ * SearchConditions を MtSeedBootTimingSearchParams に変換
+ */
+function convertToMtSeedBootTimingSearchParams(
+  conditions: SearchConditions,
+  targetSeeds: number[]
+): MtSeedBootTimingSearchParams {
+  // MACアドレスを6要素のタプルに正規化
+  const macAddress: readonly [number, number, number, number, number, number] = [
+    conditions.macAddress[0] ?? 0,
+    conditions.macAddress[1] ?? 0,
+    conditions.macAddress[2] ?? 0,
+    conditions.macAddress[3] ?? 0,
+    conditions.macAddress[4] ?? 0,
+    conditions.macAddress[5] ?? 0,
+  ];
+
+  // Auto設定時はROMパラメータからセグメントを取得し、VCount範囲を導出
+  // Manual設定時はユーザー入力をそのまま使用
+  let timer0Range: { min: number; max: number };
+  let vcountRange: { min: number; max: number };
+
+  if (conditions.timer0VCountConfig.useAutoConfiguration) {
+    const params = getROMParameters(conditions.romVersion, conditions.romRegion);
+    if (params && params.vcountTimerRanges.length > 0) {
+      const segments = params.vcountTimerRanges;
+      timer0Range = {
+        min: Math.min(...segments.map(s => s.timer0Min)),
+        max: Math.max(...segments.map(s => s.timer0Max)),
+      };
+      vcountRange = {
+        min: Math.min(...segments.map(s => s.vcount)),
+        max: Math.max(...segments.map(s => s.vcount)),
+      };
+    } else {
+      // フォールバック
+      timer0Range = { ...conditions.timer0VCountConfig.timer0Range };
+      vcountRange = { ...conditions.timer0VCountConfig.vcountRange };
+    }
+  } else {
+    timer0Range = { ...conditions.timer0VCountConfig.timer0Range };
+    vcountRange = { ...conditions.timer0VCountConfig.vcountRange };
+  }
+
+  return {
+    dateRange: {
+      startYear: conditions.dateRange.startYear,
+      startMonth: conditions.dateRange.startMonth,
+      startDay: conditions.dateRange.startDay,
+      endYear: conditions.dateRange.endYear,
+      endMonth: conditions.dateRange.endMonth,
+      endDay: conditions.dateRange.endDay,
+    },
+    timer0Range,
+    vcountRange,
+    keyInputMask: conditions.keyInput,
+    macAddress,
+    hardware: conditions.hardware,
+    romVersion: conditions.romVersion,
+    romRegion: conditions.romRegion,
+    timeRange: conditions.timeRange,
+    targetSeeds,
+    maxResults: 10000, // デフォルト上限
+  };
+}
 
 export type SearchCallbacks = SingleWorkerSearchCallbacks<InitialSeedResult> & {
   onParallelProgress?: (progress: AggregatedProgress | null) => void;
 };
 
+/**
+ * MT Seed Boot Timing検索用コールバック
+ */
+export type MtSeedBootTimingSearchCallbacks = SingleWorkerSearchCallbacks<MtSeedBootTimingSearchResult> & {
+  onParallelProgress?: (progress: AggregatedMtSeedBootTimingProgress | null) => void;
+};
+
 export class SearchWorkerManager {
-  private worker: Worker | null = null;
   private gpuWorker: Worker | null = null;
   private callbacks: SearchCallbacks | null = null;
-  private singleWorkerMode: boolean = true;
-  private multiWorkerManager: MultiWorkerSearchManager | null = null;
-  private activeMode: 'cpu-single' | 'cpu-parallel' | 'gpu' = 'cpu-single';
+  private mtSeedBootTimingManager: MtSeedBootTimingMultiWorkerManager | null = null;
+  private activeMode: 'cpu-parallel' | 'gpu' | 'mt-seed-boot-timing' = 'cpu-parallel';
   private lastRequest: { conditions: SearchConditions; targetSeeds: number[] } | null = null;
 
   constructor() {
-    this.initializeWorker();
-  }
-
-  private initializeWorker() {
-    try {
-      // Create worker with Vite's URL constructor
-      this.worker = new Worker(
-        new URL('../../workers/search-worker.ts', import.meta.url),
-        { type: 'module' }
-      );
-
-      this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-        this.processWorkerResponse(event.data, 'cpu');
-      };
-
-      this.worker.onerror = (error) => {
-        console.error('Worker error:', error);
-        this.callbacks?.onError('Worker error occurred');
-      };
-
-    } catch (error) {
-      console.error('Failed to initialize search worker:', error);
-      this.worker = null;
-    }
   }
 
   private initializeGpuWorker(): void {
@@ -65,7 +120,7 @@ export class SearchWorkerManager {
       );
 
       this.gpuWorker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-        this.processWorkerResponse(event.data, 'gpu');
+        this.processWorkerResponse(event.data);
       };
 
       this.gpuWorker.onerror = (error) => {
@@ -78,7 +133,7 @@ export class SearchWorkerManager {
     }
   }
 
-  private processWorkerResponse(response: WorkerResponse, origin: 'cpu' | 'gpu'): void {
+  private processWorkerResponse(response: WorkerResponse): void {
     if (!this.callbacks) return;
 
     switch (response.type) {
@@ -111,11 +166,7 @@ export class SearchWorkerManager {
         break;
 
       case 'ERROR':
-        if (origin === 'gpu') {
-          this.handleGpuFailure(response.error || 'WebGPU search failed', response.errorCode);
-          return;
-        }
-        this.callbacks.onError(response.error || 'Unknown error');
+        this.handleGpuFailure(response.error || 'WebGPU search failed', response.errorCode);
         break;
 
       case 'PAUSED':
@@ -152,8 +203,10 @@ export class SearchWorkerManager {
 
     try {
       const store = useAppStore.getState();
-      const fallbackMode: SearchExecutionMode = this.isParallelSearchAvailable() ? 'cpu-parallel' : 'cpu-single';
-      store.setSearchExecutionMode(fallbackMode);
+      const fallbackMode: SearchExecutionMode = 'cpu-parallel';
+      if (this.isParallelSearchAvailable()) {
+        store.setSearchExecutionMode(fallbackMode);
+      }
     } catch (storeError) {
       console.warn('Failed to update execution mode after WebGPU failure:', storeError);
     }
@@ -174,40 +227,82 @@ export class SearchWorkerManager {
     console.warn('CPU search fallback activated after WebGPU failure.');
   }
 
+  /**
+   * CPU並列検索（MtSeedBootTimingMultiWorkerManager使用）
+   */
   private startCpuSearchInternal(
     conditions: SearchConditions,
     targetSeeds: number[],
     callbacks: SearchCallbacks
   ): boolean {
-    if (!this.singleWorkerMode) {
-      this.activeMode = 'cpu-parallel';
-      return this.startParallelSearch(conditions, targetSeeds, callbacks);
-    }
-
-    if (!this.worker) {
-      this.initializeWorker();
-    }
-
-    if (!this.worker) {
-      callbacks.onError('Worker not available. Falling back to main thread.');
+    if (!this.isParallelSearchAvailable()) {
+      callbacks.onError('Parallel CPU search is not available in this environment.');
       return false;
     }
 
-    const request: WorkerRequest = {
-      type: 'START_SEARCH',
-      conditions,
-      targetSeeds
+    const mtSeedParams = convertToMtSeedBootTimingSearchParams(conditions, targetSeeds);
+
+    // MtSeedBootTimingSearchResult を InitialSeedResult に変換するコールバック
+    const seedCalculator = new SeedCalculator();
+    const mtSeedCallbacks: MtSeedBootTimingSearchCallbacks = {
+      onProgress: callbacks.onProgress,
+      onResult: (result: MtSeedBootTimingSearchResult) => {
+        // MtSeedBootTimingSearchResult を InitialSeedResult に変換
+        // GPU経路と同様に SeedCalculator で message と sha1Hash を再計算
+        const message = seedCalculator.generateMessage(
+          conditions,
+          result.boot.timer0,
+          result.boot.vcount,
+          result.boot.datetime,
+          result.boot.keyCode
+        );
+        const { hash } = seedCalculator.calculateSeed(message);
+        
+        const converted: InitialSeedResult = {
+          seed: result.mtSeed,
+          datetime: result.boot.datetime,
+          timer0: result.boot.timer0,
+          vcount: result.boot.vcount,
+          keyCode: result.boot.keyCode,
+          keyInputNames: result.boot.keyInputNames,
+          conditions,
+          message,
+          sha1Hash: hash,
+          lcgSeed: BigInt('0x' + result.lcgSeedHex),
+          isMatch: true,
+        };
+        callbacks.onResult(converted);
+      },
+      onComplete: callbacks.onComplete,
+      onError: callbacks.onError,
+      onPaused: callbacks.onPaused,
+      onResumed: callbacks.onResumed,
+      onStopped: callbacks.onStopped,
+      onParallelProgress: callbacks.onParallelProgress 
+        ? (progress) => {
+            // AggregatedMtSeedBootTimingProgress を AggregatedProgress に変換
+            if (progress) {
+              const converted: AggregatedProgress = {
+                totalCurrentStep: progress.totalCurrentStep,
+                totalSteps: progress.totalSteps,
+                totalElapsedTime: progress.totalElapsedTime,
+                totalEstimatedTimeRemaining: progress.totalEstimatedTimeRemaining,
+                totalMatchesFound: progress.totalMatchesFound,
+                activeWorkers: progress.activeWorkers,
+                completedWorkers: progress.completedWorkers,
+                workerProgresses: progress.workerProgresses,
+                progressPercent: progress.progressPercent,
+                totalProcessedSeconds: progress.totalProcessedSeconds,
+              };
+              callbacks.onParallelProgress!(converted);
+            } else {
+              callbacks.onParallelProgress!(null);
+            }
+          }
+        : undefined,
     };
 
-    try {
-      this.worker.postMessage(request);
-      this.activeMode = 'cpu-single';
-      return true;
-    } catch (error) {
-      console.error('Failed to start CPU search worker:', error);
-      callbacks.onError('Failed to start CPU search worker');
-      return false;
-    }
+    return this.startMtSeedBootTimingSearch(mtSeedParams, mtSeedCallbacks);
   }
 
   private tryStartGpuSearch(
@@ -242,47 +337,65 @@ export class SearchWorkerManager {
     callbacks: SearchCallbacks
   ): boolean {
     this.callbacks = callbacks;
+
+    const normalizedTargetSeeds = this.normalizeTargetSeeds(targetSeeds);
+    if (normalizedTargetSeeds.length === 0) {
+      const errorMessage = 'Target seed list is empty or invalid. Please configure at least one seed before starting the search.';
+      console.error(errorMessage, { targetSeeds });
+      this.callbacks.onError(errorMessage);
+      return false;
+    }
+
     this.lastRequest = {
       conditions,
-      targetSeeds: [...targetSeeds],
+      targetSeeds: [...normalizedTargetSeeds],
     };
 
-    if (shouldUseWebGpuSearch()) {
-      const gpuStarted = this.tryStartGpuSearch(conditions, targetSeeds);
+    // モード判定
+    const executionMode = this.getCurrentExecutionMode();
+
+    // WebGPU モード
+    if (executionMode === 'gpu') {
+      const gpuStarted = this.tryStartGpuSearch(conditions, normalizedTargetSeeds);
       if (gpuStarted) {
         return true;
       }
       console.warn('WebGPU search could not be started. Falling back to CPU mode.');
     }
 
-    return this.startCpuSearchInternal(conditions, targetSeeds, callbacks);
+    // CPU並列検索モード
+    return this.startCpuSearchInternal(conditions, normalizedTargetSeeds, callbacks);
   }
 
   /**
-   * 並列検索開始
+   * 現在の実行モードを取得
    */
-  private startParallelSearch(
-    conditions: SearchConditions,
-    targetSeeds: number[],
-    callbacks: SearchCallbacks
+  private getCurrentExecutionMode(): SearchExecutionMode {
+    try {
+      return useAppStore.getState().searchExecutionMode;
+    } catch {
+      return 'cpu-parallel';
+    }
+  }
+
+  /**
+   * MT Seed Boot Timing検索開始
+   * 指定されたMT Seedに対応する起動時間を検索
+   */
+  public startMtSeedBootTimingSearch(
+    params: MtSeedBootTimingSearchParams,
+    callbacks: MtSeedBootTimingSearchCallbacks
   ): boolean {
     try {
-      if (!this.multiWorkerManager) {
-        this.multiWorkerManager = new MultiWorkerSearchManager();
+      if (!this.mtSeedBootTimingManager) {
+        this.mtSeedBootTimingManager = new MtSeedBootTimingMultiWorkerManager();
       }
 
-      // アプリストアから現在のワーカー数設定を取得
-      // 注意: ここでは直接importを避けて、公開APIを使用
       const currentMaxWorkers = this.getMaxWorkers();
-      this.multiWorkerManager.setMaxWorkers(currentMaxWorkers);
+      this.mtSeedBootTimingManager.setMaxWorkers(currentMaxWorkers);
 
-      // 📝 Note: MultiWorkerSearchManager.startParallelSearch()内で
-      // safeCleanup()が自動実行されるため、ここでの明示的な呼び出しは不要
-
-      // 並列検索用のコールバック変換
-      const parallelCallbacks = {
-        onProgress: (aggregatedProgress: AggregatedProgress) => {
-          // 既存の進捗フォーマットに変換
+      const mtSeedCallbacks = {
+        onProgress: (aggregatedProgress: AggregatedMtSeedBootTimingProgress) => {
           callbacks.onProgress({
             currentStep: aggregatedProgress.totalCurrentStep,
             totalSteps: aggregatedProgress.totalSteps,
@@ -291,21 +404,13 @@ export class SearchWorkerManager {
             matchesFound: aggregatedProgress.totalMatchesFound
           });
 
-          // 並列進捗情報も送信（利用可能な場合）
           if (callbacks.onParallelProgress) {
             callbacks.onParallelProgress(aggregatedProgress);
           }
         },
         onResult: callbacks.onResult,
-        onComplete: (message: string) => {
-          // 並列進捗は保持（統計表示のため）
-          // if (callbacks.onParallelProgress) {
-          //   callbacks.onParallelProgress(null);
-          // }
-          callbacks.onComplete(message);
-        },
+        onComplete: callbacks.onComplete,
         onError: (error: string) => {
-          // エラー時は進捗をクリア（不正な状態を避けるため）
           if (callbacks.onParallelProgress) {
             callbacks.onParallelProgress(null);
           }
@@ -316,17 +421,14 @@ export class SearchWorkerManager {
         onStopped: callbacks.onStopped
       };
 
-      this.multiWorkerManager.startParallelSearch(conditions, targetSeeds, parallelCallbacks);
-      this.activeMode = 'cpu-parallel';
+      this.mtSeedBootTimingManager.startParallelSearch(params, mtSeedCallbacks);
+      this.activeMode = 'mt-seed-boot-timing';
       return true;
 
     } catch (error) {
-      console.error('Failed to start parallel search:', error);
-      callbacks.onError('Failed to start parallel search. Falling back to single worker mode.');
-      
-      // フォールバック: 単一Workerモードに切り替え
-      this.singleWorkerMode = true;
-      return this.startCpuSearchInternal(conditions, targetSeeds, callbacks);
+      console.error('Failed to start MT Seed boot timing search:', error);
+      callbacks.onError('Failed to start MT Seed boot timing search.');
+      return false;
     }
   }
 
@@ -337,11 +439,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (!this.singleWorkerMode && this.multiWorkerManager) {
-      this.multiWorkerManager.pauseAll();
-    } else if (this.worker) {
-      const request: WorkerRequest = { type: 'PAUSE_SEARCH' };
-      this.worker.postMessage(request);
+    if (this.mtSeedBootTimingManager) {
+      this.mtSeedBootTimingManager.pauseAll();
     }
   }
 
@@ -352,11 +451,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (!this.singleWorkerMode && this.multiWorkerManager) {
-      this.multiWorkerManager.resumeAll();
-    } else if (this.worker) {
-      const request: WorkerRequest = { type: 'RESUME_SEARCH' };
-      this.worker.postMessage(request);
+    if (this.mtSeedBootTimingManager) {
+      this.mtSeedBootTimingManager.resumeAll();
     }
   }
 
@@ -367,22 +463,8 @@ export class SearchWorkerManager {
       return;
     }
 
-    if (!this.singleWorkerMode && this.multiWorkerManager) {
-      this.multiWorkerManager.terminateAll();
-    } else if (this.worker) {
-      const request: WorkerRequest = { type: 'STOP_SEARCH' };
-      this.worker.postMessage(request);
-    }
-  }
-
-  /**
-   * 並列検索モードの設定
-   */
-  public setParallelMode(enabled: boolean): void {
-    this.singleWorkerMode = !enabled;
-    
-    if (enabled && !this.multiWorkerManager) {
-      this.multiWorkerManager = new MultiWorkerSearchManager();
+    if (this.mtSeedBootTimingManager) {
+      this.mtSeedBootTimingManager.terminateAll();
     }
   }
 
@@ -390,40 +472,33 @@ export class SearchWorkerManager {
    * ワーカー数設定
    */
   public setMaxWorkers(count: number): void {
-    if (!this.multiWorkerManager) {
-      this.multiWorkerManager = new MultiWorkerSearchManager();
+    if (!this.mtSeedBootTimingManager) {
+      this.mtSeedBootTimingManager = new MtSeedBootTimingMultiWorkerManager();
     }
-    this.multiWorkerManager.setMaxWorkers(count);
+    this.mtSeedBootTimingManager.setMaxWorkers(count);
   }
 
   /**
    * 現在のワーカー数設定を取得
    */
   public getMaxWorkers(): number {
-    if (!this.multiWorkerManager) {
+    if (!this.mtSeedBootTimingManager) {
       return navigator.hardwareConcurrency || 4;
     }
-    return this.multiWorkerManager.getMaxWorkers();
+    return this.mtSeedBootTimingManager.getMaxWorkers();
   }
 
   /**
    * 並列検索の利用可能性確認
    */
   public isParallelSearchAvailable(): boolean {
-    return (navigator.hardwareConcurrency ?? 1) > 1;
-  }
-
-  /**
-   * 現在のモード取得
-   */
-  public isParallelMode(): boolean {
-    return !this.singleWorkerMode;
+    return typeof Worker !== 'undefined';
   }
 
   public terminate() {
-    if (this.multiWorkerManager) {
-      this.multiWorkerManager.terminateAll();
-      this.multiWorkerManager = null;
+    if (this.mtSeedBootTimingManager) {
+      this.mtSeedBootTimingManager.terminateAll();
+      this.mtSeedBootTimingManager = null;
     }
     
     if (this.gpuWorker) {
@@ -431,17 +506,17 @@ export class SearchWorkerManager {
       this.gpuWorker = null;
     }
 
-    if (this.worker) {
-      this.worker.terminate();
-      this.worker = null;
-    }
     this.callbacks = null;
-    this.activeMode = 'cpu-single';
+    this.activeMode = 'cpu-parallel';
     this.lastRequest = null;
   }
 
-  public isWorkerAvailable(): boolean {
-    return this.worker !== null || this.gpuWorker !== null;
+  private normalizeTargetSeeds(seeds: number[] | undefined | null): number[] {
+    if (!Array.isArray(seeds)) {
+      return [];
+    }
+
+    return seeds.filter((seed) => typeof seed === 'number' && Number.isFinite(seed));
   }
 }
 

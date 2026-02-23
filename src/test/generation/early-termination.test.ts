@@ -47,8 +47,7 @@ if (typeof Worker === 'undefined') {
     );
     const domainMode = deriveDomainGameMode(template);
     const wasmMode = domainGameModeToWasm(domainMode);
-    const effectiveOffset = BigInt(wasm.calculate_game_offset(template.baseSeed, wasmMode)) + template.offset;
-    const enumerator = new wasm.SeedEnumerator(template.baseSeed, effectiveOffset, searchLimit, cfg);
+    const enumerator = new wasm.SeedEnumerator(template.baseSeed, template.offset, searchLimit, cfg, wasmMode);
     for (let i = 0; i < searchLimit; i++) {
       const raw = enumerator.next_pokemon();
       if (!raw) break;
@@ -90,7 +89,6 @@ if (typeof Worker === 'undefined') {
         isShinyLocked: false,
         stopAtFirstShiny: true,
         stopOnCap: false,
-        batchSize: 25,
         newGame: true,
         withSave: true,
         memoryLink: false,
@@ -129,7 +127,6 @@ if (typeof Worker === 'undefined') {
         isShinyLocked: false,
         stopAtFirstShiny: false,
         stopOnCap: true,
-        batchSize: 10,
         newGame: true,
         withSave: true,
         memoryLink: false,

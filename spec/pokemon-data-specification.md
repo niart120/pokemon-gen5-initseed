@@ -24,7 +24,7 @@ Generation タブで使用するデータセットの構造と、実装での扱
 
 Resolver (`enrichForSpecies`) はこれらの API を通じて性別閾値と特性名を `ResolutionContext` に取り込み、UI からはローカライズ済みの文字列が参照できるようになる。
 
-## 2. 遭遇データセット（`src/data/encounters`）
+## 2. エンカウントデータセット（`src/data/encounters`）
 
 ### 2.1 ロケーション別レジストリ（`generated/v1`）
 各 JSON は `EncounterLocationsJson` としてエクスポートされる。
@@ -49,8 +49,8 @@ interface EncounterSlotJson {
 
 ビルド時に `import.meta.glob('./generated/v1/**/**/*.json', { eager: true })` で読み込み、`registry[`${version}_${method}`][normalizedLocation]` へ格納する。ロケーションキーは `applyLocationAlias` と `normalizeLocationKey` で正規化し、英語表記の場所でも同一キーにマージされる。`displayNameKey` は UI が翻訳キーとして利用し、未指定の場合は正規化済みキーで補完する。
 
-### 2.2 固定遭遇・イベント（`static/v1`）
-固定シンボルやイベント遭遇は `EncounterSpeciesJson` として管理する。
+### 2.2 固定エンカウント・イベント（`static/v1`）
+固定シンボルやイベントエンカウントは `EncounterSpeciesJson` として管理する。
 
 ```ts
 interface EncounterSpeciesJson {
@@ -69,7 +69,7 @@ interface EncounterSpeciesJson {
 }
 ```
 
-`listStaticEncounterEntries` がバージョンと遭遇種別ごとに絞り込んだ結果を返し、UI で選択された要素を `buildResolutionContext` の `staticEncounter` 引数へ渡す。
+`listStaticEncounterEntries` がバージョンとエンカウント種別ごとに絞り込んだ結果を返し、UI で選択された要素を `buildResolutionContext` の `staticEncounter` 引数へ渡す。
 
 ### 2.3 スキーマ補足
 `src/data/encounters/schema.ts` に TypeScript interface を定義しており、生成スクリプトはこの型に沿って JSON を出力する。`source` 情報は出典と取得日を記録するメタデータとして保持し、データの検証や再取得の判断材料に利用する。
@@ -99,7 +99,7 @@ WASM が返す `encounter_slot_value` を添字としてスロットを選択す
 ### 3.2 ResolutionContext（`src/lib/initialization/build-resolution-context.ts`）
 `buildResolutionContext` は以下の情報をひとまとめにして返す。
 
-- `encounterTable`: 通常遭遇の場合は `EncounterTable`、固定遭遇の場合は単一スロットの疑似テーブル。
+- `encounterTable`: 通常エンカウントの場合は `EncounterTable`、固定エンカウントの場合は単一スロットの疑似テーブル。
 - `genderRatios`: `Map<number, GenderRatio>`。初回アクセス時に遅延構築。
 - `abilityCatalog`: `Map<number, string[]>`。こちらも遅延構築。
 
@@ -120,7 +120,7 @@ interface GenderRatio {
 ## 4. データ更新フロー
 
 1. `scripts/fetch-gen5-species.js` で種族データを取得し、`gen5-species.json` を再生成する。
-2. `scripts/scrape-encounters.js` で遭遇テーブルを取得する。
+2. `scripts/scrape-encounters.js` でエンカウントテーブルを取得する。
 3. `scripts/migrate-encounter-display-names.js` などでロケーション名を整形し、`generated`/`static` ディレクトリへ配置する。
 4. `npm run test` と `npm run lint` を実行し、Resolver/UI の整合性を確認する。
 5. 必要に応じて `legacy-docs/` へ旧仕様を移し、`spec/README.md` のステータスを更新する。

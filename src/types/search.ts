@@ -3,6 +3,61 @@
  */
 
 import type { ROMVersion, ROMRegion, Hardware } from './rom';
+import type { KeyName } from '@/lib/utils/key-input';
+
+export interface TimeFieldRange {
+  start: number;
+  end: number;
+}
+
+export interface DailyTimeRange {
+  hour: TimeFieldRange;
+  minute: TimeFieldRange;
+  second: TimeFieldRange;
+}
+
+export interface DateRange {
+  startYear: number;
+  startMonth: number;
+  startDay: number;
+  endYear: number;
+  endMonth: number;
+  endDay: number;
+}
+
+/**
+ * 起動条件情報（Boot Timing検索結果共通）
+ */
+export interface BootCondition {
+  /** 起動日時 */
+  datetime: Date;
+
+  /** Timer0値 */
+  timer0: number;
+
+  /** VCount値 */
+  vcount: number;
+
+  /** キーコード (XOR 0x2FFF後) */
+  keyCode: number;
+
+  /** キー入力名リスト */
+  keyInputNames: KeyName[];
+
+  /** MACアドレス */
+  macAddress: readonly [number, number, number, number, number, number];
+}
+
+/**
+ * Timer0/VCount セグメント（統一形式）
+ * Auto mode: ROMのvcountTimerRangesから直接取得
+ * Manual mode: ユーザー入力から変換
+ */
+export interface Timer0VCountSegment {
+  readonly vcount: number;
+  readonly timer0Min: number;
+  readonly timer0Max: number;
+}
 
 export interface SearchConditions {
   romVersion: ROMVersion;
@@ -20,21 +75,9 @@ export interface SearchConditions {
       max: number;
     };
   };
+  timeRange: DailyTimeRange;
   
-  dateRange: {
-    startYear: number;
-    endYear: number;
-    startMonth: number;
-    endMonth: number;
-    startDay: number;
-    endDay: number;
-    startHour: number;
-    endHour: number;
-    startMinute: number;
-    endMinute: number;
-    startSecond: number;
-    endSecond: number;
-  };
+  dateRange: DateRange;
   
   keyInput: number;
   macAddress: number[];
@@ -46,6 +89,7 @@ export interface InitialSeedResult {
   timer0: number;
   vcount: number;
   keyCode: number | null;
+  keyInputNames?: KeyName[];
   conditions: SearchConditions;
   message: number[];
   sha1Hash: string;
@@ -63,7 +107,6 @@ export interface SearchResult {
   romRegion: ROMRegion;
   hardware: Hardware;
   macAddress?: number[];
-  keyInput?: number;
   keyCode?: number | null;
   message?: number[];
   hash?: string;

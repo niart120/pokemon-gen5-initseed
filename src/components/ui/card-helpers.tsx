@@ -7,14 +7,23 @@ interface StandardCardHeaderProps {
   icon?: ReactNode;
   title: ReactNode; // string または装飾用ノード (a11y用に span など)
   className?: string;
+  action?: ReactNode;
 }
-export function StandardCardHeader({ icon, title, className }: StandardCardHeaderProps) {
+export function StandardCardHeader({ icon, title, className, action }: StandardCardHeaderProps) {
+  const hasAction = Boolean(action);
   return (
-    <CardHeader className={cn('pb-0', className)}>
-      <CardTitle className="text-base flex items-center gap-2">
+    <CardHeader
+      className={cn(
+        'pb-0',
+        hasAction && 'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between',
+        className
+      )}
+    >
+      <CardTitle className={cn('text-base flex items-center gap-2', hasAction && 'sm:flex-1')}>
         {icon}
         {title}
       </CardTitle>
+      {hasAction ? <div className="flex items-center gap-2">{action}</div> : null}
     </CardHeader>
   );
 }

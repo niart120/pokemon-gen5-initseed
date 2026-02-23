@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MT Seed Search Performance Test</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1, h2 {
+            color: #00d9ff;
+        }
+        .section {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .config-item label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        .config-item input, .config-item select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #0f0f23;
+            color: #eee;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary {
+            background: #00d9ff;
+            color: #000;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #00b8d9;
+        }
+        .btn-secondary {
+            background: #444;
+            color: #eee;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background: #555;
+        }
+        .btn-danger {
+            background: #ff4757;
+            color: #fff;
+        }
+        .btn-danger:hover:not(:disabled) {
+            background: #ff3344;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .results-table th, .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        .results-table th {
+            background: #0f0f23;
+            color: #00d9ff;
+        }
+        .results-table tr:hover {
+            background: #1f1f3e;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 24px;
+            background: #0f0f23;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status-info {
+            background: #1e3a5f;
+            border-left: 4px solid #00d9ff;
+        }
+        .status-success {
+            background: #1e5f3a;
+            border-left: 4px solid #00ff88;
+        }
+        .status-error {
+            background: #5f1e1e;
+            border-left: 4px solid #ff4757;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .stat-card {
+            background: #0f0f23;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #00d9ff;
+        }
+        .stat-label {
+            color: #888;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+        #log {
+            background: #0f0f23;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 0.85em;
+            white-space: pre-wrap;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .log-time {
+            color: #666;
+        }
+        .log-info {
+            color: #00d9ff;
+        }
+        .log-success {
+            color: #00ff88;
+        }
+        .log-error {
+            color: #ff4757;
+        }
+        .log-warn {
+            color: #ffa502;
+        }
+        .comparison-chart {
+            margin-top: 20px;
+        }
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            height: 200px;
+            gap: 20px;
+            padding: 20px;
+            background: #0f0f23;
+            border-radius: 8px;
+        }
+        .bar-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .bar {
+            width: 60px;
+            background: linear-gradient(180deg, #00d9ff, #0066ff);
+            border-radius: 4px 4px 0 0;
+            transition: height 0.5s;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 10px;
+            color: #fff;
+            font-weight: bold;
+        }
+        .bar-label {
+            margin-top: 10px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        .bar.gpu {
+            background: linear-gradient(180deg, #00ff88, #00aa55);
+        }
+    </style>
+</head>
+<body>
+    <h1>MT Seed Search Performance Test</h1>
+    
+    <div class="section">
+        <h2>テスト設定</h2>
+        <div class="config-grid">
+            <div class="config-item">
+                <label>検索範囲サイズ</label>
+                <select id="searchRange">
+                    <option value="1000000">100万 (1M)</option>
+                    <option value="10000000">1000万 (10M)</option>
+                    <option value="100000000" selected>1億 (100M)</option>
+                    <option value="1000000000">10億 (1B)</option>
+                    <option value="4294967295">全探索 (4.3B)</option>
+                </select>
+            </div>
+            <div class="config-item">
+                <label>MT消費数</label>
+                <input type="number" id="mtAdvances" value="0" min="0" max="1000">
+            </div>
+            <div class="config-item">
+                <label>IVコード数</label>
+                <select id="ivCodeCount">
+                    <option value="1">1 (6V固定)</option>
+                    <option value="32">32</option>
+                    <option value="128">128</option>
+                    <option value="512">512</option>
+                    <option value="1024" selected>1024 (最大)</option>
+                </select>
+            </div>
+            <div class="config-item">
+                <label>CPU Worker数</label>
+                <input type="number" id="workerCount" value="4" min="1" max="64">
+            </div>
+        </div>
+        
+        <button class="btn-primary" id="btnTestCpu">CPU テスト実行</button>
+        <button class="btn-primary" id="btnTestGpu">GPU テスト実行</button>
+        <button class="btn-primary" id="btnTestBoth">両方テスト</button>
+        <button class="btn-danger" id="btnStop" disabled>停止</button>
+        <button class="btn-secondary" id="btnClear">ログクリア</button>
+    </div>
+
+    <div class="section">
+        <h2>進捗</h2>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="statProcessed">0</div>
+                <div class="stat-label">処理済み</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statSpeed">0</div>
+                <div class="stat-label">Seeds/sec</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statMatches">0</div>
+                <div class="stat-label">マッチ数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statElapsed">0s</div>
+                <div class="stat-label">経過時間</div>
+            </div>
+        </div>
+        <div id="statusMessage" class="status status-info">待機中...</div>
+    </div>
+
+    <div class="section">
+        <h2>テスト結果</h2>
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>モード</th>
+                    <th>検索範囲</th>
+                    <th>IVコード数</th>
+                    <th>処理時間</th>
+                    <th>速度 (Seeds/sec)</th>
+                    <th>マッチ数</th>
+                </tr>
+            </thead>
+            <tbody id="resultsBody">
+            </tbody>
+        </table>
+        
+        <div class="comparison-chart" id="comparisonChart" style="display: none;">
+            <h3>速度比較</h3>
+            <div class="bar-chart">
+                <div class="bar-item">
+                    <div class="bar" id="cpuBar" style="height: 0px;">-</div>
+                    <div class="bar-label">CPU</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar gpu" id="gpuBar" style="height: 0px;">-</div>
+                    <div class="bar-label">GPU</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>ログ</h2>
+        <div id="log"></div>
+    </div>
+
+    <script type="module">
+        // ログ関数
+        const logEl = document.getElementById('log');
+        function log(message, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // UI更新関数
+        function updateProgress(percent, processed, speed, matches, elapsed) {
+            document.getElementById('progressFill').style.width = `${percent}%`;
+            document.getElementById('progressFill').textContent = `${percent.toFixed(1)}%`;
+            document.getElementById('statProcessed').textContent = formatNumber(processed);
+            document.getElementById('statSpeed').textContent = formatNumber(Math.round(speed));
+            document.getElementById('statMatches').textContent = matches;
+            document.getElementById('statElapsed').textContent = `${(elapsed / 1000).toFixed(1)}s`;
+        }
+
+        function updateStatus(message, type = 'info') {
+            const el = document.getElementById('statusMessage');
+            el.textContent = message;
+            el.className = `status status-${type}`;
+        }
+
+        function formatNumber(n) {
+            if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+            if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+            if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+            return n.toString();
+        }
+
+        function addResult(mode, range, ivCodes, time, speed, matches) {
+            const tbody = document.getElementById('resultsBody');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${mode}</td>
+                <td>${formatNumber(range)}</td>
+                <td>${ivCodes}</td>
+                <td>${(time / 1000).toFixed(2)}s</td>
+                <td>${formatNumber(Math.round(speed))}</td>
+                <td>${matches}</td>
+            `;
+            tbody.insertBefore(row, tbody.firstChild);
+        }
+
+        // テスト結果保存
+        const testResults = { cpu: null, gpu: null };
+
+        function updateComparisonChart() {
+            if (!testResults.cpu && !testResults.gpu) return;
+            
+            document.getElementById('comparisonChart').style.display = 'block';
+            
+            const maxSpeed = Math.max(
+                testResults.cpu?.speed || 0,
+                testResults.gpu?.speed || 0
+            );
+            
+            if (testResults.cpu) {
+                const height = (testResults.cpu.speed / maxSpeed) * 150;
+                document.getElementById('cpuBar').style.height = `${height}px`;
+                document.getElementById('cpuBar').textContent = formatNumber(Math.round(testResults.cpu.speed));
+            }
+            
+            if (testResults.gpu) {
+                const height = (testResults.gpu.speed / maxSpeed) * 150;
+                document.getElementById('gpuBar').style.height = `${height}px`;
+                document.getElementById('gpuBar').textContent = formatNumber(Math.round(testResults.gpu.speed));
+            }
+        }
+
+        // ダミーIVコード生成
+        function generateDummyIvCodes(count) {
+            const codes = [];
+            for (let i = 0; i < count; i++) {
+                // ランダムなIVコードを生成（30bit）
+                const hp = Math.floor(Math.random() * 32);
+                const atk = Math.floor(Math.random() * 32);
+                const def = Math.floor(Math.random() * 32);
+                const spa = Math.floor(Math.random() * 32);
+                const spd = Math.floor(Math.random() * 32);
+                const spe = Math.floor(Math.random() * 32);
+                codes.push((hp << 25) | (atk << 20) | (def << 15) | (spa << 10) | (spd << 5) | spe);
+            }
+            // 6V（全31）を必ず含める
+            codes[0] = (31 << 25) | (31 << 20) | (31 << 15) | (31 << 10) | (31 << 5) | 31;
+            return codes;
+        }
+
+        // Worker作成
+        let activeWorkers = [];
+        let isRunning = false;
+
+        async function runCpuTest(searchRange, mtAdvances, ivCodes, workerCount) {
+            log(`CPU テスト開始: 範囲=${formatNumber(searchRange)}, Worker数=${workerCount}`, 'info');
+            updateStatus('CPU テスト実行中...', 'info');
+            
+            const startTime = performance.now();
+            let completedWorkers = 0;
+            
+            // 各Workerの進捗を個別に追跡
+            const workerProgress = new Map();
+            const workerMatches = new Map();
+
+            // 全Workerの合算値を計算
+            function aggregateProgress() {
+                let totalProcessed = 0;
+                let totalMatches = 0;
+                for (const [, count] of workerProgress) {
+                    totalProcessed += count;
+                }
+                for (const [, count] of workerMatches) {
+                    totalMatches += count;
+                }
+                return { totalProcessed, totalMatches };
+            }
+
+            return new Promise((resolve, reject) => {
+                const chunkSize = Math.ceil(searchRange / workerCount);
+                
+                for (let i = 0; i < workerCount; i++) {
+                    const start = i * chunkSize;
+                    const end = Math.min((i + 1) * chunkSize - 1, searchRange - 1);
+                    
+                    // 初期化
+                    workerProgress.set(i, 0);
+                    workerMatches.set(i, 0);
+                    
+                    const worker = new Worker(
+                        new URL('/src/workers/mt-seed-search-worker-cpu.ts', import.meta.url),
+                        { type: 'module' }
+                    );
+                    activeWorkers.push(worker);
+
+                    worker.onmessage = (e) => {
+                        const msg = e.data;
+                        
+                        if (msg.type === 'READY') {
+                            worker.postMessage({
+                                type: 'START',
+                                job: {
+                                    searchRange: { start, end },
+                                    ivCodes,
+                                    mtAdvances,
+                                    jobId: i
+                                }
+                            });
+                        } else if (msg.type === 'PROGRESS') {
+                            // 各Workerの進捗を個別に更新
+                            workerProgress.set(i, msg.payload.processedCount);
+                            workerMatches.set(i, msg.payload.matchesFound);
+                            
+                            // 全Workerの合算値を計算してUI更新
+                            const { totalProcessed, totalMatches } = aggregateProgress();
+                            const elapsed = performance.now() - startTime;
+                            const speed = totalProcessed / (elapsed / 1000);
+                            const percent = (totalProcessed / searchRange) * 100;
+                            updateProgress(percent, totalProcessed, speed, totalMatches, elapsed);
+                        } else if (msg.type === 'RESULTS') {
+                            // RESULTSはマッチ発見時に送られるが、マッチ数はPROGRESSで管理
+                            log(`Worker ${i}: ${msg.payload.matches.length} マッチ発見`, 'success');
+                        } else if (msg.type === 'COMPLETE') {
+                            completedWorkers++;
+                            log(`Worker ${i} 完了`, 'info');
+                            
+                            if (completedWorkers >= workerCount) {
+                                const { totalProcessed, totalMatches } = aggregateProgress();
+                                const elapsed = performance.now() - startTime;
+                                const speed = searchRange / (elapsed / 1000);
+                                resolve({ elapsed, speed, matches: totalMatches });
+                            }
+                        } else if (msg.type === 'ERROR') {
+                            log(`Worker ${i} エラー: ${msg.message}`, 'error');
+                            reject(new Error(msg.message));
+                        }
+                    };
+
+                    worker.onerror = (e) => {
+                        log(`Worker ${i} エラー: ${e.message}`, 'error');
+                        reject(e);
+                    };
+                }
+            });
+        }
+
+        async function runGpuTest(searchRange, mtAdvances, ivCodes) {
+            log(`GPU テスト開始: 範囲=${formatNumber(searchRange)}`, 'info');
+            updateStatus('GPU テスト実行中...', 'info');
+            
+            const startTime = performance.now();
+            let processedTotal = 0;
+            let matchesTotal = 0;
+
+            return new Promise((resolve, reject) => {
+                const worker = new Worker(
+                    new URL('/src/workers/mt-seed-search-worker-gpu.ts', import.meta.url),
+                    { type: 'module' }
+                );
+                activeWorkers.push(worker);
+
+                worker.onmessage = (e) => {
+                    const msg = e.data;
+                    
+                    if (msg.type === 'READY') {
+                        worker.postMessage({
+                            type: 'START',
+                            job: {
+                                searchRange: { start: 0, end: searchRange - 1 },
+                                ivCodes,
+                                mtAdvances,
+                                jobId: 0
+                            }
+                        });
+                    } else if (msg.type === 'PROGRESS') {
+                        processedTotal = msg.payload.processedCount;
+                        matchesTotal = msg.payload.matchesFound;
+                        const elapsed = performance.now() - startTime;
+                        const speed = processedTotal / (elapsed / 1000);
+                        const percent = (processedTotal / searchRange) * 100;
+                        updateProgress(percent, processedTotal, speed, matchesTotal, elapsed);
+                    } else if (msg.type === 'RESULTS') {
+                        matchesTotal += msg.payload.matches.length;
+                        log(`GPU: ${msg.payload.matches.length} マッチ発見`, 'success');
+                    } else if (msg.type === 'COMPLETE') {
+                        const elapsed = performance.now() - startTime;
+                        const speed = searchRange / (elapsed / 1000);
+                        resolve({ elapsed, speed, matches: matchesTotal });
+                    } else if (msg.type === 'ERROR') {
+                        log(`GPU エラー: ${msg.message}`, 'error');
+                        reject(new Error(msg.message));
+                    }
+                };
+
+                worker.onerror = (e) => {
+                    log(`GPU Worker エラー: ${e.message}`, 'error');
+                    reject(e);
+                };
+            });
+        }
+
+        function stopAllWorkers() {
+            activeWorkers.forEach(w => {
+                w.postMessage({ type: 'STOP' });
+                w.terminate();
+            });
+            activeWorkers = [];
+            isRunning = false;
+            document.getElementById('btnStop').disabled = true;
+            updateStatus('停止しました', 'info');
+            log('テスト停止', 'warn');
+        }
+
+        function getConfig() {
+            return {
+                searchRange: parseInt(document.getElementById('searchRange').value),
+                mtAdvances: parseInt(document.getElementById('mtAdvances').value),
+                ivCodeCount: parseInt(document.getElementById('ivCodeCount').value),
+                workerCount: parseInt(document.getElementById('workerCount').value)
+            };
+        }
+
+        async function runTest(mode) {
+            if (isRunning) return;
+            
+            const config = getConfig();
+            const ivCodes = generateDummyIvCodes(config.ivCodeCount);
+            
+            isRunning = true;
+            document.getElementById('btnStop').disabled = false;
+            updateProgress(0, 0, 0, 0, 0);
+
+            try {
+                if (mode === 'cpu' || mode === 'both') {
+                    const result = await runCpuTest(
+                        config.searchRange,
+                        config.mtAdvances,
+                        ivCodes,
+                        config.workerCount
+                    );
+                    
+                    testResults.cpu = result;
+                    addResult('CPU', config.searchRange, config.ivCodeCount, 
+                        result.elapsed, result.speed, result.matches);
+                    log(`CPU テスト完了: ${(result.elapsed / 1000).toFixed(2)}s, ${formatNumber(Math.round(result.speed))} seeds/sec`, 'success');
+                    updateStatus('CPU テスト完了', 'success');
+                    
+                    // Workerをクリーンアップ
+                    activeWorkers.forEach(w => w.terminate());
+                    activeWorkers = [];
+                }
+
+                if (mode === 'gpu' || mode === 'both') {
+                    const result = await runGpuTest(
+                        config.searchRange,
+                        config.mtAdvances,
+                        ivCodes
+                    );
+                    
+                    testResults.gpu = result;
+                    addResult('GPU', config.searchRange, config.ivCodeCount,
+                        result.elapsed, result.speed, result.matches);
+                    log(`GPU テスト完了: ${(result.elapsed / 1000).toFixed(2)}s, ${formatNumber(Math.round(result.speed))} seeds/sec`, 'success');
+                    updateStatus('GPU テスト完了', 'success');
+                    
+                    activeWorkers.forEach(w => w.terminate());
+                    activeWorkers = [];
+                }
+
+                updateComparisonChart();
+                
+            } catch (error) {
+                log(`テスト失敗: ${error.message}`, 'error');
+                updateStatus(`エラー: ${error.message}`, 'error');
+            } finally {
+                isRunning = false;
+                document.getElementById('btnStop').disabled = true;
+            }
+        }
+
+        // イベントリスナー
+        document.getElementById('btnTestCpu').addEventListener('click', () => runTest('cpu'));
+        document.getElementById('btnTestGpu').addEventListener('click', () => runTest('gpu'));
+        document.getElementById('btnTestBoth').addEventListener('click', () => runTest('both'));
+        document.getElementById('btnStop').addEventListener('click', stopAllWorkers);
+        document.getElementById('btnClear').addEventListener('click', () => {
+            logEl.innerHTML = '';
+            document.getElementById('resultsBody').innerHTML = '';
+            testResults.cpu = null;
+            testResults.gpu = null;
+            document.getElementById('comparisonChart').style.display = 'none';
+        });
+
+        // 初期化
+        log('MT Seed Search パフォーマンステスト準備完了', 'info');
+        
+        // WebGPU利用可能性チェック
+        if (navigator.gpu) {
+            log('WebGPU: 利用可能', 'success');
+        } else {
+            log('WebGPU: 利用不可 (GPUテストは実行できません)', 'warn');
+            document.getElementById('btnTestGpu').disabled = true;
+        }
+        
+        // CPU情報
+        log(`論理コア数: ${navigator.hardwareConcurrency}`, 'info');
+        document.getElementById('workerCount').value = navigator.hardwareConcurrency || 4;
+    </script>
+</body>
+</html>

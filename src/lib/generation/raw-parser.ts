@@ -73,6 +73,7 @@ export function parseFromWasmRaw(wasmData: unknown): UnresolvedPokemonData {
   return {
       seed: toBigInt(seedVal),
       pid: toNumber(pid),
+      advance: 0,
       nature: toNumber(nature),
       sync_applied: Boolean(syncApplied),
       ability_slot: toNumber(abilitySlot),

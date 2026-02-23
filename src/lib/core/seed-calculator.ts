@@ -84,9 +84,11 @@ export class SeedCalculator {
     
     return {
       nazo: [...regionData.nazo] as [number, number, number, number, number],
-      vcountTimerRanges: regionData.vcountTimerRanges.map(range => 
-        [...range] as [number, number, number]
-      )
+      vcountTimerRanges: regionData.vcountTimerRanges.map(segment => ({
+        vcount: segment.vcount,
+        timer0Min: segment.timer0Min,
+        timer0Max: segment.timer0Max,
+      }))
     };
   }
 
@@ -283,13 +285,13 @@ export class SeedCalculator {
    */
   public getVCountForTimer0(params: ROMParameters, timer0: number): number {
     // 新しいvcountTimerRanges構造を使用
-    for (const [vcount, timer0Min, timer0Max] of params.vcountTimerRanges) {
-      if (timer0 >= timer0Min && timer0 <= timer0Max) {
-        return vcount;
+    for (const segment of params.vcountTimerRanges) {
+      if (timer0 >= segment.timer0Min && timer0 <= segment.timer0Max) {
+        return segment.vcount;
       }
     }
 
     // フォールバック: 最初のVCOUNT値を返す
-    return params.vcountTimerRanges.length > 0 ? params.vcountTimerRanges[0][0] : 0x60;
+    return params.vcountTimerRanges.length > 0 ? params.vcountTimerRanges[0].vcount : 0x60;
   }
 }
